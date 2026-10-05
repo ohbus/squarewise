@@ -10,8 +10,8 @@ For a concise evidence-state overview, see the [QA-10 test-gap summary](qa10-gap
 
 ## Current baseline
 
-As of 2026-10-02, the freshly regenerated JaCoCo XML baseline records **37
-production methods with missed branches** containing **63 missed branches**,
+As of 2026-10-05, the freshly regenerated JaCoCo XML baseline records **35
+production methods with missed branches** containing **61 missed branches**,
 **54 contract operations** (45 REST and 9 GraphQL), and **one concrete
 execution-gap record**. Operation source discovery
 finds 0 operations without a literal E2E reference and 36 without a literal
@@ -32,11 +32,11 @@ credited. This closes neither hosted-CI evidence nor the remaining per-operation
 acceptance rows.
 
 The current residual review split is **4 reviewed structural-invariant mappings**
-and **33 behavior-covered boundary/instrumentation mappings**. No
+and **31 behavior-covered boundary/instrumentation mappings**. No
 missed method is unaccounted for; behavior-covered mappings are explicitly
 linked to tests, while structural records remain review work.
 The companion [`QA-10 branch-line ledger`](qa10-branch-line-gap-ledger.md)
-records the 50 exact JaCoCo source lines that account for those 63 branches;
+records the 48 exact JaCoCo source lines that account for those 61 branches;
 it is regenerated from the same reports and is not a substitute for behavior
 acceptance.
 The companion [`QA-10 concrete execution-gap ledger`](qa10-execution-gap-ledger.md)
@@ -76,7 +76,7 @@ delivery, identity-provider behavior, or cross-service side effects.
 
 ## Audit evidence and limits
 
-The current source inventory contains 400 Kotlin production files and 199
+The current source inventory contains 401 Kotlin production files and 199
 Kotlin test files under `app/` and `libs/`. The generated local JaCoCo
 reports currently report these line-coverage signals:
 
@@ -158,12 +158,10 @@ behavior is exercised through inline call-site tests, while JaCoCo cannot mark
 the inline declaration method node executed. This is a reviewed compiler
 classification, not a reason to add reflection-only coverage or alter the
 implementation contract.
-The two residual `DbTelemetry.acquisition` and `queryDuration` branch records
-are behavior-covered by `DbTelemetryTest` for positive and negative durations
-with both null and registry-backed telemetry. Their remaining JaCoCo arm is
-the defensive nullable `Timer?.record` mapping; Micrometer's
-`MeterRegistry.timer` contract returns a non-null timer. This is a documented
-instrumentation mapping, not a missing duration behavior test.
+`DbTelemetry.acquisition` and `queryDuration` now achieve 100% branch
+coverage in `DbTelemetryTest` by asserting metric publication when
+`MeterRegistry.timer` returns null as well as valid `Timer` instances.
+`DbTelemetry` now has 0 missed branches and 100% branch coverage.
 
 ### Current operations without a literal E2E source reference
 
@@ -412,7 +410,7 @@ Current provisional assignment workload (39 records):
 | QA10-E02 | 2 | Database routing, reader health, fallback, and operational lifecycle. |
 | QA10-E03 | 0 | Servlet/reactive OIDC decoder construction and key-validation paths are locally covered; deployed issuer/provider behavior remains environment evidence. |
 | QA10-E04 | 0 | IDs/constants have no current missed-branch methods; static contract checks remain required. |
-| QA10-E05 | 2 | Bounded observability labels and metric behavior now has direct local invocation evidence; negative-duration and slow-query mappings remain under review, while dashboards/alerts and deployed cardinality remain operational evidence. |
+| QA10-E05 | 0 | Bounded observability labels and metric behavior have direct local invocation evidence; DbTelemetry achieves 100% branch coverage with null and registry-backed timers, while dashboards/alerts and deployed cardinality remain operational evidence. |
 
 This table is regenerated from the JSON assignment output; it is not a
 coverage claim. A row closes only when its acceptance criteria and required

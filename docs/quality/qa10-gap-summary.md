@@ -12,8 +12,8 @@ evidence.
 
 | Area | Current evidence | Still missing |
 | --- | --- | --- |
-| JaCoCo branches | 37 production methods / 63 missed branches; all assigned to a QA row, record-level acceptance criterion, and test boundary | 4 structural-invariant mappings are reviewed against boundary tests; 33 identity/session/network/origin/recurrence/search/sync/notification/realtime/gateway/decoder/settlement/database/recurring/group-store/error/telemetry mappings are behavior-covered at tested boundaries; 0 open design |
-| Exact branch lines | 50 source-line records account for all 63 missed branches | Each line remains open until behavior proof or an evidence-backed structural classification is recorded |
+| JaCoCo branches | 35 production methods / 61 missed branches; all assigned to a QA row, record-level acceptance criterion, and test boundary | 4 structural-invariant mappings are reviewed against boundary tests; 31 identity/session/network/origin/recurrence/search/sync/notification/realtime/gateway/decoder/settlement/database/recurring/group-store/error mappings are behavior-covered at tested boundaries; 0 open design |
+| Exact branch lines | 48 source-line records account for all 61 missed branches | Each line remains open until behavior proof or an evidence-backed structural classification is recorded |
 | Concrete execution | 1 zero-instruction method is recorded separately | Inline telemetry (DbTelemetry.measureQuery) remains a compiler mapping |
 | Contract operations | 54 operations: 45 REST and 9 GraphQL; 54 request-shaped source signals | Static source is not execution evidence; every operation still needs its required persona, failure, durability, async, concurrency, and isolation artifact |
 | Bruno source | 18 operation references; 36 operations have no Bruno source reference | Bruno is supplementary and cannot substitute for the deployed E2E matrix; surface-aware path/method matching prefers false negatives over cross-operation credit |

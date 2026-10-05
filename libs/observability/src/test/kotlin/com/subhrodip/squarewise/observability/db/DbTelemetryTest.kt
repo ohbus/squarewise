@@ -122,4 +122,31 @@ class DbTelemetryTest {
         assertEquals(0, snapshot.queryTotalMs)
         assertEquals(0, snapshot.slowQueries)
     }
+
+    @Test
+    fun `acquisition and queryDuration handle null Timer gracefully`() {
+        val mockRegistry = org.mockito.Mockito.mock(io.micrometer.core.instrument.MeterRegistry::class.java)
+        org.mockito.Mockito.`when`(
+            mockRegistry.timer(
+                org.mockito.ArgumentMatchers.eq("squarewise.db.pool.acquisition"),
+                org.mockito.ArgumentMatchers.any(io.micrometer.core.instrument.Tags::class.java)
+            )
+        ).thenReturn(null)
+        org.mockito.Mockito.`when`(
+            mockRegistry.timer(
+                org.mockito.ArgumentMatchers.eq("squarewise.db.query.duration"),
+                org.mockito.ArgumentMatchers.any(io.micrometer.core.instrument.Tags::class.java)
+            )
+        ).thenReturn(null)
+
+        val telemetry = DbTelemetry(mockRegistry, slowQueryThresholdMs = 10)
+        telemetry.acquisition("groups", "writer", 5)
+        telemetry.queryDuration("groups", "writer", 5)
+
+        val snapshot = telemetry.snapshot()
+        assertEquals(1, snapshot.acquisitions)
+        assertEquals(5, snapshot.acquisitionTotalMs)
+        assertEquals(1, snapshot.queries)
+        assertEquals(5, snapshot.queryTotalMs)
+    }
 }
