@@ -15,7 +15,9 @@ import com.subhrodip.squarewise.accounts.auth.credential.LoginCredentialReposito
 import com.subhrodip.squarewise.accounts.auth.credential.LoginCredentialService
 import com.subhrodip.squarewise.accounts.auth.credential.OneTimeCredentialIssuer
 import com.subhrodip.squarewise.security.ratelimit.RateLimiter
+import com.subhrodip.squarewise.security.ratelimit.HmacRateLimitKeyDeriver
 import com.subhrodip.squarewise.security.ratelimit.RedisRateLimiter
+import io.micrometer.core.instrument.MeterRegistry
 import com.subhrodip.squarewise.accounts.auth.delivery.security.AesGcmCredentialEnvelopeProtector
 import com.subhrodip.squarewise.accounts.auth.delivery.security.CredentialEnvelopeProtector
 import java.util.Base64
@@ -36,8 +38,8 @@ class AuthenticationCredentialConfiguration(
 ) {
     /** Creates the mandatory Redis-backed distributed limiter for runtime profiles. */
     @Bean
-    fun rateLimiter(redis: StringRedisTemplate): RateLimiter =
-        RedisRateLimiter(redis)
+    fun rateLimiter(redis: StringRedisTemplate, meterRegistry: MeterRegistry): RateLimiter =
+        RedisRateLimiter(redis, HmacRateLimitKeyDeriver.fromBase64(encodedDigestSecret), meterRegistry)
 
     /** Creates the HMAC digest adapter from a deployment-only base64 secret. */
     @Bean

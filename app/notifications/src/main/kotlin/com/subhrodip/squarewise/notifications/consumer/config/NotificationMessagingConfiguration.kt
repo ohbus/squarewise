@@ -6,7 +6,10 @@ import com.subhrodip.squarewise.notifications.delivery.rate.RedisDeliveryRateLim
 import com.subhrodip.squarewise.notifications.email.config.EmailProperties
 import com.subhrodip.squarewise.notifications.consumer.transport.BrokerEnvelopeParser
 import com.subhrodip.squarewise.security.ratelimit.RateLimiter
+import com.subhrodip.squarewise.security.ratelimit.HmacRateLimitKeyDeriver
 import com.subhrodip.squarewise.security.ratelimit.RedisRateLimiter
+import io.micrometer.core.instrument.MeterRegistry
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.amqp.core.Binding
 import org.springframework.amqp.core.BindingBuilder
 import org.springframework.amqp.core.Declarables
@@ -21,12 +24,15 @@ import tools.jackson.databind.ObjectMapper
 /** Declares the notification event exchange, queues, and domain-event bindings. */
 @Configuration
 @EnableConfigurationProperties(NotificationMessagingProperties::class, EmailProperties::class)
-class NotificationMessagingConfiguration {
+class NotificationMessagingConfiguration(
+    @Value("\${SQUAREWISE_SECURITY_CREDENTIAL_DIGEST_SECRET:}")
+    private val encodedRateLimitSecret: String
+) {
 
     /** Creates the mandatory Redis-backed distributed limiter for runtime profiles. */
     @Bean
-    fun rateLimiter(redis: StringRedisTemplate): RateLimiter =
-        RedisRateLimiter(redis)
+    fun rateLimiter(redis: StringRedisTemplate, meterRegistry: MeterRegistry): RateLimiter =
+        RedisRateLimiter(redis, HmacRateLimitKeyDeriver.fromBase64(encodedRateLimitSecret), meterRegistry)
 
     /** Requires the application-managed mapper for broker envelope parsing. */
     @Bean

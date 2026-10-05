@@ -1,7 +1,5 @@
 package com.subhrodip.squarewise.security.ratelimit
 
-import java.nio.charset.StandardCharsets
-import java.security.MessageDigest
 import java.time.Duration
 import io.micrometer.core.instrument.MeterRegistry
 import org.springframework.context.annotation.Profile
@@ -20,13 +18,14 @@ import org.springframework.stereotype.Component
 @Profile("!test")
 class RedisRateLimiter(
     private val redis: StringRedisTemplate,
+    private val keyDeriver: RateLimitKeyDeriver,
     private val meterRegistry: MeterRegistry? = null
 ) : RateLimiter {
     private val script = DefaultRedisScript<String>(SCRIPT, String::class.java)
 
     override fun consume(key: String, policy: RateLimitPolicy): RateLimitDecision {
         require(key.length in 1..256) { "Rate-limit key material must be 1-256 characters" }
-        val redisKey = "squarewise:rl:v1:${key.sha256()}"
+        val redisKey = "squarewise:rl:v1:${keyDeriver.derive(key)}"
         return try {
             val result = redis.execute(
                 script,
@@ -54,10 +53,6 @@ class RedisRateLimiter(
     private fun record(policyId: String, outcome: String) {
         meterRegistry?.counter("squarewise.rate_limit.decisions", "policy", policyId, "outcome", outcome)?.increment()
     }
-
-    private fun String.sha256(): String = MessageDigest.getInstance("SHA-256")
-        .digest(toByteArray(StandardCharsets.UTF_8))
-        .joinToString("") { byte -> "%02x".format(byte) }
 
     private companion object {
         const val SCRIPT = """

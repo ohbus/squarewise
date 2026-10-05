@@ -370,10 +370,11 @@ No production launch approval is implied by local Redis tests.
 
 Added the provider-neutral `RateLimiter`, bounded `RateLimitPolicy`, safe
 `RateLimitDecision`, fail-closed store exception, and atomic Redis adapter under
-`libs/security`. The adapter hashes caller-provided canonical key material before
-constructing the namespaced Redis key and maps the single-script result to
-bounded decision metadata. Policy validation tests pass. Service migration and
-live Redis/public-interface evidence remain open.
+`libs/security`. The adapter derives caller-provided canonical key material with
+a deployment HMAC secret before constructing the namespaced Redis key and maps
+the single-script result to bounded decision metadata. Policy and key-derivation
+tests pass. Service migration and live Redis/public-interface evidence remain
+open.
 
 Accounts login-start and refresh admission now consume the shared `RateLimiter`
 port in production wiring. The former Accounts-specific bucket port and Redis
