@@ -1,6 +1,7 @@
 package com.subhrodip.squarewise.db.config
 
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -14,6 +15,37 @@ class DbPropertiesTest {
         connectionTimeoutMs = 2_000,
         maxLifetimeMs = 1_800_000,
     )
+
+    @Test
+    fun `configuration properties retain values supplied by binding`() {
+        val pool = PoolProperties()
+        pool.url = "jdbc:postgresql://reader/db"
+        pool.username = "reader"
+        pool.password = "secret"
+        pool.maximumPoolSize = 12
+        pool.connectionTimeoutMs = 3_000
+        pool.maxLifetimeMs = 60_000
+
+        val properties = DbProperties()
+        properties.enabled = true
+        properties.writer = pool
+        properties.readers = mapOf("reader" to pool)
+        properties.readerIsWriterDiagnostic = true
+        properties.readerLagBudgetMs = 7_000
+        properties.healthProbeIntervalMs = 4_000
+
+        assertEquals("jdbc:postgresql://reader/db", properties.writer.url)
+        assertEquals("reader", properties.writer.username)
+        assertEquals("secret", properties.writer.password)
+        assertEquals(12, properties.writer.maximumPoolSize)
+        assertEquals(3_000, properties.writer.connectionTimeoutMs)
+        assertEquals(60_000, properties.writer.maxLifetimeMs)
+        assertEquals(pool, properties.readers["reader"])
+        assertTrue(properties.enabled)
+        assertTrue(properties.readerIsWriterDiagnostic)
+        assertEquals(7_000, properties.readerLagBudgetMs)
+        assertEquals(4_000, properties.healthProbeIntervalMs)
+    }
     @Test
     fun `diagnostic reader alias is explicit and disabled by default`() {
         assertFalse(DbProperties().readerIsWriterDiagnostic)
