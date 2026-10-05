@@ -5,7 +5,7 @@ services:
     build:
       context: ../..
       dockerfile: tests/fixtures/invalid_subject_oidc/Dockerfile
-    ports: ["127.0.0.1:8091:8080"]
+    ports: ["127.0.0.1:${INVALID_SUBJECT_HOST_PORT:-28091}:8080"]
     environment:
       INVALID_SUBJECT_OIDC_ISSUER: *invalid_subject_oidc_issuer
     healthcheck:

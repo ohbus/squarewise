@@ -1,0 +1,56 @@
+include:
+  - path: ../infra/local/docker-compose.yml
+
+services:
+  devcontainer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        DEVCONTAINER_BASE_IMAGE: ${DEVCONTAINER_BASE_IMAGE:-mcr.microsoft.com/devcontainers/base:ubuntu-24.04}
+        DEVCONTAINER_JDK_VERSION: ${DEVCONTAINER_JDK_VERSION:-25}
+        DEVCONTAINER_NODE_VERSION: ${DEVCONTAINER_NODE_VERSION:-22}
+        PYTHON_VERSION: ${PYTHON_VERSION:-3.12}
+        UV_VERSION: ${UV_VERSION:-0.6.5}
+        POSTGRES_CLIENT_VERSION: ${POSTGRES_CLIENT_VERSION:-17}
+    hostname: workspace-devcontainer
+    volumes:
+      - ..:/workspace:cached
+      - gradle-cache:/home/vscode/.gradle
+      - uv-cache:/home/vscode/.cache/uv
+    command: sleep infinity
+    environment:
+      DEVCONTAINER: "true"
+      SQUAREWISE_POSTGRES_HOST: ${SQUAREWISE_POSTGRES_HOSTNAME:-postgres-db}
+      SQUAREWISE_POSTGRES_PORT: 5432
+      PGHOST: ${SQUAREWISE_POSTGRES_HOSTNAME:-postgres-db}
+      PGPORT: 5432
+      PGUSER: ${POSTGRES_USER:-squarewise}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-squarewise-local-only}
+      SQUAREWISE_RABBITMQ_HOST: ${SQUAREWISE_RABBITMQ_HOSTNAME:-message-broker}
+      SQUAREWISE_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_HOST: ${SQUAREWISE_RABBITMQ_HOSTNAME:-message-broker}
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER:-squarewise}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS:-squarewise-local-only}
+      SQUAREWISE_REDIS_HOST: ${SQUAREWISE_REDIS_HOSTNAME:-rate-limit-redis}
+      SQUAREWISE_REDIS_PORT: 6379
+      SQUAREWISE_MAILPIT_HOST: ${SQUAREWISE_MAILPIT_HOSTNAME:-mailpit-email}
+      SQUAREWISE_MAILPIT_PORT: 1025
+      SQUAREWISE_KEYCLOAK_URL: http://${SQUAREWISE_IDP_HOSTNAME:-idp-keycloak}:8080
+      SQUAREWISE_SECURITY_OIDC_ISSUER_URI: http://${SQUAREWISE_IDP_HOSTNAME:-idp-keycloak}:8080/realms/squarewise
+      SQUAREWISE_SECURITY_OIDC_AUDIENCE: squarewise-api
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      default:
+        aliases:
+          - workspace-devcontainer
+
+volumes:
+  gradle-cache:
+  uv-cache:
+
+networks:
+  default:
+    name: squarewise-local-net

@@ -37,10 +37,10 @@ from tests.http_constants import (
 )
 from tests.e2e.qa10_evidence import ExecutionOperation, load_execution_specs, write_execution_evidence
 
-BASE_URL = os.environ.get("SQUAREWISE_BFF_URL", "http://localhost:8080")
-ACCOUNTS_URL = os.environ.get("SQUAREWISE_ACCOUNTS_URL", "http://localhost:8081")
-EXPENSE_CORE_URL = os.environ.get("SQUAREWISE_EXPENSE_CORE_URL", "http://localhost:8082")
-NOTIFICATIONS_URL = os.environ.get("SQUAREWISE_NOTIFICATIONS_URL", "http://localhost:8083")
+BASE_URL = os.environ.get("SQUAREWISE_BFF_URL", "http://localhost:28080")
+ACCOUNTS_URL = os.environ.get("SQUAREWISE_ACCOUNTS_URL", "http://localhost:28081")
+EXPENSE_CORE_URL = os.environ.get("SQUAREWISE_EXPENSE_CORE_URL", "http://localhost:28082")
+NOTIFICATIONS_URL = os.environ.get("SQUAREWISE_NOTIFICATIONS_URL", "http://localhost:28083")
 
 
 def request_json(

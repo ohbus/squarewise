@@ -33,12 +33,13 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 from tests.e2e.qa10_evidence import write_execution_evidence
 
-BFF_URL = "http://localhost:8080"
-EXPENSE_CORE_URL = "http://localhost:8082"
+BFF_URL = os.environ.get("SQUAREWISE_BFF_URL", "http://localhost:28080")
+ACCOUNTS_URL = os.environ.get("SQUAREWISE_ACCOUNTS_URL", "http://localhost:28081")
+EXPENSE_CORE_URL = os.environ.get("SQUAREWISE_EXPENSE_CORE_URL", "http://localhost:28082")
 HTTP_TIMEOUT_SECONDS = 10
 SOCKET_SETUP_TIMEOUT_SECONDS = 10
 WS_HOST = "localhost"
-WS_PORT = 8080
+WS_PORT = int(os.environ.get("SQUAREWISE_BFF_PORT", "28080"))
 
 
 
@@ -265,11 +266,11 @@ def run_concurrency_and_subscriptions_test() -> None:
     if not user_a or not user_b or not user_nonmember:
         raise RuntimeError("E2E persona variables must contain signed tokens")
 
-    status, profile_a = request_json(f"http://localhost:8081/accounts/v1/me", bearer=user_a)
+    status, profile_a = request_json(f"{ACCOUNTS_URL}/accounts/v1/me", bearer=user_a)
     assert status == 200, f"Failed to get profile for Alice: {profile_a}"
     alice_id = profile_a["accountId"]
 
-    status, profile_b = request_json(f"http://localhost:8081/accounts/v1/me", bearer=user_b)
+    status, profile_b = request_json(f"{ACCOUNTS_URL}/accounts/v1/me", bearer=user_b)
     assert status == 200, f"Failed to get profile for Bob: {profile_b}"
     bob_id = profile_b["accountId"]
 

@@ -15,8 +15,8 @@ from urllib.request import Request, urlopen
 from tests.http_constants import AUTHORIZATION, CONTENT_TYPE
 from tests.e2e.qa10_evidence import write_execution_evidence
 
-ACCOUNTS_URL = os.environ.get("SQUAREWISE_ACCOUNTS_URL", "http://localhost:8081")
-MAILPIT_URL = os.environ.get("SQUAREWISE_MAILPIT_URL", "http://localhost:8025")
+ACCOUNTS_URL = os.environ.get("SQUAREWISE_ACCOUNTS_URL", "http://localhost:28081")
+MAILPIT_URL = os.environ.get("SQUAREWISE_MAILPIT_URL", "http://localhost:28025")
 
 
 def request_json(

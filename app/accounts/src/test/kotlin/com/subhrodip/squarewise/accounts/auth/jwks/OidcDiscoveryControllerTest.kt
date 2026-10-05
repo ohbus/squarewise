@@ -57,10 +57,10 @@ class OidcDiscoveryControllerTest {
                 .accept(MediaType.APPLICATION_JSON)
         )
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.issuer").value("http://localhost:8081"))
+            .andExpect(jsonPath("$.issuer").value("http://localhost:28081"))
             .andExpect(
                 jsonPath("$.jwks_uri").value(
-                    "http://localhost:8081${ApiEndpoints.Accounts.V1.WELL_KNOWN_JWKS}"
+                    "http://localhost:28081${ApiEndpoints.Accounts.V1.WELL_KNOWN_JWKS}"
                 )
             )
     }

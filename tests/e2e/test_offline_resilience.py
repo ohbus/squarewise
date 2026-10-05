@@ -29,9 +29,9 @@ from typing import Any, Tuple
 from tests.http_constants import ACCEPT, APPLICATION_JSON, AUTHORIZATION, BEARER_PREFIX, CONTENT_TYPE, IDEMPOTENCY_KEY
 from tests.e2e.qa10_evidence import write_execution_evidence
 
-BASE_URL = os.environ.get("SQUAREWISE_BFF_URL", "http://localhost:8080")
-EXPENSE_CORE_URL = os.environ.get("SQUAREWISE_EXPENSE_CORE_URL", "http://localhost:8082")
-ACCOUNTS_URL = os.environ.get("SQUAREWISE_ACCOUNTS_URL", "http://localhost:8081")
+BASE_URL = os.environ.get("SQUAREWISE_BFF_URL", "http://localhost:28080")
+EXPENSE_CORE_URL = os.environ.get("SQUAREWISE_EXPENSE_CORE_URL", "http://localhost:28082")
+ACCOUNTS_URL = os.environ.get("SQUAREWISE_ACCOUNTS_URL", "http://localhost:28081")
 
 
 def request_json(

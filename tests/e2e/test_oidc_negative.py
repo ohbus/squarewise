@@ -20,10 +20,10 @@ TOKEN: Final[str] = os.environ.get("BEARER_TOKEN", "")
 WRONG_ISSUER_TOKEN: Final[str] = os.environ.get("WRONG_ISSUER_TOKEN", "")
 EXPIRED_TOKEN: Final[str] = os.environ.get("EXPIRED_TOKEN", "")
 INVALID_SUBJECT_TOKEN: Final[str] = os.environ.get("INVALID_SUBJECT_TOKEN", "")
-ACCOUNTS_URL: Final[str] = os.environ.get("ACCOUNTS_URL", "http://localhost:8081")
-EXPENSE_CORE_URL: Final[str] = os.environ.get("EXPENSE_CORE_URL", "http://localhost:8082")
-NOTIFICATIONS_URL: Final[str] = os.environ.get("NOTIFICATIONS_URL", "http://localhost:8083")
-BFF_URL: Final[str] = os.environ.get("BFF_URL", "http://localhost:8080")
+ACCOUNTS_URL: Final[str] = os.environ.get("ACCOUNTS_URL", "http://localhost:28081")
+EXPENSE_CORE_URL: Final[str] = os.environ.get("EXPENSE_CORE_URL", "http://localhost:28082")
+NOTIFICATIONS_URL: Final[str] = os.environ.get("NOTIFICATIONS_URL", "http://localhost:28083")
+BFF_URL: Final[str] = os.environ.get("BFF_URL", "http://localhost:28080")
 EXPECTED_STATUS: Final[int] = 401
 
 

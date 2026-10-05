@@ -20,7 +20,9 @@ COMPOSE_PROJECT: Final[str] = os.environ.get("SQUAREWISE_COMPOSE_PROJECT", "")
 REDIS_PASSWORD: Final[str] = os.environ.get(
     "REDIS_PASSWORD", "squarewise-redis-local-only"
 )
-ACCOUNTS_URL: Final[str] = os.environ.get("ACCOUNTS_URL", "http://localhost:8081")
+ACCOUNTS_URL: Final[str] = os.environ.get(
+    "ACCOUNTS_URL", os.environ.get("SQUAREWISE_ACCOUNTS_URL", "http://localhost:28081")
+)
 REFRESH_PATH: Final[str] = "/accounts/v1/auth/token/refresh"
 PROBE_TOKEN: Final[str] = "auth-cache-resilience-invalid-refresh"
 RATE_LIMIT_KEY_PATTERN: Final[str] = "squarewise:rate-limit:v1:*"

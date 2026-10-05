@@ -26,10 +26,10 @@ import uuid
 from typing import Any
 from tests.http_constants import APPLICATION_JSON, AUTHORIZATION, BEARER_PREFIX, CONTENT_TYPE
 
-BFF_URL = "http://localhost:8080"
-ACCOUNTS_URL = "http://localhost:8081"
-EXPENSE_CORE_URL = "http://localhost:8082"
-NOTIFICATIONS_URL = "http://localhost:8083"
+BFF_URL = os.environ.get("SQUAREWISE_BFF_URL", "http://localhost:28080")
+ACCOUNTS_URL = os.environ.get("SQUAREWISE_ACCOUNTS_URL", "http://localhost:28081")
+EXPENSE_CORE_URL = os.environ.get("SQUAREWISE_EXPENSE_CORE_URL", "http://localhost:28082")
+NOTIFICATIONS_URL = os.environ.get("SQUAREWISE_NOTIFICATIONS_URL", "http://localhost:28083")
 EXPENSE_CORE_CONTAINER = os.environ.get("SQUAREWISE_EXPENSE_CORE_CONTAINER", "local-expense-core-1")
 RABBITMQ_CONTAINER = os.environ.get("SQUAREWISE_RABBITMQ_CONTAINER", "local-rabbitmq-1")
 POSTGRES_CONTAINER = os.environ.get("SQUAREWISE_POSTGRES_CONTAINER", "local-postgres-1")
