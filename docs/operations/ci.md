@@ -10,6 +10,16 @@ The PR, branch, and master callers grant `pull-requests: read` because the reusa
 dependency-review job declares that least-privilege permission; the job remains
 skipped for non-PR events.
 
+PR and non-master branch runs now calculate a changed-scope plan before the Gradle
+matrix. The plan selects changed modules plus their reverse project dependents and
+selects only the E2E streams affected by the changed paths. Master and manually
+dispatched master runs pass `full_run: true` and retain the complete matrix and all
+E2E streams. Repository-wide preflight, lint, contract, security, and Sonar jobs
+remain global checks where their tools need the complete repository; they are not
+pretended to be module-local checks. The scope resolver is
+`tools/ci/changed_scope.py`, with behavior tests in
+`tests/tools/test_changed_scope.py`.
+
 The reusable workflow applies Gradle dependency and build caching with
 content-addressed keys and restore fallbacks. E2E uses the same policy, while
 Docker BuildKit layers use the GitHub Actions cache backend. Cache misses only
@@ -47,8 +57,12 @@ The monolithic E2E stage is split into three parallel streams:
 2. `e2e-product-and-offline`: Passwordless auth-email delivery (`make e2e-auth-email`), public acceptance suite (`make acceptance-live`), ordered Bruno collection (`make bruno-run`), live multi-service product lifecycle (`make e2e-live`), and offline client synchronization / replay resilience (`make e2e-offline`).
 3. `e2e-concurrency-and-chaos`: Real-time WebSocket GraphQL subscription invalidation, concurrent member edit race resolution (`make e2e-concurrency`), message broker outage chaos, and transactional outbox drain recovery (`make e2e-chaos`).
 
-An aggregate gate job (`e2e-gate`) monitors all parallel streams and provides a single,
-authoritative status check for branch protection rules.
+An aggregate gate job (`e2e-gate`) monitors the selected parallel streams and provides
+a single status check for branch protection rules. It fails only when a selected
+stream fails, or when the shared preflight/artifact preparation fails. Intentionally
+unselected streams are reported as not evaluated and do not fail the gate. If no E2E
+stream is selected, the gate is skipped rather than falsely reporting a full E2E pass.
+Master always selects all three streams.
 
 The matrix tests every application and library in parallel after a single
 preflight, validates contracts, REST path structure, GraphQL schema/resolver

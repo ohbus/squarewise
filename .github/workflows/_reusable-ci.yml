@@ -4,6 +4,7 @@ on:
   workflow_call:
     inputs:
       run_e2e: { type: boolean, required: false, default: false }
+      full_run: { type: boolean, required: false, default: false }
 permissions:
   contents: read
 
@@ -16,6 +17,69 @@ env:
   SQUAREWISE_SECURITY_AUTH_EMAIL_ENVELOPE_KEY: 'ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj8='
 
 jobs:
+  scope:
+    name: Determine changed verification scope
+    runs-on: ubuntu-slim
+    permissions:
+      contents: read
+    outputs:
+      matrix: ${{ steps.scope.outputs.matrix }}
+      has_verify: ${{ steps.scope.outputs.has_verify }}
+      full_scope: ${{ steps.scope.outputs.full_scope }}
+      run_sonar: ${{ steps.scope.outputs.run_sonar }}
+      has_e2e: ${{ steps.scope.outputs.has_e2e }}
+      run_edge: ${{ steps.scope.outputs.run_edge }}
+      run_product: ${{ steps.scope.outputs.run_product }}
+      run_chaos: ${{ steps.scope.outputs.run_chaos }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up isolated Python tooling
+        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+      - name: Install dependencies from lockfile
+        run: uv sync --frozen --no-build
+      - name: Calculate changed paths
+        id: changed-paths
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          FULL_RUN: ${{ inputs.full_run }}
+          BEFORE_SHA: ${{ github.event.before }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          : > changed-paths.txt
+          if [ "${FULL_RUN}" = "true" ]; then
+            :
+          elif [ "${EVENT_NAME}" = "pull_request" ]; then
+            git diff --name-only "${BASE_SHA}" "${HEAD_SHA}" > changed-paths.txt
+          elif [ -n "${BEFORE_SHA}" ] && [ "${BEFORE_SHA}" != "0000000000000000000000000000000000000000" ]; then
+            git diff --name-only "${BEFORE_SHA}" "${HEAD_SHA}" > changed-paths.txt
+          else
+            echo 'No usable push base was provided; selecting the full scope.' >> "$GITHUB_OUTPUT"
+            echo 'true' > full-run-fallback.txt
+          fi
+      - name: Resolve module and E2E scope
+        id: scope
+        shell: bash
+        env:
+          FULL_RUN: ${{ inputs.full_run }}
+        run: |
+          set -euo pipefail
+          full_run_args=()
+          if [ "${FULL_RUN}" = "true" ] || [ -f full-run-fallback.txt ]; then
+            full_run_args+=(--full-run)
+          fi
+          uv run --frozen --no-build python tools/ci/changed_scope.py "${full_run_args[@]}" < changed-paths.txt | tee scope.json
+          while IFS='=' read -r key value; do
+            case "${key}" in
+              matrix|has_verify|full_scope|run_sonar|has_e2e|run_edge|run_product|run_chaos)
+                echo "${key}=${value}" >> "$GITHUB_OUTPUT" ;;
+            esac
+          done < <(tail -n +2 scope.json)
   preflight:
     name: Contracts and Compose preflight
     runs-on: ubuntu-slim
@@ -99,7 +163,8 @@ jobs:
   verify:
     name: Verify ${{ matrix.kind }} / ${{ matrix.name }}
     runs-on: ubuntu-latest
-    needs: preflight
+    if: needs.scope.outputs.has_verify == 'true'
+    needs: [preflight, scope]
     services:
       postgres:
         image: postgres:17
@@ -125,16 +190,7 @@ jobs:
       # failures caused by launching all 18 service containers at once.
       max-parallel: 4
       matrix:
-        include:
-          - { kind: app, name: accounts, path: ':app:accounts', report: 'app/accounts/build/reports/jacoco/test/jacocoTestReport.xml' }
-          - { kind: app, name: expense-core, path: ':app:expense-core', report: 'app/expense-core/build/reports/jacoco/test/jacocoTestReport.xml' }
-          - { kind: app, name: notifications, path: ':app:notifications', report: 'app/notifications/build/reports/jacoco/test/jacocoTestReport.xml' }
-          - { kind: app, name: bff, path: ':app:bff', report: 'app/bff/build/reports/jacoco/test/jacocoTestReport.xml' }
-          - { kind: library, name: db, path: ':libs:db', report: 'libs/db/build/reports/jacoco/test/jacocoTestReport.xml' }
-          - { kind: library, name: errors, path: ':libs:errors', report: 'libs/errors/build/reports/jacoco/test/jacocoTestReport.xml' }
-          - { kind: library, name: observability, path: ':libs:observability', report: 'libs/observability/build/reports/jacoco/test/jacocoTestReport.xml' }
-          - { kind: library, name: security, path: ':libs:security', report: 'libs/security/build/reports/jacoco/test/jacocoTestReport.xml' }
-          - { kind: library, name: test-support, path: ':libs:test-support', report: '' }
+        include: ${{ fromJSON(needs.scope.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -160,7 +216,7 @@ jobs:
           key: squarewise-gradle-build-${{ runner.os }}-${{ hashFiles('**/*.gradle.kts', '**/gradle.properties', 'gradle/libs.versions.toml') }}
           restore-keys: squarewise-gradle-build-${{ runner.os }}-
       - name: Build, test, check, and coverage
-        run: ./gradlew ${{ matrix.path }}:test ${{ matrix.path }}:check jacocoTestReport --no-daemon
+        run: ./gradlew ${{ matrix.path }}:test ${{ matrix.path }}:check ${{ matrix.path }}:jacocoTestReport --no-daemon
       - name: Build application artifact
         if: matrix.kind == 'app'
         run: ./gradlew ${{ matrix.path }}:bootJar --no-daemon
@@ -192,8 +248,8 @@ jobs:
 
   qa10-coverage-inventory:
     name: QA-10 aggregate branch inventory
-    if: needs.verify.result == 'success'
-    needs: verify
+    if: always() && needs.scope.outputs.full_scope == 'true' && needs.verify.result == 'success'
+    needs: [scope, verify]
     runs-on: ubuntu-slim
     permissions:
       contents: read
@@ -217,11 +273,7 @@ jobs:
           set -euo pipefail
           for module in app/accounts app/expense-core app/notifications app/bff libs/db libs/errors libs/observability libs/security; do
             report="$(find .qa10-reports -path "*/${module}/build/reports/jacoco/test/jacocoTestReport.xml" -print -quit)"
-            if test -z "$report"; then
-              echo "Missing JaCoCo report for ${module}; downloaded files:" >&2
-              find .qa10-reports -type f -print >&2 | sort
-              exit 1
-            fi
+            test -n "$report"
             mkdir -p "${module}/build/reports/jacoco/test"
             cp "$report" "${module}/build/reports/jacoco/test/jacocoTestReport.xml"
           done
@@ -237,8 +289,9 @@ jobs:
 
   sonar:
     name: SonarQube quality analysis
+    if: needs.scope.outputs.run_sonar == 'true'
     runs-on: ubuntu-latest
-    needs: preflight
+    needs: [preflight, scope]
     services:
       postgres:
         image: postgres:17
@@ -293,10 +346,38 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: ./gradlew build jacocoTestReport sonar --info --no-daemon
 
+  e2e-artifacts:
+    name: Package application artifacts for selected E2E
+    if: always() && inputs.run_e2e && needs.scope.outputs.has_e2e == 'true' && needs.preflight.result == 'success'
+    needs: [preflight, scope]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v6
+        with:
+          distribution: microsoft
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: gradle
+      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+      - name: Build all application boot JARs without rerunning tests
+        run: ./gradlew :app:accounts:bootJar :app:expense-core:bootJar :app:notifications:bootJar :app:bff:bootJar --no-daemon
+      - name: Upload E2E application JARs
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-app-jars
+          path: app/*/build/libs/*.jar
+          if-no-files-found: error
+          retention-days: 5
+
   e2e-edge-and-security:
     name: E2E edge cases, negative OIDC, and contract smoke
-    if: inputs.run_e2e
-    needs: [preflight, verify]
+    if: always() && inputs.run_e2e && needs.scope.outputs.run_edge == 'true' && needs.preflight.result == 'success' && needs.e2e-artifacts.result == 'success'
+    needs: [preflight, scope, e2e-artifacts]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -312,17 +393,13 @@ jobs:
       - name: Download application JAR artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: app-jar-*
+          name: e2e-app-jars
           path: app/
-          merge-multiple: false
-      - name: Organize application JAR artifacts
+      - name: Verify application JAR artifacts
         run: |
           for svc in accounts expense-core notifications bff; do
-            mkdir -p "app/${svc}/build/libs"
-            artifact="app/app-jar-${svc}/squarewise-${svc}-0.1.0-SNAPSHOT.jar"
+            artifact="app/${svc}/build/libs/squarewise-${svc}-0.1.0-SNAPSHOT.jar"
             test -f "$artifact"
-            mv "$artifact" "app/${svc}/build/libs/"
-            test -f "app/${svc}/build/libs/squarewise-${svc}-0.1.0-SNAPSHOT.jar"
           done
       - name: Run contract and deployment smoke checks
         run: bash tests/e2e/contract-smoke.sh
@@ -359,7 +436,7 @@ jobs:
           uv run --frozen --no-build python3 tests/e2e/test_oidc_negative.py --variant provider
           uv run --frozen --no-build python3 tests/e2e/test_oidc_websocket_negative.py
           docker compose -f infra/local/docker-compose.dev.yml -f infra/local/docker-compose.invalid-subject.yml up -d --build --wait
-          invalid_subject_token="$(curl --fail-with-body --silent --show-error -X POST http://localhost:28091/token | uv run --frozen --no-build python3 -c 'import json,sys; print(json.load(sys.stdin)["access_token"])')"
+          invalid_subject_token="$(curl --fail-with-body --silent --show-error -X POST http://localhost:8091/token | uv run --frozen --no-build python3 -c 'import json,sys; print(json.load(sys.stdin)["access_token"])')"
           test -n "$invalid_subject_token"
           INVALID_SUBJECT_TOKEN="$invalid_subject_token" uv run --frozen --no-build python3 tests/e2e/test_oidc_negative.py --variant provider
           INVALID_SUBJECT_TOKEN="$invalid_subject_token" BEARER_TOKEN="$BEARER_TOKEN" uv run --frozen --no-build python3 tests/e2e/test_oidc_websocket_negative.py
@@ -406,8 +483,8 @@ jobs:
 
   e2e-product-and-offline:
     name: E2E acceptance, Bruno, product journey, and offline sync
-    if: inputs.run_e2e
-    needs: [preflight, verify]
+    if: always() && inputs.run_e2e && needs.scope.outputs.run_product == 'true' && needs.preflight.result == 'success' && needs.e2e-artifacts.result == 'success'
+    needs: [preflight, scope, e2e-artifacts]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -423,17 +500,13 @@ jobs:
       - name: Download application JAR artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: app-jar-*
+          name: e2e-app-jars
           path: app/
-          merge-multiple: false
-      - name: Organize application JAR artifacts
+      - name: Verify application JAR artifacts
         run: |
           for svc in accounts expense-core notifications bff; do
-            mkdir -p "app/${svc}/build/libs"
-            artifact="app/app-jar-${svc}/squarewise-${svc}-0.1.0-SNAPSHOT.jar"
+            artifact="app/${svc}/build/libs/squarewise-${svc}-0.1.0-SNAPSHOT.jar"
             test -f "$artifact"
-            mv "$artifact" "app/${svc}/build/libs/"
-            test -f "app/${svc}/build/libs/squarewise-${svc}-0.1.0-SNAPSHOT.jar"
           done
       - name: Start the complete local application stack
         run: docker compose -f infra/local/docker-compose.dev.yml up -d --build --wait
@@ -530,8 +603,8 @@ jobs:
 
   e2e-concurrency-and-chaos:
     name: E2E concurrency, WebSocket subscriptions, and broker chaos
-    if: inputs.run_e2e
-    needs: [preflight, verify]
+    if: always() && inputs.run_e2e && needs.scope.outputs.run_chaos == 'true' && needs.preflight.result == 'success' && needs.e2e-artifacts.result == 'success'
+    needs: [preflight, scope, e2e-artifacts]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -547,17 +620,13 @@ jobs:
       - name: Download application JAR artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: app-jar-*
+          name: e2e-app-jars
           path: app/
-          merge-multiple: false
-      - name: Organize application JAR artifacts
+      - name: Verify application JAR artifacts
         run: |
           for svc in accounts expense-core notifications bff; do
-            mkdir -p "app/${svc}/build/libs"
-            artifact="app/app-jar-${svc}/squarewise-${svc}-0.1.0-SNAPSHOT.jar"
+            artifact="app/${svc}/build/libs/squarewise-${svc}-0.1.0-SNAPSHOT.jar"
             test -f "$artifact"
-            mv "$artifact" "app/${svc}/build/libs/"
-            test -f "app/${svc}/build/libs/squarewise-${svc}-0.1.0-SNAPSHOT.jar"
           done
       - name: Start the complete local application stack
         run: docker compose -f infra/local/docker-compose.dev.yml up -d --build --wait
@@ -608,25 +677,41 @@ jobs:
           retention-days: 14
 
   e2e-gate:
-    name: E2E verification gate
-    if: always() && inputs.run_e2e
-    needs: [e2e-edge-and-security, e2e-product-and-offline, e2e-concurrency-and-chaos]
+    name: E2E verification gate (selected suites)
+    if: always() && inputs.run_e2e && needs.scope.outputs.has_e2e == 'true'
+    needs: [scope, preflight, e2e-artifacts, e2e-edge-and-security, e2e-product-and-offline, e2e-concurrency-and-chaos]
     runs-on: ubuntu-slim
     permissions:
       contents: read
     steps:
       - name: Aggregate parallel E2E results
         run: |
+          set -euo pipefail
+          preflight_result="${{ needs.preflight.result }}"
+          artifacts_result="${{ needs.e2e-artifacts.result }}"
           edge_result="${{ needs.e2e-edge-and-security.result }}"
           product_result="${{ needs.e2e-product-and-offline.result }}"
           chaos_result="${{ needs.e2e-concurrency-and-chaos.result }}"
+          edge_selected="${{ needs.scope.outputs.run_edge }}"
+          product_selected="${{ needs.scope.outputs.run_product }}"
+          chaos_selected="${{ needs.scope.outputs.run_chaos }}"
+          echo "preflight: ${preflight_result}"
+          echo "E2E artifacts: ${artifacts_result}"
           echo "e2e-edge-and-security: ${edge_result}"
           echo "e2e-product-and-offline: ${product_result}"
           echo "e2e-concurrency-and-chaos: ${chaos_result}"
-          if [ "${edge_result}" = "success" ] && [ "${product_result}" = "success" ] && [ "${chaos_result}" = "success" ]; then
-            echo "All parallelized E2E test suites passed successfully."
-            exit 0
-          else
-            echo "One or more parallelized E2E test suites failed or were cancelled."
+          test "${preflight_result}" = success
+          test "${artifacts_result}" = success
+          if [ "${edge_selected}" = true ] && [ "${edge_result}" != success ]; then
+            echo 'Selected edge/security E2E did not pass.'
             exit 1
           fi
+          if [ "${product_selected}" = true ] && [ "${product_result}" != success ]; then
+            echo 'Selected product/offline E2E did not pass.'
+            exit 1
+          fi
+          if [ "${chaos_selected}" = true ] && [ "${chaos_result}" != success ]; then
+            echo 'Selected concurrency/chaos E2E did not pass.'
+            exit 1
+          fi
+          echo 'All selected E2E suites passed; intentionally unselected suites were not evaluated.'

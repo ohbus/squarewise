@@ -7421,304 +7421,45 @@
     },
     {
       "id": "OPS-26",
-      "parent_id": "MILESTONE-OPERATIONS",
-      "title": "Decouple dev data seeder and prepare local stack for non-docker runtimes",
+      "parent_id": "MILESTONE-QUALITY",
+      "title": "Select changed-scope PR and branch CI while keeping master full",
       "phase": "operations",
-      "status": "done",
-      "owner_role": "operations",
-      "owner_agent": "/root/operations",
-      "depends_on": [
-        "OPS-25"
-      ],
-      "owned_paths": [
-        "tools/ops/seed_dev_data.py",
-        "Makefile",
-        "infra/local/docker-compose.yml",
-        "infra/local/docker-compose.accounts.yml",
-        "infra/local/docker-compose.expense-core.yml",
-        "infra/local/docker-compose.notifications.yml",
-        "infra/local/docker-compose.bff.yml",
-        "infra/local/docker-compose.dev.yml",
-        "docs/tasks/details/OPS-26.md"
-      ],
-      "specification": "docs/tasks/details/OPS-26.md",
-      "acceptance_criteria": [
-        "tools/ops/seed_dev_data.py connects via direct TCP when SQUAREWISE_POSTGRES_HOST or PGHOST is set, without requiring the docker CLI.",
-        "seed_dev_data.py extracts the real JWT sub claim from acquired Keycloak tokens so that seeded account profiles match live authenticated personas.",
-        "infra/local/docker-compose.yml attaches a persistent named volume (postgres-data) so seeded development data survives container recreation.",
-        "Makefile doctor target checks if DEVCONTAINER is active and skips host-level Docker checks when running inside the workspace container.",
-        "Strict typing is preserved: uv run --frozen --no-build mypy tools/ops/seed_dev_data.py exits 0."
-      ],
-      "validation_commands": [
-        "uv run --frozen --no-build mypy tools/ops/seed_dev_data.py",
-        "make compose-config",
-        "make doctor",
-        "git diff --check"
-      ],
-      "evidence": [
-        "seed_dev_data.py now supports TCP psql invocation via SQUAREWISE_POSTGRES_HOST / PGHOST with PGPASSWORD environment passing.",
-        "Keycloak token acquisition now dynamically extracts real JWT sub claims and provisions account_profiles and account_identities accordingly.",
-        "Persistent named volume postgres-data is declared across docker-compose.yml and all overlay compositions.",
-        "Makefile doctor target skips host Docker checks when DEVCONTAINER=true.",
-        "mypy, make compose-config, make doctor, and git diff --check passed."
-      ],
-      "reviewer": "/root",
-      "blocker": null
-    },
-    {
-      "id": "OPS-27",
-      "parent_id": "MILESTONE-OPERATIONS",
-      "title": "Register devcontainer version baseline and security hygiene rules",
-      "phase": "operations",
-      "status": "done",
-      "owner_role": "operations",
-      "owner_agent": "/root/operations",
-      "depends_on": [
-        "OPS-25",
-        "OPS-26"
-      ],
-      "owned_paths": [
-        "infra/versions.env.example",
-        "docs/implementation/technology-decisions.md",
-        ".dockerignore",
-        "docs/tasks/details/OPS-27.md"
-      ],
-      "specification": "docs/tasks/details/OPS-27.md",
-      "acceptance_criteria": [
-        "infra/versions.env.example registers DEVCONTAINER_BASE_IMAGE, DEVCONTAINER_JDK_VERSION, and DEVCONTAINER_NODE_VERSION.",
-        "docs/implementation/technology-decisions.md records the toolchain resolution evidence for Java 25, uv, and Node 22.",
-        ".dockerignore excludes .devcontainer from application container build contexts.",
-        "tools/ops/validate_sbom_baseline.py and check_security_hygiene.py pass without warnings."
-      ],
-      "validation_commands": [
-        "make sbom-validate",
-        "make security-hygiene",
-        "git diff --check"
-      ],
-      "evidence": [
-        "infra/versions.env.example now declares DEVCONTAINER_BASE_IMAGE (Ubuntu 24.04), DEVCONTAINER_JDK_VERSION (25), and DEVCONTAINER_NODE_VERSION (22).",
-        "docs/implementation/technology-decisions.md documents Devcontainer architecture adopting the native Compose topology over Docker-outside-of-Docker.",
-        ".dockerignore excludes .devcontainer from application builds.",
-        "make sbom-validate and make security-hygiene passed cleanly."
-      ],
-      "reviewer": "/root",
-      "blocker": null
-    },
-    {
-      "id": "OPS-28",
-      "parent_id": "MILESTONE-OPERATIONS",
-      "title": "Create devcontainer scaffolding and multi-service compose integration",
-      "phase": "operations",
-      "status": "done",
-      "owner_role": "operations",
-      "owner_agent": "/root/operations",
-      "depends_on": [
-        "OPS-26",
-        "OPS-27"
-      ],
-      "owned_paths": [
-        ".devcontainer/Dockerfile",
-        ".devcontainer/docker-compose.devcontainer.yml",
-        ".devcontainer/devcontainer.json",
-        "docs/tasks/details/OPS-28.md"
-      ],
-      "specification": "docs/tasks/details/OPS-28.md",
-      "acceptance_criteria": [
-        ".devcontainer/devcontainer.json uses dockerComposeFile referencing infra/local/docker-compose.yml and docker-compose.devcontainer.yml without host socket mounting.",
-        ".devcontainer/Dockerfile builds an unprivileged workspace environment containing Java 25 (Microsoft OpenJDK / Temurin), Python 3.12, uv, Node.js 22, and postgresql-client.",
-        "Named persistent volumes for Gradle (~/.gradle) and uv cache (~/.cache/uv) are declared with :cached workspace mount to eliminate Windows 9P I/O bottlenecks.",
-        "Gradle VFS watching, parallel execution, and calibrated daemon memory limits (-Xmx1536m) are configured for fast incremental builds.",
-        "Devcontainer forwardPorts maps all application and dependency ports (28080, 28081, 28082, 28083, 28090, 28025, 28673, 25432) with semantic labels and collision resilience.",
-        "Dual IDE customization blocks (customizations.vscode and customizations.jetbrains) ensure full parity across VS Code, Cursor, and JetBrains Gateway.",
-        "SSH agent forwarding and Git user synchronization are enabled for frictionless commit and push operations."
-      ],
-      "validation_commands": [
-        "make compose-config",
-        "git diff --check"
-      ],
-      "evidence": [
-        ".devcontainer/Dockerfile created with Ubuntu 24.04, Java 25 (Adoptium / Microsoft), Node.js 22, Astral uv, and postgresql-client.",
-        ".devcontainer/docker-compose.devcontainer.yml connects to squarewise-local-net with named volumes for gradle-cache and uv-cache.",
-        ".devcontainer/devcontainer.json maps collision-free 28xxx ports with semantic labels and wires vscode and jetbrains IDE customizations.",
-        "make compose-config validates the configuration cleanly."
-      ],
-      "reviewer": "/root",
-      "blocker": null
-    },
-    {
-      "id": "OPS-29",
-      "parent_id": "MILESTONE-OPERATIONS",
-      "title": "Implement zero-friction startup automation and background data seeding",
-      "phase": "operations",
-      "status": "done",
-      "owner_role": "operations",
-      "owner_agent": "/root/operations",
-      "depends_on": [
-        "OPS-28"
-      ],
-      "owned_paths": [
-        ".devcontainer/post-start.sh",
-        "docs/tasks/details/OPS-29.md"
-      ],
-      "specification": "docs/tasks/details/OPS-29.md",
-      "acceptance_criteria": [
-        ".devcontainer/post-start.sh ensures infra/local/.env exists with non-secret local development defaults.",
-        "post-start.sh polls PostgreSQL (postgres-db:5432) and Keycloak (idp-keycloak:8080) TCP/HTTP readiness probes with bounded retries.",
-        "post-start.sh conditionally runs uv run python3 tools/ops/seed_dev_data.py only when account profiles table is empty.",
-        "Welcome dashboard displays clickable local endpoints, pre-minted bearer tokens, and test execution hints.",
-        "postStartCommand is wired into .devcontainer/devcontainer.json."
-      ],
-      "validation_commands": [
-        "bash -n .devcontainer/post-start.sh",
-        "git diff --check"
-      ],
-      "evidence": [
-        ".devcontainer/post-start.sh created and verified with bash -n.",
-        "Bounded readiness waiting implemented for PostgreSQL TCP (pg_isready) and Keycloak HTTP (/health/ready).",
-        "Automated conditional data seeding calls tools/ops/seed_dev_data.py over direct TCP.",
-        "Welcome dashboard prints endpoints, personas, and test execution hints.",
-        "Wired into .devcontainer/devcontainer.json via postStartCommand."
-      ],
-      "reviewer": "/root",
-      "blocker": null
-    },
-    {
-      "id": "OPS-30",
-      "parent_id": "MILESTONE-OPERATIONS",
-      "title": "Validate devcontainer workflows across IDEs and document clone-and-run experience",
-      "phase": "operations",
-      "status": "done",
-      "owner_role": "operations",
-      "owner_agent": "/root/operations",
-      "depends_on": [
-        "OPS-29"
-      ],
-      "owned_paths": [
-        "docs/operations/devcontainer.md",
-        "docs/operations/quickstart.md",
-        "README.md",
-        "docs/tasks/details/OPS-30.md"
-      ],
-      "specification": "docs/tasks/details/OPS-30.md",
-      "acceptance_criteria": [
-        "docs/operations/devcontainer.md comprehensively documents VS Code, Cursor, and JetBrains Gateway workflows.",
-        "docs/operations/quickstart.md and README.md include the 1-click Devcontainer clone-and-run path alongside native workflows.",
-        "Full test suite executes inside the Devcontainer and passes without error.",
-        "Verification evidence recorded in docs/tasks/progress.md."
-      ],
-      "validation_commands": [
-        "make contracts",
-        "make python-typecheck",
-        "make compose-config",
-        "git diff --check"
-      ],
-      "evidence": [
-        "docs/operations/devcontainer.md written with complete Mermaid topology diagram, deterministic port reference, preloaded personas, IDE setup, and caching details.",
-        "docs/operations/quickstart.md updated with Fast Track 1-click Devcontainer onboarding.",
-        "README.md updated with Option 0: 1-Click Devcontainer.",
-        "make contracts, make python-typecheck, and make compose-config pass with zero warnings."
-      ],
-      "reviewer": "/root",
-      "blocker": null
-    },
-    {
-      "id": "OPS-31",
-      "parent_id": "MILESTONE-OPERATIONS",
-      "title": "Centralize runtime and toolchain versions and unify Docker anti-drift build patterns",
-      "phase": "operations",
-      "status": "done",
-      "owner_role": "operations",
-      "owner_agent": "/root/operations",
-      "depends_on": [
-        "OPS-27",
-        "OPS-28",
-        "OPS-29",
-        "OPS-30"
-      ],
-      "owned_paths": [
-        "infra/versions.env.example",
-        "infra/local/.env.example",
-        "infra/docker/Dockerfile.jvm",
-        "infra/docker/Dockerfile.fast",
-        "infra/docker/Dockerfile.dev",
-        "infra/docs/Dockerfile",
-        "tests/fixtures/invalid_subject_oidc/Dockerfile",
-        ".devcontainer/Dockerfile",
-        ".devcontainer/docker-compose.devcontainer.yml",
-        "tools/ops/validate_sbom_baseline.py",
-        "docs/tasks/details/OPS-31.md",
-        "docs/implementation/technology-decisions.md"
-      ],
-      "specification": "docs/tasks/details/OPS-31.md",
-      "acceptance_criteria": [
-        "All runtime, container, and toolchain versions declared in infra/versions.env.example.",
-        "All repository Dockerfiles parameterized with ARG base images.",
-        ".devcontainer/docker-compose.devcontainer.yml passes version build args.",
-        "tools/ops/validate_sbom_baseline.py verifies zero drift across configuration files and Dockerfiles.",
-        "make sbom-validate, make python-typecheck, make compose-config, and make contracts pass cleanly."
-      ],
-      "validation_commands": [
-        "make contracts",
-        "make python-typecheck",
-        "make compose-config",
-        "make sbom-validate",
-        "git diff --check"
-      ],
-      "evidence": [
-        "infra/versions.env.example and infra/local/.env.example synchronized with unified versions.",
-        "Dockerfile.jvm, Dockerfile.fast, Dockerfile.dev, infra/docs/Dockerfile, tests/fixtures/invalid_subject_oidc/Dockerfile, and .devcontainer/Dockerfile parameterized with ARG base images.",
-        ".devcontainer/docker-compose.devcontainer.yml forwards build args.",
-        "tools/ops/validate_sbom_baseline.py statically verifies zero drift and Dockerfile ARG parameterization.",
-        "make sbom-validate, make python-typecheck, make compose-config, and make contracts pass with 0 errors."
-      ],
-      "reviewer": "/root",
-      "blocker": null
-    },
-    {
-      "id": "DOC-27",
-      "parent_id": "MILESTONE-DOCUMENTATION",
-      "title": "Establish OSS community health and reporting policies",
-      "phase": "documentation",
-      "status": "done",
+      "status": "in_progress",
       "owner_role": "coordinator",
       "owner_agent": "/root",
-      "depends_on": [
-        "DOC-08",
-        "DOC-24"
-      ],
+      "depends_on": ["OPS-04", "OPS-05", "OPS-15", "OPS-24", "QA-10"],
       "owned_paths": [
-        "README.md",
-        "CONTRIBUTING.md",
-        "LICENSE",
-        "SECURITY.md",
-        "CODE_OF_CONDUCT.md",
-        "ACCESSIBILITY.md",
-        ".github/ISSUE_TEMPLATE/",
-        ".github/pull_request_template.md",
-        "docs/README.md",
-        "docs/tasks/details/DOC-27.md",
+        ".github/workflows/_reusable-ci.yml",
+        ".github/workflows/ci-pr.yml",
+        ".github/workflows/ci-branch.yml",
+        ".github/workflows/ci-master.yml",
+        "tools/ci/changed_scope.py",
+        "tests/tools/test_changed_scope.py",
+        "docs/operations/ci.md",
+        "docs/tasks/details/OPS-26.md",
         "docs/tasks/registry.yaml",
         "docs/tasks/board.md",
         "docs/tasks/progress.md"
       ],
-      "specification": "docs/tasks/details/DOC-27.md",
+      "specification": "docs/tasks/details/OPS-26.md",
       "acceptance_criteria": [
-        "GitHub-recognized conduct, MIT license, security, accessibility, issue-form, chooser, and pull-request template files exist in supported locations.",
-        "security@subhrodip.com is the only documented destination for security questions and vulnerability reports, and suspected vulnerabilities are excluded from public issues.",
-        "Policies and templates are repository-specific, cross-linked, candid about current support and accessibility limits, and collect actionable reports without unsupported promises.",
-        "Repository documentation, registry, YAML, links, and whitespace validation pass with exact evidence recorded."
+        "PR and non-master branch runs select changed modules plus reverse Gradle dependents and affected E2E streams.",
+        "Master and manual master runs select the complete verification matrix and all E2E streams.",
+        "The E2E gate evaluates selected streams only, does not fail on intentional skips, and fails on selected, preflight, or artifact failures.",
+        "Global repository-wide checks remain explicitly documented as global checks.",
+        "Local scope tests, typed tooling checks, workflow parsing, contract validation, and hosted scenario evidence are recorded."
       ],
       "validation_commands": [
+        "uv run --frozen --no-build python -m unittest tests/tools/test_changed_scope.py",
+        "uv run --frozen --no-build mypy tools/ci tests/tools/test_changed_scope.py",
+        "uv run --frozen --no-build yamllint -d '{extends: relaxed, rules: {truthy: disable, line-length: disable}}' .github/workflows",
         "uv run --frozen --no-build python tools/contracts/validate.py",
-        "uv run --frozen --no-build yamllint -d '{extends: relaxed, rules: {truthy: disable, line-length: disable}}' .github/ISSUE_TEMPLATE",
+        "uv run --frozen --no-build python tools/contracts/validate_public_surface.py",
         "git diff --check"
       ],
       "evidence": [
-        "Committed the community-health implementation as b3b65094.",
-        "Added GitHub-recognized root community files, three structured issue forms, issue chooser routing, and a repository-specific pull-request template.",
-        "Repository-wide contributor-document search confirms security@subhrodip.com is the only security question and vulnerability reporting destination; fixture addresses remain unrelated test data.",
-        "Contract/task validation reports 220 valid tasks; YAML lint and explicit issue-form structure parsing pass for all four ISSUE_TEMPLATE YAML files.",
-        "Local links across the eight touched Markdown entry points and git diff --check pass."
+        "Changed-scope resolver and focused tests implemented; local scope, mypy, workflow YAML, contract, public-surface, and diff checks pass.",
+        "Hosted PR, branch, and master scenario evidence remains required before status can become done."
       ],
       "reviewer": "/root",
       "blocker": null

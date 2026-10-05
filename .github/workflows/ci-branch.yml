@@ -13,5 +13,7 @@ jobs:
   ci:
     name: Feature branch verification (reusable)
     uses: ./.github/workflows/_reusable-ci.yml
-    with: { run_e2e: true }
+    with:
+      run_e2e: true
+      full_run: ${{ github.event_name == 'workflow_dispatch' }}
     secrets: inherit

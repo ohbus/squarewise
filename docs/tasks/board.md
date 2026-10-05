@@ -108,6 +108,7 @@ query classification, and evidence gates are complete.
 | SEC-01E | coordinator | done | Formalize rate-limit proxy topology and bearer-revocation guarantees (SEC-007, SEC-008) |
 | SEC-01F | coordinator | done | Make security operations, telemetry, supply chain, and release evidence executable (SEC-010 - SEC-013) |
 | OPS-24 | coordinator | done | Remove undeclared Ruby dependency and E2E Compose host-port collisions from CI |
+| OPS-26 | coordinator | in_progress | Select changed-scope PR and branch CI while keeping master full |
 | OPS-17 | coordinator | done | Stable error taxonomy and service/source attribution |
 | OPS-18 | coordinator | done | Micrometer and Prometheus metrics for all services |
 | OPS-19 | operations | done | Dashboards, alerts, SLOs, and runbooks baseline |
