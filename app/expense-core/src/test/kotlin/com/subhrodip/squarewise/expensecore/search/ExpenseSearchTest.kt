@@ -96,6 +96,14 @@ class ExpenseSearchTest {
         }
     }
 
+    /** Verifies CSV export rejects a row bound above the documented maximum. */
+    @Test
+    fun `rejects csv row bounds above the maximum`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            ExpenseSearch().csv(emptyList(), maxRows = ExpenseSearch.MAX_EXPORT_ROWS + 1)
+        }
+    }
+
     /** Verifies an empty result still produces a valid header-only CSV export. */
     @Test
     fun `exports a header when no expenses match`() {
