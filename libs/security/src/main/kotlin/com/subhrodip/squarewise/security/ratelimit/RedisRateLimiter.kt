@@ -3,6 +3,7 @@ package com.subhrodip.squarewise.security.ratelimit
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.time.Duration
+import io.micrometer.core.instrument.MeterRegistry
 import org.springframework.context.annotation.Profile
 import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.data.redis.core.script.DefaultRedisScript
@@ -17,7 +18,10 @@ import org.springframework.stereotype.Component
  */
 @Component
 @Profile("!test")
-class RedisRateLimiter(private val redis: StringRedisTemplate) : RateLimiter {
+class RedisRateLimiter(
+    private val redis: StringRedisTemplate,
+    private val meterRegistry: MeterRegistry? = null
+) : RateLimiter {
     private val script = DefaultRedisScript<String>(SCRIPT, String::class.java)
 
     override fun consume(key: String, policy: RateLimitPolicy): RateLimitDecision {
@@ -36,12 +40,19 @@ class RedisRateLimiter(private val redis: StringRedisTemplate) : RateLimiter {
             val allowed = fields[0] == "1"
             val remaining = fields[1].toInt().coerceIn(0, policy.maximumPermits)
             val retryAfterSeconds = fields[2].toLong().coerceAtLeast(0)
+            record(policy.id, if (allowed) "allowed" else "denied")
             RateLimitDecision(allowed, remaining, Duration.ofSeconds(retryAfterSeconds), policy.id)
         } catch (exception: RateLimitStoreUnavailableException) {
+            record(policy.id, "store_error")
             throw exception
         } catch (exception: Exception) {
+            record(policy.id, "store_error")
             throw RateLimitStoreUnavailableException(exception)
         }
+    }
+
+    private fun record(policyId: String, outcome: String) {
+        meterRegistry?.counter("squarewise.rate_limit.decisions", "policy", policyId, "outcome", outcome)?.increment()
     }
 
     private fun String.sha256(): String = MessageDigest.getInstance("SHA-256")

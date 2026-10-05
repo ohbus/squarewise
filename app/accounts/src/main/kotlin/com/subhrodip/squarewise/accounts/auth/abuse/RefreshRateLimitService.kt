@@ -2,6 +2,7 @@ package com.subhrodip.squarewise.accounts.auth.abuse
 
 import com.subhrodip.squarewise.accounts.auth.credential.CredentialDigest
 import com.subhrodip.squarewise.security.ratelimit.RateLimitPolicy
+import com.subhrodip.squarewise.security.ratelimit.RateLimitPolicyIds
 import com.subhrodip.squarewise.security.ratelimit.RateLimiter
 import java.time.Duration
 import java.time.Instant
@@ -39,7 +40,7 @@ open class RefreshRateLimitService(
         val key = digest.digest("v1|refresh|$partition")
         return rateLimiter.consume(
             key = key.toHex(),
-            policy = RateLimitPolicy("auth-refresh", maximumPermits = maximumRequests, window = window)
+            policy = RateLimitPolicy(RateLimitPolicyIds.AUTH_REFRESH, maximumPermits = maximumRequests, window = window)
         ).allowed
     }
 

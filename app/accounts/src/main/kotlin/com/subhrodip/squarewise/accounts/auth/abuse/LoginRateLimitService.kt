@@ -3,6 +3,7 @@ package com.subhrodip.squarewise.accounts.auth.abuse
 import java.time.Duration
 import java.time.Instant
 import com.subhrodip.squarewise.security.ratelimit.RateLimitPolicy
+import com.subhrodip.squarewise.security.ratelimit.RateLimitPolicyIds
 import com.subhrodip.squarewise.security.ratelimit.RateLimiter
 import org.springframework.transaction.annotation.Transactional
 
@@ -28,7 +29,7 @@ open class LoginRateLimitService(
         val key = keyDeriver.derive(email, networkPartition)
         return rateLimiter.consume(
             key = key.toHex(),
-            policy = RateLimitPolicy("auth-login", maximumPermits = maximumRequests, window = window, cooldown = resendCooldown)
+            policy = RateLimitPolicy(RateLimitPolicyIds.AUTH_LOGIN, maximumPermits = maximumRequests, window = window, cooldown = resendCooldown)
         ).allowed
     }
 

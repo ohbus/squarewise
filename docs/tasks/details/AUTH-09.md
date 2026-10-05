@@ -407,6 +407,12 @@ fail-closed behavior, and restart recovery when Docker-backed execution runs;
 multi-replica concurrency, query-count, notification, and capacity suites are
 still separate open evidence.
 
+Rate-limit decisions now expose bounded Micrometer counters for `allowed`,
+`denied`, and `store_error`, tagged only by the centrally defined policy ID and
+outcome. No key, subject, IP, token, or request ID is used as a metric label.
+The shared policy identifier catalog is used by Accounts, Notifications, and
+the BFF; deployed scrape/alert evidence remains open.
+
 ### Current increment (2026-09-28)
 
 The login-start request path now throws the catalogued `ERR-11` application

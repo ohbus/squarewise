@@ -2,6 +2,7 @@ package com.subhrodip.squarewise.notifications.delivery.rate
 
 import java.time.Duration
 import com.subhrodip.squarewise.security.ratelimit.RateLimitPolicy
+import com.subhrodip.squarewise.security.ratelimit.RateLimitPolicyIds
 import com.subhrodip.squarewise.security.ratelimit.RateLimiter
 import com.subhrodip.squarewise.security.ratelimit.RedisRateLimiter
 import org.springframework.data.redis.core.StringRedisTemplate
@@ -25,7 +26,7 @@ class RedisDeliveryRateLimiter(
     override fun allow(subject: String): Boolean {
         return rateLimiter.consume(
             key = subject,
-            policy = RateLimitPolicy("notification-delivery", maximumPermits = limit, window = window)
+            policy = RateLimitPolicy(RateLimitPolicyIds.NOTIFICATION_DELIVERY, maximumPermits = limit, window = window)
         ).allowed
     }
 }

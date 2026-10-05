@@ -3,6 +3,7 @@ package com.subhrodip.squarewise.bff.config
 import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
 import com.subhrodip.squarewise.security.ratelimit.RateLimitPolicy
 import com.subhrodip.squarewise.security.ratelimit.RateLimitStoreUnavailableException
+import com.subhrodip.squarewise.security.ratelimit.RateLimitPolicyIds
 import com.subhrodip.squarewise.security.ratelimit.RateLimiter
 import java.time.Duration
 import java.util.UUID
@@ -32,7 +33,7 @@ class GraphQlRateLimitWebFilter(
         }
         val websocket = isWebSocketUpgrade(exchange)
         val policy = RateLimitPolicy(
-            id = if (websocket) "graphql-websocket" else "graphql-http",
+            id = if (websocket) RateLimitPolicyIds.GRAPHQL_WEBSOCKET else RateLimitPolicyIds.GRAPHQL_HTTP,
             maximumPermits = if (websocket) properties.maxWebSocketConnections else properties.maxHttpRequests,
             window = Duration.ofSeconds(
                 if (websocket) properties.webSocketWindowSeconds else properties.httpWindowSeconds
