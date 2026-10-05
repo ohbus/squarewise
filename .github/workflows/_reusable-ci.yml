@@ -192,7 +192,7 @@ jobs:
 
   qa10-coverage-inventory:
     name: QA-10 aggregate branch inventory
-    if: always()
+    if: needs.verify.result == 'success'
     needs: verify
     runs-on: ubuntu-slim
     permissions:
@@ -217,7 +217,11 @@ jobs:
           set -euo pipefail
           for module in app/accounts app/expense-core app/notifications app/bff libs/db libs/errors libs/observability libs/security; do
             report="$(find .qa10-reports -path "*/${module}/build/reports/jacoco/test/jacocoTestReport.xml" -print -quit)"
-            test -n "$report"
+            if test -z "$report"; then
+              echo "Missing JaCoCo report for ${module}; downloaded files:" >&2
+              find .qa10-reports -type f -print >&2 | sort
+              exit 1
+            fi
             mkdir -p "${module}/build/reports/jacoco/test"
             cp "$report" "${module}/build/reports/jacoco/test/jacocoTestReport.xml"
           done
