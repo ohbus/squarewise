@@ -27,15 +27,18 @@ class GraphQlRateLimitWebFilter(
     private val enabled: Boolean = true
 ) : WebFilter {
     override fun filter(exchange: ServerWebExchange, chain: WebFilterChain): Mono<Void> {
-        if (!enabled || exchange.request.uri.path != ApiEndpoints.Bff.GRAPHQL || isWebSocketUpgrade(exchange)) {
+        if (!enabled || exchange.request.uri.path != ApiEndpoints.Bff.GRAPHQL) {
             return chain.filter(exchange)
         }
+        val websocket = isWebSocketUpgrade(exchange)
         val policy = RateLimitPolicy(
-            id = "graphql-http",
-            maximumPermits = properties.maxHttpRequests,
-            window = Duration.ofSeconds(properties.httpWindowSeconds)
+            id = if (websocket) "graphql-websocket" else "graphql-http",
+            maximumPermits = if (websocket) properties.maxWebSocketConnections else properties.maxHttpRequests,
+            window = Duration.ofSeconds(
+                if (websocket) properties.webSocketWindowSeconds else properties.httpWindowSeconds
+            )
         )
-        val key = "graphql|${exchange.request.method}|${clientPartition(exchange)}"
+        val key = "graphql|${if (websocket) "websocket" else exchange.request.method}|${clientPartition(exchange)}"
         return try {
             val decision = rateLimiter.consume(key, policy)
             if (decision.allowed) {

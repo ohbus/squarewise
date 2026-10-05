@@ -395,6 +395,12 @@ their dedicated admission slice. Filter and live GraphQL transport tests pass;
 WebSocket, query-count, failure-drill, and live multi-replica evidence remain
 open.
 
+WebSocket upgrades now receive a distinct `graphql-websocket` admission policy
+at the same BFF handshake boundary instead of bypassing rate limiting. The
+policy is separate from GraphQL HTTP and remains subject to the existing JWT
+security chain and subscription-cap controls. Focused handshake tests pass;
+multi-replica reconnect and revoked-token live evidence remain open.
+
 ### Current increment (2026-09-28)
 
 The login-start request path now throws the catalogued `ERR-11` application

@@ -50,6 +50,29 @@ class GraphQlRateLimitWebFilterTest {
         assertFalse(reached.get())
     }
 
+    @Test
+    fun `websocket handshake is admitted through a separate policy`() {
+        val reached = AtomicBoolean(false)
+        var policyId: String? = null
+        val filter = GraphQlRateLimitWebFilter(
+            object : RateLimiter {
+                override fun consume(key: String, policy: RateLimitPolicy): RateLimitDecision {
+                    policyId = policy.id
+                    return RateLimitDecision(true, 19, Duration.ZERO, policy.id)
+                }
+            },
+            GraphQlAbuseProperties(maxWebSocketConnections = 20, webSocketWindowSeconds = 45)
+        )
+        val exchange = MockServerWebExchange.from(
+            MockServerHttpRequest.get("/graphql").header(HttpHeaders.UPGRADE, "websocket").build()
+        )
+
+        filter.filter(exchange, chain(reached)).block()
+
+        assertEquals("graphql-websocket", policyId)
+        assertEquals(true, reached.get())
+    }
+
     private fun limiter(decision: () -> RateLimitDecision): RateLimiter =
         object : RateLimiter {
             override fun consume(key: String, policy: RateLimitPolicy): RateLimitDecision = decision()
