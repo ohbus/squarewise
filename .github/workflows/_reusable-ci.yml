@@ -355,7 +355,7 @@ jobs:
           uv run --frozen --no-build python3 tests/e2e/test_oidc_negative.py --variant provider
           uv run --frozen --no-build python3 tests/e2e/test_oidc_websocket_negative.py
           docker compose -f infra/local/docker-compose.dev.yml -f infra/local/docker-compose.invalid-subject.yml up -d --build --wait
-          invalid_subject_token="$(curl --fail-with-body --silent --show-error -X POST http://localhost:8091/token | uv run --frozen --no-build python3 -c 'import json,sys; print(json.load(sys.stdin)["access_token"])')"
+          invalid_subject_token="$(curl --fail-with-body --silent --show-error -X POST http://localhost:28091/token | uv run --frozen --no-build python3 -c 'import json,sys; print(json.load(sys.stdin)["access_token"])')"
           test -n "$invalid_subject_token"
           INVALID_SUBJECT_TOKEN="$invalid_subject_token" uv run --frozen --no-build python3 tests/e2e/test_oidc_negative.py --variant provider
           INVALID_SUBJECT_TOKEN="$invalid_subject_token" BEARER_TOKEN="$BEARER_TOKEN" uv run --frozen --no-build python3 tests/e2e/test_oidc_websocket_negative.py
