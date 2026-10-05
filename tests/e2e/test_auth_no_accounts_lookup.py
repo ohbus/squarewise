@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 from typing import Final
 from urllib.error import HTTPError
@@ -20,6 +21,23 @@ REDIS_PASSWORD: Final[str] = os.environ.get(
 BEARER_TOKEN: Final[str] = os.environ.get("BEARER_TOKEN", "")
 EXPENSE_CORE_URL: Final[str] = os.environ.get("EXPENSE_CORE_URL", "http://localhost:8082")
 BFF_URL: Final[str] = os.environ.get("BFF_URL", "http://localhost:8080")
+
+
+def statement_count(base_url: str, operation: str) -> int:
+    """Read one bounded Hibernate statement counter from a protected actuator endpoint."""
+    if not BEARER_TOKEN:
+        raise RuntimeError("BEARER_TOKEN is required for the local JWT lookup probe")
+    request = Request(
+        f"{base_url}/actuator/prometheus",
+        headers={"Authorization": f"Bearer {BEARER_TOKEN}"},
+    )
+    with urlopen(request, timeout=10) as response:
+        payload = response.read().decode("utf-8")
+    for line in payload.splitlines():
+        match = re.match(r'^squarewise_db_statement_total\{([^}]*)\}\s+([0-9.]+)$', line)
+        if match and f'operation="{operation}"' in match.group(1):
+            return int(float(match.group(2)))
+    return 0
 
 
 def compose(*arguments: str) -> str:
@@ -68,6 +86,36 @@ def request_json(url: str, body: bytes | None = None) -> tuple[int, object]:
 def main() -> int:
     """Stop Accounts and verify resource authorization continues locally."""
     clear_rate_limit_namespace()
+    accounts_before = statement_count("http://localhost:8081", "groups.list")
+    expense_before = statement_count(EXPENSE_CORE_URL, "groups.list")
+    expense_status, expense_response = request_json(
+        f"{EXPENSE_CORE_URL}/expense-core/v1/groups"
+    )
+    if expense_status != 200:
+        raise AssertionError(
+            f"Expense Core bearer request failed before isolation check: HTTP {expense_status} ({expense_response})"
+        )
+    bff_status, bff_response = request_json(
+        f"{BFF_URL}/graphql", b'{"query":"{ groups { id name } }"}'
+    )
+    if bff_status != 200 or not isinstance(bff_response, dict) or bff_response.get("errors"):
+        raise AssertionError(
+            f"BFF groups request failed before isolation check: HTTP {bff_status} ({bff_response})"
+        )
+    accounts_after = statement_count("http://localhost:8081", "groups.list")
+    expense_after = statement_count(EXPENSE_CORE_URL, "groups.list")
+    if accounts_after != accounts_before:
+        raise AssertionError(
+            f"ordinary group reads changed Accounts groups.list SQL count: {accounts_before} -> {accounts_after}"
+        )
+    if expense_after <= expense_before:
+        raise AssertionError(
+            f"ordinary group reads produced no Expense Core groups.list SQL: {expense_before} -> {expense_after}"
+        )
+    print(
+        "  SQL telemetry: Accounts groups.list "
+        f"{accounts_before}->{accounts_after}; Expense Core groups.list {expense_before}->{expense_after}"
+    )
     compose("stop", "accounts")
     try:
         expense_status, expense_response = request_json(

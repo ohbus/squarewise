@@ -18,6 +18,9 @@ import com.subhrodip.squarewise.expensecore.messaging.outbox.model.OutboxMessage
 import com.subhrodip.squarewise.expensecore.messaging.outbox.persistence.OutboxStore
 import com.subhrodip.squarewise.expensecore.sync.persistence.SynchronizationStore
 import com.subhrodip.squarewise.ids.generation.UuidGenerator
+import com.subhrodip.squarewise.db.routing.DbContextHolder
+import com.subhrodip.squarewise.db.routing.DbExecutionContext
+import com.subhrodip.squarewise.db.routing.DbOperationKind
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
@@ -70,10 +73,12 @@ class JpaGroupStore(
      */
     @Transactional(readOnly = true)
     override fun list(subject: String): List<GroupResponse> =
-        memberships.findAllBySubjectAndStatusOrderByMembershipId(subject, "ACTIVE")
-            .mapNotNull { groups.findById(it.groupId).orElse(null) }
-            .filter { it.status == "ACTIVE" }
-            .map { it.toResponse() }
+        DbContextHolder.withContext(DbExecutionContext("groups.list", DbOperationKind.QUERY)) {
+            memberships.findAllBySubjectAndStatusOrderByMembershipId(subject, "ACTIVE")
+                .mapNotNull { groups.findById(it.groupId).orElse(null) }
+                .filter { it.status == "ACTIVE" }
+                .map { it.toResponse() }
+        }
 
     /**
      * Updates an existing expense group's name and increments its revision.
