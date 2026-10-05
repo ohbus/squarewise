@@ -436,6 +436,12 @@ require a request-time Accounts call in the local topology. It is dependency
 isolation evidence rather than PostgreSQL statement-count telemetry; exact SQL
 query-count and latency artifacts remain open.
 
+The shared JPA configuration now installs a Hibernate `StatementInspector` for
+non-test runtime profiles. It increments `squarewise.db.statement` with only
+the current bounded operation label and retains an in-process statement count;
+SQL text, parameters, identities, and request identifiers are not recorded.
+The live metric scrape and representative request-count artifact remain open.
+
 Notifications delivery policy values are now bounded configuration properties,
 and both general notification dispatch and protected auth-email dispatch invoke
 the shared limiter immediately before provider dispatch. Unit/component tests

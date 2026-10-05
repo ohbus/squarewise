@@ -104,9 +104,24 @@ class DbTelemetryTest {
 
         assertEquals(0, telemetry.snapshot().failures)
         assertEquals(0, telemetry.snapshot().queries)
+        assertEquals(0, telemetry.snapshot().jdbcStatements)
         telemetry.route("groups", "writer")
         telemetry.lag("reader", 0)
         assertEquals(0, telemetry.snapshot().queries)
+    }
+
+    @Test
+    fun `records bounded JDBC statement telemetry`() {
+        val registry = SimpleMeterRegistry()
+        val telemetry = DbTelemetry(registry)
+
+        telemetry.jdbcStatement("groups.list")
+
+        assertEquals(1, telemetry.snapshot().jdbcStatements)
+        assertEquals(
+            1.0,
+            registry.counter("squarewise.db.statement", "operation", "groups.list").count()
+        )
     }
 
     @Test
