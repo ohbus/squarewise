@@ -335,6 +335,7 @@ Add focused commands for the Redis suite, for example:
 ./gradlew :libs:security:test :app:accounts:test :app:notifications:test :app:bff:test --no-daemon
 python3 tests/e2e/test_rate_limiting.py
 python3 tests/e2e/test_auth_query_counts.py
+make e2e-auth-refresh-concurrency
 ```
 
 Exact target names must match the repository after implementation; nonexistent

@@ -7531,7 +7531,7 @@
         "git diff --check"
       ],
       "evidence": [
-        "Changed-scope resolver and focused tests implemented; local scope, mypy, workflow YAML, contract, public-surface, and diff checks pass.",
+        "Changed-scope resolver and focused tests implemented; after the auth refresh E2E invocation was added, local scope tests (5/5), mypy, workflow YAML parsing/lint, contract, public-surface, and diff checks pass.",
         "Hosted PR, branch, and master scenario evidence remains required before status can become done."
       ],
       "reviewer": "/root",
