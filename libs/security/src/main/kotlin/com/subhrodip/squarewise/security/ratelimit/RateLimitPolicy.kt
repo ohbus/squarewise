@@ -12,12 +12,14 @@ import java.time.Duration
  * @property algorithm counter algorithm implemented by the shared adapter
  * @property maximumPermits maximum admitted operations in one window
  * @property window duration after which the ephemeral counter expires
+ * @property cooldown minimum delay between admitted operations for a key
  */
 data class RateLimitPolicy(
     val id: String,
     val algorithm: RateLimitAlgorithm = RateLimitAlgorithm.FIXED_WINDOW,
     val maximumPermits: Int,
-    val window: Duration
+    val window: Duration,
+    val cooldown: Duration = Duration.ZERO
 ) {
     init {
         require(id.length in 1..64 && id.all { it.isLetterOrDigit() || it == '-' || it == '_' }) {
@@ -26,8 +28,11 @@ data class RateLimitPolicy(
         require(maximumPermits in 1..1_000_000) {
             "Rate-limit maximum permits must be between 1 and 1000000"
         }
-        require(!window.isZero && !window.isNegative && window <= MAXIMUM_WINDOW) {
+        require(window.seconds >= 1 && window <= MAXIMUM_WINDOW) {
             "Rate-limit window must be positive and no longer than 24 hours"
+        }
+        require(!cooldown.isNegative && cooldown <= window) {
+            "Rate-limit cooldown must be non-negative and no longer than the window"
         }
     }
 

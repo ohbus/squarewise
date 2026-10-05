@@ -375,6 +375,13 @@ constructing the namespaced Redis key and maps the single-script result to
 bounded decision metadata. Policy validation tests pass. Service migration and
 live Redis/public-interface evidence remain open.
 
+Accounts login-start and refresh admission now consume the shared `RateLimiter`
+port in production wiring. The former bucket port is retained only as a
+compatibility constructor for focused unit tests; the local-oidc profile no
+longer registers its in-memory test double. Accounts behavior tests pass, but
+the legacy Redis class and live distributed failure/concurrency evidence still
+require the next increment.
+
 ### Current increment (2026-09-28)
 
 The login-start request path now throws the catalogued `ERR-11` application

@@ -17,6 +17,9 @@ class RateLimitPolicyTest {
         assertThrows(IllegalArgumentException::class.java) {
             RateLimitPolicy("login", maximumPermits = 1, window = Duration.ofDays(2))
         }
+        assertThrows(IllegalArgumentException::class.java) {
+            RateLimitPolicy("login", maximumPermits = 1, window = Duration.ofMinutes(1), cooldown = Duration.ofMinutes(2))
+        }
     }
 
     @Test

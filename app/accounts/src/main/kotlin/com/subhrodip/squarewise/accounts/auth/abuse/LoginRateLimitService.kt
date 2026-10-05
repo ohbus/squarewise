@@ -2,16 +2,27 @@ package com.subhrodip.squarewise.accounts.auth.abuse
 
 import java.time.Duration
 import java.time.Instant
+import com.subhrodip.squarewise.security.ratelimit.RateLimitPolicy
+import com.subhrodip.squarewise.security.ratelimit.RateLimiter
 import org.springframework.transaction.annotation.Transactional
 
 /** Application service for atomic passwordless login request throttling. */
 open class LoginRateLimitService(
     private val keyDeriver: LoginRateLimitKeyDeriver,
-    private val repository: RateLimitBucketStore,
+    private val rateLimiter: RateLimiter,
     private val window: Duration = Duration.ofMinutes(15),
     private val maximumRequests: Int = 5,
     private val resendCooldown: Duration = Duration.ofSeconds(60)
 ) {
+    /** Compatibility constructor for focused tests of the pre-migration bucket port. */
+    constructor(
+        keyDeriver: LoginRateLimitKeyDeriver,
+        repository: RateLimitBucketStore,
+        window: Duration = Duration.ofMinutes(15),
+        maximumRequests: Int = 5,
+        resendCooldown: Duration = Duration.ofSeconds(60)
+    ) : this(keyDeriver, LegacyRateLimitBucketAdapter(repository), window, maximumRequests, resendCooldown)
+
     init {
         LoginAbusePolicy(window, maximumRequests, resendCooldown)
     }
@@ -24,13 +35,11 @@ open class LoginRateLimitService(
     @Transactional
     open fun tryAcquire(email: String, networkPartition: String, now: Instant): Boolean {
         val key = keyDeriver.derive(email, networkPartition)
-        val updated = repository.acquireAtomically(
-            key = key,
-            now = now,
-            windowStart = now.minus(window),
-            cooldownCutoff = now.minus(resendCooldown),
-            maximumRequests = maximumRequests
-        )
-        return updated == 1
+        return rateLimiter.consume(
+            key = key.toHex(),
+            policy = RateLimitPolicy("auth-login", maximumPermits = maximumRequests, window = window, cooldown = resendCooldown)
+        ).allowed
     }
+
+    private fun ByteArray.toHex(): String = joinToString("") { "%02x".format(it) }
 }

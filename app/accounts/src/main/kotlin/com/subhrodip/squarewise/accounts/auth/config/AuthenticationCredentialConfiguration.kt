@@ -1,7 +1,6 @@
 @file:Suppress("CanConvertToMultiDollarString")
 
 package com.subhrodip.squarewise.accounts.auth.config
-import com.subhrodip.squarewise.accounts.auth.abuse.RateLimitBucketStore
 import com.subhrodip.squarewise.accounts.auth.abuse.LoginRateLimitKeyDeriver
 import com.subhrodip.squarewise.accounts.auth.abuse.LoginRateLimitService
 import com.subhrodip.squarewise.accounts.auth.abuse.RefreshRateLimitService
@@ -15,6 +14,7 @@ import com.subhrodip.squarewise.accounts.auth.credential.HmacCredentialDigest
 import com.subhrodip.squarewise.accounts.auth.credential.LoginCredentialRepository
 import com.subhrodip.squarewise.accounts.auth.credential.LoginCredentialService
 import com.subhrodip.squarewise.accounts.auth.credential.OneTimeCredentialIssuer
+import com.subhrodip.squarewise.security.ratelimit.RateLimiter
 import com.subhrodip.squarewise.accounts.auth.delivery.security.AesGcmCredentialEnvelopeProtector
 import com.subhrodip.squarewise.accounts.auth.delivery.security.CredentialEnvelopeProtector
 import java.util.Base64
@@ -62,17 +62,17 @@ class AuthenticationCredentialConfiguration(
     @Bean
     fun loginRateLimitService(
         keyDeriver: LoginRateLimitKeyDeriver,
-        repository: RateLimitBucketStore
+        rateLimiter: RateLimiter
     ): LoginRateLimitService =
-        LoginRateLimitService(keyDeriver, repository)
+        LoginRateLimitService(keyDeriver, rateLimiter)
 
     /** Creates the fail-closed refresh-token rotation limiter. */
     @Bean
     fun refreshRateLimitService(
         digest: CredentialDigest,
-        repository: RateLimitBucketStore
+        rateLimiter: RateLimiter
     ): RefreshRateLimitService =
-        RefreshRateLimitService(digest, repository)
+        RefreshRateLimitService(digest, rateLimiter)
 
     /** Creates the login start application service. */
     @Bean

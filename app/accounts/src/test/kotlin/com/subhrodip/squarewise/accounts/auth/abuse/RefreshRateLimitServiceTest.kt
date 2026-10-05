@@ -15,7 +15,7 @@ class RefreshRateLimitServiceTest {
     @Test
     fun `denies after the configured maximum`() {
         val store = TestRateLimitBucketStore()
-        val service = RefreshRateLimitService(digest, store, maximumRequests = 1)
+        val service = RefreshRateLimitService(digest, store as RateLimitBucketStore, maximumRequests = 1)
         val now = Instant.parse("2026-09-28T00:00:00Z")
 
         assertTrue(service.tryAcquire("10.44", now))
@@ -43,7 +43,7 @@ class RefreshRateLimitServiceTest {
 
     @Test
     fun `rejects blank or oversized partitions before store access`() {
-        val service = RefreshRateLimitService(digest, TestRateLimitBucketStore())
+        val service = RefreshRateLimitService(digest, TestRateLimitBucketStore() as RateLimitBucketStore)
 
         assertThrows(IllegalArgumentException::class.java) {
             service.tryAcquire(" ", Instant.now())
@@ -62,13 +62,13 @@ class RefreshRateLimitServiceTest {
     @Test
     fun `rejects invalid rate-limit policy at construction`() {
         assertThrows(IllegalArgumentException::class.java) {
-            RefreshRateLimitService(digest, TestRateLimitBucketStore(), window = Duration.ZERO)
+            RefreshRateLimitService(digest, TestRateLimitBucketStore() as RateLimitBucketStore, window = Duration.ZERO)
         }
         assertThrows(IllegalArgumentException::class.java) {
-            RefreshRateLimitService(digest, TestRateLimitBucketStore(), window = Duration.ofSeconds(-1))
+            RefreshRateLimitService(digest, TestRateLimitBucketStore() as RateLimitBucketStore, window = Duration.ofSeconds(-1))
         }
         assertThrows(IllegalArgumentException::class.java) {
-            RefreshRateLimitService(digest, TestRateLimitBucketStore(), maximumRequests = 0)
+            RefreshRateLimitService(digest, TestRateLimitBucketStore() as RateLimitBucketStore, maximumRequests = 0)
         }
     }
 }

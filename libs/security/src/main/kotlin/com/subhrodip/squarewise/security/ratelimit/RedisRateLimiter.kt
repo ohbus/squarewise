@@ -28,7 +28,8 @@ class RedisRateLimiter(private val redis: StringRedisTemplate) : RateLimiter {
                 script,
                 listOf(redisKey),
                 policy.window.seconds.toString(),
-                policy.maximumPermits.toString()
+                policy.maximumPermits.toString(),
+                policy.cooldown.seconds.toString()
             ) ?: throw IllegalStateException("Redis returned no rate-limit decision")
             val fields = result.split('|')
             require(fields.size == 3) { "Redis returned malformed rate-limit decision" }
@@ -49,17 +50,30 @@ class RedisRateLimiter(private val redis: StringRedisTemplate) : RateLimiter {
 
     private companion object {
         const val SCRIPT = """
-            local count = tonumber(redis.call('GET', KEYS[1]) or '0')
+            local now = tonumber(redis.call('TIME')[1])
+            local count = tonumber(redis.call('HGET', KEYS[1], 'count') or '0')
+            local last = tonumber(redis.call('HGET', KEYS[1], 'last') or '0')
             local maximum = tonumber(ARGV[2])
             local ttl = tonumber(ARGV[1])
+            local cooldown = tonumber(ARGV[3])
+            local started = tonumber(redis.call('HGET', KEYS[1], 'started') or '0')
+            if started == 0 or now - started >= ttl then
+              count = 0
+              started = now
+              last = 0
+            end
             if count >= maximum then
               local remaining = 0
               local current_ttl = redis.call('TTL', KEYS[1])
               if current_ttl < 0 then current_ttl = ttl end
               return '0|' .. remaining .. '|' .. current_ttl
             end
-            count = redis.call('INCR', KEYS[1])
-            if count == 1 then redis.call('EXPIRE', KEYS[1], ttl) end
+            if cooldown > 0 and last > 0 and now - last < cooldown then
+              return '0|' .. (maximum - count) .. '|' .. (cooldown - (now - last))
+            end
+            count = count + 1
+            redis.call('HSET', KEYS[1], 'count', count, 'started', started, 'last', now)
+            redis.call('EXPIRE', KEYS[1], ttl)
             local remaining = maximum - count
             local current_ttl = redis.call('TTL', KEYS[1])
             return '1|' .. remaining .. '|' .. current_ttl
