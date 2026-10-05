@@ -1,0 +1,68 @@
+package com.subhrodip.squarewise.security.ratelimit
+
+import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
+import java.time.Duration
+import org.springframework.context.annotation.Profile
+import org.springframework.data.redis.core.StringRedisTemplate
+import org.springframework.data.redis.core.script.DefaultRedisScript
+import org.springframework.stereotype.Component
+
+/**
+ * Redis implementation of [RateLimiter] using one atomic fixed-window script.
+ *
+ * The caller key is hashed before it becomes Redis key material. Every key is
+ * namespaced, bounded by the policy TTL, and contains no raw identifier. Redis
+ * failures are translated to the shared fail-closed exception.
+ */
+@Component
+@Profile("!test")
+class RedisRateLimiter(private val redis: StringRedisTemplate) : RateLimiter {
+    private val script = DefaultRedisScript<String>(SCRIPT, String::class.java)
+
+    override fun consume(key: String, policy: RateLimitPolicy): RateLimitDecision {
+        require(key.length in 1..256) { "Rate-limit key material must be 1-256 characters" }
+        val redisKey = "squarewise:rl:v1:${key.sha256()}"
+        return try {
+            val result = redis.execute(
+                script,
+                listOf(redisKey),
+                policy.window.seconds.toString(),
+                policy.maximumPermits.toString()
+            ) ?: throw IllegalStateException("Redis returned no rate-limit decision")
+            val fields = result.split('|')
+            require(fields.size == 3) { "Redis returned malformed rate-limit decision" }
+            val allowed = fields[0] == "1"
+            val remaining = fields[1].toInt().coerceIn(0, policy.maximumPermits)
+            val retryAfterSeconds = fields[2].toLong().coerceAtLeast(0)
+            RateLimitDecision(allowed, remaining, Duration.ofSeconds(retryAfterSeconds), policy.id)
+        } catch (exception: RateLimitStoreUnavailableException) {
+            throw exception
+        } catch (exception: Exception) {
+            throw RateLimitStoreUnavailableException(exception)
+        }
+    }
+
+    private fun String.sha256(): String = MessageDigest.getInstance("SHA-256")
+        .digest(toByteArray(StandardCharsets.UTF_8))
+        .joinToString("") { byte -> "%02x".format(byte) }
+
+    private companion object {
+        const val SCRIPT = """
+            local count = tonumber(redis.call('GET', KEYS[1]) or '0')
+            local maximum = tonumber(ARGV[2])
+            local ttl = tonumber(ARGV[1])
+            if count >= maximum then
+              local remaining = 0
+              local current_ttl = redis.call('TTL', KEYS[1])
+              if current_ttl < 0 then current_ttl = ttl end
+              return '0|' .. remaining .. '|' .. current_ttl
+            end
+            count = redis.call('INCR', KEYS[1])
+            if count == 1 then redis.call('EXPIRE', KEYS[1], ttl) end
+            local remaining = maximum - count
+            local current_ttl = redis.call('TTL', KEYS[1])
+            return '1|' .. remaining .. '|' .. current_ttl
+        """
+    }
+}

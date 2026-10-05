@@ -267,5 +267,6 @@ reviewed and the follow-on tasks are registered.
 | CORE-28 | core | done | Refactor Expense Core recurring persistence into separated SOLID files |
 | FND-08 | coordinator | done | Refactor domain ports, in-memory stores, and consumer services into dedicated files |
 | OBS-01 | coordinator | done | Implement cross-cutting structured logging, MDC correlation, and observability tools |
+| AUTH-09 | coordinator | in_progress | Implement distributed Redis rate limiting and request-path security controls |
 | DOC-26 | coordinator | done | Reconcile local smoke-demo delivery evidence and Bruno API collection |
 | SEC-02 | coordinator | done | Implement and verify whole security audit remediation (H-1, H-2, M-1 to M-5, L-1 to L-6) |

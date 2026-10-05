@@ -4995,6 +4995,66 @@
       "blocker": null
     },
     {
+      "id": "AUTH-09",
+      "parent_id": "AUTH-01",
+      "title": "Implement distributed Redis rate limiting and request-path security controls",
+      "phase": "security",
+      "status": "in_progress",
+      "owner_role": "coordinator",
+      "owner_agent": "/root",
+      "depends_on": [
+        "AUTH-06",
+        "AUTH-07",
+        "OPS-18",
+        "OPS-19",
+        "OPS-20",
+        "PR-20",
+        "PR-27"
+      ],
+      "owned_paths": [
+        "libs/security/",
+        "app/accounts/",
+        "app/notifications/",
+        "app/bff/",
+        "infra/local/",
+        "tests/e2e/",
+        "tests/load/",
+        "docs/architecture/",
+        "docs/security/",
+        "docs/operations/",
+        "docs/quality/",
+        "docs/tasks/details/AUTH-09.md",
+        "docs/tasks/registry.yaml",
+        "docs/tasks/board.md",
+        "docs/tasks/progress.md"
+      ],
+      "specification": "docs/tasks/details/AUTH-09.md",
+      "acceptance_criteria": [
+        "One provider-neutral atomic rate-limiter port and policy model is used by covered boundaries.",
+        "Redis is the only runtime rate-limit store; keys are bounded, namespaced, TTL-bound, and contain no raw sensitive values.",
+        "Login, refresh, notification delivery, GraphQL, WebSocket admission, and selected public API policies execute in their real paths.",
+        "Redis outage behavior fails closed with the existing structured 429/RATE_LIMITED contract and bounded Retry-After metadata.",
+        "Ordinary locally validated bearer requests perform no Accounts identity lookup; query-count evidence is recorded.",
+        "Unit, integration, contract, live E2E, security-hygiene, and load evidence is recorded at its declared scope.",
+        "Intentionally skipped E2E streams do not fail the aggregate gate or appear as passed; selected failures still fail it."
+      ],
+      "validation_commands": [
+        "./gradlew :libs:security:test :app:accounts:test :app:notifications:test :app:bff:test --rerun-tasks --no-daemon",
+        "make compose-config",
+        "make workflow-validate",
+        "make e2e-all",
+        "make security-hygiene",
+        "make load-k6-validate",
+        "git diff --check"
+      ],
+      "evidence": [
+        "Shared RateLimiter contract, bounded policy/decision model, fail-closed exception, and atomic Redis adapter added under libs/security; focused security tests pass.",
+        "Accounts, Notifications, BFF, distributed Redis, query-count, failure, capacity, and hosted E2E evidence remain open and must not be inferred from this increment."
+      ],
+      "reviewer": "/root",
+      "blocker": null
+    },
+    {
       "id": "AUTH-05",
 
       "parent_id": "AUTH-01",

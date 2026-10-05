@@ -13,8 +13,7 @@ perform an Accounts or PostgreSQL lookup. Resource services validate signed OIDC
 tokens locally using cached discovery/JWK material, then perform only the domain
 authorization and business queries required by the operation.
 
-This task is implementation-ready but must be registered by the coordinator before
-code changes begin. AUTH-09 depends on AUTH-07 and AUTH-06. It may share the existing
+AUTH-09 is registered as an implementation task. It depends on AUTH-07 and AUTH-06. It may share the existing
 security and observability libraries, but it must not create cross-service entities,
 repositories, or business dependencies.
 
@@ -366,6 +365,15 @@ task before delegation. Registry and board updates remain coordinator-owned.
 No production launch approval is implied by local Redis tests.
 
 ## Current implementation evidence
+
+### Shared rate-limit contract increment (2026-10-05)
+
+Added the provider-neutral `RateLimiter`, bounded `RateLimitPolicy`, safe
+`RateLimitDecision`, fail-closed store exception, and atomic Redis adapter under
+`libs/security`. The adapter hashes caller-provided canonical key material before
+constructing the namespaced Redis key and maps the single-script result to
+bounded decision metadata. Policy validation tests pass. Service migration and
+live Redis/public-interface evidence remain open.
 
 ### Current increment (2026-09-28)
 
