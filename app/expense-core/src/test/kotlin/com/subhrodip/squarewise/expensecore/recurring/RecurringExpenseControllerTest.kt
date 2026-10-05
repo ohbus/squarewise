@@ -57,6 +57,11 @@ class RecurringExpenseControllerTest @Autowired constructor(
         assertEquals("250000", created.amount.minor)
         assertEquals(RecurrenceFrequency.MONTHLY, created.frequency)
         assertEquals(1, created.dayOfMonth)
+        assertEquals(LocalDate.of(2026, 10, 1), created.startDate)
+        assertEquals(null, created.endDate)
+        assertEquals(LocalDate.of(2026, 10, 1), created.nextOccurrenceDate)
+        assertNotNull(created.createdAt)
+        assertEquals(1L, created.version)
         assertFalse(created.paused)
 
         // 2. Get schedule
