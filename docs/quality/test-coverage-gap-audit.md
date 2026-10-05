@@ -10,10 +10,10 @@ For a concise evidence-state overview, see the [QA-10 test-gap summary](qa10-gap
 
 ## Current baseline
 
-As of 2026-10-02, the freshly regenerated JaCoCo XML baseline records **39
-production methods with missed branches** containing **78 missed branches**,
-**54 contract operations** (45 REST and 9 GraphQL), and **three concrete
-execution-gap records**. Operation source discovery
+As of 2026-10-05, the freshly regenerated JaCoCo XML baseline records **35
+production methods with missed branches** containing **61 missed branches**,
+**54 contract operations** (45 REST and 9 GraphQL), and **one concrete
+execution-gap record**. Operation source discovery
 finds 0 operations without a literal E2E reference and 36 without a literal
 Bruno reference. These numbers are backlog signals, not passing-test claims;
 the hard branch gate remains red until the production reports are regenerated
@@ -31,19 +31,18 @@ normalized Bruno artifact credits 18 uniquely attributable contract operations;
 credited. This closes neither hosted-CI evidence nor the remaining per-operation
 acceptance rows.
 
-The current residual review split is **4 reviewed structural-invariant mappings**,
-**34 behavior-covered boundary/instrumentation mappings**, and **one open-design
-record** (`ProfileController.problem`/`mapErrorCode`). No
+The current residual review split is **4 reviewed structural-invariant mappings**
+and **31 behavior-covered boundary/instrumentation mappings**. No
 missed method is unaccounted for; behavior-covered mappings are explicitly
-linked to tests, while structural and open-design records remain review work.
+linked to tests, while structural records remain review work.
 The companion [`QA-10 branch-line ledger`](qa10-branch-line-gap-ledger.md)
-records the 52 exact JaCoCo source lines that account for those 78 branches;
+records the 48 exact JaCoCo source lines that account for those 61 branches;
 it is regenerated from the same reports and is not a substitute for behavior
 acceptance.
 The companion [`QA-10 concrete execution-gap ledger`](qa10-execution-gap-ledger.md)
-also records 3 production methods with zero covered instructions after
+also records 1 production method with zero covered instructions after
 excluding compiler-generated methods, accessors, application entry points, and
-interface declarations. These records catch method-level execution gaps that
+interface declarations (`DbTelemetry.measureQuery`). This record catches method-level execution gaps that
 branch-only discovery cannot represent. Framework/bootstrap entries require
 configuration or integration evidence; domain and transport entries require
 direct behavior tests. This ledger is a backlog and review aid, never a reason
@@ -77,7 +76,7 @@ delivery, identity-provider behavior, or cross-service side effects.
 
 ## Audit evidence and limits
 
-The current source inventory contains 400 Kotlin production files and 179
+The current source inventory contains 400 Kotlin production files and 199
 Kotlin test files under `app/` and `libs/`. The generated local JaCoCo
 reports currently report these line-coverage signals:
 
@@ -159,12 +158,10 @@ behavior is exercised through inline call-site tests, while JaCoCo cannot mark
 the inline declaration method node executed. This is a reviewed compiler
 classification, not a reason to add reflection-only coverage or alter the
 implementation contract.
-The two residual `DbTelemetry.acquisition` and `queryDuration` branch records
-are behavior-covered by `DbTelemetryTest` for positive and negative durations
-with both null and registry-backed telemetry. Their remaining JaCoCo arm is
-the defensive nullable `Timer?.record` mapping; Micrometer's
-`MeterRegistry.timer` contract returns a non-null timer. This is a documented
-instrumentation mapping, not a missing duration behavior test.
+`DbTelemetry.acquisition` and `queryDuration` now achieve 100% branch
+coverage in `DbTelemetryTest` by asserting metric publication when
+`MeterRegistry.timer` returns null as well as valid `Timer` instances.
+`DbTelemetry` now has 0 missed branches and 100% branch coverage.
 
 ### Current operations without a literal E2E source reference
 
@@ -413,7 +410,7 @@ Current provisional assignment workload (39 records):
 | QA10-E02 | 2 | Database routing, reader health, fallback, and operational lifecycle. |
 | QA10-E03 | 0 | Servlet/reactive OIDC decoder construction and key-validation paths are locally covered; deployed issuer/provider behavior remains environment evidence. |
 | QA10-E04 | 0 | IDs/constants have no current missed-branch methods; static contract checks remain required. |
-| QA10-E05 | 2 | Bounded observability labels and metric behavior now has direct local invocation evidence; negative-duration and slow-query mappings remain under review, while dashboards/alerts and deployed cardinality remain operational evidence. |
+| QA10-E05 | 0 | Bounded observability labels and metric behavior have direct local invocation evidence; DbTelemetry achieves 100% branch coverage with null and registry-backed timers, while dashboards/alerts and deployed cardinality remain operational evidence. |
 
 This table is regenerated from the JSON assignment output; it is not a
 coverage claim. A row closes only when its acceptance criteria and required
