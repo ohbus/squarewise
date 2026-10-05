@@ -423,6 +423,13 @@ missing BFF Redis host/password wiring, which was corrected before the passing
 rerun. This remains local single-replica evidence, not hosted or production
 capacity evidence.
 
+The disposable Accounts replica overlay now starts two independently deployed
+Accounts containers against the same PostgreSQL and Redis services. The local
+login probe alternated six requests between the two published replica ports and
+observed `[202, 202, 202, 202, 202, 429]`, proving the login window is shared
+across processes. This is local distributed-behavior evidence, not production
+scale, multi-zone, or capacity evidence.
+
 The same suite also stops Redis after clearing its namespace and verifies both
 GraphQL HTTP admission and WebSocket handshake admission return fail-closed
 `429` responses, then restarts Redis. Refresh outage/recovery and these BFF

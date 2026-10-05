@@ -1,0 +1,14 @@
+services:
+  accounts-replica-a:
+    extends:
+      file: docker-compose.dev.yml
+      service: accounts
+    hostname: accounts-replica-a-api
+    ports: !override ["8084:8080"]
+
+  accounts-replica-b:
+    extends:
+      file: docker-compose.dev.yml
+      service: accounts
+    hostname: accounts-replica-b-api
+    ports: !override ["8085:8080"]

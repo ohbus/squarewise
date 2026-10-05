@@ -79,6 +79,14 @@ The end-to-end test suites run against the live local environment (`infra/local/
      window expires.
    - The overrides are test-only; production defaults remain unchanged.
 
+9. **Cross-process login admission (`test_auth_login_replicas.py`)**:
+   - Starts the disposable `docker-compose.auth-replicas.yml` overlay with two
+     Accounts containers sharing PostgreSQL and Redis.
+   - Alternates six login-start requests between the two published replica
+     ports and requires five `202` responses followed by one shared `429`.
+   - This proves local distributed-window behavior only; it is not a production
+     scale or multi-zone capacity result.
+
 6. **Passwordless Auth-Email Delivery (`test_auth_email_delivery.py`)**:
    - Real Accounts outbox/RabbitMQ/Notifications/Mailpit CODE delivery.
    - One-time credential redemption and replay rejection.

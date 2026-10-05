@@ -421,6 +421,7 @@ jobs:
           INCLUDE_EXPIRED=true tests/e2e/acquire_local_tokens.sh
       - name: Run negative OIDC security paths and live REST edge checks
         env:
+          SQUAREWISE_AUTH_LOGIN_RESEND_COOLDOWN_SECONDS: "0"
           BEARER_TOKEN: ${{ steps.oidc-token.outputs.token }}
           SQUAREWISE_E2E_TOKEN_A: ${{ steps.oidc-token.outputs.token }}
           SQUAREWISE_E2E_TOKEN_B: ${{ steps.oidc-token.outputs.e2e_bob_token }}
@@ -457,6 +458,11 @@ jobs:
           fresh_token="$(grep '^BEARER_TOKEN=' "$GITHUB_ENV" | tail -1 | cut -d= -f2-)"
           fresh_bob="$(grep '^SQUAREWISE_E2E_TOKEN_B=' "$GITHUB_ENV" | tail -1 | cut -d= -f2-)"
           fresh_nonmember="$(grep '^SQUAREWISE_E2E_TOKEN_NONMEMBER=' "$GITHUB_ENV" | tail -1 | cut -d= -f2-)"
+          docker compose -f infra/local/docker-compose.dev.yml \
+            -f infra/local/docker-compose.auth-replicas.yml \
+            up -d --build --wait accounts-replica-a accounts-replica-b
+          trap 'docker compose -f infra/local/docker-compose.dev.yml -f infra/local/docker-compose.auth-replicas.yml rm -sf accounts-replica-a accounts-replica-b' EXIT
+          make e2e-auth-login-replicas 2>&1 | tee build/reports/e2e/auth-login-replicas.log
           SQUAREWISE_AUTH_LOGIN_RESEND_COOLDOWN_SECONDS=0 \
             SQUAREWISE_NOTIFICATIONS_DELIVERY_MAX_PERMITS=1 \
             SQUAREWISE_NOTIFICATIONS_DELIVERY_WINDOW_SECONDS=2 \
