@@ -854,7 +854,7 @@ class CoverageInventoryTest(unittest.TestCase):
     def test_ci_documentation_uses_current_branch_baseline(self) -> None:
         ci = (ROOT / "docs/operations/ci.md").read_text(encoding="utf-8")
 
-        self.assertIn("37 methods containing 63 missed", ci)
+        self.assertIn("35 methods containing 61 missed", ci)
         self.assertNotIn("220 missed-branch methods", ci)
 
     def test_qa10_audit_documents_current_baseline_and_live_limitations(self) -> None:
