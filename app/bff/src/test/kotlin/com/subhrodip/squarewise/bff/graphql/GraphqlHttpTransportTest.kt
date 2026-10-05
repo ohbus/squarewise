@@ -55,7 +55,8 @@ import java.util.UUID
             "org.springframework.boot.autoconfigure.security.reactive.ReactiveSecurityAutoConfiguration," +
             "org.springframework.boot.autoconfigure.security.reactive.ReactiveUserDetailsServiceAutoConfiguration," +
             "org.springframework.boot.autoconfigure.security.oauth2.resource.reactive.ReactiveOAuth2ResourceServerAutoConfiguration",
-        "squarewise.security.browser.allowed-origins=https://app.example.test"
+        "squarewise.security.browser.allowed-origins=https://app.example.test",
+        "squarewise.bff.rate-limit.enabled=false"
     ]
 )
 class GraphqlHttpTransportTest {

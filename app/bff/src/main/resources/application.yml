@@ -32,6 +32,9 @@ server:
   max-http-request-header-size: ${SQUAREWISE_BFF_MAX_HEADER_SIZE:16KB}
 
 squarewise:
+  bff:
+    rate-limit:
+      enabled: ${SQUAREWISE_BFF_RATE_LIMIT_ENABLED:true}
   accounts-url: ${SQUAREWISE_ACCOUNTS_URL}
   expense-core-url: ${SQUAREWISE_EXPENSE_CORE_URL}
   security:

@@ -1,9 +1,12 @@
 package com.subhrodip.squarewise.bff
 
 import com.subhrodip.squarewise.bff.config.GraphQlAbuseProperties
+import com.subhrodip.squarewise.bff.config.GraphQlRateLimitWebFilter
 import com.subhrodip.squarewise.bff.realtime.LiveUpdateFanout
 import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
 import com.subhrodip.squarewise.security.OidcConfigurationGuard
+import com.subhrodip.squarewise.security.ratelimit.RateLimiter
+import com.subhrodip.squarewise.security.ratelimit.RedisRateLimiter
 import java.time.Duration
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
@@ -12,12 +15,24 @@ import org.springframework.context.annotation.Import
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.web.server.WebFilter
+import org.springframework.data.redis.core.StringRedisTemplate
 import reactor.core.publisher.Mono
 
 /** Root Spring Boot composition for the GraphQL BFF application. */
 @SpringBootApplication
 @Import(OidcConfigurationGuard::class)
 class BffApplication {
+    /** Creates the mandatory Redis-backed distributed limiter for BFF admission. */
+    @Bean
+    fun rateLimiter(redis: StringRedisTemplate): RateLimiter = RedisRateLimiter(redis)
+
+    /** Registers the GraphQL admission filter before request body parsing. */
+    @Bean
+    fun graphqlRateLimitWebFilter(
+        rateLimiter: RateLimiter,
+        properties: GraphQlAbuseProperties,
+        @org.springframework.beans.factory.annotation.Value("\${squarewise.bff.rate-limit.enabled:true}") enabled: Boolean
+    ): WebFilter = GraphQlRateLimitWebFilter(rateLimiter, properties, enabled)
     @Bean
     fun liveUpdateFanout(properties: GraphQlAbuseProperties): LiveUpdateFanout = LiveUpdateFanout(
         queueCapacity = properties.subscriptionQueueCapacity,

@@ -388,6 +388,13 @@ adapter, while test-only delivery doubles remain direct unit-test dependencies.
 Focused adapter and Notifications context tests pass; GraphQL/WebSocket
 admission, failure drills, and live broker/Redis evidence remain open.
 
+The BFF now applies a shared Redis-backed HTTP admission decision at the
+GraphQL WebFlux boundary before request parsing. Denials and store outages use
+structured HTTP 429 with bounded `Retry-After`; WebSocket upgrades are left to
+their dedicated admission slice. Filter and live GraphQL transport tests pass;
+WebSocket, query-count, failure-drill, and live multi-replica evidence remain
+open.
+
 ### Current increment (2026-09-28)
 
 The login-start request path now throws the catalogued `ERR-11` application
