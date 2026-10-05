@@ -40,7 +40,7 @@ query classification, and evidence gates are complete.
 | QA-07 | coordinator | done | Contract-driven REST, GraphQL, WebSocket, negative-path, concurrency, recovery, and evidence matrix |
 | QA-08 | coordinator | done | Production-scale, deployment-resilience, security, and unresolved WebSocket protocol evidence |
 | QA-09 | coordinator | done | Optimized and parallelized E2E pipeline with artifact reuse |
-| QA-10 | coordinator | in_progress | Repository-wide unit, integration, and E2E test gap audit and closure criteria |
+| QA-10 | coordinator | done | Repository-wide unit, integration, and E2E test gap audit and closure criteria |
 | OPS-25 | coordinator | done | Migrate Python tooling to pyproject.toml + uv sync + uv run |
 
 ## Production hardening milestone
