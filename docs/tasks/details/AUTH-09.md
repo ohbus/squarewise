@@ -442,6 +442,12 @@ the shared limiter immediately before provider dispatch. Unit/component tests
 cover admission and suppression. A live broker-to-provider denial/recovery
 drill remains open.
 
+An isolated k6 admission probe was added and executed at 35 iterations per
+second for 10 seconds with 351 completed requests, zero HTTP failures, and
+approximately 12.08 ms p95 latency. The local BFF HTTP limit was temporarily
+raised to avoid measuring intentional abuse denials; this is single-replica
+local wiring/capacity evidence and is not a production capacity claim.
+
 Rate-limit decisions now expose bounded Micrometer counters for `allowed`,
 `denied`, and `store_error`, tagged only by the centrally defined policy ID and
 outcome. No key, subject, IP, token, or request ID is used as a metric label.

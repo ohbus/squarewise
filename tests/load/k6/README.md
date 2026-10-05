@@ -7,6 +7,7 @@ k6 run tests/load/k6/accounts.js
 k6 run tests/load/k6/expense-core.js
 k6 run tests/load/k6/notifications.js
 k6 run tests/load/k6/bff-graphql.js
+k6 run tests/load/k6/rate-limit-graphql.js
 ```
 
 When k6 is not installed locally, use the pinned workflow entry point supplied
@@ -41,3 +42,8 @@ rates and thresholds are provisional starting points; OPS-20 requires replacing
 them with measured capacity and SLO evidence. Run mutation scenarios separately
 with unique fixture data and idempotency keys; these read-focused scripts are
 safe to repeat.
+
+For an admission-focused limiter probe, run `rate-limit-graphql.js` with a
+temporarily raised isolated BFF HTTP limit. It uses `{ __typename }` so the
+measurement covers BFF/Redis admission and GraphQL parsing without downstream
+Accounts gateway latency. Local results are wiring/capacity evidence only.

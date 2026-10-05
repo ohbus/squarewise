@@ -5056,6 +5056,7 @@
         "The same local probe passes BFF GraphQL HTTP and WebSocket fail-closed 429 checks while Redis is stopped, then restores Redis.",
         "Local authenticated lookup-isolation E2E passes Expense Core and BFF group reads while Accounts is stopped; exact SQL statement-count telemetry is still open.",
         "Notifications delivery policy is bounded/configurable and both general and auth-email dispatch paths invoke the shared limiter; focused tests pass, while live broker/provider denial evidence remains open.",
+        "An isolated local k6 GraphQL admission run completed 351 requests at 35/s with 0% HTTP failures and 12.08 ms p95 after a temporary isolated cap override; this is not production or multi-replica capacity evidence.",
         "Accounts, Notifications delivery, GraphQL/WebSocket public-surface, query-count, multi-replica failure, capacity, and hosted E2E evidence remain open and must not be inferred from local increments."
       ],
       "reviewer": "/root",
