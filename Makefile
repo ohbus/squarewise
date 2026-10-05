@@ -14,7 +14,12 @@ export SQUAREWISE_SECURITY_CREDENTIAL_DIGEST_SECRET ?= AAECAwQFBgcICQoLDA0ODxARE
 export SQUAREWISE_SECURITY_AUTH_EMAIL_ENVELOPE_KEY ?= ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj8=
 
 .DEFAULT_GOAL := help
+.PHONY: load-k6-rate-limit e2e-auth-notification-limit
+<<<<<<< HEAD
 .PHONY: help doctor bootstrap sync validate contracts lint python-typecheck test test-unit test-integration coverage build package check ci ci-e2e acceptance acceptance-live bruno-run workflow-validate observability-validate release-gate security-hygiene architecture-validate sbom-validate load-probe load-k6-validate load-k6 load-k6-rate-limit e2e e2e-auth-email e2e-auth-notification-limit e2e-auth-login-replicas e2e-rest-edge e2e-auth-cache e2e-auth-surfaces e2e-auth-no-accounts smoke docs-diagrams docs-diagrams-config compose-config devcontainer-config deps-config deps-up deps-status deps-logs deps-down accounts-deps-config accounts-deps-up accounts-deps-status accounts-deps-logs accounts-deps-down expense-core-deps-config expense-core-deps-up expense-core-deps-status expense-core-deps-logs expense-core-deps-down notifications-deps-config notifications-deps-up notifications-deps-status notifications-deps-logs notifications-deps-down bff-deps-config bff-deps-up bff-deps-status bff-deps-logs bff-deps-down full-config full-up full-status full-logs full-down compose-dev-up compose-dev-down compose-dev-logs compose-up compose-down dev-setup seed seed-large seed-reset docker-build-all docker-build-% prod-config clean clean-gradle status
+=======
+.PHONY: help doctor bootstrap sync validate contracts lint python-typecheck test test-unit test-integration coverage build package check ci ci-e2e acceptance acceptance-live bruno-run workflow-validate observability-validate release-gate security-hygiene architecture-validate sbom-validate load-probe load-k6-validate load-k6 load-k6-rate-limit e2e e2e-auth-email e2e-auth-notification-limit e2e-auth-login-replicas e2e-auth-refresh-concurrency e2e-rest-edge e2e-auth-cache e2e-auth-surfaces e2e-auth-no-accounts smoke docs-diagrams docs-diagrams-config compose-config deps-config deps-up deps-status deps-logs deps-down accounts-deps-config accounts-deps-up accounts-deps-status accounts-deps-logs accounts-deps-down expense-core-deps-config expense-core-deps-up expense-core-deps-status expense-core-deps-logs expense-core-deps-down notifications-deps-config notifications-deps-up notifications-deps-status notifications-deps-logs notifications-deps-down bff-deps-config bff-deps-up bff-deps-status bff-deps-logs bff-deps-down full-config full-up full-status full-logs full-down compose-dev-up compose-dev-down compose-dev-logs compose-up compose-down dev-setup seed seed-large seed-reset docker-build-all docker-build-% prod-config clean clean-gradle status
+>>>>>>> 713f971f (auth: prove concurrent refresh family revocation)
 
 help: ## Show available commands
 	@awk 'BEGIN {FS = ":.*##"; printf "Squarewise commands\n\n"} /^[a-zA-Z0-9_.-]+:.*##/ {printf "  %-24s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -123,6 +128,9 @@ load-k6: load-k6-validate ## Run one k6 script in Docker; set SCRIPT=tests/load/
 	@test -n "$(SCRIPT)" || (echo "Set SCRIPT, e.g. make load-k6 SCRIPT=tests/load/k6/accounts.js"; exit 2)
 	@docker run --rm -i --network squarewise-local-net -v "$(CURDIR):/work:ro" -e BASE_URL -e ACCOUNTS_URL -e EXPENSE_CORE_URL -e NOTIFICATIONS_URL -e BEARER_TOKEN grafana/k6 run "/work/$(SCRIPT)"
 
+load-k6-rate-limit: load-k6-validate ## Run the isolated GraphQL admission k6 scenario
+	@k6 run tests/load/k6/rate-limit-graphql.js
+
 load-mutation-check: load-k6-validate ## Run fixture-backed mutation load and verify financial reconciliation
 	@DURATION="$${DURATION:-5s}" k6 run tests/load/k6/mutation-expense.js
 	@$(UV_RUN) python3 tools/ops/reconcile_mutation_fixture.py --token "$${BEARER_TOKEN:-test-user}"
@@ -150,6 +158,9 @@ e2e-auth-notification-limit: ## Run deployed auth-email delivery admission suppr
 
 e2e-auth-login-replicas: ## Run shared login admission checks against two Accounts replicas
 	@$(UV_RUN) python3 tests/e2e/test_auth_login_replicas.py
+
+e2e-auth-refresh-concurrency: ## Run concurrent refresh rotation and family-revocation checks
+	@$(UV_RUN) python3 tests/e2e/test_auth_refresh_concurrency.py
 
 e2e-auth-cache: ## Run live Redis eviction, outage, and restart authentication checks
 	@$(UV_RUN) python3 tests/e2e/test_auth_cache_resilience.py

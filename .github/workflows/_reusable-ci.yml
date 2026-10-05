@@ -553,6 +553,7 @@ jobs:
           set -o pipefail
           mkdir -p build/reports/e2e
           make e2e-auth-email E2E_AUTH_EMAIL_ARGS="--evidence-output build/reports/e2e/auth-email-operation-execution.json --source-revision $GITHUB_SHA --environment ci-compose-oidc" 2>&1 | tee build/reports/e2e/auth-email.log
+          make e2e-auth-refresh-concurrency 2>&1 | tee build/reports/e2e/auth-refresh-concurrency.log
           make acceptance-live 2>&1 | tee build/reports/e2e/acceptance-live.log
           BRUNO_REPORT="$GITHUB_WORKSPACE/build/reports/e2e/bruno.json" \
             make bruno-run BRUNO_ENV="$BRUNO_ENV" BRUNO_TOKEN="$BRUNO_TOKEN"

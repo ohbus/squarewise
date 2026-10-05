@@ -87,7 +87,14 @@ The end-to-end test suites run against the live local environment (`infra/local/
    - This proves local distributed-window behavior only; it is not a production
      scale or multi-zone capacity result.
 
-6. **Passwordless Auth-Email Delivery (`test_auth_email_delivery.py`)**:
+6. **Concurrent refresh rotation (`test_auth_refresh_concurrency.py`)**:
+    - Obtains one real passwordless session, submits two concurrent refresh
+      requests with the same token, and requires exactly one `200` plus one
+      reuse `401`.
+    - Presents the winning child token again and requires `401`, proving the
+      PostgreSQL-authoritative family revocation path after reuse detection.
+
+7. **Passwordless Auth-Email Delivery (`test_auth_email_delivery.py`)**:
    - Real Accounts outbox/RabbitMQ/Notifications/Mailpit CODE delivery.
    - One-time credential redemption and replay rejection.
    - Refresh-family revocation after logout and idempotent logout replay.

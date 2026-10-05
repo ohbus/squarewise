@@ -380,7 +380,7 @@ Accounts login-start and refresh admission now consume the shared `RateLimiter`
 port in production wiring. The former Accounts-specific bucket port and Redis
 component have been removed; the local-oidc profile no longer registers its
 in-memory test double. Accounts behavior tests pass, while live distributed
-failure/concurrency evidence remains open.
+failure evidence remains open; the refresh-concurrency slice is recorded below.
 
 Notifications delivery now delegates to the shared `RateLimiter` through its
 delivery boundary. Recipient admission therefore uses the common atomic Redis
@@ -466,6 +466,15 @@ second for 10 seconds with 351 completed requests, zero HTTP failures, and
 approximately 12.08 ms p95 latency. The local BFF HTTP limit was temporarily
 raised to avoid measuring intentional abuse denials; this is single-replica
 local wiring/capacity evidence and is not a production capacity claim.
+
+The concurrent refresh probe now obtains one real passwordless session and
+submits two refresh requests with the same token in parallel. Against rebuilt
+local Compose it observed exactly one `200` and one `401`, then rejected the
+winning child token with `401`, proving that reuse detection revokes the entire
+PostgreSQL-authoritative family. The implementation keeps the rotation
+transaction from rolling back the security revocation when the expected
+`ApplicationException` is raised. This is local single-Accounts evidence;
+hosted and multi-replica refresh evidence remain open.
 
 The shared `rateLimitRedis` health contributor is explicitly imported into
 Accounts, Notifications, and BFF and included in each readiness group. In the
