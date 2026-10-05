@@ -63,7 +63,7 @@ flowchart TD
 
 | Category | Endpoint / Request Operation | Cache Lookups (Redis) | DB Queries (PostgreSQL) | Persistence Operations & Details |
 |---|---|:---:|:---:|---|
-| **Public Auth** | `POST /auth/login/start` | **1 write/eval** *(Rate limit)* | **0** | Atomically checks/updates rate limit slot (`squarewise:rate-limit:v1:*`). Sends code/link via provider/outbox. |
+| **Public Auth** | `POST /auth/login/start` | **1 write/eval** *(Rate limit)* | **0** | Atomically checks/updates rate limit slot (`squarewise:rl:v1:<HMAC>`). Sends code/link via provider/outbox. |
 | | `POST /auth/login/verify` | **0** | **3 - 5** *(1 Tx)* | Single-use credential verify/redeem, `account_identities` lookup/enrollment, profile creation (if new), `auth_sessions` insert, audit log. |
 | | `POST /auth/token/refresh` | **1 write/eval** *(Rate limit)* | **3 - 4** *(1 Tx)* | Rate limit check, lookup session by token digest, identity status check, save child session, rotate parent session. |
 | | `POST /auth/logout` | **0** | **1 - 2** *(1 Tx)* | Marks token family/session revoked in `auth_sessions`. |

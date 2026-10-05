@@ -30,8 +30,8 @@ approval that every fallback is appropriate.
 
 | Location | Behavior | Reason | Assessment |
 |---|---|---|---|
-| `app/accounts/.../RedisRateLimitBucketStore.kt` | Redis failure propagates as rate-limit service unavailability | Prevents accepting requests when the limiter cannot decide | Fail-closed; required |
-| `app/notifications/.../RedisDeliveryRateLimiter` | Redis failure propagates | Prevents delivery-rate bypass across replicas | Fail-closed; required |
+| `libs/security/.../RedisRateLimiter.kt` | Redis failure propagates as rate-limit service unavailability | Prevents accepting requests when the limiter cannot decide | Fail-closed; required |
+| `app/notifications/.../RedisDeliveryRateLimiter` | Shared Redis failure suppresses delivery | Prevents delivery-rate bypass across replicas | Fail-closed; required |
 | `libs/db/.../DbRoutingDataSource.kt` | Reader failure is not redirected to the writer | Prevents hidden consistency/topology changes | Fail-closed; required |
 | `libs/db/.../DbReaderHealth.kt` | Lagging, disconnected, or open readers return failure | Prevents stale or unsafe reads | Fail-closed; required |
 | `libs/db/.../DbContextHolder.kt` | Missing context uses an unclassified command/writer context | Conservative route for undeclared operations | Compatibility fail-safe; retain telemetry |

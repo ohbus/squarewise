@@ -5048,8 +5048,9 @@
         "git diff --check"
       ],
       "evidence": [
-        "Shared RateLimiter contract, bounded policy/decision model, fail-closed exception, and atomic Redis adapter added under libs/security; focused security tests pass.",
-        "Accounts, Notifications, BFF, distributed Redis, query-count, failure, capacity, and hosted E2E evidence remain open and must not be inferred from this increment."
+        "Shared RateLimiter contract, bounded policy/decision model, fail-closed exception, atomic Redis adapter, and deployment-HMAC key derivation are implemented under libs/security; focused security and BFF tests pass.",
+        "Local Compose refresh/Redis outage/eviction/restart E2E passes; Notifications full-suite execution is blocked by existing RabbitMQ authentication in the local test environment.",
+        "Accounts, Notifications delivery, GraphQL/WebSocket public-surface, query-count, multi-replica failure, capacity, and hosted E2E evidence remain open and must not be inferred from local increments."
       ],
       "reviewer": "/root",
       "blocker": null

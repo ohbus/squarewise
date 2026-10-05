@@ -81,7 +81,7 @@ provider-qualified subject, and token responses prohibit intermediary caching.
 | AUTH-06 | Optional local Keycloak realm and Mailpit bootstrap | P1 | AUTH-03 | Done |
 | AUTH-07 | Squarewise-owned login start/callback contracts | P1 | AUTH-01 | Done |
 | AUTH-08 | RFC-aligned session lifecycle, endpoint protection, cache consistency, and full local security evidence | P0 | AUTH-07, DB-08, ERR-03, QA-07 | Done |
-| AUTH-09 | Rate limiting and email-enumeration protection | P0 | AUTH-08 | Planned |
+| AUTH-09 | Rate limiting and email-enumeration protection | P0 | AUTH-08 | In progress; shared Redis/HMAC limiter implemented, distributed evidence open |
 | AUTH-10 | Identity mapping using provider-qualified subjects | P0 | AUTH-03 | Planned |
 | AUTH-11 | Short-lived access credentials and rotating refresh tokens | P0 | AUTH-10 | Planned |
 | AUTH-12 | Logout, revocation, reuse detection, and session management | P0 | AUTH-11 | Planned |
