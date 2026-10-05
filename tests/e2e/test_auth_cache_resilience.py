@@ -25,7 +25,7 @@ ACCOUNTS_URL: Final[str] = os.environ.get(
 )
 REFRESH_PATH: Final[str] = "/accounts/v1/auth/token/refresh"
 PROBE_TOKEN: Final[str] = "auth-cache-resilience-invalid-refresh"
-RATE_LIMIT_KEY_PATTERN: Final[str] = "squarewise:rate-limit:v1:*"
+RATE_LIMIT_KEY_PATTERN: Final[str] = "squarewise:rl:v1:*"
 
 
 def compose(*arguments: str) -> str:

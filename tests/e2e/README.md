@@ -47,7 +47,13 @@ The end-to-end test suites run against the live local environment (`infra/local/
    - Fault healing: unpauses RabbitMQ; verifies outbox relay daemon drains `PENDING` records to `PUBLISHED`.
    - End-to-end verification: Notifications service receives and confirms delivered events.
 
-5. **Passwordless Auth-Email Delivery (`test_auth_email_delivery.py`)**:
+5. **Redis Authentication Rate-Limit Resilience (`test_auth_cache_resilience.py`)**:
+   - Shared Redis admission reaches the refresh limit, evicts only the
+     `squarewise:rl:v1:*` namespace, and admits again after targeted cleanup.
+   - Redis outage fails closed with HTTP 429 and restart recovers with no
+     PostgreSQL or process-local fallback.
+
+6. **Passwordless Auth-Email Delivery (`test_auth_email_delivery.py`)**:
    - Real Accounts outbox/RabbitMQ/Notifications/Mailpit CODE delivery.
    - One-time credential redemption and replay rejection.
    - Refresh-family revocation after logout and idempotent logout replay.
@@ -62,6 +68,7 @@ The end-to-end test suites run against the live local environment (`infra/local/
 ```sh
 # Run individual test suites
 make e2e-live
+make e2e-auth-cache
 make e2e-offline
 make e2e-concurrency
 make e2e-chaos

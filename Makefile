@@ -160,7 +160,7 @@ e2e-concurrency: ## Run concurrent member edit conflict resolution and GraphQL s
 e2e-chaos: ## Run message broker outage chaos and transactional outbox recovery tests
 	@$(UV_RUN) python3 tests/e2e/test_chaos_recovery.py
 
-e2e-all: e2e-auth-email e2e-live e2e-offline e2e-concurrency e2e-chaos ## Run the entire comprehensive E2E test suite against the live stack
+e2e-all: e2e-auth-cache e2e-auth-email e2e-live e2e-offline e2e-concurrency e2e-chaos ## Run the entire comprehensive E2E test suite against the live stack
 	@echo "All E2E test suites passed successfully!"
 
 smoke: validate e2e ## Run safe local smoke checks without starting containers

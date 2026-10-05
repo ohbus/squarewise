@@ -400,6 +400,13 @@ policy is separate from GraphQL HTTP and remains subject to the existing JWT
 security chain and subscription-cap controls. Focused handshake tests pass;
 multi-replica reconnect and revoked-token live evidence remain open.
 
+The existing Redis resilience E2E now targets the shared `squarewise:rl:v1:*`
+namespace and is part of `make e2e-all` and the selected edge/security CI
+stream. It proves refresh denial, targeted namespace eviction, Redis outage
+fail-closed behavior, and restart recovery when Docker-backed execution runs;
+multi-replica concurrency, query-count, notification, and capacity suites are
+still separate open evidence.
+
 ### Current increment (2026-09-28)
 
 The login-start request path now throws the catalogued `ERR-11` application
