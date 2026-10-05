@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component
 /**
  * Redis implementation of [RateLimiter] using one atomic fixed-window script.
  *
- * The caller key is hashed before it becomes Redis key material. Every key is
+ * The caller key is HMAC-derived before it becomes Redis key material. Every key is
  * namespaced, bounded by the policy TTL, and contains no raw identifier. Redis
  * failures are translated to the shared fail-closed exception.
  */

@@ -8,6 +8,7 @@ import com.subhrodip.squarewise.security.OidcConfigurationGuard
 import com.subhrodip.squarewise.security.ratelimit.RateLimiter
 import com.subhrodip.squarewise.security.ratelimit.HmacRateLimitKeyDeriver
 import com.subhrodip.squarewise.security.ratelimit.RedisRateLimiter
+import com.subhrodip.squarewise.security.ratelimit.RateLimitRedisHealthIndicator
 import java.time.Duration
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
@@ -23,7 +24,7 @@ import reactor.core.publisher.Mono
 
 /** Root Spring Boot composition for the GraphQL BFF application. */
 @SpringBootApplication
-@Import(OidcConfigurationGuard::class)
+@Import(OidcConfigurationGuard::class, RateLimitRedisHealthIndicator::class)
 class BffApplication {
     /** Creates the mandatory Redis-backed distributed limiter for BFF admission. */
     @Bean

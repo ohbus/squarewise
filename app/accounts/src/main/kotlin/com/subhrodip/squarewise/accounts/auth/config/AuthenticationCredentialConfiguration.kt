@@ -17,6 +17,7 @@ import com.subhrodip.squarewise.accounts.auth.credential.OneTimeCredentialIssuer
 import com.subhrodip.squarewise.security.ratelimit.RateLimiter
 import com.subhrodip.squarewise.security.ratelimit.HmacRateLimitKeyDeriver
 import com.subhrodip.squarewise.security.ratelimit.RedisRateLimiter
+import com.subhrodip.squarewise.security.ratelimit.RateLimitRedisHealthIndicator
 import io.micrometer.core.instrument.MeterRegistry
 import com.subhrodip.squarewise.accounts.auth.delivery.security.AesGcmCredentialEnvelopeProtector
 import com.subhrodip.squarewise.accounts.auth.delivery.security.CredentialEnvelopeProtector
@@ -25,10 +26,12 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Import
 import org.springframework.data.redis.core.StringRedisTemplate
 
 /** Fail-closed deployment wiring for passwordless credential cryptography. */
 @Configuration
+@Import(RateLimitRedisHealthIndicator::class)
 @EnableConfigurationProperties(TrustedProxyProperties::class)
 class AuthenticationCredentialConfiguration(
     @Value("\${SQUAREWISE_SECURITY_CREDENTIAL_DIGEST_SECRET}")

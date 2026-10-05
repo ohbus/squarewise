@@ -9,6 +9,7 @@ import com.subhrodip.squarewise.notifications.consumer.transport.BrokerEnvelopeP
 import com.subhrodip.squarewise.security.ratelimit.RateLimiter
 import com.subhrodip.squarewise.security.ratelimit.HmacRateLimitKeyDeriver
 import com.subhrodip.squarewise.security.ratelimit.RedisRateLimiter
+import com.subhrodip.squarewise.security.ratelimit.RateLimitRedisHealthIndicator
 import io.micrometer.core.instrument.MeterRegistry
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.amqp.core.Binding
@@ -19,11 +20,13 @@ import org.springframework.amqp.core.TopicExchange
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Import
 import org.springframework.data.redis.core.StringRedisTemplate
 import tools.jackson.databind.ObjectMapper
 
 /** Declares the notification event exchange, queues, and domain-event bindings. */
 @Configuration
+@Import(RateLimitRedisHealthIndicator::class)
 @EnableConfigurationProperties(NotificationMessagingProperties::class, EmailProperties::class)
 class NotificationMessagingConfiguration(
     @Value("\${SQUAREWISE_SECURITY_CREDENTIAL_DIGEST_SECRET:}")

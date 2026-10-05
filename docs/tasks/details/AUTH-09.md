@@ -448,6 +448,14 @@ approximately 12.08 ms p95 latency. The local BFF HTTP limit was temporarily
 raised to avoid measuring intentional abuse denials; this is single-replica
 local wiring/capacity evidence and is not a production capacity claim.
 
+The shared `rateLimitRedis` health contributor is explicitly imported into
+Accounts, Notifications, and BFF and included in each readiness group. In the
+rebuilt local Compose stack, Accounts and BFF readiness returned `200/UP` with
+Redis healthy, `503/DOWN` while Redis was stopped, and `200/UP` after Redis
+restart. All three services returned healthy after recovery. This is local
+readiness evidence; hosted health, alert, and production failover evidence
+remain open.
+
 Rate-limit decisions now expose bounded Micrometer counters for `allowed`,
 `denied`, and `store_error`, tagged only by the centrally defined policy ID and
 outcome. No key, subject, IP, token, or request ID is used as a metric label.
