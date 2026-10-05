@@ -5053,6 +5053,7 @@
         "Shared RateLimiter contract, bounded policy/decision model, fail-closed exception, atomic Redis adapter, and deployment-HMAC key derivation are implemented under libs/security; focused security and BFF tests pass.",
         "Local Compose refresh/Redis outage/eviction/restart E2E passes; Notifications full-suite execution is blocked by existing RabbitMQ authentication in the local test environment.",
         "Local public BFF E2E passes GraphQL HTTP and distinct WebSocket handshake cap-plus-one 429 checks after correcting BFF Redis host/password wiring.",
+        "The same local probe passes BFF GraphQL HTTP and WebSocket fail-closed 429 checks while Redis is stopped, then restores Redis.",
         "Local authenticated lookup-isolation E2E passes Expense Core and BFF group reads while Accounts is stopped; exact SQL statement-count telemetry is still open.",
         "Accounts, Notifications delivery, GraphQL/WebSocket public-surface, query-count, multi-replica failure, capacity, and hosted E2E evidence remain open and must not be inferred from local increments."
       ],

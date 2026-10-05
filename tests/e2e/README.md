@@ -58,6 +58,8 @@ The end-to-end test suites run against the live local environment (`infra/local/
      120-request window and verifies the next request returns HTTP 429.
    - Exercises 20 public GraphQL WebSocket handshakes and verifies the next
      handshake returns HTTP 429 under the distinct WebSocket policy.
+   - Stops Redis and verifies both public GraphQL admission paths fail closed
+     with HTTP 429 before restarting it.
    - Clears only `squarewise:rl:v1:*`; it requires a real `BEARER_TOKEN` for
      the WebSocket handshake and must run against the dedicated local/CI stack.
 

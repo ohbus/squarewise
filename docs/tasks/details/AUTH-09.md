@@ -423,6 +423,12 @@ missing BFF Redis host/password wiring, which was corrected before the passing
 rerun. This remains local single-replica evidence, not hosted or production
 capacity evidence.
 
+The same suite also stops Redis after clearing its namespace and verifies both
+GraphQL HTTP admission and WebSocket handshake admission return fail-closed
+`429` responses, then restarts Redis. Refresh outage/recovery and these BFF
+public-path checks are local evidence; Notifications delivery outage and
+multi-replica failure evidence remain open.
+
 The authenticated lookup-isolation probe stopped Accounts after acquiring a
 real Keycloak bearer token, then successfully read Expense Core groups directly
 and BFF groups through GraphQL. This proves those ordinary bearer paths do not

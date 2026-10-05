@@ -118,6 +118,14 @@ def main() -> int:
         if status == 429:
             raise AssertionError(f"WebSocket handshake {index} was rate limited early")
     expect("GraphQL WebSocket handshake at cap + 1", websocket_handshake_status(), 429)
+
+    clear_rate_limit_namespace()
+    compose("stop", "redis")
+    try:
+        expect("GraphQL HTTP with Redis unavailable", graphql_http_status(), 429)
+        expect("GraphQL WebSocket with Redis unavailable", websocket_handshake_status(), 429)
+    finally:
+        compose("start", "redis")
     return 0
 
 
