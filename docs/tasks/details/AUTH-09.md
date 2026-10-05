@@ -407,6 +407,13 @@ fail-closed behavior, and restart recovery when Docker-backed execution runs;
 multi-replica concurrency, query-count, notification, and capacity suites are
 still separate open evidence.
 
+The Redis resilience suite was executed against the local Docker Compose stack
+after building the four service boot JARs. It observed ten pre-limit `401`
+responses, an eleventh `429`, recovery to `401` after targeted namespace
+eviction, fail-closed `429` while Redis was stopped, and recovery to `401`
+after Redis restart. This is local Compose evidence only; it does not close
+hosted CI, production topology, multi-replica, or capacity acceptance.
+
 Rate-limit decisions now expose bounded Micrometer counters for `allowed`,
 `denied`, and `store_error`, tagged only by the centrally defined policy ID and
 outcome. No key, subject, IP, token, or request ID is used as a metric label.
@@ -446,9 +453,9 @@ translated by the shared validation handler. Notification delivery limits remain
 asynchronous and fail closed by suppressing dispatch when the limit/store path
 does not admit delivery.
 
-This increment does not claim completion of AUTH-09: the task is still absent
-from the authoritative registry, and distributed cross-surface Redis E2E,
-failure, query-count, and capacity evidence remain outstanding.
+This increment does not claim completion of AUTH-09. The task is registered as
+`in_progress`; distributed cross-surface Redis E2E, failure, query-count,
+capacity, and hosted evidence remain outstanding.
 
 - Accounts rate limiting uses the Redis bucket port and a mandatory Redis adapter;
   PostgreSQL rate-limit entities/repositories were removed and the table is retired
