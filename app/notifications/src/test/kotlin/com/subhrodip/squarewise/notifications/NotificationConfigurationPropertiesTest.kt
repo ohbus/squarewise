@@ -16,6 +16,18 @@ class NotificationConfigurationPropertiesTest {
         assertEquals("squarewise.events.dlx", properties.deadLetterExchange)
         assertEquals("squarewise.notifications.v2.dlq", properties.deadLetterQueue)
         assertEquals("squarewise.auth-email.v2.dlq", properties.authEmailDeadLetterQueue)
+        assertEquals(10, properties.deliveryMaxPermits)
+        assertEquals(60, properties.deliveryWindowSeconds)
+    }
+
+    @Test
+    fun `notification delivery policy bounds fail closed`() {
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException::class.java) {
+            NotificationMessagingProperties(deliveryMaxPermits = 0)
+        }
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException::class.java) {
+            NotificationMessagingProperties(deliveryWindowSeconds = 0)
+        }
     }
 
     @Test

@@ -36,6 +36,8 @@ management:
 
 squarewise:
   notifications:
+    delivery-max-permits: ${SQUAREWISE_NOTIFICATIONS_DELIVERY_MAX_PERMITS:10}
+    delivery-window-seconds: ${SQUAREWISE_NOTIFICATIONS_DELIVERY_WINDOW_SECONDS:60}
     email:
       host: ${SQUAREWISE_NOTIFICATIONS_EMAIL_HOST}
       port: ${SQUAREWISE_NOTIFICATIONS_EMAIL_PORT}

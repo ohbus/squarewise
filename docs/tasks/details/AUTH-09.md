@@ -436,6 +436,12 @@ require a request-time Accounts call in the local topology. It is dependency
 isolation evidence rather than PostgreSQL statement-count telemetry; exact SQL
 query-count and latency artifacts remain open.
 
+Notifications delivery policy values are now bounded configuration properties,
+and both general notification dispatch and protected auth-email dispatch invoke
+the shared limiter immediately before provider dispatch. Unit/component tests
+cover admission and suppression. A live broker-to-provider denial/recovery
+drill remains open.
+
 Rate-limit decisions now expose bounded Micrometer counters for `allowed`,
 `denied`, and `store_error`, tagged only by the centrally defined policy ID and
 outcome. No key, subject, IP, token, or request ID is used as a metric label.

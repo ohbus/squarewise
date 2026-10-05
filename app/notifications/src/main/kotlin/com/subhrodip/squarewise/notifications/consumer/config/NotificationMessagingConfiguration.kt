@@ -3,6 +3,7 @@ package com.subhrodip.squarewise.notifications.consumer.config
 import com.subhrodip.squarewise.ids.events.EventConstants
 import com.subhrodip.squarewise.notifications.delivery.rate.DeliveryRateLimiter
 import com.subhrodip.squarewise.notifications.delivery.rate.RedisDeliveryRateLimiter
+import java.time.Duration
 import com.subhrodip.squarewise.notifications.email.config.EmailProperties
 import com.subhrodip.squarewise.notifications.consumer.transport.BrokerEnvelopeParser
 import com.subhrodip.squarewise.security.ratelimit.RateLimiter
@@ -40,7 +41,14 @@ class NotificationMessagingConfiguration(
 
     /** Provides the bounded per-recipient delivery policy used by consumers. */
     @Bean
-    fun deliveryRateLimiter(rateLimiter: RateLimiter): DeliveryRateLimiter = RedisDeliveryRateLimiter(rateLimiter)
+    fun deliveryRateLimiter(
+        rateLimiter: RateLimiter,
+        properties: NotificationMessagingProperties
+    ): DeliveryRateLimiter = RedisDeliveryRateLimiter(
+        rateLimiter,
+        limit = properties.deliveryMaxPermits,
+        window = Duration.ofSeconds(properties.deliveryWindowSeconds)
+    )
 
     /** Declares the shared durable event exchange. */
     @Bean
