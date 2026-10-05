@@ -454,6 +454,7 @@ jobs:
           fresh_bob="$(grep '^SQUAREWISE_E2E_TOKEN_B=' "$GITHUB_ENV" | tail -1 | cut -d= -f2-)"
           fresh_nonmember="$(grep '^SQUAREWISE_E2E_TOKEN_NONMEMBER=' "$GITHUB_ENV" | tail -1 | cut -d= -f2-)"
           BEARER_TOKEN="$fresh_token" make e2e-auth-surfaces 2>&1 | tee build/reports/e2e/auth-rate-limit-surfaces.log
+          BEARER_TOKEN="$fresh_token" make e2e-auth-no-accounts 2>&1 | tee build/reports/e2e/auth-no-accounts.log
           make e2e-auth-cache 2>&1 | tee build/reports/e2e/auth-cache-resilience.log
           BEARER_TOKEN="$fresh_token" \
             SQUAREWISE_E2E_TOKEN_B="$fresh_bob" \

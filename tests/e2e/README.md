@@ -61,6 +61,12 @@ The end-to-end test suites run against the live local environment (`infra/local/
    - Clears only `squarewise:rl:v1:*`; it requires a real `BEARER_TOKEN` for
      the WebSocket handshake and must run against the dedicated local/CI stack.
 
+7. **Local JWT identity lookup isolation (`test_auth_no_accounts_lookup.py`)**:
+   - Stops Accounts after token acquisition and verifies authenticated Expense
+     Core and BFF group reads still succeed through local JWT validation.
+   - This proves no request-time Accounts call is required; it is local
+     dependency-isolation evidence and does not replace SQL/query telemetry.
+
 6. **Passwordless Auth-Email Delivery (`test_auth_email_delivery.py`)**:
    - Real Accounts outbox/RabbitMQ/Notifications/Mailpit CODE delivery.
    - One-time credential redemption and replay rejection.
@@ -78,6 +84,7 @@ The end-to-end test suites run against the live local environment (`infra/local/
 make e2e-live
 make e2e-auth-cache
 make e2e-auth-surfaces
+make e2e-auth-no-accounts
 make e2e-offline
 make e2e-concurrency
 make e2e-chaos

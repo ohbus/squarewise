@@ -423,6 +423,13 @@ missing BFF Redis host/password wiring, which was corrected before the passing
 rerun. This remains local single-replica evidence, not hosted or production
 capacity evidence.
 
+The authenticated lookup-isolation probe stopped Accounts after acquiring a
+real Keycloak bearer token, then successfully read Expense Core groups directly
+and BFF groups through GraphQL. This proves those ordinary bearer paths do not
+require a request-time Accounts call in the local topology. It is dependency
+isolation evidence rather than PostgreSQL statement-count telemetry; exact SQL
+query-count and latency artifacts remain open.
+
 Rate-limit decisions now expose bounded Micrometer counters for `allowed`,
 `denied`, and `store_error`, tagged only by the centrally defined policy ID and
 outcome. No key, subject, IP, token, or request ID is used as a metric label.
