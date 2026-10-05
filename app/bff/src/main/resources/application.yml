@@ -3,6 +3,11 @@ spring:
     name: bff
   codec:
     max-in-memory-size: ${SQUAREWISE_BFF_MAX_BODY_SIZE:256KB}
+  data:
+    redis:
+      host: ${SQUAREWISE_REDIS_HOST}
+      password: ${SQUAREWISE_REDIS_PASSWORD}
+      timeout: ${SQUAREWISE_REDIS_COMMAND_TIMEOUT:2s}
   security:
     oauth2:
       resourceserver:

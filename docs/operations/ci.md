@@ -52,7 +52,8 @@ four artifact paths before Compose starts, so a missing artifact fails at the
 handoff instead of later as an opaque Docker `COPY` checksum error.
 The monolithic E2E stage is split into three parallel streams:
 1. `e2e-edge-and-security`: Contract smoke, Redis authentication-cache
-   eviction/outage/restart checks (`make e2e-auth-cache`), negative OIDC JWT
+   eviction/outage/restart checks (`make e2e-auth-cache`), public GraphQL HTTP
+   and WebSocket rate-limit surface checks (`make e2e-auth-surfaces`), negative OIDC JWT
    path probes, and live REST edge cases (`make e2e-rest-edge`).
 2. `e2e-product-and-offline`: Passwordless auth-email delivery (`make e2e-auth-email`), public acceptance suite (`make acceptance-live`), ordered Bruno collection (`make bruno-run`), live multi-service product lifecycle (`make e2e-live`), and offline client synchronization / replay resilience (`make e2e-offline`).
 3. `e2e-concurrency-and-chaos`: Real-time WebSocket GraphQL subscription invalidation, concurrent member edit race resolution (`make e2e-concurrency`), message broker outage chaos, and transactional outbox drain recovery (`make e2e-chaos`).

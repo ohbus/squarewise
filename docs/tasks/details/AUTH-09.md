@@ -415,6 +415,14 @@ eviction, fail-closed `429` while Redis was stopped, and recovery to `401`
 after Redis restart. This is local Compose evidence only; it does not close
 hosted CI, production topology, multi-replica, or capacity acceptance.
 
+The public GraphQL surface suite now runs through the rebuilt local Compose BFF.
+It admitted requests through the configured HTTP window and returned `429` at
+cap plus one; it likewise admitted WebSocket handshakes through the distinct
+WebSocket window and returned `429` at cap plus one. The first live run exposed
+missing BFF Redis host/password wiring, which was corrected before the passing
+rerun. This remains local single-replica evidence, not hosted or production
+capacity evidence.
+
 Rate-limit decisions now expose bounded Micrometer counters for `allowed`,
 `denied`, and `store_error`, tagged only by the centrally defined policy ID and
 outcome. No key, subject, IP, token, or request ID is used as a metric label.

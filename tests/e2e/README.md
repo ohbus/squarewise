@@ -53,6 +53,14 @@ The end-to-end test suites run against the live local environment (`infra/local/
    - Redis outage fails closed with HTTP 429 and restart recovers with no
      PostgreSQL or process-local fallback.
 
+6. **GraphQL Rate-Limit Surfaces (`test_auth_rate_limit_surfaces.py`)**:
+   - Exercises the public `/graphql` HTTP boundary through the configured
+     120-request window and verifies the next request returns HTTP 429.
+   - Exercises 20 public GraphQL WebSocket handshakes and verifies the next
+     handshake returns HTTP 429 under the distinct WebSocket policy.
+   - Clears only `squarewise:rl:v1:*`; it requires a real `BEARER_TOKEN` for
+     the WebSocket handshake and must run against the dedicated local/CI stack.
+
 6. **Passwordless Auth-Email Delivery (`test_auth_email_delivery.py`)**:
    - Real Accounts outbox/RabbitMQ/Notifications/Mailpit CODE delivery.
    - One-time credential redemption and replay rejection.
@@ -69,6 +77,7 @@ The end-to-end test suites run against the live local environment (`infra/local/
 # Run individual test suites
 make e2e-live
 make e2e-auth-cache
+make e2e-auth-surfaces
 make e2e-offline
 make e2e-concurrency
 make e2e-chaos
