@@ -404,6 +404,10 @@ jobs:
       - name: Run contract and deployment smoke checks
         run: bash tests/e2e/contract-smoke.sh
       - name: Start the complete local application stack
+        env:
+          SQUAREWISE_AUTH_LOGIN_RESEND_COOLDOWN_SECONDS: "0"
+          SQUAREWISE_NOTIFICATIONS_DELIVERY_MAX_PERMITS: "1"
+          SQUAREWISE_NOTIFICATIONS_DELIVERY_WINDOW_SECONDS: "2"
         run: docker compose -f infra/local/docker-compose.dev.yml up -d --build --wait
       - name: Diagnose local stack startup failure
         if: failure()
@@ -453,6 +457,10 @@ jobs:
           fresh_token="$(grep '^BEARER_TOKEN=' "$GITHUB_ENV" | tail -1 | cut -d= -f2-)"
           fresh_bob="$(grep '^SQUAREWISE_E2E_TOKEN_B=' "$GITHUB_ENV" | tail -1 | cut -d= -f2-)"
           fresh_nonmember="$(grep '^SQUAREWISE_E2E_TOKEN_NONMEMBER=' "$GITHUB_ENV" | tail -1 | cut -d= -f2-)"
+          SQUAREWISE_AUTH_LOGIN_RESEND_COOLDOWN_SECONDS=0 \
+            SQUAREWISE_NOTIFICATIONS_DELIVERY_MAX_PERMITS=1 \
+            SQUAREWISE_NOTIFICATIONS_DELIVERY_WINDOW_SECONDS=2 \
+            make e2e-auth-notification-limit 2>&1 | tee build/reports/e2e/auth-notification-rate-limit.log
           BEARER_TOKEN="$fresh_token" make e2e-auth-surfaces 2>&1 | tee build/reports/e2e/auth-rate-limit-surfaces.log
           BEARER_TOKEN="$fresh_token" make e2e-auth-no-accounts 2>&1 | tee build/reports/e2e/auth-no-accounts.log
           make e2e-auth-cache 2>&1 | tee build/reports/e2e/auth-cache-resilience.log

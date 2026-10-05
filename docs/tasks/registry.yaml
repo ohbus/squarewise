@@ -5055,10 +5055,11 @@
         "Local public BFF E2E passes GraphQL HTTP and distinct WebSocket handshake cap-plus-one 429 checks after correcting BFF Redis host/password wiring.",
         "The same local probe passes BFF GraphQL HTTP and WebSocket fail-closed 429 checks while Redis is stopped, then restores Redis.",
         "Local authenticated lookup-isolation E2E passes Expense Core and BFF group reads while Accounts is stopped; exact SQL statement-count telemetry is still open.",
-        "Notifications delivery policy is bounded/configurable and both general and auth-email dispatch paths invoke the shared limiter; focused tests pass, while live broker/provider denial evidence remains open.",
+        "Notifications delivery policy is bounded/configurable and both general and auth-email dispatch paths invoke the shared limiter; focused tests pass and local live broker/provider suppression and recovery evidence is recorded separately.",
+        "A typed local E2E probe passed through Accounts outbox, RabbitMQ, Notifications, and Mailpit with test-only one-per-two-second settings: the first same-recipient auth email was delivered, the second was suppressed before provider dispatch, and a later event recovered after the Redis window expired. Hosted and production evidence remain open.",
         "An isolated local k6 GraphQL admission run completed 351 requests at 35/s with 0% HTTP failures and 12.08 ms p95 after a temporary isolated cap override; this is not production or multi-replica capacity evidence.",
         "The shared rateLimitRedis health contributor is explicitly imported into Accounts, Notifications, and BFF and included in each readiness group; rebuilt local Compose showed Accounts and BFF 200/UP when Redis was healthy, 503/DOWN while Redis was stopped, and 200/UP after restart, with all three healthy after recovery. Hosted health, alert, and production failover evidence remain open.",
-        "Accounts, Notifications delivery, GraphQL/WebSocket public-surface, query-count, multi-replica failure, capacity, and hosted E2E evidence remain open and must not be inferred from local increments."
+        "Notifications hosted/production delivery, GraphQL/WebSocket public-surface, query-count, multi-replica failure, capacity, and hosted E2E evidence remain open and must not be inferred from local increments."
       ],
       "reviewer": "/root",
       "blocker": null

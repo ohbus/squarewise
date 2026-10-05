@@ -22,6 +22,7 @@ import io.micrometer.core.instrument.MeterRegistry
 import com.subhrodip.squarewise.accounts.auth.delivery.security.AesGcmCredentialEnvelopeProtector
 import com.subhrodip.squarewise.accounts.auth.delivery.security.CredentialEnvelopeProtector
 import java.util.Base64
+import java.time.Duration
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
@@ -37,8 +38,15 @@ class AuthenticationCredentialConfiguration(
     @Value("\${SQUAREWISE_SECURITY_CREDENTIAL_DIGEST_SECRET}")
     private val encodedDigestSecret: String,
     @Value("\${SQUAREWISE_SECURITY_AUTH_EMAIL_ENVELOPE_KEY}")
-    private val encodedEnvelopeKey: String
+    private val encodedEnvelopeKey: String,
+    @Value("\${SQUAREWISE_AUTH_LOGIN_RESEND_COOLDOWN_SECONDS:60}")
+    private val loginResendCooldownSeconds: Long
 ) {
+    init {
+        require(loginResendCooldownSeconds in 0..900) {
+            "SQUAREWISE_AUTH_LOGIN_RESEND_COOLDOWN_SECONDS must be between 0 and 900"
+        }
+    }
     /** Creates the mandatory Redis-backed distributed limiter for runtime profiles. */
     @Bean
     fun rateLimiter(redis: StringRedisTemplate, meterRegistry: MeterRegistry): RateLimiter =
@@ -75,8 +83,11 @@ class AuthenticationCredentialConfiguration(
     fun loginRateLimitService(
         keyDeriver: LoginRateLimitKeyDeriver,
         rateLimiter: RateLimiter
-    ): LoginRateLimitService =
-        LoginRateLimitService(keyDeriver, rateLimiter)
+    ): LoginRateLimitService = LoginRateLimitService(
+        keyDeriver,
+        rateLimiter,
+        resendCooldown = Duration.ofSeconds(loginResendCooldownSeconds)
+    )
 
     /** Creates the fail-closed refresh-token rotation limiter. */
     @Bean

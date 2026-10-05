@@ -69,6 +69,16 @@ The end-to-end test suites run against the live local environment (`infra/local/
    - This proves no request-time Accounts call is required; it is local
      dependency-isolation evidence and does not replace SQL/query telemetry.
 
+8. **Auth-email delivery admission (`test_auth_notification_rate_limit.py`)**:
+   - Requires the test deployment overrides `SQUAREWISE_AUTH_LOGIN_RESEND_COOLDOWN_SECONDS=0`,
+     `SQUAREWISE_NOTIFICATIONS_DELIVERY_MAX_PERMITS=1`, and
+     `SQUAREWISE_NOTIFICATIONS_DELIVERY_WINDOW_SECONDS=2`.
+   - Emits real same-recipient login events through the Accounts outbox and
+     RabbitMQ, verifies Notifications delivers the first, suppresses the
+     second before provider dispatch, and delivers again after the Redis
+     window expires.
+   - The overrides are test-only; production defaults remain unchanged.
+
 6. **Passwordless Auth-Email Delivery (`test_auth_email_delivery.py`)**:
    - Real Accounts outbox/RabbitMQ/Notifications/Mailpit CODE delivery.
    - One-time credential redemption and replay rejection.

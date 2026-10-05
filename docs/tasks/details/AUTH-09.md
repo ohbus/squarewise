@@ -440,7 +440,9 @@ Notifications delivery policy values are now bounded configuration properties,
 and both general notification dispatch and protected auth-email dispatch invoke
 the shared limiter immediately before provider dispatch. Unit/component tests
 cover admission and suppression. A live broker-to-provider denial/recovery
-drill remains open.
+drill now passes locally through Accounts outbox, RabbitMQ, Notifications, and
+Mailpit when the test-only delivery window is set to one permit per two seconds;
+the production-default and hosted evidence remain separate.
 
 An isolated k6 admission probe was added and executed at 35 iterations per
 second for 10 seconds with 351 completed requests, zero HTTP failures, and

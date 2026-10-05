@@ -61,9 +61,17 @@ class AuthenticationCredentialConfigurationTest {
         )
     }
 
+    @Test
+    fun `rejects an unsafe login resend cooldown`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            configuration(loginResendCooldownSeconds = 901)
+        }
+    }
+
     private fun configuration(
         digestSecret: String = Base64.getEncoder().encodeToString(ByteArray(32)),
         envelopeKey: String = Base64.getEncoder().encodeToString(ByteArray(32)),
+        loginResendCooldownSeconds: Long = 60,
     ): AuthenticationCredentialConfiguration =
-        AuthenticationCredentialConfiguration(digestSecret, envelopeKey)
+        AuthenticationCredentialConfiguration(digestSecret, envelopeKey, loginResendCooldownSeconds)
 }
