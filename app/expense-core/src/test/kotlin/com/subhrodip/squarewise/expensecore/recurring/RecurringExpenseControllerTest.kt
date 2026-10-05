@@ -81,12 +81,14 @@ class RecurringExpenseControllerTest @Autowired constructor(
             frequency = RecurrenceFrequency.MONTHLY,
             dayOfMonth = 1,
             startDate = LocalDate.of(2026, 10, 1),
+            endDate = LocalDate.of(2026, 12, 31),
             payers = listOf(ExpensePayerDto(aliceId, MoneyDto("USD", "270000"))),
             allocations = listOf(ExpenseAllocationItemDto(aliceId, MoneyDto("USD", "270000")))
         )
         val updated = controller.updateSchedule(group.groupId, created.scheduleId, updateRequest, alice)
         assertEquals("Monthly Rent & Water", updated.description)
         assertEquals("270000", updated.amount.minor)
+        assertEquals(LocalDate.of(2026, 12, 31), updated.endDate)
 
         // 5. Pause schedule
         val paused = controller.pauseSchedule(group.groupId, created.scheduleId, alice)
