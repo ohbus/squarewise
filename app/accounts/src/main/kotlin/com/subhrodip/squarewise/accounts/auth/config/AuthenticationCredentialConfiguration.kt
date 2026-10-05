@@ -15,6 +15,7 @@ import com.subhrodip.squarewise.accounts.auth.credential.LoginCredentialReposito
 import com.subhrodip.squarewise.accounts.auth.credential.LoginCredentialService
 import com.subhrodip.squarewise.accounts.auth.credential.OneTimeCredentialIssuer
 import com.subhrodip.squarewise.security.ratelimit.RateLimiter
+import com.subhrodip.squarewise.security.ratelimit.RedisRateLimiter
 import com.subhrodip.squarewise.accounts.auth.delivery.security.AesGcmCredentialEnvelopeProtector
 import com.subhrodip.squarewise.accounts.auth.delivery.security.CredentialEnvelopeProtector
 import java.util.Base64
@@ -22,6 +23,7 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.data.redis.core.StringRedisTemplate
 
 /** Fail-closed deployment wiring for passwordless credential cryptography. */
 @Configuration
@@ -32,6 +34,11 @@ class AuthenticationCredentialConfiguration(
     @Value("\${SQUAREWISE_SECURITY_AUTH_EMAIL_ENVELOPE_KEY}")
     private val encodedEnvelopeKey: String
 ) {
+    /** Creates the mandatory Redis-backed distributed limiter for runtime profiles. */
+    @Bean
+    fun rateLimiter(redis: StringRedisTemplate): RateLimiter =
+        RedisRateLimiter(redis)
+
     /** Creates the HMAC digest adapter from a deployment-only base64 secret. */
     @Bean
     fun credentialDigest(): CredentialDigest = HmacCredentialDigest(decodeSecret())

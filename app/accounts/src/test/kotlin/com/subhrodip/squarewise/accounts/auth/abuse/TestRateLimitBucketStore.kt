@@ -13,12 +13,12 @@ import com.subhrodip.squarewise.security.ratelimit.RateLimiter
 @Component
 @Profile("test")
 @Primary
-class TestRateLimitBucketStore : RateLimitBucketStore, RateLimiter {
+class TestRateLimitBucketStore : RateLimiter {
     private data class Bucket(var started: Instant, var count: Int, var last: Instant)
 
     private val buckets = ConcurrentHashMap<String, Bucket>()
 
-    override fun acquireAtomically(
+    private fun acquireAtomically(
         key: ByteArray,
         now: Instant,
         windowStart: Instant,

@@ -24,7 +24,6 @@ import com.subhrodip.squarewise.accounts.auth.session.TokenResponse
 import com.subhrodip.squarewise.accounts.profile.persistence.InMemoryProfileStore
 import com.subhrodip.squarewise.errors.http.GlobalErrorHandler
 import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
-import com.subhrodip.squarewise.security.ratelimit.RateLimiter
 import java.security.Principal
 import java.time.Instant
 import org.junit.jupiter.api.Test
@@ -54,8 +53,8 @@ class AuthControllerTest @Autowired constructor(
     private val issuer = OneTimeCredentialIssuer(digest)
     private val credentialService = LoginCredentialService(credentialRepository, issuer)
     private val keyDeriver = LoginRateLimitKeyDeriver(digest)
-    private val rateLimitService = LoginRateLimitService(keyDeriver, bucketStore as RateLimiter)
-    private val refreshRateLimitService = RefreshRateLimitService(digest, bucketStore as RateLimiter, maximumRequests = 1)
+    private val rateLimitService = LoginRateLimitService(keyDeriver, bucketStore)
+    private val refreshRateLimitService = RefreshRateLimitService(digest, bucketStore, maximumRequests = 1)
     private val sentEmails = mutableListOf<AuthEmailMessage>()
     private val emailSender = AuthEmailSender {
         sentEmails.add(it)

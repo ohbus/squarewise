@@ -1,6 +1,9 @@
 package com.subhrodip.squarewise.accounts.auth.abuse
 
 import com.subhrodip.squarewise.accounts.auth.credential.HmacCredentialDigest
+import com.subhrodip.squarewise.security.ratelimit.RateLimitDecision
+import com.subhrodip.squarewise.security.ratelimit.RateLimitPolicy
+import com.subhrodip.squarewise.security.ratelimit.RateLimiter
 import java.time.Instant
 import java.time.Duration
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -15,7 +18,7 @@ class RefreshRateLimitServiceTest {
     @Test
     fun `denies after the configured maximum`() {
         val store = TestRateLimitBucketStore()
-        val service = RefreshRateLimitService(digest, store as RateLimitBucketStore, maximumRequests = 1)
+        val service = RefreshRateLimitService(digest, store, maximumRequests = 1)
         val now = Instant.parse("2026-09-28T00:00:00Z")
 
         assertTrue(service.tryAcquire("10.44", now))
@@ -25,14 +28,9 @@ class RefreshRateLimitServiceTest {
 
     @Test
     fun `fails closed when the rate-limit store cannot decide`() {
-        val unavailable = object : RateLimitBucketStore {
-            override fun acquireAtomically(
-                key: ByteArray,
-                now: Instant,
-                windowStart: Instant,
-                cooldownCutoff: Instant,
-                maximumRequests: Int
-            ): Int = throw RateLimitStoreUnavailableException(IllegalStateException("redis down"))
+        val unavailable = object : RateLimiter {
+            override fun consume(key: String, policy: RateLimitPolicy): RateLimitDecision =
+                throw RateLimitStoreUnavailableException(IllegalStateException("redis down"))
         }
         val service = RefreshRateLimitService(digest, unavailable)
 
@@ -43,7 +41,7 @@ class RefreshRateLimitServiceTest {
 
     @Test
     fun `rejects blank or oversized partitions before store access`() {
-        val service = RefreshRateLimitService(digest, TestRateLimitBucketStore() as RateLimitBucketStore)
+        val service = RefreshRateLimitService(digest, TestRateLimitBucketStore())
 
         assertThrows(IllegalArgumentException::class.java) {
             service.tryAcquire(" ", Instant.now())
@@ -62,13 +60,13 @@ class RefreshRateLimitServiceTest {
     @Test
     fun `rejects invalid rate-limit policy at construction`() {
         assertThrows(IllegalArgumentException::class.java) {
-            RefreshRateLimitService(digest, TestRateLimitBucketStore() as RateLimitBucketStore, window = Duration.ZERO)
+            RefreshRateLimitService(digest, TestRateLimitBucketStore(), window = Duration.ZERO)
         }
         assertThrows(IllegalArgumentException::class.java) {
-            RefreshRateLimitService(digest, TestRateLimitBucketStore() as RateLimitBucketStore, window = Duration.ofSeconds(-1))
+            RefreshRateLimitService(digest, TestRateLimitBucketStore(), window = Duration.ofSeconds(-1))
         }
         assertThrows(IllegalArgumentException::class.java) {
-            RefreshRateLimitService(digest, TestRateLimitBucketStore() as RateLimitBucketStore, maximumRequests = 0)
+            RefreshRateLimitService(digest, TestRateLimitBucketStore(), maximumRequests = 0)
         }
     }
 }

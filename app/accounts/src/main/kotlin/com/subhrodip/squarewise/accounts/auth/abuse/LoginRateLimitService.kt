@@ -14,17 +14,8 @@ open class LoginRateLimitService(
     private val maximumRequests: Int = 5,
     private val resendCooldown: Duration = Duration.ofSeconds(60)
 ) {
-    /** Compatibility constructor for focused tests of the pre-migration bucket port. */
-    constructor(
-        keyDeriver: LoginRateLimitKeyDeriver,
-        repository: RateLimitBucketStore,
-        window: Duration = Duration.ofMinutes(15),
-        maximumRequests: Int = 5,
-        resendCooldown: Duration = Duration.ofSeconds(60)
-    ) : this(keyDeriver, LegacyRateLimitBucketAdapter(repository), window, maximumRequests, resendCooldown)
-
     init {
-        LoginAbusePolicy(window, maximumRequests, resendCooldown)
+        RateLimitPolicy("auth-login", maximumPermits = maximumRequests, window = window, cooldown = resendCooldown)
     }
 
     /**
