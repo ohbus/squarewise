@@ -5,6 +5,8 @@ import com.subhrodip.squarewise.notifications.delivery.rate.DeliveryRateLimiter
 import com.subhrodip.squarewise.notifications.delivery.rate.RedisDeliveryRateLimiter
 import com.subhrodip.squarewise.notifications.email.config.EmailProperties
 import com.subhrodip.squarewise.notifications.consumer.transport.BrokerEnvelopeParser
+import com.subhrodip.squarewise.security.ratelimit.RateLimiter
+import com.subhrodip.squarewise.security.ratelimit.RedisRateLimiter
 import org.springframework.amqp.core.Binding
 import org.springframework.amqp.core.BindingBuilder
 import org.springframework.amqp.core.Declarables
@@ -21,13 +23,18 @@ import tools.jackson.databind.ObjectMapper
 @EnableConfigurationProperties(NotificationMessagingProperties::class, EmailProperties::class)
 class NotificationMessagingConfiguration {
 
+    /** Creates the mandatory Redis-backed distributed limiter for runtime profiles. */
+    @Bean
+    fun rateLimiter(redis: StringRedisTemplate): RateLimiter =
+        RedisRateLimiter(redis)
+
     /** Requires the application-managed mapper for broker envelope parsing. */
     @Bean
     fun brokerEnvelopeParser(objectMapper: ObjectMapper): BrokerEnvelopeParser = BrokerEnvelopeParser(objectMapper)
 
     /** Provides the bounded per-recipient delivery policy used by consumers. */
     @Bean
-    fun deliveryRateLimiter(redis: StringRedisTemplate): DeliveryRateLimiter = RedisDeliveryRateLimiter(redis)
+    fun deliveryRateLimiter(rateLimiter: RateLimiter): DeliveryRateLimiter = RedisDeliveryRateLimiter(rateLimiter)
 
     /** Declares the shared durable event exchange. */
     @Bean

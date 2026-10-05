@@ -382,6 +382,12 @@ longer registers its in-memory test double. Accounts behavior tests pass, but
 the legacy Redis class and live distributed failure/concurrency evidence still
 require the next increment.
 
+Notifications delivery now delegates to the shared `RateLimiter` through its
+delivery boundary. Recipient admission therefore uses the common atomic Redis
+adapter, while test-only delivery doubles remain direct unit-test dependencies.
+Focused adapter and Notifications context tests pass; GraphQL/WebSocket
+admission, failure drills, and live broker/Redis evidence remain open.
+
 ### Current increment (2026-09-28)
 
 The login-start request path now throws the catalogued `ERR-11` application
