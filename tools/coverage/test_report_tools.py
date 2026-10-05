@@ -82,7 +82,7 @@ class CoverageInventoryTest(unittest.TestCase):
     def test_every_current_branch_gap_has_a_qa_row(self) -> None:
         gaps = all_gaps(ROOT)
 
-        self.assertEqual(39, len(gaps))
+        self.assertEqual(37, len(gaps))
         self.assertTrue(all(gap.qa_row.startswith("QA10-") for gap in gaps))
         self.assertTrue(all(gap.assignment_basis for gap in gaps))
         self.assertTrue(all(gap.acceptance_criteria for gap in gaps))
@@ -103,7 +103,7 @@ class CoverageInventoryTest(unittest.TestCase):
             else:
                 self.assertIn(": identify a focused", target)
         self.assertEqual(
-            34,
+            33,
             sum(gap.closure_status == "BEHAVIOR-COVERED-MAPPING" for gap in gaps),
         )
         self.assertEqual(
@@ -111,7 +111,7 @@ class CoverageInventoryTest(unittest.TestCase):
             sum(gap.closure_status == "STRUCTURAL-INVARIANT" for gap in gaps),
         )
         self.assertEqual(
-            1,
+            0,
             sum(gap.closure_status == "OPEN-DESIGN" for gap in gaps),
         )
         group_store_gaps = [gap for gap in gaps if "JpaGroupStore" in gap.class_name]
@@ -131,13 +131,7 @@ class CoverageInventoryTest(unittest.TestCase):
             all("RecurringExpenseOptionalOutboxTest" in gap.record_acceptance for gap in recurring_gaps)
         )
         error_handler_gaps = [gap for gap in gaps if "GlobalErrorHandler" in gap.class_name]
-        self.assertEqual(1, len(error_handler_gaps))
-        self.assertTrue(
-            all(gap.closure_status == "BEHAVIOR-COVERED-MAPPING" for gap in error_handler_gaps)
-        )
-        self.assertTrue(
-            all("GlobalErrorHandlerTest" in gap.record_acceptance for gap in error_handler_gaps)
-        )
+        self.assertEqual(0, len(error_handler_gaps))
         for class_name, test_name in {
             "ClientAddressResolver": "ClientAddressResolverTest",
             "EmailAddress": "EmailAddressTest",
@@ -161,39 +155,39 @@ class CoverageInventoryTest(unittest.TestCase):
             self.assertTrue(all(test_name in gap.record_acceptance for gap in candidate_gaps))
         expected_counts = {
             "QA10-A01": 0,
-                "QA10-A02": 0,
-                "QA10-A03": 1,
-                "QA10-A04": 0,
-                "QA10-A05": 1,
-                "QA10-A06": 1,
-                "QA10-A07": 2,
-                "QA10-A08": 1,
-                "QA10-B01": 1,
-                "QA10-B02": 0,
-                "QA10-B03": 3,
-                "QA10-B04": 1,
-                "QA10-C01": 5,
-                "QA10-C02": 0,
-                "QA10-C03": 6,
-                "QA10-C04": 9,
-                "QA10-C05": 1,
-                "QA10-C06": 1,
-                "QA10-D01": 0,
-                "QA10-D02": 0,
-                "QA10-D03": 1,
-                "QA10-D04": 0,
-                "QA10-E01": 1,
-                "QA10-E02": 2,
-                "QA10-E03": 0,
-                "QA10-E04": 0,
-                "QA10-E05": 2,
+            "QA10-A02": 0,
+            "QA10-A03": 1,
+            "QA10-A04": 0,
+            "QA10-A05": 1,
+            "QA10-A06": 0,
+            "QA10-A07": 2,
+            "QA10-A08": 1,
+            "QA10-B01": 1,
+            "QA10-B02": 0,
+            "QA10-B03": 3,
+            "QA10-B04": 1,
+            "QA10-C01": 5,
+            "QA10-C02": 0,
+            "QA10-C03": 6,
+            "QA10-C04": 9,
+            "QA10-C05": 1,
+            "QA10-C06": 1,
+            "QA10-D01": 0,
+            "QA10-D02": 0,
+            "QA10-D03": 1,
+            "QA10-D04": 0,
+            "QA10-E01": 0,
+            "QA10-E02": 2,
+            "QA10-E03": 0,
+            "QA10-E04": 0,
+            "QA10-E05": 2,
         }
         actual_counts = Counter(gap.qa_row for gap in gaps)
         self.assertEqual(
             expected_counts,
             {row: actual_counts.get(row, 0) for row in expected_counts},
         )
-        self.assertEqual(78, sum(gap.missed_branches for gap in gaps))
+        self.assertEqual(63, sum(gap.missed_branches for gap in gaps))
 
     def test_evidence_targets_follow_public_or_service_boundaries(self) -> None:
         """Keep generated targets actionable without treating them as coverage."""
@@ -303,7 +297,7 @@ class CoverageInventoryTest(unittest.TestCase):
     def test_concrete_zero_execution_inventory_is_complete_and_assigned(self) -> None:
         gaps = execution_gaps(ROOT)
 
-        self.assertEqual(3, len(gaps))
+        self.assertEqual(1, len(gaps))
         self.assertTrue(all(gap.qa_row.startswith("QA10-") for gap in gaps))
         self.assertTrue(all(gap.acceptance_criteria for gap in gaps))
         self.assertTrue(all(gap.next_action for gap in gaps))
@@ -319,7 +313,6 @@ class CoverageInventoryTest(unittest.TestCase):
         )
         self.assertEqual(
             {
-                "app/accounts": 2,
                 "libs/observability": 1,
             },
             Counter(gap.module for gap in gaps),
@@ -327,13 +320,7 @@ class CoverageInventoryTest(unittest.TestCase):
         self.assertNotIn("AccountIdentityStore", {gap.class_name for gap in gaps})
         self.assertNotIn("<init>", {gap.method for gap in gaps})
         self.assertNotIn("$default", " ".join(gap.method for gap in gaps))
-        profile_actions = [
-            gap.next_action
-            for gap in gaps
-            if gap.class_name.endswith("ProfileController")
-        ]
-        self.assertEqual(2, len(profile_actions))
-        self.assertTrue(all("source search found no production caller" in action for action in profile_actions))
+        self.assertEqual("measureQuery", gaps[0].method)
 
     def test_committed_execution_gap_ledger_matches_current_inventory(self) -> None:
         gaps = execution_gaps(ROOT)
@@ -476,7 +463,7 @@ class CoverageInventoryTest(unittest.TestCase):
         rendered = render_branch_gaps(gaps)
         rows = rendered.splitlines()
 
-        self.assertEqual(41, len(rows))
+        self.assertEqual(39, len(rows))
         self.assertEqual(
             "| Module | QA row | Production class | Source | Method | Line | Missed | Covered | Assignment | Report | QA-row acceptance | Record acceptance | Evidence target | Closure status | Next action |",
             rows[0],
@@ -493,8 +480,8 @@ class CoverageInventoryTest(unittest.TestCase):
     def test_source_line_inventory_accounts_for_every_missed_branch(self) -> None:
         gaps = line_gaps(ROOT)
 
-        self.assertEqual(52, len(gaps))
-        self.assertEqual(78, sum(gap.missed_branches for gap in gaps))
+        self.assertEqual(50, len(gaps))
+        self.assertEqual(63, sum(gap.missed_branches for gap in gaps))
         self.assertTrue(all(gap.package for gap in gaps))
         self.assertTrue(all(gap.source_file for gap in gaps))
         self.assertTrue(all(gap.class_name for gap in gaps))
@@ -865,7 +852,7 @@ class CoverageInventoryTest(unittest.TestCase):
     def test_ci_documentation_uses_current_branch_baseline(self) -> None:
         ci = (ROOT / "docs/operations/ci.md").read_text(encoding="utf-8")
 
-        self.assertIn("39 methods containing 78 missed", ci)
+        self.assertIn("37 methods containing 63 missed", ci)
         self.assertNotIn("220 missed-branch methods", ci)
 
     def test_qa10_audit_documents_current_baseline_and_live_limitations(self) -> None:
@@ -877,17 +864,17 @@ class CoverageInventoryTest(unittest.TestCase):
         )
 
         self.assertIn(
-            "freshly regenerated JaCoCo XML baseline records **39",
+            "freshly regenerated JaCoCo XML baseline records **37",
             audit,
         )
-        self.assertIn("containing **78 missed branches**", audit)
+        self.assertIn("containing **63 missed branches**", audit)
         self.assertIn("The historical execution was **NOT-GREEN**", ledger)
 
     def test_qa10_task_detail_uses_current_baseline_not_historical_counts(self) -> None:
         detail = (ROOT / "docs/tasks/details/QA-10.md").read_text(encoding="utf-8")
 
         self.assertIn(
-            "current regenerated authoritative ledger is\n39 records with 78 missed branches",
+            "current regenerated authoritative ledger is\n37 records with 63 missed branches",
             detail,
         )
         self.assertNotIn(

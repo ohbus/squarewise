@@ -10,10 +10,10 @@ For a concise evidence-state overview, see the [QA-10 test-gap summary](qa10-gap
 
 ## Current baseline
 
-As of 2026-10-02, the freshly regenerated JaCoCo XML baseline records **39
-production methods with missed branches** containing **78 missed branches**,
-**54 contract operations** (45 REST and 9 GraphQL), and **three concrete
-execution-gap records**. Operation source discovery
+As of 2026-10-02, the freshly regenerated JaCoCo XML baseline records **37
+production methods with missed branches** containing **63 missed branches**,
+**54 contract operations** (45 REST and 9 GraphQL), and **one concrete
+execution-gap record**. Operation source discovery
 finds 0 operations without a literal E2E reference and 36 without a literal
 Bruno reference. These numbers are backlog signals, not passing-test claims;
 the hard branch gate remains red until the production reports are regenerated
@@ -31,19 +31,18 @@ normalized Bruno artifact credits 18 uniquely attributable contract operations;
 credited. This closes neither hosted-CI evidence nor the remaining per-operation
 acceptance rows.
 
-The current residual review split is **4 reviewed structural-invariant mappings**,
-**34 behavior-covered boundary/instrumentation mappings**, and **one open-design
-record** (`ProfileController.problem`/`mapErrorCode`). No
+The current residual review split is **4 reviewed structural-invariant mappings**
+and **33 behavior-covered boundary/instrumentation mappings**. No
 missed method is unaccounted for; behavior-covered mappings are explicitly
-linked to tests, while structural and open-design records remain review work.
+linked to tests, while structural records remain review work.
 The companion [`QA-10 branch-line ledger`](qa10-branch-line-gap-ledger.md)
-records the 52 exact JaCoCo source lines that account for those 78 branches;
+records the 50 exact JaCoCo source lines that account for those 63 branches;
 it is regenerated from the same reports and is not a substitute for behavior
 acceptance.
 The companion [`QA-10 concrete execution-gap ledger`](qa10-execution-gap-ledger.md)
-also records 3 production methods with zero covered instructions after
+also records 1 production method with zero covered instructions after
 excluding compiler-generated methods, accessors, application entry points, and
-interface declarations. These records catch method-level execution gaps that
+interface declarations (`DbTelemetry.measureQuery`). This record catches method-level execution gaps that
 branch-only discovery cannot represent. Framework/bootstrap entries require
 configuration or integration evidence; domain and transport entries require
 direct behavior tests. This ledger is a backlog and review aid, never a reason
@@ -77,7 +76,7 @@ delivery, identity-provider behavior, or cross-service side effects.
 
 ## Audit evidence and limits
 
-The current source inventory contains 400 Kotlin production files and 179
+The current source inventory contains 400 Kotlin production files and 199
 Kotlin test files under `app/` and `libs/`. The generated local JaCoCo
 reports currently report these line-coverage signals:
 
