@@ -456,6 +456,10 @@ jobs:
           SQUAREWISE_NOTIFICATIONS_DELIVERY_MAX_PERMITS=1 \
             SQUAREWISE_NOTIFICATIONS_DELIVERY_WINDOW_SECONDS=5 \
             docker compose -f infra/local/docker-compose.dev.yml up -d --build --wait
+          docker compose -f infra/local/docker-compose.dev.yml exec -T notifications sh -c '
+            test "$SQUAREWISE_NOTIFICATIONS_DELIVERY_MAX_PERMITS" = "1" &&
+            test "$SQUAREWISE_NOTIFICATIONS_DELIVERY_WINDOW_SECONDS" = "5"
+          '
           tests/e2e/acquire_local_tokens.sh
           # The stack was restarted above; Keycloak generated new signing keys, so the
           # tokens from the step-level env: block are now invalid.  acquire_local_tokens.sh

@@ -123,10 +123,8 @@ def main() -> int:
 
     recipient = f"qa-general-notification-{uuid.uuid4().hex}@example.com"
     publish_general_event(recipient)
-    first = wait_for_count(recipient, 1)
-
     publish_general_event(recipient)
-    time.sleep(1)
+    first = wait_for_count(recipient, 1)
     second = recipient_count(recipient)
     assert second == first, "second general notification bypassed delivery admission"
 

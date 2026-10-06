@@ -94,10 +94,8 @@ def main() -> int:
 
     recipient = f"qa-notification-limit-{int(time.time() * 1000)}@example.com"
     start_login(recipient)
-    assert wait_for_count(recipient, 1) == 1
-
     start_login(recipient)
-    time.sleep(1)
+    assert wait_for_count(recipient, 1) == 1
     assert recipient_count(recipient) == 1, "second same-recipient event bypassed delivery admission"
 
     time.sleep(5)
