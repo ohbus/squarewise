@@ -633,9 +633,18 @@ translated by the shared validation handler. Notification delivery limits remain
 asynchronous and fail closed by suppressing dispatch when the limit/store path
 does not admit delivery.
 
-This increment does not claim completion of AUTH-09. The task is registered as
-`in_progress`; distributed cross-surface Redis E2E, failure, query-count,
-capacity, and hosted evidence remain outstanding.
+The local implementation and disposable Compose verification now cover the
+selected Accounts, Notifications, BFF GraphQL HTTP/WebSocket, Redis outage and
+recovery, query-isolation, multi-replica admission, concurrent refresh, and
+capacity-probe paths. The repository-wide Gradle test gate also passes.
+
+This increment does not claim completion of AUTH-09. The task remains
+`in_progress` because hosted selected/skipped E2E evidence, managed Redis
+selection/failover/rotation/capacity, deployed alert routing, broader query and
+latency coverage, and production fanout/reconnect evidence remain release
+gates. Unselected E2E streams are intentionally neutral: they neither fail the
+aggregate gate nor appear as passed; selected failures, shared preflight
+failures, and artifact-preparation failures remain gate failures.
 
 - Accounts rate limiting uses the Redis bucket port and a mandatory Redis adapter;
   PostgreSQL rate-limit entities/repositories were removed and the table is retired
