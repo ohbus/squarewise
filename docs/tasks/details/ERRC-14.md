@@ -94,3 +94,24 @@ git diff --check
 - Additive observability adapter.
 - Zero production impact until wired into web mappers in Phase 3.
 - Rollback: Revert library classes if metrics or logging behavior needs recalibration.
+
+## Implementation Notes and Evidence
+
+- Added `ErrorLogger` with severity-aware stack disclosure: INFO/WARN client
+  outcomes are concise, while ERROR/CRITICAL outcomes include the root cause
+  and request correlation value.
+- Added `ErrorMetricsRecorder` for `squarewise_errors_total` with only catalog
+  domain, category, numeric code, HTTP status, and error-name tags, plus a hard
+  1,000-dimension budget.
+- Added the `libs/errors` `ErrorTraceSpan` port and `ErrorTraceEnricher`; an
+  OpenTelemetry bridge can implement the port at the transport edge without
+  making the shared error library provider-dependent.
+- Added focused tests for logging overloads, exact metric counts/dimensions,
+  trace identity attributes, and 4xx/5xx span status behavior.
+- Validation passed on 2026-10-07:
+  `./gradlew.bat :libs:observability:test :libs:observability:jacocoTestReport
+  :libs:errors:test :libs:errors:jacocoTestReport --rerun-tasks --no-daemon --console=plain`,
+  `uv run python tools/contracts/validate.py`, and `git diff --check`.
+- The current increment intentionally adds the provider-neutral tracing port;
+  concrete OpenTelemetry SDK wiring remains an application/runtime integration
+  concern for the later transport tasks.

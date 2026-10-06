@@ -8381,7 +8381,7 @@
       "parent_id": "ERRC-01",
       "title": "Implement logging, metrics, and trace adapter",
       "phase": "observability",
-      "status": "todo",
+      "status": "done",
       "owner_role": "observability",
       "owner_agent": "/root",
       "depends_on": [
@@ -8409,7 +8409,11 @@
         "uv run python tools/contracts/validate.py",
         "git diff --check"
       ],
-      "evidence": [],
+      "evidence": [
+        "Added ErrorLogger, bounded ErrorMetricsRecorder, provider-neutral ErrorTraceSpan port, and ErrorTraceEnricher with focused tests.",
+        "Paired observability/errors Gradle tests and JaCoCo reports, contract validation, and git diff --check passed on 2026-10-07.",
+        "Concrete OpenTelemetry SDK bridge remains a later runtime integration; shared libraries remain provider-neutral."
+      ],
       "reviewer": "/root",
       "blocker": null
     },
