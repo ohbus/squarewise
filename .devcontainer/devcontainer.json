@@ -1,0 +1,75 @@
+{
+  "name": "Squarewise Development",
+  "dockerComposeFile": "docker-compose.devcontainer.yml",
+  "service": "devcontainer",
+  "workspaceFolder": "/workspace",
+  "remoteUser": "vscode",
+  "updateRemoteUserUID": true,
+  "forwardPorts": [
+    28080,
+    28081,
+    28082,
+    28083,
+    28090,
+    28025,
+    28673,
+    25432
+  ],
+  "portsAttributes": {
+    "28080": {
+      "label": "GraphQL BFF Gateway",
+      "onAutoForward": "notify"
+    },
+    "28081": {
+      "label": "Accounts REST API"
+    },
+    "28082": {
+      "label": "Expense Core REST API"
+    },
+    "28083": {
+      "label": "Notifications REST API"
+    },
+    "28090": {
+      "label": "Keycloak OIDC Provider"
+    },
+    "28025": {
+      "label": "Mailpit Email Web UI"
+    },
+    "28673": {
+      "label": "RabbitMQ Management"
+    },
+    "25432": {
+      "label": "PostgreSQL Database"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "fwcd.kotlin",
+        "vscjava.vscode-java-pack",
+        "GraphQL.vscode-graphql",
+        "GraphQL.vscode-graphql-syntax",
+        "usebruno.bruno",
+        "tamasfe.even-better-toml",
+        "ms-python.python",
+        "charliermarsh.ruff"
+      ],
+      "settings": {
+        "java.configuration.runtimes": [
+          {
+            "name": "JavaSE-25",
+            "path": "/usr/lib/jvm/default-java",
+            "default": true
+          }
+        ],
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "editor.formatOnSave": true
+      }
+    },
+    "jetbrains": {
+      "backend": "IntelliJ"
+    }
+  },
+  "updateContentCommand": "uv sync --frozen --no-build && ./gradlew --version",
+  "postStartCommand": "bash .devcontainer/post-start.sh"
+}

@@ -39,7 +39,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://${SQUAREWISE_POSTGRES_HOSTNAME:-postgres-db}:5432/squarewise_accounts
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-squarewise}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-squarewise-local-only}
-    ports: ["8081:8080"]
+    ports: ["${SQUAREWISE_ACCOUNTS_PORT:-28081}:8080"]
     healthcheck:
       test: ["CMD-SHELL", "bash -ec 'exec 3<>/dev/tcp/127.0.0.1/8080; printf \"GET /actuator/health/readiness HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n\" >&3; grep -q \"200\" <&3'"]
       interval: 5s
@@ -69,7 +69,7 @@ services:
       SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS:-squarewise-local-only}
       SQUAREWISE_OUTBOX_ENABLED: "true"
       SQUAREWISE_OUTBOX_RABBIT_ENABLED: "true"
-    ports: ["8082:8080"]
+    ports: ["${SQUAREWISE_EXPENSE_CORE_PORT:-28082}:8080"]
     healthcheck:
       test: ["CMD-SHELL", "bash -ec 'exec 3<>/dev/tcp/127.0.0.1/8080; printf \"GET /actuator/health/readiness HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n\" >&3; grep -q \"200\" <&3'"]
       interval: 5s
@@ -104,7 +104,7 @@ services:
       SQUAREWISE_NOTIFICATIONS_EMAIL_PORT: ${MAILPIT_SMTP_PORT:-1025}
       SQUAREWISE_NOTIFICATIONS_EMAIL_FROM_ADDRESS: ${SQUAREWISE_NOTIFICATIONS_EMAIL_FROM_ADDRESS:-notifications@squarewise.local}
       SQUAREWISE_NOTIFICATIONS_EMAIL_ENABLED: "true"
-    ports: ["8083:8080"]
+    ports: ["${SQUAREWISE_NOTIFICATIONS_PORT:-28083}:8080"]
     healthcheck:
       test: ["CMD-SHELL", "bash -ec 'exec 3<>/dev/tcp/127.0.0.1/8080; printf \"GET /actuator/health/readiness HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n\" >&3; grep -q \"200\" <&3'"]
       interval: 5s
@@ -132,10 +132,17 @@ services:
       SQUAREWISE_EXPENSE_CORE_URL: ${SQUAREWISE_EXPENSE_CORE_URL:-http://expense-core-api:8080}
       SQUAREWISE_ACCOUNTS_URL: ${SQUAREWISE_ACCOUNTS_URL:-http://accounts-api:8080}
       SQUAREWISE_BFF_MESSAGING_ENABLED: "true"
-    ports: ["8080:8080"]
+    ports: ["${SQUAREWISE_BFF_PORT:-28080}:8080"]
     healthcheck:
       test: ["CMD-SHELL", "bash -ec 'exec 3<>/dev/tcp/127.0.0.1/8080; printf \"GET /actuator/health/readiness HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n\" >&3; grep -q \"200\" <&3'"]
       interval: 5s
       timeout: 3s
       retries: 30
     depends_on: {accounts: {condition: service_healthy}, expense-core: {condition: service_healthy}, notifications: {condition: service_healthy}, idp-keycloak: {condition: service_healthy}}
+
+volumes:
+  postgres-data:
+
+networks:
+  default:
+    name: squarewise-local-net

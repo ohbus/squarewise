@@ -27,5 +27,5 @@ make release-gate
 ```
 
 Run `make security-hygiene` for tracked-file credential checks. Run
-`make load-probe URL=http://localhost:8080/actuator/health CONCURRENCY=8
+`make load-probe URL=http://localhost:28080/actuator/health CONCURRENCY=8
 DURATION=60` against a safe non-mutating endpoint and retain its JSON output.

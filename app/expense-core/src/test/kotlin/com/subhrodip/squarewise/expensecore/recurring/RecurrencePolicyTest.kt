@@ -14,7 +14,10 @@ class RecurrencePolicyTest {
     private val policy = RecurrencePolicy()
     @Test
     fun `clamps monthly schedule at month end`() {
-        assertEquals(LocalDate.of(2024, 2, 29), policy.nextAfter(LocalDate.of(2024, 1, 31), RecurrenceSchedule("s", RecurrenceFrequency.MONTHLY, 31)))
+        val schedule = RecurrenceSchedule("s", RecurrenceFrequency.MONTHLY, 31)
+
+        assertEquals("s", schedule.scheduleId)
+        assertEquals(LocalDate.of(2024, 2, 29), policy.nextAfter(LocalDate.of(2024, 1, 31), schedule))
     }
 
     @Test

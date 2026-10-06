@@ -23,7 +23,10 @@ class DeliveryPolicyTest {
         store.put("alice", NotificationPreferences(emailEnabled = false, pushEnabled = true))
         val policy = DeliveryPolicy(InboxDeduplicator(), store)
         val event = UUID.randomUUID()
-        assertEquals(setOf(DeliveryChannel.PUSH), policy.decide(event, "alice")!!.channels)
+        val decision = policy.decide(event, "alice")!!
+        assertEquals(event, decision.eventId)
+        assertEquals("alice", decision.subject)
+        assertEquals(setOf(DeliveryChannel.PUSH), decision.channels)
         assertNull(policy.decide(event, "alice"))
     }
 

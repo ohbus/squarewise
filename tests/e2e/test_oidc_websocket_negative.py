@@ -12,7 +12,7 @@ from tests.http_constants import GRAPHQL_PATH
 TOKEN: Final[str] = os.environ.get("BEARER_TOKEN", "")
 INVALID_SUBJECT_TOKEN: Final[str] = os.environ.get("INVALID_SUBJECT_TOKEN", "")
 HOST: Final[str] = "localhost"
-BFF_URL: Final[str] = os.environ.get("BFF_URL", "http://localhost:8080")
+BFF_URL: Final[str] = os.environ.get("BFF_URL", "http://localhost:28080")
 PORT: Final[int] = int(BFF_URL.rsplit(":", 1)[1])
 PATH: Final[str] = GRAPHQL_PATH
 

@@ -13,6 +13,10 @@ class DbOperationPolicyTest {
     fun `writer-only operations default to writer`() {
         val policy = DbOperationPolicy("expense.create", DbOperationKind.COMMAND)
 
+        assertEquals("expense.create", policy.operationName)
+        assertEquals(DbOperationKind.COMMAND, policy.kind)
+        assertEquals(ReadConsistency.STRONG, policy.consistency)
+        assertEquals(false, policy.readerEligible)
         assertEquals(DbRoute.WRITER, policy.defaultRoute())
     }
 
@@ -25,6 +29,10 @@ class DbOperationPolicyTest {
             readerEligible = true,
         )
 
+        assertEquals("expense.search", policy.operationName)
+        assertEquals(DbOperationKind.QUERY, policy.kind)
+        assertEquals(ReadConsistency.EVENTUAL, policy.consistency)
+        assertEquals(true, policy.readerEligible)
         assertEquals(DbRoute.READER, policy.defaultRoute())
     }
 

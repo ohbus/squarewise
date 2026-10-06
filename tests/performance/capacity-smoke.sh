@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 set -eu
-BASE_URL=${BASE_URL:-http://localhost:8080}; HEALTH_PATH=${HEALTH_PATH:-/actuator/health/readiness}
+BASE_URL=${BASE_URL:-http://localhost:28080}; HEALTH_PATH=${HEALTH_PATH:-/actuator/health/readiness}
 REQUESTS=${REQUESTS:-20}; CONCURRENCY=${CONCURRENCY:-4}; AUTH_HEADER=${AUTH_HEADER:-}
 case "$REQUESTS" in *[!0-9]*|'') echo "REQUESTS must be numeric" >&2; exit 2;; esac
 case "$CONCURRENCY" in *[!0-9]*|0) echo "CONCURRENCY must be positive" >&2; exit 2;; esac

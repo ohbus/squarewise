@@ -31,6 +31,7 @@ A permanently free, privacy-centric expense-sharing platform for households, cou
 - [Quality & Verification](#quality--verification)
 - [Production Readiness](#production-readiness)
 - [Project Structure](#project-structure)
+- [Community & Support](#community--support)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -46,10 +47,10 @@ Squarewise is structured into four focused applications and technical libraries:
 
 ```mermaid
 flowchart LR
-    Client[Web / Mobile UI] -->|GraphQL HTTPS & WS| BFF[BFF Gateway<br/>:8080]
-    BFF -->|REST HTTPS| Accounts[Accounts Service<br/>:8081]
-    BFF -->|REST HTTPS| ExpenseCore[Expense Core Service<br/>:8082]
-    BFF -->|REST HTTPS| Notifications[Notifications Service<br/>:8083]
+    Client[Web / Mobile UI] -->|GraphQL HTTPS & WS| BFF[BFF Gateway<br/>:28080]
+    BFF -->|REST HTTPS| Accounts[Accounts Service<br/>:28081]
+    BFF -->|REST HTTPS| ExpenseCore[Expense Core Service<br/>:28082]
+    BFF -->|REST HTTPS| Notifications[Notifications Service<br/>:28083]
     ExpenseCore -->|Local TX / Outbox| PG[(PostgreSQL)]
     PG --> OutboxRelay[Outbox Relay]
     OutboxRelay --> RMQ[RabbitMQ]
@@ -59,10 +60,10 @@ flowchart LR
 
 | Application | Port | Description & Responsibilities |
 |---|:---:|---|
-| **[Accounts](app/accounts)** | `8081` | Identity linkage, user profiles, preferences, and data privacy/export requests. |
-| **[Expense Core](app/expense-core)** | `8082` | Groups, memberships, invitations, expense allocation algorithms, balance settlements, sync changelog, and transactional outbox. |
-| **[Notifications](app/notifications)** | `8083` | User inboxes, notification delivery, delivery channel preferences, and email dispatch. |
-| **[GraphQL BFF](app/bff)** | `8080` | Client-facing backend-for-frontend combining upstream REST services into a unified GraphQL API and real-time WebSocket subscriptions. |
+| **[Accounts](app/accounts)** | `28081` | Identity linkage, user profiles, preferences, and data privacy/export requests. |
+| **[Expense Core](app/expense-core)** | `28082` | Groups, memberships, invitations, expense allocation algorithms, balance settlements, sync changelog, and transactional outbox. |
+| **[Notifications](app/notifications)** | `28083` | User inboxes, notification delivery, delivery channel preferences, and email dispatch. |
+| **[GraphQL BFF](app/bff)** | `28080` | Client-facing backend-for-frontend combining upstream REST services into a unified GraphQL API and real-time WebSocket subscriptions. |
 
 ---
 
@@ -101,7 +102,15 @@ Ensure you have the following installed on your workstation:
    make doctor
    ```
 
-### Option A: Running with Docker (Recommended)
+### Option 0: 1-Click Devcontainer (Zero Toolchain Setup)
+
+Open in VS Code, Cursor, or JetBrains Gateway with zero local toolchain installation:
+```sh
+code .   # or cursor .
+```
+Click **"Reopen in Container"** when prompted. The workspace container automatically configures Java 25, Python 3.12 (`uv`), Node 22, starts all backing services, and seeds realistic development personas. See the [Devcontainer Guide](docs/operations/devcontainer.md).
+
+### Option A: Running with Docker
 
 To start the complete environment (Postgres, RabbitMQ, Mailpit, and all 4 microservices):
 
@@ -155,13 +164,13 @@ When the stack is running, services are accessible at:
 
 | Component | Host URL | Description / UI |
 |---|---|---|
-| **GraphQL BFF** | `http://localhost:8080/graphql` | GraphQL HTTP endpoint and WebSocket subscriptions |
-| **Accounts API** | `http://localhost:8081` | REST endpoints under `/accounts/v1/` |
-| **Expense Core API** | `http://localhost:8082` | REST endpoints under `/expense-core/v1/` |
-| **Notifications API** | `http://localhost:8083` | REST endpoints under `/notifications/v1/` |
-| **Mailpit Web UI** | `http://localhost:8025` | Inspect outbound confirmation and notification emails |
-| **RabbitMQ Management** | `http://localhost:15672` | Credentials: `squarewise` / `squarewise-local-only` |
-| **PostgreSQL Database** | `localhost:5432` | Credentials: `squarewise` / `squarewise-local-only` |
+| **GraphQL BFF** | `http://localhost:28080/graphql` | GraphQL HTTP endpoint and WebSocket subscriptions |
+| **Accounts API** | `http://localhost:28081` | REST endpoints under `/accounts/v1/` |
+| **Expense Core API** | `http://localhost:28082` | REST endpoints under `/expense-core/v1/` |
+| **Notifications API** | `http://localhost:28083` | REST endpoints under `/notifications/v1/` |
+| **Mailpit Web UI** | `http://localhost:28025` | Inspect outbound confirmation and notification emails |
+| **RabbitMQ Management** | `http://localhost:28673` | Credentials: `squarewise` / `squarewise-local-only` |
+| **PostgreSQL Database** | `localhost:25432` | Credentials: `squarewise` / `squarewise-local-only` |
 
 ---
 
@@ -240,10 +249,28 @@ squarewise/
 │   ├── security/               # Common security adapters
 │   └── test-support/           # Shared testing utilities
 ├── tools/                      # Validation scripts & CI tooling
+├── ACCESSIBILITY.md            # Accessibility goals, limitations & reporting
+├── CODE_OF_CONDUCT.md          # Community behavior & enforcement policy
 ├── CONTRIBUTING.md             # Developer workflow & contribution guide
+├── LICENSE                     # MIT license terms
 ├── Makefile                    # One-command developer CLI
-└── README.md                   # Project overview and entry point
+├── README.md                   # Project overview and entry point
+└── SECURITY.md                 # Private vulnerability reporting policy
 ```
+
+---
+
+## Community & Support
+
+- Follow the [Code of Conduct](CODE_OF_CONDUCT.md) in all project spaces.
+- Use the [issue templates](https://github.com/ohbus/squarewise/issues/new/choose)
+  for bugs, feature requests, and accessibility barriers.
+- Read the [Accessibility Statement](ACCESSIBILITY.md) for current priorities,
+  known limitations, and barrier reporting.
+- Send every security question or suspected vulnerability privately to
+  [security@subhrodip.com](mailto:security@subhrodip.com) under the [Security
+  Policy](SECURITY.md). Never disclose a suspected vulnerability in a public
+  issue, discussion, or pull request.
 
 ---
 
@@ -260,4 +287,4 @@ We welcome contributions! Please read our [**Contributing Guide (CONTRIBUTING.md
 
 ## License
 
-Squarewise is open-source software licensed under the [MIT License](https://opensource.org/license/mit).
+Squarewise is open-source software licensed under the [MIT License](LICENSE).

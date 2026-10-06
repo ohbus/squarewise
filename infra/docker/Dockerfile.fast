@@ -1,5 +1,8 @@
+# syntax=docker/dockerfile:1
 # Fast local runtime image using host-built bootJar
-FROM eclipse-temurin:25-jre
+ARG JVM_RUNTIME_IMAGE=eclipse-temurin:25-jre
+
+FROM ${JVM_RUNTIME_IMAGE}
 ARG APP_PROJECT
 ENV APP_PROJECT=${APP_PROJECT}
 WORKDIR /app

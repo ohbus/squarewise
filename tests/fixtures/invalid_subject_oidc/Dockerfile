@@ -1,4 +1,7 @@
-FROM python:3.12-slim
+# syntax=docker/dockerfile:1
+ARG PYTHON_IMAGE=python:3.12-slim
+FROM ${PYTHON_IMAGE}
+
 WORKDIR /app
 COPY tests/fixtures/invalid_subject_oidc/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt

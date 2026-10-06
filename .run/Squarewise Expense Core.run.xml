@@ -6,12 +6,12 @@
     <option name="VM_PARAMETERS" value="-Dspring.profiles.active=local" />
     <envs>
       <env name="SPRING_PROFILES_ACTIVE" value="local" />
-      <env name="SERVER_PORT" value="8082" />
-      <env name="SPRING_DATASOURCE_URL" value="jdbc:postgresql://localhost:5432/squarewise_expense_core" />
+      <env name="SERVER_PORT" value="28082" />
+      <env name="SPRING_DATASOURCE_URL" value="jdbc:postgresql://localhost:25432/squarewise_expense_core" />
       <env name="SPRING_DATASOURCE_USERNAME" value="squarewise" />
       <env name="SPRING_DATASOURCE_PASSWORD" value="squarewise-local-only" />
       <env name="SPRING_RABBITMQ_HOST" value="localhost" />
-      <env name="SPRING_RABBITMQ_PORT" value="5672" />
+      <env name="SPRING_RABBITMQ_PORT" value="28672" />
       <env name="SPRING_RABBITMQ_USERNAME" value="squarewise" />
       <env name="SPRING_RABBITMQ_PASSWORD" value="squarewise-local-only" />
     </envs>

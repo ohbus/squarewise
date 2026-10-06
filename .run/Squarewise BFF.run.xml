@@ -6,16 +6,16 @@
     <option name="VM_PARAMETERS" value="-Dspring.profiles.active=local" />
     <envs>
       <env name="SPRING_PROFILES_ACTIVE" value="local-oidc" />
-      <env name="SERVER_PORT" value="8080" />
-      <env name="SQUAREWISE_ACCOUNTS_URL" value="http://localhost:8081" />
-      <env name="SQUAREWISE_EXPENSE_CORE_URL" value="http://localhost:8082" />
+      <env name="SERVER_PORT" value="28080" />
+      <env name="SQUAREWISE_ACCOUNTS_URL" value="http://localhost:28081" />
+      <env name="SQUAREWISE_EXPENSE_CORE_URL" value="http://localhost:28082" />
       <env name="SQUAREWISE_BFF_MESSAGING_ENABLED" value="true" />
       <env name="SPRING_RABBITMQ_HOST" value="localhost" />
-      <env name="SPRING_RABBITMQ_PORT" value="5672" />
+      <env name="SPRING_RABBITMQ_PORT" value="28672" />
       <env name="SPRING_RABBITMQ_USERNAME" value="squarewise" />
       <env name="SPRING_RABBITMQ_PASSWORD" value="squarewise-local-only" />
-      <env name="SQUAREWISE_NOTIFICATIONS_URL" value="http://localhost:8083" />
-      <env name="SQUAREWISE_SECURITY_OIDC_ISSUER_URI" value="http://localhost:8090/realms/squarewise" />
+      <env name="SQUAREWISE_NOTIFICATIONS_URL" value="http://localhost:28083" />
+      <env name="SQUAREWISE_SECURITY_OIDC_ISSUER_URI" value="http://localhost:28090/realms/squarewise" />
       <env name="SQUAREWISE_SECURITY_OIDC_AUDIENCE" value="squarewise-api" />
     </envs>
     <method v="2"><option name="Make" enabled="true" /></method>

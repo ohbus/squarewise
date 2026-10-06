@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security question or vulnerability
+    url: https://github.com/ohbus/squarewise/security/policy
+    about: Email security@subhrodip.com; never disclose vulnerabilities in a public issue.
+  - name: Contribution guidance
+    url: https://github.com/ohbus/squarewise/blob/master/CONTRIBUTING.md
+    about: Review setup, workflow, architecture, validation, and pull-request expectations.

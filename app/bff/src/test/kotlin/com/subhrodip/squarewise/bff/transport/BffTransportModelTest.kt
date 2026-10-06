@@ -1,6 +1,7 @@
 package com.subhrodip.squarewise.bff.transport
 
 import com.subhrodip.squarewise.bff.realtime.GroupInvalidation
+import com.subhrodip.squarewise.bff.messaging.model.BffEventEnvelope
 import com.subhrodip.squarewise.bff.transport.model.auth.AccountsTokenResponse
 import com.subhrodip.squarewise.bff.transport.model.auth.BrowserLoginStartRequest
 import com.subhrodip.squarewise.bff.transport.model.auth.BrowserLoginStartResponse
@@ -22,6 +23,7 @@ import com.subhrodip.squarewise.bff.transport.model.upstream.UpstreamExpense
 import com.subhrodip.squarewise.bff.transport.model.upstream.UpstreamGroup
 import com.subhrodip.squarewise.bff.transport.model.upstream.UpstreamSettlement
 import java.util.UUID
+import java.time.Instant
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import tools.jackson.databind.ObjectMapper
@@ -101,5 +103,33 @@ class BffTransportModelTest {
         assertEquals(true, json.contains("\"kind\":\"TRIP\""))
         assertEquals(true, json.contains("\"status\":\"ACTIVE\""))
         assertEquals(true, json.contains("\"revision\":3"))
+    }
+
+    @Test
+    fun `event envelope preserves the event identity and timing fields`() {
+        val eventId = UUID.randomUUID()
+        val aggregateId = UUID.randomUUID()
+        val groupId = UUID.randomUUID()
+        val occurredAt = Instant.parse("2026-01-01T00:00:00Z")
+
+        val envelope = BffEventEnvelope(
+            eventId = eventId,
+            eventType = "group.changed",
+            schemaVersion = 1,
+            aggregateId = aggregateId,
+            groupId = groupId,
+            groupRevision = 4,
+            occurredAt = occurredAt,
+            payload = mapOf("change" to "updated"),
+        )
+
+        assertEquals(eventId, envelope.eventId)
+        assertEquals("group.changed", envelope.eventType)
+        assertEquals(1, envelope.schemaVersion)
+        assertEquals(aggregateId, envelope.aggregateId)
+        assertEquals(groupId, envelope.groupId)
+        assertEquals(4, envelope.groupRevision)
+        assertEquals(occurredAt, envelope.occurredAt)
+        assertEquals("updated", envelope.payload["change"])
     }
 }

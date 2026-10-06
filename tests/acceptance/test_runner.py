@@ -248,8 +248,8 @@ class RunnerTest(unittest.TestCase):
         self.assertEqual(args.task_id, "QA-04")
         self.assertFalse(args.require_services)
         self.assertEqual(args.timeout, 2.0)
-        self.assertEqual(args.bff_url, "http://localhost:8080")
-        self.assertEqual(args.expense_core_url, "http://localhost:8082")
+        self.assertEqual(args.bff_url, "http://localhost:28080")
+        self.assertEqual(args.expense_core_url, "http://localhost:28082")
         self.assertIsNone(args.report_path)
 
     def test_argument_parsing_custom(self) -> None:

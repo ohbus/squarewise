@@ -4,7 +4,7 @@ set -eu
 COMPOSE_ARGS="-f ${COMPOSE_BASE:-infra/local/docker-compose.yml} -f ${COMPOSE_DEV:-infra/local/docker-compose.dev.yml} -f ${COMPOSE_REPLICA:-infra/local/docker-compose.replica.yml}"
 PRIMARY_SERVICE=${PRIMARY_SERVICE:-postgres}
 REPLICA_SERVICE=${REPLICA_SERVICE:-postgres-replica}
-EXPENSE_CORE_URL=${EXPENSE_CORE_URL:-http://localhost:8082}
+EXPENSE_CORE_URL=${EXPENSE_CORE_URL:-http://localhost:28082}
 AUTH_HEADER=${AUTH_HEADER:-}
 
 compose() { # shellcheck disable=SC2086

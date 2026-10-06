@@ -1,0 +1,51 @@
+name: Feature request
+description: Propose a scoped improvement to Squarewise
+title: "[Feature]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for proposing an improvement. Review the [MVP scope](https://github.com/ohbus/squarewise/blob/master/docs/product/mvp.md) and existing issues before submitting.
+
+        Security questions and vulnerability reports must be emailed to security@subhrodip.com, not posted publicly.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or need
+      description: Who is affected, what are they trying to do, and why is the current behavior insufficient?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed outcome
+      description: Describe observable behavior and acceptance criteria, without prescribing unnecessary implementation details.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Describe current workarounds or other approaches you considered.
+    validations:
+      required: false
+  - type: textarea
+    id: boundaries
+    attributes:
+      label: Scope and compatibility
+      description: Note affected services, APIs, contracts, migrations, security/privacy concerns, or operational impact.
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Submission checklist
+      options:
+        - label: I searched for an existing request covering this need.
+          required: true
+        - label: I reviewed the documented product scope and architecture boundaries.
+          required: true
+        - label: This request contains no secrets, personal data, or vulnerability details.
+          required: true
+        - label: I agree to follow the repository's Code of Conduct.
+          required: true

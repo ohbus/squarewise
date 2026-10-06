@@ -75,3 +75,68 @@ package manager across local developer workstations and CI workflows (`uv sync -
 and `uv run --frozen --no-build`). No ephemeral `uvx` executions or manual `PYTHONPATH` exports are
 permitted.
 
+## Devcontainer architecture and toolchain baseline
+
+The repository provides a containerized development environment adopting the
+official OCI Devcontainer specification and a native Devcontainer Compose
+topology (`dockerComposeFile`), avoiding root-equivalent Docker-outside-of-Docker
+(DooD) host socket mounting (`/var/run/docker.sock`). The workspace container
+operates as an unprivileged service on the shared internal Docker network
+`squarewise-local-net`, communicating with PostgreSQL, RabbitMQ, Redis, Mailpit,
+and Keycloak via TCP and HTTP.
+
+The Devcontainer workspace image is pinned to Ubuntu 24.04
+(`mcr.microsoft.com/devcontainers/base:ubuntu-24.04`), Microsoft OpenJDK 25
+(matching CI reusable workflows and the Gradle toolchain baseline), Python 3.12+
+managed exclusively by `uv`, and Node.js 22 LTS for executing `@usebruno/cli@4.1.0`
+via `npx` during local verification. Direct database interaction uses
+`postgresql-client` over standard TCP wire protocol. All central version
+definitions are maintained in `infra/versions.env.example` without ad-hoc duplication.
+
+## Deterministic local port allocation and networking model
+
+Local development avoids standard default ports (`5432`, `8080`, `6379`, `5672`, `1025`, `8025`)
+and unpredictable ephemeral port bindings in favor of a deterministic, collision-free `28xxx` port
+family (`28080`–`28091`, `25432`, `28672`–`28673`, `28379`, `21025`, `28025`). This gives all developers
+and automated test harnesses a shared, invariant vocabulary across workstations without risk of
+collisions against personal PostgreSQL, Redis, or Keycloak instances running on host machines.
+
+Inside the Docker bridge network (`squarewise-local-net`), containers bind to standard native ports
+(`5432`, `5672`, `6379`, `1025`, `8080`) and communicate using descriptive domain hostnames
+(`postgres-db`, `message-broker`, `rate-limit-redis`, `mailpit-email`, `idp-keycloak`, `accounts-api`,
+`expense-core-api`, `notifications-api`, `squarewise-bff`).
+
+Direct host networking (`network_mode: host`) was evaluated and rejected because it fails on macOS
+and Windows (WSL2), where containers bind to the VM's network namespace rather than the host loopback,
+breaking IDE and browser access. A user-defined bridge network combined with deterministic port
+forwarding and `extra_hosts: ["host.docker.internal:host-gateway"]` provides 100% cross-platform parity
+across Linux, macOS, and Windows.
+
+## Unified version centralization and Docker anti-drift design patterns
+
+To eliminate dependency drift and duplicate configuration between Devcontainers, local Docker Compose,
+CI workflows, and developer workstations, the repository applies strict enterprise software design patterns:
+
+1. **Single Authoritative Source of Truth**: All non-secret container image tags (`postgres:17`, `rabbitmq:4.3-management`,
+   `redis:8.2-alpine`, `mailpit:v1.27`, `keycloak:26.7.4`), base images (`gradle:9.7.1-jdk25`, `eclipse-temurin:25-jre`,
+   `node:22.14.0-bookworm-slim`, `python:3.12-slim`), and toolchain runtimes (`PYTHON_VERSION=3.12`, `UV_VERSION=0.6.5`,
+   `DEVCONTAINER_JDK_VERSION=25`, `DEVCONTAINER_NODE_VERSION=22`, `MERMAID_CLI_VERSION=11.12.0`) are declared once in
+   `infra/versions.env.example`. Local `.env.example` mirrors these exact values, while JVM library dependencies
+   remain exclusively in `gradle/libs.versions.toml`.
+2. **Parameterized Multi-Stage Dockerfile Pattern**: No Dockerfile in the repository contains un-parameterized,
+   hardcoded base image tags. Every build file (`infra/docker/Dockerfile.jvm`, `Dockerfile.fast`, `Dockerfile.dev`,
+   `infra/docs/Dockerfile`, `tests/fixtures/invalid_subject_oidc/Dockerfile`, and `.devcontainer/Dockerfile`) defines
+   `ARG <IMAGE_VAR>=<default>` before `FROM ${<IMAGE_VAR>}`. This decouples image definitions from concrete versions
+   and allows build environments, Compose, and CI pipelines to override or pin versions without modifying Dockerfiles.
+3. **Compose Service Reuse Pattern**: Rather than copying service blocks across compose files, Devcontainer topologies
+   use Docker Compose v2 `include: - path: ../infra/local/docker-compose.yml`, while local development overlays use
+   `extends: {file: docker-compose.yml, service: ...}`. This guarantees that infrastructure services share identical
+   healthchecks, environment configurations, and network topologies across all execution modes.
+4. **Automated Zero-Drift SBOM Enforcement**: `tools/ops/validate_sbom_baseline.py` (executed via `make sbom-validate`)
+   statically verifies:
+   - All required version keys exist in `infra/versions.env.example`.
+   - `infra/local/.env.example` container image tags match `infra/versions.env.example` exactly with zero drift.
+   - `pyproject.toml` Python requirements align with `PYTHON_VERSION`.
+   - All Dockerfiles adhere to the parameterized `ARG` base image pattern.
+   - All JVM dependencies in `build.gradle.kts` reference `gradle/libs.versions.toml` without hardcoded version strings.
+

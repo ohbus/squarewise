@@ -17,6 +17,16 @@ This index is the navigation entry point for repository documentation. [`AGENTS.
 - [Task details](tasks/details/)
 - [API implementation status](api/implementation-status.md)
 
+## Community health
+
+- [Contributing guide](../CONTRIBUTING.md)
+- [Code of Conduct](../CODE_OF_CONDUCT.md)
+- [Security Policy](../SECURITY.md)
+- [Accessibility Statement](../ACCESSIBILITY.md)
+- [MIT License](../LICENSE)
+- [Issue forms](../.github/ISSUE_TEMPLATE/)
+- [Pull-request template](../.github/pull_request_template.md)
+
 ## Architecture
 
 - [Architecture overview](architecture/overview.md)

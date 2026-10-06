@@ -1,12 +1,17 @@
+# syntax=docker/dockerfile:1
 # One build definition for every Squarewise JVM application.
 # Build: docker build --build-arg APP_PROJECT=accounts -t squarewise-accounts -f infra/docker/Dockerfile.jvm .
-FROM gradle:9.7.1-jdk25 AS build
+
+ARG JVM_BUILD_IMAGE=gradle:9.7.1-jdk25
+ARG JVM_RUNTIME_IMAGE=eclipse-temurin:25-jre
+
+FROM ${JVM_BUILD_IMAGE} AS build
 ARG APP_PROJECT
 WORKDIR /workspace
 COPY . .
 RUN gradle ":app:${APP_PROJECT}:bootJar" --no-daemon
 
-FROM eclipse-temurin:25-jre
+FROM ${JVM_RUNTIME_IMAGE} AS runtime
 ARG APP_PROJECT
 ENV APP_PROJECT=${APP_PROJECT}
 WORKDIR /app

@@ -1,7 +1,7 @@
-export const baseUrl = __ENV.BASE_URL || 'http://localhost:8080';
-export const accountsUrl = __ENV.ACCOUNTS_URL || 'http://localhost:8081';
-export const expenseCoreUrl = __ENV.EXPENSE_CORE_URL || 'http://localhost:8082';
-export const notificationsUrl = __ENV.NOTIFICATIONS_URL || 'http://localhost:8083';
+export const baseUrl = __ENV.BASE_URL || 'http://localhost:28080';
+export const accountsUrl = __ENV.ACCOUNTS_URL || 'http://localhost:28081';
+export const expenseCoreUrl = __ENV.EXPENSE_CORE_URL || 'http://localhost:28082';
+export const notificationsUrl = __ENV.NOTIFICATIONS_URL || 'http://localhost:28083';
 if (!__ENV.BEARER_TOKEN) {
   throw new Error('BEARER_TOKEN must contain a signed token for k6 load tests');
 }

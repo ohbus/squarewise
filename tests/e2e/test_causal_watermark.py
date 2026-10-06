@@ -10,7 +10,7 @@ from urllib.request import Request, urlopen
 from typing import Any
 from tests.http_constants import ACCEPT, APPLICATION_JSON, AUTHORIZATION, CONTENT_TYPE, REQUIRED_WATERMARK, WRITER_WATERMARK
 
-ACCOUNTS_URL = os.environ.get("SQUAREWISE_ACCOUNTS_URL", "http://localhost:8081")
+ACCOUNTS_URL = os.environ.get("SQUAREWISE_ACCOUNTS_URL", "http://localhost:28081")
 REQUIRED_HEADER = REQUIRED_WATERMARK
 WRITER_HEADER = WRITER_WATERMARK
 
