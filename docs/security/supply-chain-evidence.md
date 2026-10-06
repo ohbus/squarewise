@@ -51,10 +51,14 @@ All application container images use:
 
 Reference: [`infra/docker/`](../../infra/docker/) and [`infra/deploy/docker-compose.prod.yml`](../../infra/deploy/docker-compose.prod.yml).
 
-### Workflow action pinning
+### Build artifact and container image attestations
 
-GitHub Actions workflow steps use pinned action references where feasible. The
-`workflow-validate` Make target lints workflow YAML structure:
+In adherence to industry software supply chain standards (such as SLSA Build Level 2/3 and OpenSSF guidelines), cryptographic build-provenance attestations are mandatory for all build artifacts and published container images:
+- Every uploaded CI artifact (including CycloneDX SBOMs, Spring Boot `bootJar` application packages, JUnit/HTML test reports, and end-to-end diagnostic dumps) is cryptographically attested with GitHub's signed build-provenance mechanism (`actions/attest-build-provenance`).
+- Published container images are attested against their immutable SHA256 digest subjects.
+- All jobs generating or orchestrating artifact generation explicitly declare `id-token: write` and `attestations: write` permissions.
+
+The `workflow-validate` Make target lints workflow YAML structure:
 ```bash
 make workflow-validate  # yamllint
 ```

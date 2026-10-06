@@ -3,12 +3,11 @@
 Three thin workflows select policy: `ci-pr.yml` validates pull requests,
 `ci-branch.yml` validates non-master pushes, and `ci-master.yml` validates master and
 publishes four application images. Verification, checks, and E2E execution live
-in `_reusable-ci.yml`, while container image delivery lives in `ci-master.yml` so
-feature branch and pull request workflows can operate with read-only permissions
-without encountering GitHub Actions reusable workflow permission validation errors.
+in `_reusable-ci.yml`, while container image delivery lives in `ci-master.yml`.
 The PR, branch, and master callers grant `pull-requests: read` because the reusable
-dependency-review job declares that least-privilege permission; the job remains
-skipped for non-PR events.
+dependency-review job declares that least-privilege permission (skipped for non-PR events),
+as well as `id-token: write` and `attestations: write` so nested reusable workflow jobs
+(`lint`, `verify`, and other artifact producers) can attest build provenance.
 
 PR and non-master branch runs now calculate a changed-scope plan before the Gradle
 matrix. The plan selects changed modules plus their reverse project dependents and
@@ -127,11 +126,7 @@ For application projects, `_reusable-ci.yml` uploads the built executable
 downloads this pre-built artifact and packages the runtime image with
 `infra/docker/Dockerfile.fast` (`eclipse-temurin:25-jre`), eliminating redundant
 JVM compilation inside Docker.
-Every uploaded workflow artifact is attested immediately after upload with
-GitHub's signed build-provenance action; the published container image is
-attested against the pushed digest. Jobs that produce attestations explicitly
-request `id-token: write` and `attestations: write`, and artifact digests, not
-mutable names or tags, are used as attestation subjects.
+In adherence to industry standards for secure software supply chains (such as SLSA / OpenSSF provenance standards), cryptographic attestations must be generated for all build artifacts and container images. Every uploaded workflow artifact (SBOMs, application `bootJar` packages, JUnit/HTML test and coverage reports, and E2E diagnostic bundles) is attested immediately after creation and upload using GitHub's signed build-provenance action (`actions/attest-build-provenance`). The published container images are attested against their pushed immutable container digests. All workflows and jobs that produce or invoke jobs producing build artifacts must declare explicit OIDC and attestation permissions (`id-token: write` and `attestations: write`), and artifact digests—never mutable tags or names—are strictly used as attestation subjects.
 Master image jobs create an explicit `docker-container` Buildx builder before
 using the GitHub Actions cache backend; each service matrix entry has its own
 cache scope. They publish SHA and branch tags to
