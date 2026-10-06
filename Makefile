@@ -163,7 +163,7 @@ e2e-auth-notification-limit: ## Run deployed auth-email delivery admission suppr
 	@$(UV_RUN) python tests/e2e/test_auth_notification_rate_limit.py
 
 e2e-notification-general-limit: ## Run local general notification delivery admission through RabbitMQ management
-	@$(UV_RUN) python tests/e2e/test_notification_general_rate_limit.py
+	@SQUAREWISE_NOTIFICATIONS_DELIVERY_MAX_PERMITS=1 SQUAREWISE_NOTIFICATIONS_DELIVERY_WINDOW_SECONDS=2 $(UV_RUN) python tests/e2e/test_notification_general_rate_limit.py
 
 e2e-auth-notification-outage: ## Run auth-email delivery Redis outage and recovery checks
 	@$(UV_RUN) python tests/e2e/test_auth_notification_redis_outage.py
