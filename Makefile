@@ -18,7 +18,7 @@ export SQUAREWISE_SECURITY_CREDENTIAL_DIGEST_SECRET ?= AAECAwQFBgcICQoLDA0ODxARE
 export SQUAREWISE_SECURITY_AUTH_EMAIL_ENVELOPE_KEY ?= ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj8=
 
 .DEFAULT_GOAL := help
-.PHONY: help doctor bootstrap sync validate contracts lint python-typecheck test test-unit test-integration coverage build package check ci ci-e2e acceptance acceptance-live bruno-run workflow-validate observability-validate release-gate security-hygiene architecture-validate sbom-validate load-probe load-k6-validate load-k6 load-k6-rate-limit e2e e2e-auth-email e2e-auth-notification-limit e2e-notification-general-limit e2e-auth-notification-outage e2e-auth-login-replicas e2e-auth-refresh-concurrency e2e-rest-edge e2e-auth-cache e2e-auth-surfaces e2e-auth-bff-replicas e2e-auth-no-accounts smoke docs-diagrams docs-diagrams-config compose-config redis-status redis-logs redis-clear-rate-limit deps-config deps-up deps-status deps-logs deps-down accounts-deps-config accounts-deps-up accounts-deps-status accounts-deps-logs accounts-deps-down expense-core-deps-config expense-core-deps-up expense-core-deps-status expense-core-deps-logs expense-core-deps-down notifications-deps-config notifications-deps-up notifications-deps-status notifications-deps-logs notifications-deps-down bff-deps-config bff-deps-up bff-deps-status bff-deps-logs bff-deps-down full-config full-up full-status full-logs full-down compose-dev-up compose-dev-down compose-dev-logs compose-up compose-down dev-setup seed seed-large seed-reset docker-build-all docker-build-% prod-config clean clean-gradle status
+.PHONY: help doctor bootstrap sync validate contracts lint python-typecheck test test-unit test-integration coverage build package check ci ci-e2e acceptance acceptance-live bruno-run workflow-validate observability-validate release-gate security-hygiene architecture-validate sbom-validate load-probe load-k6-validate load-k6 load-k6-rate-limit e2e e2e-auth-email e2e-auth-notification-limit e2e-notification-general-limit e2e-auth-notification-outage e2e-auth-login-replicas e2e-auth-refresh-concurrency e2e-rest-edge e2e-auth-cache e2e-auth-surfaces e2e-auth-bff-replicas e2e-auth-no-accounts e2e-auth-query-latency smoke docs-diagrams docs-diagrams-config compose-config redis-status redis-logs redis-clear-rate-limit deps-config deps-up deps-status deps-logs deps-down accounts-deps-config accounts-deps-up accounts-deps-status accounts-deps-logs accounts-deps-down expense-core-deps-config expense-core-deps-up expense-core-deps-status expense-core-deps-logs expense-core-deps-down notifications-deps-config notifications-deps-up notifications-deps-status notifications-deps-logs notifications-deps-down bff-deps-config bff-deps-up bff-deps-status bff-deps-logs bff-deps-down full-config full-up full-status full-logs full-down compose-dev-up compose-dev-down compose-dev-logs compose-up compose-down dev-setup seed seed-large seed-reset docker-build-all docker-build-% prod-config clean clean-gradle status
 
 help: ## Show available commands
 	@awk 'BEGIN {FS = ":.*##"; printf "Squarewise commands\n\n"} /^[a-zA-Z0-9_.-]+:.*##/ {printf "  %-24s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -185,6 +185,9 @@ e2e-auth-bff-replicas: ## Verify BFF GraphQL admission across two processes shar
 
 e2e-auth-no-accounts: ## Prove authenticated resource reads do not call Accounts
 	@$(UV_RUN) python tests/e2e/test_auth_no_accounts_lookup.py
+
+e2e-auth-query-latency: ## Measure authenticated query latency and SQL isolation
+	@$(UV_RUN) python tests/e2e/test_auth_query_latency.py
 
 e2e-live: ## Run the comprehensive multi-service product journey E2E test against live stack
 	@$(UV_RUN) python tests/e2e/test_product_journey.py $(E2E_PRODUCT_ARGS)

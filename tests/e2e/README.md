@@ -87,7 +87,16 @@ The end-to-end test suites run against the live local environment (`infra/local/
    - This proves no request-time Accounts call is required; it is local
      dependency-isolation evidence and does not replace SQL/query telemetry.
 
-9. **Auth-email delivery admission (`test_auth_notification_rate_limit.py`)**:
+9. **Authenticated query and latency evidence (`test_auth_query_latency.py`)**:
+   - Measures repeated public Expense Core and BFF authenticated group reads and
+     a real Expense Core group create/archive write.
+   - Records bounded p95 request latency and requires the Accounts
+     `groups.list` SQL counter to remain unchanged while Expense Core query
+     telemetry increases.
+   - Run with `make e2e-auth-query-latency`; this is local measurement evidence,
+     not a production SLO or capacity claim.
+
+10. **Auth-email delivery admission (`test_auth_notification_rate_limit.py`):**
    - Requires the test deployment overrides `SQUAREWISE_AUTH_LOGIN_RESEND_COOLDOWN_SECONDS=0`,
      `SQUAREWISE_NOTIFICATIONS_DELIVERY_MAX_PERMITS=1`, and
      `SQUAREWISE_NOTIFICATIONS_DELIVERY_WINDOW_SECONDS=2`.

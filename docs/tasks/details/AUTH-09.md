@@ -470,6 +470,14 @@ SQL text, parameters, identities, and request identifiers are not recorded.
 The local metric scrape and representative request-count artifact now pass;
 hosted metric retention and broader request coverage remain open.
 
+The focused `e2e-auth-query-latency` probe now extends that evidence through
+repeated authenticated Expense Core and BFF reads plus a real Expense Core group
+create/archive write. The rebuilt local run recorded Accounts `groups.list`
+`0->0`, Expense Core `groups.list` `293->423`, and p95 request measurements of
+25.77 ms for Expense Core groups, 118.03 ms for the BFF groups query, and
+21.43 ms for group creation. These are local representative measurements, not
+production SLO or capacity evidence.
+
 Notifications delivery policy values are now bounded configuration properties,
 and both general notification dispatch and protected auth-email dispatch invoke
 the shared limiter immediately before provider dispatch. Unit/component tests
