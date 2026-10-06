@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://squarewise.example/schemas/error-lifecycle-history.json",
+  "title": "Squarewise Error Lifecycle History",
+  "description": "Authoritative schema tracking deprecation dates, sunset policies, and migration replacements for all error codes.",
+  "oneOf": [
+    {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/lifecycleRecord"
+      }
+    },
+    {
+      "type": "object",
+      "required": ["history"],
+      "properties": {
+        "schemaVersion": {
+          "type": "integer"
+        },
+        "history": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/lifecycleRecord"
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  ],
+  "$defs": {
+    "lifecycleRecord": {
+      "type": "object",
+      "required": [
+        "code",
+        "errorName",
+        "status",
+        "introducedIn",
+        "rationale"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "pattern": "^([1-9]{4}(0[1-9]|[1-9][0-9])|ERR-[0-9]{2})$",
+          "description": "Six-digit machine code or legacy code identifier."
+        },
+        "errorName": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]*$",
+          "description": "Globally unique SCREAMING_SNAKE_CASE error name."
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "ACTIVE",
+            "DEPRECATED",
+            "RETIRED"
+          ],
+          "description": "Current lifecycle status of the error code."
+        },
+        "introducedIn": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Milestone, release version, or task ID when the code was introduced."
+        },
+        "deprecatedIn": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Milestone or release version when the code was deprecated."
+        },
+        "retiredIn": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Milestone or release version when the code was retired."
+        },
+        "sunsetDate": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "ISO 8601 date when support for this code is permanently removed."
+        },
+        "replacedBy": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[1-9]{4}(0[1-9]|[1-9][0-9])$",
+          "description": "Six-digit replacement code if deprecated or retired."
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Justification for deprecation, retirement, or status transition."
+        },
+        "migrationGuidance": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Guidance for API callers or internal systems migrating from this code."
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

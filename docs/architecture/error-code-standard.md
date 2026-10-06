@@ -1,6 +1,6 @@
 # Six-digit domain/module error-code standard
 
-Status: accepted documentation baseline under `ERRC-01`; not implemented.
+Status: frozen and authoritative under `ERRC-03`.
 
 This document defines Squarewise's stable error identity. It does not change the
 current REST or GraphQL contract. The implementation and compatibility sequence
