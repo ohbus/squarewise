@@ -184,3 +184,30 @@ the 54-operation matrix. The same hosted step feeds it to the operation-gap
 reporter and retains `qa10-operation-inventory.json`; review the resulting
 `EXECUTION-ARTIFACT-PASSED`, `FAILED`, and `BLOCKED` statuses before crediting
 any operation.
+
+## CI secrets and environment variables
+
+Squarewise workflows ([`.github/workflows/_reusable-ci.yml`](../../.github/workflows/_reusable-ci.yml))
+support secure secret overrides through GitHub Actions repository secrets while falling back
+to safe, deterministic local fixtures when secrets are omitted:
+
+| Variable | GitHub Secret Name | Purpose |
+|---|---|---|
+| `SQUAREWISE_SECURITY_CREDENTIAL_DIGEST_SECRET` | `SQUAREWISE_SECURITY_CREDENTIAL_DIGEST_SECRET` | 32-byte Base64 key for passwordless HMAC token digest |
+| `SQUAREWISE_SECURITY_AUTH_EMAIL_ENVELOPE_KEY` | `SQUAREWISE_SECURITY_AUTH_EMAIL_ENVELOPE_KEY` | 32-byte Base64 key for AES-GCM auth email encryption |
+| `REDIS_PASSWORD` | `REDIS_PASSWORD` | Redis authentication password |
+| `POSTGRES_PASSWORD` | `POSTGRES_PASSWORD` | PostgreSQL database user password |
+| `RABBITMQ_DEFAULT_PASS` | `RABBITMQ_DEFAULT_PASS` | RabbitMQ broker password |
+| `KEYCLOAK_ADMIN_PASSWORD` | `KEYCLOAK_ADMIN_PASSWORD` | Keycloak admin console bootstrap password |
+| `SONAR_TOKEN` | `SONAR_TOKEN` | SonarCloud code quality scanner token |
+
+To generate a complete, fresh set of cryptographically strong secrets for GitHub Actions:
+
+```sh
+make generate-secrets
+# or: python3 tools/ops/generate_secrets.py
+```
+
+A complete configuration catalog and policy matrix is documented in
+[`infra/local/env-secrets-matrix.example`](../../infra/local/env-secrets-matrix.example).
+

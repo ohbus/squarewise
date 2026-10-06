@@ -70,7 +70,8 @@ current classification is:
 | [Production hardening](production-hardening.md) | Observability, error attribution, metric cardinality, and release hardening requirements |
 | [Compose topology](compose-topology.md) | Local development Docker Compose topology |
 | [Quickstart](quickstart.md) | Clone-and-run guide for new developers |
-| [CI](ci.md) | Continuous integration pipeline documentation |
+| [CI](ci.md) | Continuous integration pipeline documentation and secrets configuration |
+| [Secrets & Keys Matrix](../../infra/local/env-secrets-matrix.example) | Complete catalog of security keys, passwords, and `make generate-secrets` utility |
 
 ## Production deployment
 

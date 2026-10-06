@@ -174,6 +174,22 @@ When the stack is running, services are accessible at:
 
 ---
 
+## Environment Secrets & Cryptographic Keys
+
+Squarewise uses deterministic local fixture keys for clone-and-run local development. For CI repository secrets and production deployments, generate high-entropy keys with:
+
+```sh
+# Generate a complete set of cryptographically secure secrets
+make generate-secrets
+
+# Or directly via Python
+python3 tools/ops/generate_secrets.py
+```
+
+See the complete matrix and GitHub Actions mapping in [`infra/local/env-secrets-matrix.example`](infra/local/env-secrets-matrix.example) and the [CI Secrets Documentation](docs/operations/ci.md#ci-secrets-and-environment-variables).
+
+---
+
 ## API & Schema Documentation
 
 Squarewise enforces a contract-first design. All schema definitions reside under [`contracts/`](contracts/):
