@@ -37,8 +37,8 @@ validate: contracts compose-config ## Run dependency-light repository checks
 	@$(GRADLE) test
 
 contracts: ## Validate contract JSON, GraphQL declarations, and task links
-	@$(UV_RUN) python3 tools/contracts/validate.py
-	@$(UV_RUN) python3 tools/contracts/validate_public_surface.py
+	@$(UV_RUN) python tools/contracts/validate.py
+	@$(UV_RUN) python tools/contracts/validate_public_surface.py
 
 python-typecheck: ## Run the strict repository Python type checker
 	@$(UV_RUN) mypy tests tools
@@ -91,7 +91,7 @@ acceptance: ## Run the public-interface acceptance harness and write a JSON repo
 	@bash tests/acceptance/run.sh
 
 acceptance-live: ## Run the acceptance test harness requiring live running services
-	@$(UV_RUN) python3 tests/acceptance/runner.py --require-services
+	@$(UV_RUN) python tests/acceptance/runner.py --require-services
 
 bruno-run: ## Run the ordered Bruno collection; override BRUNO_ENV, BRUNO_TOKEN, negative tokens, and BRUNO_REPORT
 	@command -v npx >/dev/null || (echo "Node.js/npm is required for Bruno CLI"; exit 1)
@@ -104,27 +104,27 @@ workflow-validate: ## Parse all GitHub Actions workflow YAML files
 
 observability-validate: ## Validate Prometheus rules and Grafana dashboard assets
 	@ruby -e 'require "yaml"; %w[infra/observability/prometheus.yml infra/observability/rules/squarewise.yml].each { |file| YAML.load_file(file); puts "valid observability YAML: #{file}" }'
-	@$(UV_RUN) python3 -m json.tool infra/observability/grafana/dashboards/squarewise-overview.json >/dev/null
-	@$(UV_RUN) python3 -c 'import json; d=json.load(open("infra/observability/grafana/dashboards/squarewise-overview.json")); assert d["panels"] and all(p["targets"] for p in d["panels"]); print("valid Grafana dashboard")'
+	@$(UV_RUN) python -m json.tool infra/observability/grafana/dashboards/squarewise-overview.json >/dev/null
+	@$(UV_RUN) python -c 'import json; d=json.load(open("infra/observability/grafana/dashboards/squarewise-overview.json")); assert d["panels"] and all(p["targets"] for p in d["panels"]); print("valid Grafana dashboard")'
 
 release-gate: observability-validate ## Validate repository-owned production release prerequisites
-	@$(UV_RUN) python3 tools/ops/validate_release_gate.py
+	@$(UV_RUN) python tools/ops/validate_release_gate.py
 
 security-hygiene: ## Scan tracked configuration and source for obvious secret material
-	@$(UV_RUN) python3 tools/ops/check_security_hygiene.py
+	@$(UV_RUN) python tools/ops/check_security_hygiene.py
 
 architecture-validate: ## Enforce application service dependency boundaries
-	@$(UV_RUN) python3 tools/ops/check_architecture.py
+	@$(UV_RUN) python tools/ops/check_architecture.py
 
 sbom-validate: ## Validate centralized dependency-version baseline for SBOM generation
-	@$(UV_RUN) python3 tools/ops/validate_sbom_baseline.py
+	@$(UV_RUN) python tools/ops/validate_sbom_baseline.py
 
 load-probe: ## Run an HTTP load probe; set URL, CONCURRENCY, and DURATION
 	@test -n "$(URL)" || (echo "Set URL, e.g. make load-probe URL=http://localhost:8080/actuator/health"; exit 2)
-	@$(UV_RUN) python3 tools/ops/http_load_probe.py "$(URL)" --concurrency "$${CONCURRENCY:-4}" --duration "$${DURATION:-10}"
+	@$(UV_RUN) python tools/ops/http_load_probe.py "$(URL)" --concurrency "$${CONCURRENCY:-4}" --duration "$${DURATION:-10}"
 
 load-k6-validate: ## Validate modular k6 scripts and endpoint tags
-	@$(UV_RUN) python3 -c 'import pathlib; files=list(pathlib.Path("tests/load/k6").glob("*.js")); assert len(files) >= 6; assert all("options" in f.read_text() and "thresholds" in f.read_text() for f in files); print(f"valid k6 scripts: {len(files)}")'
+	@$(UV_RUN) python -c 'import pathlib; files=list(pathlib.Path("tests/load/k6").glob("*.js")); assert len(files) >= 6; assert all("options" in f.read_text() and "thresholds" in f.read_text() for f in files); print(f"valid k6 scripts: {len(files)}")'
 
 load-k6: load-k6-validate ## Run one k6 script in Docker; set SCRIPT=tests/load/k6/accounts.js
 	@test -n "$(SCRIPT)" || (echo "Set SCRIPT, e.g. make load-k6 SCRIPT=tests/load/k6/accounts.js"; exit 2)
@@ -135,7 +135,7 @@ load-k6-rate-limit: load-k6-validate ## Run the isolated GraphQL admission k6 sc
 
 load-mutation-check: load-k6-validate ## Run fixture-backed mutation load and verify financial reconciliation
 	@DURATION="$${DURATION:-5s}" k6 run tests/load/k6/mutation-expense.js
-	@$(UV_RUN) python3 tools/ops/reconcile_mutation_fixture.py --token "$${BEARER_TOKEN:-test-user}"
+	@$(UV_RUN) python tools/ops/reconcile_mutation_fixture.py --token "$${BEARER_TOKEN:-test-user}"
 
 cqrs-replica-smoke: ## Verify local PostgreSQL streaming replica and route telemetry
 	@sh tests/performance/cqrs-replica-smoke.sh
@@ -150,46 +150,46 @@ e2e: ## Run the contract and deployment E2E smoke checks
 	@tests/e2e/contract-smoke.sh
 
 e2e-rest-edge: ## Run live REST validation, authorization, boundary, and idempotency checks
-	@$(UV_RUN) python3 tests/e2e/test_rest_edge_cases.py $(E2E_REST_EDGE_ARGS)
+	@$(UV_RUN) python tests/e2e/test_rest_edge_cases.py $(E2E_REST_EDGE_ARGS)
 
 e2e-auth-email: ## Run deployed passwordless auth-email delivery and session-revocation checks
-	@$(UV_RUN) python3 tests/e2e/test_auth_email_delivery.py $(E2E_AUTH_EMAIL_ARGS)
+	@$(UV_RUN) python tests/e2e/test_auth_email_delivery.py $(E2E_AUTH_EMAIL_ARGS)
 
 e2e-auth-notification-limit: ## Run deployed auth-email delivery admission suppression and recovery
-	@$(UV_RUN) python3 tests/e2e/test_auth_notification_rate_limit.py
+	@$(UV_RUN) python tests/e2e/test_auth_notification_rate_limit.py
 
 e2e-auth-notification-outage: ## Run auth-email delivery Redis outage and recovery checks
-	@$(UV_RUN) python3 tests/e2e/test_auth_notification_redis_outage.py
+	@$(UV_RUN) python tests/e2e/test_auth_notification_redis_outage.py
 
 e2e-auth-login-replicas: ## Run shared login admission checks against two Accounts replicas
-	@$(UV_RUN) python3 tests/e2e/test_auth_login_replicas.py
+	@$(UV_RUN) python tests/e2e/test_auth_login_replicas.py
 
 e2e-auth-refresh-concurrency: ## Run concurrent refresh rotation and family-revocation checks
-	@$(UV_RUN) python3 tests/e2e/test_auth_refresh_concurrency.py
+	@$(UV_RUN) python tests/e2e/test_auth_refresh_concurrency.py
 
 e2e-auth-cache: ## Run live Redis eviction, outage, and restart authentication checks
-	@$(UV_RUN) python3 tests/e2e/test_auth_cache_resilience.py
+	@$(UV_RUN) python tests/e2e/test_auth_cache_resilience.py
 
 e2e-auth-surfaces: ## Run live GraphQL HTTP and WebSocket rate-limit checks
-	@$(UV_RUN) python3 tests/e2e/test_auth_rate_limit_surfaces.py
+	@$(UV_RUN) python tests/e2e/test_auth_rate_limit_surfaces.py
 
 e2e-auth-bff-replicas: ## Verify BFF GraphQL admission across two processes sharing Redis
-	@$(UV_RUN) python3 tests/e2e/test_auth_bff_replicas.py
+	@$(UV_RUN) python tests/e2e/test_auth_bff_replicas.py
 
 e2e-auth-no-accounts: ## Prove authenticated resource reads do not call Accounts
-	@$(UV_RUN) python3 tests/e2e/test_auth_no_accounts_lookup.py
+	@$(UV_RUN) python tests/e2e/test_auth_no_accounts_lookup.py
 
 e2e-live: ## Run the comprehensive multi-service product journey E2E test against live stack
-	@$(UV_RUN) python3 tests/e2e/test_product_journey.py $(E2E_PRODUCT_ARGS)
+	@$(UV_RUN) python tests/e2e/test_product_journey.py $(E2E_PRODUCT_ARGS)
 
 e2e-offline: ## Run offline client simulation, sync cursor, and replay resilience tests
-	@$(UV_RUN) python3 tests/e2e/test_offline_resilience.py $(E2E_OFFLINE_ARGS)
+	@$(UV_RUN) python tests/e2e/test_offline_resilience.py $(E2E_OFFLINE_ARGS)
 
 e2e-concurrency: ## Run concurrent member edit conflict resolution and GraphQL subscription invalidation tests
-	@$(UV_RUN) python3 tests/e2e/test_concurrency_subscriptions.py $(E2E_CONCURRENCY_ARGS)
+	@$(UV_RUN) python tests/e2e/test_concurrency_subscriptions.py $(E2E_CONCURRENCY_ARGS)
 
 e2e-chaos: ## Run message broker outage chaos and transactional outbox recovery tests
-	@$(UV_RUN) python3 tests/e2e/test_chaos_recovery.py
+	@$(UV_RUN) python tests/e2e/test_chaos_recovery.py
 
 e2e-all: e2e-auth-cache e2e-auth-surfaces e2e-auth-no-accounts e2e-auth-email e2e-live e2e-offline e2e-concurrency e2e-chaos ## Run the entire comprehensive E2E test suite against the live stack
 	@echo "All E2E test suites passed successfully!"
@@ -302,13 +302,13 @@ dev-setup: ## Prepare local development configuration from .env.example
 	@echo "Local development environment initialized: infra/local/.env ready"
 
 seed: ## Seed realistic development personas, groups, expenses, and schedules
-	@$(UV_RUN) python3 tools/ops/seed_dev_data.py
+	@$(UV_RUN) python tools/ops/seed_dev_data.py
 
 seed-large: ## Seed extensive high-volume development dataset (50+ groups, hundreds of expenses)
-	@$(UV_RUN) python3 tools/ops/seed_dev_data.py --large
+	@$(UV_RUN) python tools/ops/seed_dev_data.py --large
 
 seed-reset: ## Reset groups, expenses, and notifications and re-seed clean development data
-	@$(UV_RUN) python3 tools/ops/seed_dev_data.py --reset
+	@$(UV_RUN) python tools/ops/seed_dev_data.py --reset
 
 docker-build-all: $(addprefix docker-build-,$(SERVICES)) ## Build all production JVM images
 

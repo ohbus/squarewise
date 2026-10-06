@@ -333,8 +333,8 @@ Add focused commands for the Redis suite, for example:
 
 ```text
 ./gradlew :libs:security:test :app:accounts:test :app:notifications:test :app:bff:test --no-daemon
-uv run --frozen --no-build python3 tests/e2e/test_auth_cache_resilience.py
-uv run --frozen --no-build python3 tests/e2e/test_auth_no_accounts_lookup.py
+uv run --frozen --no-build python tests/e2e/test_auth_cache_resilience.py
+uv run --frozen --no-build python tests/e2e/test_auth_no_accounts_lookup.py
 make e2e-auth-surfaces
 make e2e-auth-bff-replicas
 make e2e-auth-login-replicas
