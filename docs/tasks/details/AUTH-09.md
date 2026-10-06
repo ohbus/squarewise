@@ -486,6 +486,11 @@ recovered, a subsequent real auth-email event was delivered. This is local
 Compose evidence only; hosted outage alerts, managed Redis, and production
 recovery evidence remain open.
 
+The general notification consumer now rethrows the shared
+`RateLimitStoreUnavailableException` after an applied inbox event so broker
+retry/DLQ semantics are preserved during limiter outage. Provider and preference
+failures remain isolated as before; a focused unit test covers the distinction.
+
 The Redis resilience probe now also calls the public Accounts login-start path
 while Redis is stopped and observes the structured fail-closed HTTP 429, then
 repeats login-start after Redis recovery and observes HTTP 202. Refresh and

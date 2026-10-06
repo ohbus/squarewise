@@ -10,6 +10,7 @@ import com.subhrodip.squarewise.notifications.email.delivery.EmailDeliveryOutcom
 import com.subhrodip.squarewise.notifications.email.delivery.EmailDispatcher
 import com.subhrodip.squarewise.notifications.preferences.model.NotificationPreferences
 import com.subhrodip.squarewise.notifications.preferences.persistence.PreferenceStore
+import com.subhrodip.squarewise.security.ratelimit.RateLimitStoreUnavailableException
 import java.time.Instant
 import java.util.UUID
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -122,6 +123,19 @@ class NotificationEventConsumerUnitTest {
             .send("dispatch@example.com", "Notification: expense.created", "Dinner was added")
 
         assertEquals(NotificationConsumptionOutcome.APPLIED, consumer.consume(dispatchFailure))
+    }
+
+    @Test
+    fun `propagates limiter store failure for broker retry`() {
+        val event = sampleEvent(subject = "rate-store@example.com")
+        doReturn(NotificationConsumptionOutcome.APPLIED).`when`(processor).process(event)
+        doReturn(NotificationPreferences(emailEnabled = true)).`when`(preferenceStore)
+            .get("rate-store@example.com")
+        doThrow(RateLimitStoreUnavailableException(IllegalStateException("redis unavailable")))
+            .`when`(deliveryRateLimiter).allow("rate-store@example.com")
+
+        assertThrows(RateLimitStoreUnavailableException::class.java) { consumer.consume(event) }
+        verify(emailDispatcher, never()).send(anyString(), anyString(), anyString())
     }
 
     @Test
