@@ -646,6 +646,14 @@ stop/start cycle, so a following selected stream cannot observe a transient
 connection reset. The isolation probe and passwordless auth-email stream pass
 back-to-back in the aggregate order.
 
+Expense Core is not a rate-limit consumer. Its aggregate actuator health was
+incorrectly probing the shared Redis starter at the default container-local
+`localhost:6379`, causing a transient/down health result after Redis recovery.
+The service now disables that irrelevant Redis health contributor while the
+Accounts, Notifications, and BFF rate-limit health indicators remain mandatory.
+After rebuilding, the full live product journey passed with Expense Core health
+`UP` and real outbox-to-Notifications inbox delivery.
+
 The repository Makefile is now executable on Windows as well as Unix-like
 hosts: it selects `gradlew.bat` under `Windows_NT`, and its package artifact
 listing uses the isolated Python runtime instead of a Unix-only `find` command.

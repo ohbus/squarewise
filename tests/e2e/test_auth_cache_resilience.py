@@ -25,8 +25,12 @@ REDIS_PASSWORD: Final[str] = os.environ.get(
 ACCOUNTS_URL: Final[str] = os.environ.get(
     "ACCOUNTS_URL", os.environ.get("SQUAREWISE_ACCOUNTS_URL", "http://localhost:28081")
 )
-BEARER_TOKEN: Final[str] = os.environ.get("BEARER_TOKEN", "")
-PROMETHEUS_PATH: Final[str] = "/actuator/prometheus"
+SERVICE_READINESS_URLS: Final[tuple[str, ...]] = (
+    f"{os.environ.get('SQUAREWISE_BFF_URL', 'http://localhost:28080')}/actuator/health/readiness",
+    f"{ACCOUNTS_URL}/actuator/health/readiness",
+    f"{os.environ.get('SQUAREWISE_EXPENSE_CORE_URL', 'http://localhost:28082')}/actuator/health/readiness",
+    f"{os.environ.get('SQUAREWISE_NOTIFICATIONS_URL', 'http://localhost:28083')}/actuator/health/readiness",
+)
 BEARER_TOKEN: Final[str] = os.environ.get("BEARER_TOKEN", "")
 PROMETHEUS_PATH: Final[str] = "/actuator/prometheus"
 REFRESH_PATH: Final[str] = "/accounts/v1/auth/token/refresh"
@@ -157,6 +161,23 @@ def wait_for_redis() -> None:
     raise TimeoutError("Redis did not become ready after restart")
 
 
+def wait_for_service_readiness(timeout_seconds: float = 30.0) -> None:
+    """Wait until every Redis-dependent local service has recovered readiness."""
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline:
+        try:
+            ready = True
+            for url in SERVICE_READINESS_URLS:
+                with urlopen(url, timeout=3) as response:
+                    ready = ready and response.status == 200
+            if ready:
+                return
+        except (HTTPError, OSError, URLError):
+            pass
+        time.sleep(0.5)
+    raise TimeoutError("Redis-dependent services did not become ready after restart")
+
+
 def expect(label: str, actual: int, expected: int) -> None:
     """Assert and print one HTTP result from the cache-resilience matrix."""
     if actual != expected:
@@ -212,6 +233,7 @@ def main() -> int:
 
         compose("start", "redis")
         wait_for_redis()
+        wait_for_service_readiness()
         expect("refresh after Redis restart", refresh_status(), 401)
         expect("login start after Redis restart", login_start_status(probe_email), 202)
         expect(
