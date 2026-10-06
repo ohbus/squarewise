@@ -5063,7 +5063,8 @@
         "A typed local Notifications outage probe consumed a real auth-email event while Redis was stopped without Mailpit dispatch, observed the bounded broker retry ending in the auth-email DLQ, and delivered a later event after Redis and Accounts readiness recovered; hosted alerts, managed Redis, and production recovery evidence remain open.",
         "An isolated local k6 GraphQL admission run completed 351 requests at 35/s with 0% HTTP failures and 12.08 ms p95 after a temporary isolated cap override; this is not production or multi-replica capacity evidence.",
         "The shared rateLimitRedis health contributor is explicitly imported into Accounts, Notifications, and BFF and included in each readiness group; rebuilt local Compose showed Accounts and BFF 200/UP when Redis was healthy, 503/DOWN while Redis was stopped, and 200/UP after restart, with all three healthy after recovery. Hosted health, alert, and production failover evidence remain open.",
-        "Notifications hosted/production delivery, GraphQL/WebSocket public-surface, query-count, multi-replica failure, capacity, and hosted E2E evidence remain open and must not be inferred from local increments."
+        "A disposable BFF replica overlay and typed probe now alternate GraphQL HTTP and WebSocket admission across two BFF containers sharing Redis; local runs pass the configured cap plus one as HTTP 429 for both policies. This is cross-process local evidence only; revoked-token reconnect, production topology, and capacity evidence remain open.",
+        "Notifications hosted/production delivery, hosted GraphQL/WebSocket evidence, query-count breadth, multi-replica failure, capacity, and hosted E2E evidence remain open and must not be inferred from local increments."
       ],
       "reviewer": "/root",
       "blocker": null

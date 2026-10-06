@@ -460,9 +460,10 @@ jobs:
           fresh_nonmember="$(grep '^SQUAREWISE_E2E_TOKEN_NONMEMBER=' "$GITHUB_ENV" | tail -1 | cut -d= -f2-)"
           docker compose -f infra/local/docker-compose.dev.yml \
             -f infra/local/docker-compose.auth-replicas.yml \
-            up -d --build --wait accounts-replica-a accounts-replica-b
-          trap 'docker compose -f infra/local/docker-compose.dev.yml -f infra/local/docker-compose.auth-replicas.yml rm -sf accounts-replica-a accounts-replica-b' EXIT
+            up -d --build --wait accounts-replica-a accounts-replica-b bff-replica-a bff-replica-b
+          trap 'docker compose -f infra/local/docker-compose.dev.yml -f infra/local/docker-compose.auth-replicas.yml rm -sf accounts-replica-a accounts-replica-b bff-replica-a bff-replica-b' EXIT
           make e2e-auth-login-replicas 2>&1 | tee build/reports/e2e/auth-login-replicas.log
+          BEARER_TOKEN="$fresh_token" make e2e-auth-bff-replicas 2>&1 | tee build/reports/e2e/auth-bff-replicas.log
           SQUAREWISE_AUTH_LOGIN_RESEND_COOLDOWN_SECONDS=0 \
             SQUAREWISE_NOTIFICATIONS_DELIVERY_MAX_PERMITS=1 \
           SQUAREWISE_NOTIFICATIONS_DELIVERY_WINDOW_SECONDS=2 \

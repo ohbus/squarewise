@@ -494,6 +494,12 @@ restart. All three services returned healthy after recovery. This is local
 readiness evidence; hosted health, alert, and production failover evidence
 remain open.
 
+A disposable BFF replica overlay and typed probe now alternate GraphQL HTTP and
+WebSocket admission across two BFF containers sharing Redis. Local runs pass
+the configured cap plus one as HTTP 429 for both policies. This is cross-process
+local evidence only; revoked-token reconnect, production topology, and capacity
+evidence remain open.
+
 Rate-limit decisions now expose bounded Micrometer counters for `allowed`,
 `denied`, and `store_error`, tagged only by the centrally defined policy ID and
 outcome. No key, subject, IP, token, or request ID is used as a metric label.

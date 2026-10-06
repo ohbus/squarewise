@@ -14,6 +14,7 @@ export SQUAREWISE_SECURITY_CREDENTIAL_DIGEST_SECRET ?= AAECAwQFBgcICQoLDA0ODxARE
 export SQUAREWISE_SECURITY_AUTH_EMAIL_ENVELOPE_KEY ?= ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj8=
 
 .DEFAULT_GOAL := help
+.PHONY: e2e-auth-bff-replicas
 .PHONY: e2e-auth-notification-outage
 .PHONY: load-k6-rate-limit e2e-auth-notification-limit
 <<<<<<< HEAD
@@ -171,6 +172,9 @@ e2e-auth-cache: ## Run live Redis eviction, outage, and restart authentication c
 
 e2e-auth-surfaces: ## Run live GraphQL HTTP and WebSocket rate-limit checks
 	@$(UV_RUN) python3 tests/e2e/test_auth_rate_limit_surfaces.py
+
+e2e-auth-bff-replicas: ## Verify BFF GraphQL admission across two processes sharing Redis
+	@$(UV_RUN) python3 tests/e2e/test_auth_bff_replicas.py
 
 e2e-auth-no-accounts: ## Prove authenticated resource reads do not call Accounts
 	@$(UV_RUN) python3 tests/e2e/test_auth_no_accounts_lookup.py

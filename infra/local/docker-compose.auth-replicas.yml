@@ -12,3 +12,17 @@ services:
       service: accounts
     hostname: accounts-replica-b-api
     ports: !override ["8085:8080"]
+
+  bff-replica-a:
+    extends:
+      file: docker-compose.dev.yml
+      service: bff
+    hostname: bff-replica-a-api
+    ports: !override ["8086:8080"]
+
+  bff-replica-b:
+    extends:
+      file: docker-compose.dev.yml
+      service: bff
+    hostname: bff-replica-b-api
+    ports: !override ["8087:8080"]

@@ -63,13 +63,21 @@ The end-to-end test suites run against the live local environment (`infra/local/
    - Clears only `squarewise:rl:v1:*`; it requires a real `BEARER_TOKEN` for
      the WebSocket handshake and must run against the dedicated local/CI stack.
 
-7. **Local JWT identity lookup isolation (`test_auth_no_accounts_lookup.py`)**:
+7. **BFF Replica Rate-Limit Sharing (`test_auth_bff_replicas.py`)**:
+   - Alternates authenticated GraphQL HTTP requests across two disposable BFF
+     containers sharing one Redis instance and verifies the shared cap plus one
+     response is HTTP 429.
+   - Repeats the same check for WebSocket handshakes across both containers.
+   - This proves local cross-process admission only; revoked-token reconnect,
+     production topology, and capacity evidence remain separate.
+
+8. **Local JWT identity lookup isolation (`test_auth_no_accounts_lookup.py`)**:
    - Stops Accounts after token acquisition and verifies authenticated Expense
      Core and BFF group reads still succeed through local JWT validation.
    - This proves no request-time Accounts call is required; it is local
      dependency-isolation evidence and does not replace SQL/query telemetry.
 
-8. **Auth-email delivery admission (`test_auth_notification_rate_limit.py`)**:
+9. **Auth-email delivery admission (`test_auth_notification_rate_limit.py`)**:
    - Requires the test deployment overrides `SQUAREWISE_AUTH_LOGIN_RESEND_COOLDOWN_SECONDS=0`,
      `SQUAREWISE_NOTIFICATIONS_DELIVERY_MAX_PERMITS=1`, and
      `SQUAREWISE_NOTIFICATIONS_DELIVERY_WINDOW_SECONDS=2`.
