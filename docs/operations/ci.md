@@ -30,6 +30,12 @@ calculate this repository's reverse Gradle-dependent closure or classify the
 three E2E streams, so the small typed resolver and first-party matrix jobs
 remain necessary.
 
+The comprehensive E2E job applies the notification delivery-limit variables
+again when it restarts Compose after the invalid-subject checks. Compose
+interpolation is evaluated at startup, so a restart without those variables
+would silently restore the default ten-per-minute policy and invalidate the
+suppression probe.
+
 The reusable workflow applies Gradle dependency and build caching with
 content-addressed keys and restore fallbacks. E2E uses the same policy, while
 Docker BuildKit layers use the GitHub Actions cache backend. Cache misses only

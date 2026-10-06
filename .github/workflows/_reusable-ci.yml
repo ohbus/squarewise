@@ -408,7 +408,9 @@ jobs:
             (cd tools/bruno && npx --yes @usebruno/cli@4.1.0 run "../../$request" -r --env local-oidc --env-var "invalidSubjectToken=$invalid_subject_token")
           done
           docker compose -f infra/local/docker-compose.dev.yml -f infra/local/docker-compose.invalid-subject.yml down
-          docker compose -f infra/local/docker-compose.dev.yml up -d --build --wait
+          SQUAREWISE_NOTIFICATIONS_DELIVERY_MAX_PERMITS=1 \
+            SQUAREWISE_NOTIFICATIONS_DELIVERY_WINDOW_SECONDS=2 \
+            docker compose -f infra/local/docker-compose.dev.yml up -d --build --wait
           tests/e2e/acquire_local_tokens.sh
           # The stack was restarted above; Keycloak generated new signing keys, so the
           # tokens from the step-level env: block are now invalid.  acquire_local_tokens.sh
