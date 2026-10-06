@@ -486,10 +486,11 @@ recovered, a subsequent real auth-email event was delivered. This is local
 Compose evidence only; hosted outage alerts, managed Redis, and production
 recovery evidence remain open.
 
-The general notification consumer now rethrows the shared
-`RateLimitStoreUnavailableException` after an applied inbox event so broker
-retry/DLQ semantics are preserved during limiter outage. Provider and preference
-failures remain isolated as before; a focused unit test covers the distinction.
+The general notification consumer keeps the inbox event durable while suppressing
+provider dispatch if the shared limiter cannot decide; it does not fall back to a
+local or database limiter. Provider and preference failures remain isolated as
+before, and a focused unit test covers the distinction. The dedicated auth-email
+listener retains its separate bounded retry/DLQ behavior.
 Its preference, disabled-delivery, and limiter-denial diagnostics now use the
 existing opaque recipient representation rather than raw recipient identifiers.
 

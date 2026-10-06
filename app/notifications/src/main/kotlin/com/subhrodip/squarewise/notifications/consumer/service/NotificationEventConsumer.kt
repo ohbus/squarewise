@@ -6,7 +6,6 @@ import com.subhrodip.squarewise.notifications.email.delivery.EmailDispatcher
 import com.subhrodip.squarewise.notifications.email.delivery.opaqueRecipientId
 
 import com.subhrodip.squarewise.notifications.delivery.rate.DeliveryRateLimiter
-import com.subhrodip.squarewise.security.ratelimit.RateLimitStoreUnavailableException
 import com.subhrodip.squarewise.notifications.preferences.persistence.PreferenceStore
 
 import org.hibernate.exception.ConstraintViolationException
@@ -84,9 +83,6 @@ class NotificationEventConsumer(
             val deliveryOutcome = emailDispatcher.send(recipientEmail, subject, body)
             log.info("Email dispatch outcome for recipientId={} (notificationId={}): {}", opaqueRecipientId(recipientEmail), event.notificationId, deliveryOutcome)
         } catch (t: Throwable) {
-            if (t is RateLimitStoreUnavailableException) {
-                throw t
-            }
             log.error("Unexpected email delivery failure for notification {}, errorClass={}", event.notificationId, t::class.simpleName)
         }
     }
