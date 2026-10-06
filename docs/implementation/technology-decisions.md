@@ -64,6 +64,11 @@ truth for identity, sessions, audit or financial state. Local single-database
 reader mode is diagnostic only and is not replica evidence. Kubernetes, Kafka, JPA
 second-level caching, multi-region writes and sharding are deferred until measured
 requirements justify them.
+Local Compose owns a disposable password-protected Redis instance; staging and
+production Compose consume an externally managed Redis endpoint whose host,
+credential, port, and TLS mode are required deployment inputs. No application
+profile may select PostgreSQL, process-local memory, or an implicit Redis fallback
+for rate-limit state.
 
 ## Python tooling and environment management
 
