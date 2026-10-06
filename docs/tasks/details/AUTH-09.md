@@ -576,6 +576,9 @@ Rate-limit decisions now expose bounded Micrometer counters for `allowed`,
 `denied`, `store_error`, `timeout`, and `fail_closed`, tagged only by the
 centrally defined policy ID and outcome. No key, subject, IP, token, or request
 ID is used as a metric label.
+Policy validation also rejects sub-second windows and cooldowns because the
+atomic Redis script uses explicit whole-second units; disabled, oversized, and
+ambiguous duration policies cannot be silently accepted.
 The shared policy identifier catalog is used by Accounts, Notifications, and
 the BFF. Prometheus now has a `SquarewiseRateLimitStoreUnavailable` alert and
 the shared Grafana dashboard exposes bounded outcome rates; deployed scrape,

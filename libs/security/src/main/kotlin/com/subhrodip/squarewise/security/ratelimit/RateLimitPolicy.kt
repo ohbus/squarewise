@@ -28,6 +28,9 @@ data class RateLimitPolicy(
         require(maximumPermits in 1..1_000_000) {
             "Rate-limit maximum permits must be between 1 and 1000000"
         }
+        require(window.nano == 0 && cooldown.nano == 0) {
+            "Rate-limit window and cooldown must use whole seconds"
+        }
         require(window.seconds >= 1 && window <= MAXIMUM_WINDOW) {
             "Rate-limit window must be positive and no longer than 24 hours"
         }
