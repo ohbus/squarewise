@@ -39,6 +39,13 @@ closed because Redis decisions cannot be made safely. Confirm the service
 readiness and Redis health indicators, inspect bounded `store_error` metrics by
 service and policy, and check the Redis endpoint, authentication, TLS, and
 connection saturation. Do not enable an in-memory or PostgreSQL fallback.
+Production and staging Compose use an externally managed Redis endpoint; provide
+`SQUAREWISE_REDIS_HOST`, `SQUAREWISE_REDIS_PORT`,
+`SQUAREWISE_REDIS_PASSWORD`, and `SQUAREWISE_REDIS_SSL_ENABLED` through the
+deployment secret/configuration manager. The production Compose contract also
+requires `SQUAREWISE_SECURITY_CREDENTIAL_DIGEST_SECRET` for HMAC-derived limiter
+keys. Never place those values in the repository or disable TLS for a managed
+production endpoint.
 After Redis recovery, verify readiness returns healthy and run the documented
 local/managed-environment admission recovery probe before clearing the alert.
 

@@ -547,6 +547,12 @@ online, requires login-start to fail closed with HTTP 429 on both, and verifies
 HTTP 202 recovery on both after Redis restarts. This remains disposable local
 cross-process evidence; hosted and production failover evidence remain open.
 
+Production/staging Compose now explicitly requires the managed Redis endpoint,
+credential, TLS mode, and deployment HMAC secret through environment contracts;
+all three Redis-backed applications map the TLS flag to Spring Data Redis. This
+closes deployment wiring only; managed Redis selection, failover, rotation,
+capacity, and alert-routing evidence remain release gates.
+
 Rate-limit decisions now expose bounded Micrometer counters for `allowed`,
 `denied`, and `store_error`, tagged only by the centrally defined policy ID and
 outcome. No key, subject, IP, token, or request ID is used as a metric label.

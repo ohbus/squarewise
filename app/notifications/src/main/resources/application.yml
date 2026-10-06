@@ -6,6 +6,8 @@ spring:
       host: ${SQUAREWISE_REDIS_HOST}
       port: ${SQUAREWISE_REDIS_PORT:6379}
       password: ${SQUAREWISE_REDIS_PASSWORD}
+      ssl:
+        enabled: ${SQUAREWISE_REDIS_SSL_ENABLED:false}
   security:
     oauth2:
       resourceserver:
