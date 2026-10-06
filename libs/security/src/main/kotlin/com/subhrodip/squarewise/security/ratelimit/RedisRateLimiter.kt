@@ -3,6 +3,7 @@ package com.subhrodip.squarewise.security.ratelimit
 import java.time.Duration
 import java.util.concurrent.TimeoutException
 import io.micrometer.core.instrument.MeterRegistry
+import io.micrometer.core.instrument.Timer
 import org.springframework.context.annotation.Profile
 import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.data.redis.core.script.DefaultRedisScript
@@ -27,6 +28,7 @@ class RedisRateLimiter(
     override fun consume(key: String, policy: RateLimitPolicy): RateLimitDecision {
         require(key.length in 1..256) { "Rate-limit key material must be 1-256 characters" }
         val redisKey = "squarewise:rl:v1:${keyDeriver.derive(key)}"
+        val timer = meterRegistry?.let(Timer::start)
         return try {
             val result = redis.execute(
                 script,
@@ -48,6 +50,16 @@ class RedisRateLimiter(
         } catch (exception: Exception) {
             recordFailure(policy.id, exception)
             throw RateLimitStoreUnavailableException(exception)
+        } finally {
+            meterRegistry?.let { registry ->
+                timer?.stop(
+                    registry.timer(
+                    "squarewise.rate_limit.decision",
+                    "policy",
+                    policy.id
+                    )
+                )
+            }
         }
     }
 
