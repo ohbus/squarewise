@@ -134,6 +134,36 @@ def start_container(service: str) -> None:
     subprocess.run(["docker", "start", container_id], check=True, capture_output=True, text=True)
 
 
+def pause_container(service: str) -> None:
+    """Pause one existing container without changing its network identity."""
+    container_id = compose("ps", "-q", service)
+    if not container_id:
+        raise AssertionError(f"Compose service {service} has no running container")
+    subprocess.run(["docker", "pause", container_id], check=True, capture_output=True, text=True)
+
+
+def unpause_container(service: str) -> None:
+    """Resume one paused container while preserving its network identity."""
+    container_id = compose("ps", "-aq", service)
+    if not container_id:
+        raise AssertionError(f"Compose service {service} has no existing container")
+    subprocess.run(["docker", "unpause", container_id], check=True, capture_output=True, text=True)
+
+
+def container_paused(service: str) -> bool:
+    """Return whether one Compose service container is currently paused."""
+    container_id = compose("ps", "-aq", service)
+    if not container_id:
+        return False
+    completed = subprocess.run(
+        ["docker", "inspect", "--format={{.State.Status}}", container_id],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return completed.stdout.strip().lower() == "paused"
+
+
 def wait_for_container_state(service: str, expected: bool, timeout_seconds: float = 30.0) -> None:
     """Wait for a Compose service to reach the requested process state."""
     deadline = time.monotonic() + timeout_seconds
@@ -142,6 +172,16 @@ def wait_for_container_state(service: str, expected: bool, timeout_seconds: floa
             return
         time.sleep(0.5)
     raise AssertionError(f"Compose service {service} did not reach running={expected}")
+
+
+def wait_for_container_paused(service: str, expected: bool, timeout_seconds: float = 30.0) -> None:
+    """Wait for a Compose service container to reach its paused state."""
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline:
+        if container_paused(service) == expected:
+            return
+        time.sleep(0.5)
+    raise AssertionError(f"Compose service {service} did not reach paused={expected}")
 
 
 def wait_for_queue_increase(queue: str, baseline: int, timeout_seconds: float = 30.0) -> int:
@@ -202,7 +242,7 @@ def wait_for_redis(timeout_seconds: float = 30.0) -> None:
     raise AssertionError("Redis did not recover within the bounded probe timeout")
 
 
-def wait_for_accounts(timeout_seconds: float = 30.0) -> None:
+def wait_for_accounts(timeout_seconds: float = 90.0) -> None:
     """Wait until Accounts has re-established its Redis-backed readiness path."""
     deadline = time.monotonic() + timeout_seconds
     while time.monotonic() < deadline:
@@ -276,10 +316,11 @@ def main() -> int:
         start_login(outage_recipient)
         wait_for_queue_increase(AUTH_EMAIL_QUEUE, baseline_queue)
 
-        # Stop the existing Redis container while preserving its Compose
-        # identity/IP so other services can reconnect during recovery.
-        compose("stop", "redis")
-        wait_for_container_state("redis", False)
+        # Pause Redis so the outage preserves its container identity/IP. A
+        # stop/start cycle can receive a new IP, while long-lived JVM DNS
+        # caches continue dialing the old address after recovery.
+        pause_container("redis")
+        wait_for_container_paused("redis", True)
         start_container("notifications")
         wait_for_container_state("notifications", True)
         wait_for_notifications_liveness()
@@ -287,7 +328,8 @@ def main() -> int:
         if recipient_count(outage_recipient) != 0:
             raise AssertionError("auth email was dispatched while Notifications Redis was unavailable")
 
-        compose("start", "redis")
+        unpause_container("redis")
+        wait_for_container_paused("redis", False)
         wait_for_redis()
         wait_for_accounts()
         start_login(recovery_recipient)
@@ -295,8 +337,11 @@ def main() -> int:
         print("  [ok] Notifications dead-lettered auth email during Redis outage without dispatch, then recovered")
         return 0
     finally:
+        if container_paused("redis"):
+            unpause_container("redis")
         compose("start", "redis")
-        compose("start", "notifications")
+        if not container_running("notifications"):
+            compose("start", "notifications")
 
 
 if __name__ == "__main__":

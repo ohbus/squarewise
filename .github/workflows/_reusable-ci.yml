@@ -195,7 +195,7 @@ jobs:
           RABBITMQ_ERLANG_COOKIE: squarewise-ci-erlang-cookie
         ports: ['5672:5672']
         options: >-
-          --health-cmd="rabbitmq-diagnostics -q ping"
+          --health-cmd="rabbitmqctl await_startup"
           --health-start-period=60s --health-interval=5s --health-timeout=10s --health-retries=24
     timeout-minutes: 20
     strategy:
@@ -297,7 +297,7 @@ jobs:
           RABBITMQ_ERLANG_COOKIE: squarewise-ci-erlang-cookie
         ports: ['5672:5672']
         options: >-
-          --health-cmd="rabbitmq-diagnostics -q ping"
+          --health-cmd="rabbitmqctl await_startup"
           --health-start-period=60s --health-interval=5s --health-timeout=10s --health-retries=24
     timeout-minutes: 25
     steps:
