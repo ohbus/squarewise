@@ -1,0 +1,16 @@
+{
+  "status": 500,
+  "headers": {
+    "Content-Type": "application/problem+json"
+  },
+  "body": {
+    "type": "https://squarewise.example/problems/err_01",
+    "title": "Internal server error",
+    "status": 500,
+    "code": "INTERNAL_ERROR",
+    "source": "expense-core",
+    "requestId": "550e8400-e29b-41d4-a716-446655440000",
+    "detail": "An unexpected error occurred",
+    "violations": []
+  }
+}

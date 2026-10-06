@@ -1,0 +1,16 @@
+{
+  "status": 404,
+  "headers": {
+    "Content-Type": "application/problem+json"
+  },
+  "body": {
+    "type": "https://squarewise.example/problems/err_05",
+    "title": "Resource not found",
+    "status": 404,
+    "code": "NOT_FOUND",
+    "source": "expense-core",
+    "requestId": "550e8400-e29b-41d4-a716-446655440005",
+    "detail": "Resource not found",
+    "violations": []
+  }
+}

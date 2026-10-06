@@ -1,0 +1,16 @@
+{
+  "status": 400,
+  "headers": {
+    "Content-Type": "application/problem+json"
+  },
+  "body": {
+    "type": "https://squarewise.example/problems/err_10",
+    "title": "Malformed request syntax",
+    "status": 400,
+    "code": "VALIDATION_FAILED",
+    "source": "notifications",
+    "requestId": "550e8400-e29b-41d4-a716-446655440008",
+    "detail": "Invalid cursor format",
+    "violations": []
+  }
+}

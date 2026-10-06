@@ -1,0 +1,17 @@
+{
+  "status": 429,
+  "headers": {
+    "Content-Type": "application/problem+json",
+    "Retry-After": "60"
+  },
+  "body": {
+    "type": "https://squarewise.example/problems/err_11",
+    "title": "Too many requests",
+    "status": 429,
+    "code": "RATE_LIMITED",
+    "source": "accounts",
+    "requestId": "550e8400-e29b-41d4-a716-446655440009",
+    "detail": "Rate limit exceeded. Try again in 60 seconds.",
+    "violations": []
+  }
+}

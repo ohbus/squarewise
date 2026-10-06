@@ -1,0 +1,17 @@
+{
+  "status": 401,
+  "headers": {
+    "Content-Type": "application/problem+json",
+    "WWW-Authenticate": "Bearer error=\"invalid_token\""
+  },
+  "body": {
+    "type": "https://squarewise.example/problems/err_03",
+    "title": "Authentication required",
+    "status": 401,
+    "code": "UNAUTHENTICATED",
+    "source": "accounts",
+    "requestId": "550e8400-e29b-41d4-a716-446655440003",
+    "detail": "Authentication required",
+    "violations": []
+  }
+}

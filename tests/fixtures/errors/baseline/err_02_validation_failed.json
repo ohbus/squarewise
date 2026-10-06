@@ -1,0 +1,16 @@
+{
+  "status": 400,
+  "headers": {
+    "Content-Type": "application/problem+json"
+  },
+  "body": {
+    "type": "https://squarewise.example/problems/err_02",
+    "title": "Request validation failed",
+    "status": 400,
+    "code": "VALIDATION_FAILED",
+    "source": "expense-core",
+    "requestId": "550e8400-e29b-41d4-a716-446655440001",
+    "detail": "Invalid request parameter",
+    "violations": []
+  }
+}

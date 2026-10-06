@@ -1,0 +1,16 @@
+{
+  "status": 409,
+  "headers": {
+    "Content-Type": "application/problem+json"
+  },
+  "body": {
+    "type": "https://squarewise.example/problems/err_09",
+    "title": "Duplicate entity detected",
+    "status": 409,
+    "code": "CONFLICT",
+    "source": "expense-core",
+    "requestId": "550e8400-e29b-41d4-a716-446655440007",
+    "detail": "Resource was updated by another transaction",
+    "violations": []
+  }
+}
