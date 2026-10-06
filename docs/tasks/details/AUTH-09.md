@@ -553,6 +553,10 @@ all three Redis-backed applications map the TLS flag to Spring Data Redis. This
 closes deployment wiring only; managed Redis selection, failover, rotation,
 capacity, and alert-routing evidence remain release gates.
 
+Local operations now expose `make redis-status`, `make redis-logs`, and
+`make redis-clear-rate-limit`; the clear command is restricted to the versioned
+`squarewise:rl:v1:*` namespace.
+
 Rate-limit decisions now expose bounded Micrometer counters for `allowed`,
 `denied`, and `store_error`, tagged only by the centrally defined policy ID and
 outcome. No key, subject, IP, token, or request ID is used as a metric label.

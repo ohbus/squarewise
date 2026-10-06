@@ -14,25 +14,16 @@ export SQUAREWISE_SECURITY_CREDENTIAL_DIGEST_SECRET ?= AAECAwQFBgcICQoLDA0ODxARE
 export SQUAREWISE_SECURITY_AUTH_EMAIL_ENVELOPE_KEY ?= ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj8=
 
 .DEFAULT_GOAL := help
-.PHONY: e2e-auth-bff-replicas
-.PHONY: e2e-auth-notification-outage
-.PHONY: load-k6-rate-limit e2e-auth-notification-limit
-<<<<<<< HEAD
-.PHONY: help doctor bootstrap sync validate contracts lint python-typecheck test test-unit test-integration coverage build package check ci ci-e2e acceptance acceptance-live bruno-run workflow-validate observability-validate release-gate security-hygiene architecture-validate sbom-validate load-probe load-k6-validate load-k6 load-k6-rate-limit e2e e2e-auth-email e2e-auth-notification-limit e2e-auth-login-replicas e2e-rest-edge e2e-auth-cache e2e-auth-surfaces e2e-auth-no-accounts smoke docs-diagrams docs-diagrams-config compose-config devcontainer-config deps-config deps-up deps-status deps-logs deps-down accounts-deps-config accounts-deps-up accounts-deps-status accounts-deps-logs accounts-deps-down expense-core-deps-config expense-core-deps-up expense-core-deps-status expense-core-deps-logs expense-core-deps-down notifications-deps-config notifications-deps-up notifications-deps-status notifications-deps-logs notifications-deps-down bff-deps-config bff-deps-up bff-deps-status bff-deps-logs bff-deps-down full-config full-up full-status full-logs full-down compose-dev-up compose-dev-down compose-dev-logs compose-up compose-down dev-setup seed seed-large seed-reset docker-build-all docker-build-% prod-config clean clean-gradle status
-=======
-.PHONY: help doctor bootstrap sync validate contracts lint python-typecheck test test-unit test-integration coverage build package check ci ci-e2e acceptance acceptance-live bruno-run workflow-validate observability-validate release-gate security-hygiene architecture-validate sbom-validate load-probe load-k6-validate load-k6 load-k6-rate-limit e2e e2e-auth-email e2e-auth-notification-limit e2e-auth-login-replicas e2e-auth-refresh-concurrency e2e-rest-edge e2e-auth-cache e2e-auth-surfaces e2e-auth-no-accounts smoke docs-diagrams docs-diagrams-config compose-config deps-config deps-up deps-status deps-logs deps-down accounts-deps-config accounts-deps-up accounts-deps-status accounts-deps-logs accounts-deps-down expense-core-deps-config expense-core-deps-up expense-core-deps-status expense-core-deps-logs expense-core-deps-down notifications-deps-config notifications-deps-up notifications-deps-status notifications-deps-logs notifications-deps-down bff-deps-config bff-deps-up bff-deps-status bff-deps-logs bff-deps-down full-config full-up full-status full-logs full-down compose-dev-up compose-dev-down compose-dev-logs compose-up compose-down dev-setup seed seed-large seed-reset docker-build-all docker-build-% prod-config clean clean-gradle status
->>>>>>> 713f971f (auth: prove concurrent refresh family revocation)
+.PHONY: help doctor bootstrap sync validate contracts lint python-typecheck test test-unit test-integration coverage build package check ci ci-e2e acceptance acceptance-live bruno-run workflow-validate observability-validate release-gate security-hygiene architecture-validate sbom-validate load-probe load-k6-validate load-k6 load-k6-rate-limit e2e e2e-auth-email e2e-auth-notification-limit e2e-auth-notification-outage e2e-auth-login-replicas e2e-auth-refresh-concurrency e2e-rest-edge e2e-auth-cache e2e-auth-surfaces e2e-auth-bff-replicas e2e-auth-no-accounts smoke docs-diagrams docs-diagrams-config compose-config redis-status redis-logs redis-clear-rate-limit deps-config deps-up deps-status deps-logs deps-down accounts-deps-config accounts-deps-up accounts-deps-status accounts-deps-logs accounts-deps-down expense-core-deps-config expense-core-deps-up expense-core-deps-status expense-core-deps-logs expense-core-deps-down notifications-deps-config notifications-deps-up notifications-deps-status notifications-deps-logs notifications-deps-down bff-deps-config bff-deps-up bff-deps-status bff-deps-logs bff-deps-down full-config full-up full-status full-logs full-down compose-dev-up compose-dev-down compose-dev-logs compose-up compose-down dev-setup seed seed-large seed-reset docker-build-all docker-build-% prod-config clean clean-gradle status
 
 help: ## Show available commands
 	@awk 'BEGIN {FS = ":.*##"; printf "Squarewise commands\n\n"} /^[a-zA-Z0-9_.-]+:.*##/ {printf "  %-24s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 doctor: ## Check required local tools and versions
-	@if [ -z "$$DEVCONTAINER" ]; then \
-		command -v docker >/dev/null || (echo "Docker is required on host"; exit 1); \
-		docker compose version; \
-	fi
+	@command -v docker >/dev/null || (echo "Docker is required"; exit 1)
 	@command -v uv >/dev/null || (echo "uv is required for isolated Python tooling"; exit 1)
 	@command -v java >/dev/null || (echo "Java 25+ is required"; exit 1)
+	@docker compose version
 	@java -version
 	@$(GRADLE) --version
 
@@ -57,6 +48,15 @@ docs-diagrams-config: ## Validate the Mermaid renderer Compose file
 
 docs-diagrams: docs-diagrams-config ## Render Mermaid source diagrams to ignored SVG outputs
 	@$(COMPOSE) -f infra/docs/docker-compose.yml run --build --rm mermaid
+
+redis-status: ## Show the local Redis dependency status
+	@$(COMPOSE) -f $(DEV_COMPOSE) ps redis
+
+redis-logs: ## Show recent local Redis logs
+	@$(COMPOSE) -f $(DEV_COMPOSE) logs --tail=200 redis
+
+redis-clear-rate-limit: ## Delete only the squarewise:rl:v1:* local limiter namespace
+	@$(COMPOSE) -f $(DEV_COMPOSE) exec -T redis redis-cli -a "$${REDIS_PASSWORD:-squarewise-redis-local-only}" --no-auth-warning --scan --pattern 'squarewise:rl:v1:*' | while IFS= read -r key; do [ -z "$$key" ] || $(COMPOSE) -f $(DEV_COMPOSE) exec -T redis redis-cli -a "$${REDIS_PASSWORD:-squarewise-redis-local-only}" --no-auth-warning DEL "$$key" >/dev/null; done
 
 lint: contracts ## Run contracts, compatible Spotless formatting baseline, and Gradle checks
 	@$(GRADLE) spotlessCheck check
@@ -120,7 +120,7 @@ sbom-validate: ## Validate centralized dependency-version baseline for SBOM gene
 	@$(UV_RUN) python3 tools/ops/validate_sbom_baseline.py
 
 load-probe: ## Run an HTTP load probe; set URL, CONCURRENCY, and DURATION
-	@test -n "$(URL)" || (echo "Set URL, e.g. make load-probe URL=http://localhost:28080/actuator/health"; exit 2)
+	@test -n "$(URL)" || (echo "Set URL, e.g. make load-probe URL=http://localhost:8080/actuator/health"; exit 2)
 	@$(UV_RUN) python3 tools/ops/http_load_probe.py "$(URL)" --concurrency "$${CONCURRENCY:-4}" --duration "$${DURATION:-10}"
 
 load-k6-validate: ## Validate modular k6 scripts and endpoint tags
@@ -128,7 +128,7 @@ load-k6-validate: ## Validate modular k6 scripts and endpoint tags
 
 load-k6: load-k6-validate ## Run one k6 script in Docker; set SCRIPT=tests/load/k6/accounts.js
 	@test -n "$(SCRIPT)" || (echo "Set SCRIPT, e.g. make load-k6 SCRIPT=tests/load/k6/accounts.js"; exit 2)
-	@docker run --rm -i --network squarewise-local-net -v "$(CURDIR):/work:ro" -e BASE_URL -e ACCOUNTS_URL -e EXPENSE_CORE_URL -e NOTIFICATIONS_URL -e BEARER_TOKEN grafana/k6 run "/work/$(SCRIPT)"
+	@docker run --rm -i --network host -v "$(CURDIR):/work:ro" -e BASE_URL -e ACCOUNTS_URL -e EXPENSE_CORE_URL -e NOTIFICATIONS_URL -e BEARER_TOKEN grafana/k6 run "/work/$(SCRIPT)"
 
 load-k6-rate-limit: load-k6-validate ## Run the isolated GraphQL admission k6 scenario
 	@k6 run tests/load/k6/rate-limit-graphql.js
@@ -196,10 +196,7 @@ e2e-all: e2e-auth-cache e2e-auth-surfaces e2e-auth-no-accounts e2e-auth-email e2
 
 smoke: validate e2e ## Run safe local smoke checks without starting containers
 
-compose-config: deps-config accounts-deps-config expense-core-deps-config notifications-deps-config bff-deps-config full-config devcontainer-config ## Validate every local Compose topology
-
-devcontainer-config: ## Validate .devcontainer/docker-compose.devcontainer.yml
-	@$(COMPOSE) -f .devcontainer/docker-compose.devcontainer.yml config --quiet
+compose-config: deps-config accounts-deps-config expense-core-deps-config notifications-deps-config bff-deps-config full-config ## Validate every local Compose topology
 
 deps-config: ## Validate dependency-only infra/local/docker-compose.yml
 	@$(COMPOSE) -f $(LOCAL_COMPOSE) config --quiet

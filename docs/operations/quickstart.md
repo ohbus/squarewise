@@ -54,6 +54,9 @@ For the complete containerized environment, run:
 ```sh
 make dev-setup     # Ensures infra/local/.env exists with safe development keys
 make compose-up    # Starts Postgres, RabbitMQ, Redis, Keycloak, Mailpit, and 4 services
+make redis-status  # Shows the local Redis dependency status
+make redis-logs    # Shows recent local Redis logs
+make redis-clear-rate-limit  # Clears only squarewise:rl:v1:* limiter keys
 make seed          # Seeds rich realistic groups, multi-participant expenses, and settlements
 ```
 

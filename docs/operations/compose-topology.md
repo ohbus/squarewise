@@ -47,6 +47,11 @@ Every row also has a `-config` target. `make compose-config` validates all six
 files without starting containers. `make help` lists these commands and the
 exact Compose file each command uses.
 
+For rate-limit diagnostics, use `make redis-status` and `make redis-logs`. To
+reset disposable local limiter state, use `make redis-clear-rate-limit`; it
+deletes only keys matching `squarewise:rl:v1:*` and never removes PostgreSQL
+volumes or unrelated Redis keys.
+
 The BFF is database-free. Its standalone topology therefore starts its real
 Accounts and Expense Core HTTP upstreams rather than PostgreSQL for the BFF
 itself. Those upstreams require PostgreSQL, and Expense Core also requires
