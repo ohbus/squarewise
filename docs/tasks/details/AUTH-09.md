@@ -664,6 +664,14 @@ hosts: it selects `gradlew.bat` under `Windows_NT`, and its package artifact
 listing uses the isolated Python runtime instead of a Unix-only `find` command.
 The declared local `check` gate passes through `mingw32-make` on Windows.
 
+With fresh local Keycloak bearer tokens, `mingw32-make e2e-all` passed the
+complete local aggregate: cache resilience, authenticated admission surfaces,
+Accounts lookup isolation, passwordless auth-email, product lifecycle, offline
+replay, concurrent subscription revocation, and chaos/broker recovery. This
+does not substitute for hosted selected/skipped artifact evidence or the
+managed-production Redis, alert-routing, broader query/latency, and production
+fanout/reconnect gates.
+
 This increment does not claim completion of AUTH-09. The task remains
 `in_progress` because hosted selected/skipped E2E evidence, managed Redis
 selection/failover/rotation/capacity, deployed alert routing, broader query and
