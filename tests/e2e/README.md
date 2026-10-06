@@ -66,7 +66,9 @@ The end-to-end test suites run against the live local environment (`infra/local/
    - Stops Redis and verifies both public GraphQL admission paths fail closed
      with HTTP 429 before restarting it.
    - Clears only `squarewise:rl:v1:*`; it requires a real `BEARER_TOKEN` for
-     the WebSocket handshake and must run against the dedicated local/CI stack.
+     both authenticated public paths. If the fixture is absent, the selected
+     stream reports an intentional neutral skip rather than a pass or failure.
+     It must run against the dedicated local/CI stack.
 
 7. **BFF Replica Rate-Limit Sharing (`test_auth_bff_replicas.py`)**:
    - Alternates authenticated GraphQL HTTP requests across two disposable BFF

@@ -416,6 +416,11 @@ login/refresh outage recovery, and telemetry when a token is supplied;
 multi-replica concurrency, query-count, notification, and capacity evidence is
 recorded in the following increments.
 
+The public GraphQL admission probe now treats a missing `BEARER_TOKEN` as an
+intentional neutral skip for both HTTP and WebSocket checks. A supplied but
+invalid token still fails the probe; skipped coverage is neither passed nor
+failed by the aggregate E2E gate.
+
 The Redis resilience suite was executed against the local Docker Compose stack
 after building the four service boot JARs. It observed ten pre-limit `401`
 responses, an eleventh `429`, recovery to `401` after targeted namespace

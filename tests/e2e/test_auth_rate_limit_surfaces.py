@@ -105,6 +105,12 @@ def expect(label: str, actual: int, expected: int) -> None:
 
 def main() -> int:
     """Verify GraphQL HTTP and WebSocket admission limits independently."""
+    if not BEARER_TOKEN:
+        print(
+            "[skip] GraphQL HTTP/WebSocket admission probe requires BEARER_TOKEN; "
+            "the selected stream is intentionally neutral"
+        )
+        return 0
     clear_rate_limit_namespace()
     for index in range(1, GRAPHQL_HTTP_LIMIT + 1):
         status = graphql_http_status()
