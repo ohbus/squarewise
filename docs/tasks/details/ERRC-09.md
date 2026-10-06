@@ -77,6 +77,27 @@ git diff --check
 - 100% passing test output from unittest and mypy.
 - Execution logs demonstrating intentional failure on synthetic invalid catalog fixtures.
 
+## Implementation Notes and Verification
+
+- Added `validate_six_digit_catalog.py` for code-shape, namespace registration,
+  sequence monotonicity, uniqueness, transport requirements, and domain/module
+  agreement checks.
+- Added `validate_openapi_parity.py` for canonical ProblemDetails parity,
+  required response components/headers, and all 45 operation status references.
+- Added `detect_breaking_error_changes.py` for immutable numeric-code and
+  symbolic-name comparison against a Git baseline. A missing baseline catalog
+  is reported as not applicable because this branch introduced the catalog;
+  supplied baselines still fail closed on deletion or renumbering.
+- Added five positive/negative unit tests and wired all three validators into
+  the `contracts` Make target. The existing `python-typecheck` target already
+  covers `tools` and `tests` under strict mypy.
+- Strict mypy passed for `tools/errors tools/contracts tests/tools`; the unit
+  suite passed; all three validators, the base contract validator, and
+  `git diff --check` passed. Synthetic invalid catalog and missing-response
+  cases were asserted by the unit tests. GNU Make is not installed in the
+  Windows shell, so `mingw32-make contracts` was used for the actual target;
+  it passed in approximately 3.4 seconds. Plain `make contracts` was not run.
+
 ## Rollout & Rollback Strategy
 
 - Tooling and CI gate upgrade.

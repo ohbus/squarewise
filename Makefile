@@ -45,6 +45,9 @@ validate: contracts compose-config ## Run dependency-light repository checks
 contracts: ## Validate contract JSON, GraphQL declarations, and task links
 	@$(UV_RUN) python tools/contracts/validate.py
 	@$(UV_RUN) python tools/contracts/validate_public_surface.py
+	@$(UV_RUN) python tools/errors/validate_six_digit_catalog.py
+	@$(UV_RUN) python tools/contracts/validate_openapi_parity.py
+	@$(UV_RUN) python tools/contracts/detect_breaking_error_changes.py
 
 python-typecheck: ## Run the strict repository Python type checker
 	@$(UV_RUN) mypy tests tools

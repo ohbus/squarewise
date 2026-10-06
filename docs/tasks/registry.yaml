@@ -8179,7 +8179,7 @@
       "parent_id": "ERRC-01",
       "title": "Upgrade contract validation and breaking-change gates",
       "phase": "quality",
-      "status": "todo",
+      "status": "done",
       "owner_role": "quality",
       "owner_agent": "/root",
       "depends_on": [
@@ -8211,7 +8211,11 @@
         "uv run python tools/contracts/validate.py",
         "git diff --check"
       ],
-      "evidence": [],
+      "evidence": [
+        "Added typed catalog, OpenAPI parity, and immutable-history validators under tools/errors and tools/contracts.",
+        "Added five positive/negative tests under tests/tools/test_error_validators.py and wired validators into the contracts Make target; python-typecheck already covers the new tools and tests.",
+        "uv run --frozen --no-build mypy tools/errors tools/contracts tests/tools passed with 0 issues; unit tests passed (5 tests); catalog, OpenAPI parity, breaking-change, base contract, and git diff checks passed. mingw32-make contracts passed in approximately 3.4 seconds; plain make is unavailable in the Windows shell."
+      ],
       "reviewer": "/root",
       "blocker": null
     },
