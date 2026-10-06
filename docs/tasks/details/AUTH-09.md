@@ -549,9 +549,10 @@ cross-process evidence; hosted and production failover evidence remain open.
 
 Production/staging Compose now explicitly requires the managed Redis endpoint,
 credential, TLS mode, and deployment HMAC secret through environment contracts;
-all three Redis-backed applications map the TLS flag to Spring Data Redis. This
-closes deployment wiring only; managed Redis selection, failover, rotation,
-capacity, and alert-routing evidence remain release gates.
+all three Redis-backed applications map the host, port, TLS flag, and bounded
+connect/command timeouts to Spring Data Redis. This closes deployment wiring
+only; managed Redis selection, failover, rotation, capacity, and alert-routing
+evidence remain release gates.
 
 Local operations now expose `make redis-status`, `make redis-logs`, and
 `make redis-clear-rate-limit`; the clear command is restricted to the versioned

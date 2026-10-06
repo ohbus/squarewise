@@ -6,9 +6,11 @@ spring:
   data:
     redis:
       host: ${SQUAREWISE_REDIS_HOST}
+      port: ${SQUAREWISE_REDIS_PORT:6379}
       password: ${SQUAREWISE_REDIS_PASSWORD}
       ssl:
         enabled: ${SQUAREWISE_REDIS_SSL_ENABLED:false}
+      connect-timeout: ${SQUAREWISE_REDIS_CONNECT_TIMEOUT:2s}
       timeout: ${SQUAREWISE_REDIS_COMMAND_TIMEOUT:2s}
   security:
     oauth2:
