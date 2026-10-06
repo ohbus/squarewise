@@ -558,8 +558,9 @@ Local operations now expose `make redis-status`, `make redis-logs`, and
 `squarewise:rl:v1:*` namespace.
 
 Rate-limit decisions now expose bounded Micrometer counters for `allowed`,
-`denied`, and `store_error`, tagged only by the centrally defined policy ID and
-outcome. No key, subject, IP, token, or request ID is used as a metric label.
+`denied`, `store_error`, `timeout`, and `fail_closed`, tagged only by the
+centrally defined policy ID and outcome. No key, subject, IP, token, or request
+ID is used as a metric label.
 The shared policy identifier catalog is used by Accounts, Notifications, and
 the BFF. Prometheus now has a `SquarewiseRateLimitStoreUnavailable` alert and
 the shared Grafana dashboard exposes bounded outcome rates; deployed scrape,

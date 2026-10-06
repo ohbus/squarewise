@@ -1,6 +1,7 @@
 package com.subhrodip.squarewise.security.ratelimit
 
 import java.time.Duration
+import java.util.concurrent.TimeoutException
 import io.micrometer.core.instrument.MeterRegistry
 import org.springframework.context.annotation.Profile
 import org.springframework.data.redis.core.StringRedisTemplate
@@ -42,11 +43,19 @@ class RedisRateLimiter(
             record(policy.id, if (allowed) "allowed" else "denied")
             RateLimitDecision(allowed, remaining, Duration.ofSeconds(retryAfterSeconds), policy.id)
         } catch (exception: RateLimitStoreUnavailableException) {
-            record(policy.id, "store_error")
+            recordFailure(policy.id, exception)
             throw exception
         } catch (exception: Exception) {
-            record(policy.id, "store_error")
+            recordFailure(policy.id, exception)
             throw RateLimitStoreUnavailableException(exception)
+        }
+    }
+
+    private fun recordFailure(policyId: String, exception: Throwable) {
+        record(policyId, "store_error")
+        record(policyId, "fail_closed")
+        if (exception.isRateLimitTimeout()) {
+            record(policyId, "timeout")
         }
     }
 
@@ -85,4 +94,17 @@ class RedisRateLimiter(
             return '1|' .. remaining .. '|' .. current_ttl
         """
     }
+}
+
+/** Returns true when a Redis failure or one of its causes represents a timeout. */
+internal fun Throwable.isRateLimitTimeout(): Boolean {
+    val visited = mutableSetOf<Throwable>()
+    var current: Throwable? = this
+    while (current != null && visited.add(current)) {
+        if (current is TimeoutException || current::class.simpleName?.contains("Timeout", ignoreCase = true) == true) {
+            return true
+        }
+        current = current.cause
+    }
+    return false
 }

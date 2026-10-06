@@ -36,9 +36,10 @@ addresses, tokens, or request IDs.
 
 `SquarewiseRateLimitStoreUnavailable` means protected admission is failing
 closed because Redis decisions cannot be made safely. Confirm the service
-readiness and Redis health indicators, inspect bounded `store_error` metrics by
-service and policy, and check the Redis endpoint, authentication, TLS, and
-connection saturation. Do not enable an in-memory or PostgreSQL fallback.
+readiness and Redis health indicators, inspect bounded `store_error`, `timeout`,
+and `fail_closed` metrics by service and policy, and check the Redis endpoint,
+authentication, TLS, and connection saturation. Do not enable an in-memory or
+PostgreSQL fallback.
 Production and staging Compose use an externally managed Redis endpoint; provide
 `SQUAREWISE_REDIS_HOST`, `SQUAREWISE_REDIS_PORT`,
 `SQUAREWISE_REDIS_PASSWORD`, and `SQUAREWISE_REDIS_SSL_ENABLED` through the
