@@ -737,9 +737,15 @@ jobs:
     if: always() && inputs.run_e2e && needs.scope.outputs.has_e2e == 'true'
     needs: [scope, preflight, e2e-artifacts, e2e-edge-and-security, e2e-product-and-offline, e2e-concurrency-and-chaos]
     runs-on: ubuntu-slim
+    timeout-minutes: 15
     permissions:
       contents: read
     steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Set up isolated Python tooling
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
       - name: Aggregate parallel E2E results
         run: |
           set -euo pipefail
