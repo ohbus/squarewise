@@ -100,6 +100,7 @@ after they reach the repository's default branch.
 
 ## Validation evidence
 
+- Community-health implementation commit: `b3b65094`.
 - `uv run --frozen --no-build python tools/contracts/validate.py` passed: all
   contract JSON, GraphQL declarations, and 220 registry tasks are valid.
 - `uv run --frozen --no-build yamllint -d '{extends: relaxed, rules: {truthy:
