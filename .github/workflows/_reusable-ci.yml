@@ -11,10 +11,14 @@ permissions:
 env:
   JAVA_VERSION: '25'
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-  # Ephemeral CI-only values used to render and boot the local fixture. They
-  # are not deployment credentials and must never be reused outside CI.
-  SQUAREWISE_SECURITY_CREDENTIAL_DIGEST_SECRET: 'AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=' # local-only CI fixture
-  SQUAREWISE_SECURITY_AUTH_EMAIL_ENVELOPE_KEY: 'ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj8='
+  # Cryptographic keys and backing service credentials. Can be overridden
+  # in GitHub Actions Repository Secrets (or inherited secrets), falling back
+  # to safe deterministic local fixtures when not set.
+  SQUAREWISE_SECURITY_CREDENTIAL_DIGEST_SECRET: ${{ secrets.SQUAREWISE_SECURITY_CREDENTIAL_DIGEST_SECRET || 'AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=' }}
+  SQUAREWISE_SECURITY_AUTH_EMAIL_ENVELOPE_KEY: ${{ secrets.SQUAREWISE_SECURITY_AUTH_EMAIL_ENVELOPE_KEY || 'ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj8=' }}
+  REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD || 'squarewise-redis-local-only' }}
+  POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD || 'squarewise-local-only' }}
+  RABBITMQ_DEFAULT_PASS: ${{ secrets.RABBITMQ_DEFAULT_PASS || 'squarewise-local-only' }}
 
 jobs:
   scope:
