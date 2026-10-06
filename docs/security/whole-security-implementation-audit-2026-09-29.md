@@ -155,7 +155,6 @@ the old refresh token, and verify generic failure without raw-token logging.
 
 **Severity:** High
 **Evidence level:** Direct source inspection.
-
 `LoginVerificationService.kt:53-56` constructs `internal:$canonicalEmail` and
 passes it as the durable subject. `JpaProfileStore.get` provisions a profile if
 the subject does not exist. This conflicts with the documented target model in
@@ -282,7 +281,13 @@ origins, preflight, and WebSocket origin handling.
 ### SEC-007 — Refresh/login rate limiting uses a coarse and proxy-sensitive network key
 
 **Severity:** Medium
-**Evidence level:** Direct source inspection.
+**Evidence level:** Historical source inspection; implementation status updated below.
+
+**Current status (2026-10-06):** The former direct `remoteAddr` bucket path has
+been replaced by the shared HMAC-derived limiter and bounded client-address
+partition resolver. Local tests and shared-Redis multi-replica/outage probes
+cover the current path. Hosted proxy-chain validation and production edge
+configuration remain open.
 
 `AuthController.kt:158-161` uses `remoteAddr`, and for IPv4 reduces it to the
 first two octets. There is no explicit trusted-proxy configuration in this
@@ -490,9 +495,10 @@ identity, and financial authorization. Redis is used for rate limiting and is
 expected to fail closed with bounded waits. Local cache-resilience evidence
 covers eviction, restart, and Redis outage.
 
-The remaining concerns are rate-limit key quality (SEC-007), observability of
-cache uncertainty, and ensuring no future profile or membership cache becomes a
-stale authorization authority.
+The rate-limit key-quality concern is addressed in the current implementation
+by deployment-HMAC derivation and bounded client partitioning. Remaining
+concerns are hosted alert/cardinality evidence and ensuring no future profile
+or membership cache becomes a stale authorization authority.
 
 ### Input, protocol, and error security
 
