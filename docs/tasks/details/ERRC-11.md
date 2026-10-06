@@ -108,3 +108,23 @@ git diff --check
 - Additive static code generation in `libs/errors`.
 - Zero impact on runtime traffic until exception and handler migrations in subsequent phases.
 - Rollback: Revert generated files and script if catalog schema updates are required.
+
+## Implementation Notes and Evidence
+
+- Added `tools/codegen/generate_error_catalogs.py` as the deterministic generator
+  from `contracts/errors/error-catalog.yaml`. It groups records by owner and
+  emits one Kotlin object per domain plus a compiled aggregate view.
+- Generated `AccountsErrors`, `ExpenseErrors`, `NotificationErrors`,
+  `BffErrors`, and `PlatformErrors` with immutable `SimpleErrorDefinition`
+  instances. Production catalog access performs no YAML parsing, reflection,
+  classpath scanning, annotations, or `ServiceLoader` lookup.
+- The generator emits `CatalogParityTest`, which checks all 99 authoritative
+  records for numeric code, error name, title, and HTTP status against the
+  compiled catalog. Missing HTTP status remains `null` for internal-only
+  records; missing disclosure metadata uses the deterministic pre-migration
+  default of public, except GraphQL `NOT_FOUND` records, which hide resources.
+- Validation passed on 2026-10-07:
+  `uv run python tools/codegen/generate_error_catalogs.py`,
+  `uv run --frozen --no-build mypy tools/codegen/generate_error_catalogs.py`,
+  `./gradlew.bat :libs:errors:test :libs:errors:jacocoTestReport --rerun-tasks --no-daemon --console=plain`,
+  `uv run python tools/contracts/validate.py`, and `git diff --check`.

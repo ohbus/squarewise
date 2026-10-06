@@ -8264,7 +8264,7 @@
       "parent_id": "ERRC-01",
       "title": "Generate or compile static catalogs",
       "phase": "platform",
-      "status": "todo",
+      "status": "done",
       "owner_role": "platform",
       "owner_agent": "/root",
       "depends_on": [
@@ -8289,7 +8289,11 @@
         "uv run python tools/contracts/validate.py",
         "git diff --check"
       ],
-      "evidence": [],
+      "evidence": [
+        "Added deterministic tools/codegen/generate_error_catalogs.py and generated five owner-specific Kotlin catalogs plus the immutable aggregate view.",
+        "Generated CatalogParityTest verifies all 99 authoritative records for numeric code, error name, title, and HTTP status.",
+        "Generator mypy validation, libs:errors test/JaCoCo, contract validation, and git diff --check passed on 2026-10-07."
+      ],
       "reviewer": "/root",
       "blocker": null
     },
