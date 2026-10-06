@@ -79,3 +79,20 @@ git diff --check
 - Deployed to Expense Core service.
 - Additive problem details ensure zero downtime and complete client compatibility.
 - Rollback: Standard Git revert of service branch if regressions occur.
+
+## Implementation Notes and Evidence
+
+- Replaced all Expense Core production references to legacy `ApplicationException`
+  and `ErrorCode` with catalog-backed `ExpenseDomainException` and static
+  `ExpenseErrors` definitions across groups, expenses, settlements, recurrence,
+  search, sync, and category validation paths.
+- Preserved the existing exception compatibility type and message/cause behavior
+  for v1 callers while transport mappers now read governed catalog identity and
+  safe detail. ACID transaction annotations and financial mutation ordering were
+  not changed.
+- Added deterministic generator support for the temporary symbolic compatibility
+  aliases; these aliases are explicitly migration scaffolding and are owned for
+  removal by ERRC-30 after the compatibility window.
+- The complete Expense Core suite passed 296 tests with 4 intentional skips on
+  2026-10-07. Error hygiene passed with no Expense Core entries, the contract
+  validator passed, and the declared JaCoCo report completed successfully.

@@ -8619,7 +8619,7 @@
       "parent_id": "ERRC-01",
       "title": "Migrate Expense Core definitions and failures",
       "phase": "implementation",
-      "status": "todo",
+      "status": "done",
       "owner_role": "core",
       "owner_agent": "/root",
       "depends_on": [
@@ -8646,7 +8646,11 @@
         "uv run python tools/contracts/validate.py",
         "git diff --check"
       ],
-      "evidence": [],
+      "evidence": [
+        "Migrated all Expense Core production legacy exception/code references to ExpenseDomainException and static ExpenseErrors definitions across the bounded-context slices.",
+        "Preserved financial transaction ordering and existing ACID mutation boundaries; the shared mapper now emits governed catalog identity with v1-compatible symbolic codes.",
+        "Expense Core tests passed 296 tests with 4 intentional skips; JaCoCo, error hygiene, contract validation, and git diff --check passed on 2026-10-07."
+      ],
       "reviewer": "/root",
       "blocker": null
     },

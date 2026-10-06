@@ -11,8 +11,8 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
+import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
 import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
 
 @RestController
@@ -28,15 +28,15 @@ class SyncController(
         @RequestParam(defaultValue = "50") limit: Int,
         principal: Principal
     ): SyncPageResponse {
-        if (principal.name.isBlank()) throw ApplicationException(ErrorCode.ERR_03, "Authenticated subject is required")
+        if (principal.name.isBlank()) throw ExpenseDomainException(ExpenseErrors.ERR_03, "Authenticated subject is required")
         if (!memberships.existsByGroupIdAndSubjectAndStatus(groupId, principal.name, "ACTIVE")) {
-            throw ApplicationException(ErrorCode.ERR_05, "Group $groupId not found")
+            throw ExpenseDomainException(ExpenseErrors.ERR_05, "Group $groupId not found")
         }
-        if (limit !in 1..100) throw ApplicationException(ErrorCode.ERR_02, "limit must be between 1 and 100")
+        if (limit !in 1..100) throw ExpenseDomainException(ExpenseErrors.ERR_02, "limit must be between 1 and 100")
         return try {
             store.snapshot(groupId.toString(), cursor, limit).toResponse()
         } catch (exception: InvalidSyncCursorException) {
-            throw ApplicationException(ErrorCode.ERR_02, exception.message ?: "Invalid sync cursor", exception)
+            throw ExpenseDomainException(ExpenseErrors.ERR_02, exception.message ?: "Invalid sync cursor", exception)
         }
     }
 }

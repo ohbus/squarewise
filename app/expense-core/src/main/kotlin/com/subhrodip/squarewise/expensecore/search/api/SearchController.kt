@@ -12,8 +12,8 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
+import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
 import java.security.Principal
 import java.util.UUID
 import com.subhrodip.squarewise.db.routing.DbContextHolder
@@ -85,7 +85,7 @@ class SearchController(
                 limit = limit
             )
         } catch (ex: IllegalArgumentException) {
-            throw ApplicationException(ErrorCode.ERR_02, ex.message, ex)
+            throw ExpenseDomainException(ExpenseErrors.ERR_02, ex.message, ex)
         }
     }
 
@@ -134,7 +134,7 @@ class SearchController(
                 maxRows = maxRows
             )
         } catch (ex: IllegalArgumentException) {
-            throw ApplicationException(ErrorCode.ERR_02, ex.message, ex)
+            throw ExpenseDomainException(ExpenseErrors.ERR_02, ex.message, ex)
         }
 
         val filename = "expenses-$groupId.csv"
@@ -147,7 +147,7 @@ class SearchController(
     private fun ensureMembership(groupId: UUID, subject: String) {
         val groups = groupStore.list(subject)
         if (groups.none { it.groupId == groupId }) {
-            throw ApplicationException(ErrorCode.ERR_05, "Group $groupId not found")
+            throw ExpenseDomainException(ExpenseErrors.ERR_05, "Group $groupId not found")
         }
     }
 }

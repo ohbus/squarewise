@@ -1,8 +1,8 @@
 package com.subhrodip.squarewise.expensecore.expenses.domain
 import com.subhrodip.squarewise.expensecore.expenses.api.request.AllocationItemDto
 
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
+import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
 
 /**
  * Allocates integer minor units without floating point arithmetic. The first
@@ -62,7 +62,7 @@ object AllocationCalculator {
             "EXACT" -> exact(totalMinor, items.associate { it.participantId to it.value.toLong() })
             "PERCENT_BASIS_POINTS" -> percentage(totalMinor, items.associate { it.participantId to it.value.toLong() })
             "WEIGHTED_SHARES" -> weightedShares(totalMinor, items.associate { it.participantId to it.value.toLong() })
-            else -> throw ApplicationException(ErrorCode.ERR_02, "Unsupported allocation mode: $mode")
+            else -> throw ExpenseDomainException(ExpenseErrors.ERR_02, "Unsupported allocation mode: $mode")
         }
     }
 }

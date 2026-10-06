@@ -16,7 +16,8 @@ abstract class SquarewiseException protected constructor(
     val definition: ErrorDefinition,
     val diagnostics: ErrorDiagnostics = ErrorDiagnostics.EMPTY,
     cause: Throwable? = null,
-) : ApplicationException(legacyCode(definition), definition.errorName, cause) {
+    messageOverride: String? = null,
+) : ApplicationException(legacyCode(definition), messageOverride ?: definition.errorName, cause) {
     init {
         require(ErrorCatalog.all.any { it === definition }) {
             "SquarewiseException requires a compiled catalog definition"

@@ -571,4 +571,14 @@ object ExpenseErrors {
         OUTBOX_RELAY_PUBLISH_FAILED,
         OUTBOX_RECORD_CORRUPT,
     )
+
+    /** Legacy symbolic aliases retained while Expense Core callers migrate. */
+    val ERR_01: ErrorDefinition = OCCURRENCE_GENERATION_FAILED
+    val ERR_02: ErrorDefinition = EXPENSE_REQUEST_INVALID
+    val ERR_03: ErrorDefinition = PlatformErrors.AUTHENTICATION_REQUIRED
+    val ERR_05: ErrorDefinition = GROUP_NOT_FOUND
+    val ERR_06: ErrorDefinition = GROUP_NAME_CONFLICT
+    val ERR_08: ErrorDefinition = BffErrors.UPSTREAM_PROTOCOL_INVALID
+    val ERR_09: ErrorDefinition = SYNC_REVISION_CONFLICT
+    val ERR_10: ErrorDefinition = INSUFFICIENT_BALANCE
 }

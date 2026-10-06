@@ -1,8 +1,8 @@
 package com.subhrodip.squarewise.expensecore.search.model
 
-import com.subhrodip.squarewise.errors.domain.ApplicationException
+import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
 import com.subhrodip.squarewise.expensecore.categories.ExpenseCategory
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
 import java.math.BigInteger
 import java.nio.charset.StandardCharsets
 import java.util.Base64
@@ -123,5 +123,5 @@ class ExpenseSearch {
 
     private fun decodeCursor(cursor: String): String = runCatching {
         String(Base64.getUrlDecoder().decode(cursor), StandardCharsets.UTF_8).also { require(it.isNotBlank()) }
-    }.getOrElse { throw ApplicationException(ErrorCode.ERR_02, "Invalid search cursor") }
+    }.getOrElse { throw ExpenseDomainException(ExpenseErrors.ERR_02, "Invalid search cursor") }
 }

@@ -13,8 +13,8 @@ import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
+import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
 import java.security.Principal
 import java.util.UUID
 
@@ -32,7 +32,7 @@ class GroupController(private val groups: GroupStore) {
     @GetMapping("/{groupId}")
     fun get(@PathVariable groupId: UUID, principal: Principal): GroupResponse =
         groups.list(principal.name).find { it.groupId == groupId }
-            ?: throw ApplicationException(ErrorCode.ERR_05, "Group $groupId not found")
+            ?: throw ExpenseDomainException(ExpenseErrors.ERR_05, "Group $groupId not found")
 
     @PatchMapping("/{groupId}")
     fun update(
@@ -41,7 +41,7 @@ class GroupController(private val groups: GroupStore) {
         @RequestHeader(ApiEndpoints.Headers.ACCEPTANCE_FAULT, required = false) fault: String?,
         principal: Principal
     ): GroupResponse {
-        if (fault == ApiEndpoints.Headers.ACCEPTANCE_FAULT_ROLLBACK) throw ApplicationException(ErrorCode.ERR_06, "Acceptance rollback fault")
+        if (fault == ApiEndpoints.Headers.ACCEPTANCE_FAULT_ROLLBACK) throw ExpenseDomainException(ExpenseErrors.ERR_06, "Acceptance rollback fault")
         return groups.update(groupId, principal.name, request)
     }
 
@@ -73,7 +73,7 @@ class GroupController(private val groups: GroupStore) {
         @RequestHeader(ApiEndpoints.Headers.ACCEPTANCE_FAULT, required = false) fault: String?,
         principal: Principal
     ): List<GroupMemberResponse> {
-        if (fault == ApiEndpoints.Bff.ACCEPTANCE_FAULT_FANOUT) throw ApplicationException(ErrorCode.ERR_08, "Acceptance fanout fault")
+        if (fault == ApiEndpoints.Bff.ACCEPTANCE_FAULT_FANOUT) throw ExpenseDomainException(ExpenseErrors.ERR_08, "Acceptance fanout fault")
         return groups.listMembers(groupId, principal.name)
     }
 

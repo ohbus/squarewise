@@ -4,8 +4,8 @@ import com.subhrodip.squarewise.expensecore.search.api.SearchQuery
 import com.subhrodip.squarewise.expensecore.search.model.SearchExpense
 import java.nio.charset.StandardCharsets
 import java.util.Base64
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
+import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
 
 /**
  * Domain port for durable search and retrieval of expenses within an authorized group.
@@ -25,5 +25,5 @@ interface SearchStore {
 fun decodeSearchCursor(cursor: String?): String? = cursor?.let {
     runCatching {
         String(Base64.getUrlDecoder().decode(it), StandardCharsets.UTF_8).also { value -> require(value.isNotBlank()) }
-    }.getOrElse { throw ApplicationException(ErrorCode.ERR_02, "Invalid search cursor", it) }
+    }.getOrElse { throw ExpenseDomainException(ExpenseErrors.ERR_02, "Invalid search cursor", it) }
 }

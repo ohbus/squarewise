@@ -180,7 +180,7 @@ class GlobalErrorHandler(
         "ERR-03" -> "UNAUTHENTICATED"
         "ERR-04" -> "FORBIDDEN"
         "ERR-05" -> "NOT_FOUND"
-        "ERR-06" -> "ERR_06"
+        "ERR-06" -> "CONFLICT"
         "ERR-11" -> "RATE_LIMITED"
         else -> "INTERNAL_ERROR"
     }

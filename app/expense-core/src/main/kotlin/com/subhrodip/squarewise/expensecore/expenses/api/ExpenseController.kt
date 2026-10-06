@@ -35,8 +35,8 @@ import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.validation.annotation.Validated
 
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
+import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
 
 import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
 @RestController
@@ -64,28 +64,28 @@ class ExpenseController(
 
         val payerSum = request.payers.fold(0L) { sum, payer ->
             val pAmount = payer.amount.minor.toLongOrNull()
-                ?: throw ApplicationException(ErrorCode.ERR_02, "payer amount.minor must be a valid integer")
+                ?: throw ExpenseDomainException(ExpenseErrors.ERR_02, "payer amount.minor must be a valid integer")
             if (pAmount <= 0) {
-                throw ApplicationException(ErrorCode.ERR_02, "payer amount.minor must be positive")
+                throw ExpenseDomainException(ExpenseErrors.ERR_02, "payer amount.minor must be positive")
             }
             if (payer.amount.currency != request.amount.currency) {
-                throw ApplicationException(ErrorCode.ERR_02, "payer currency must match expense currency")
+                throw ExpenseDomainException(ExpenseErrors.ERR_02, "payer currency must match expense currency")
             }
             try {
                 FinancialArithmetic.add(sum, pAmount)
             } catch (e: IllegalArgumentException) {
-                throw ApplicationException(ErrorCode.ERR_02, e.message, e)
+                throw ExpenseDomainException(ExpenseErrors.ERR_02, e.message, e)
             }
         }
 
         if (payerSum != totalMinor) {
-            throw ApplicationException(ErrorCode.ERR_02, "Sum of payer amounts ($payerSum) must equal total ($totalMinor)")
+            throw ExpenseDomainException(ExpenseErrors.ERR_02, "Sum of payer amounts ($payerSum) must equal total ($totalMinor)")
         }
 
         val allocationMap = try {
             AllocationCalculator.calculate(request.allocation.mode, totalMinor, request.allocation.items)
         } catch (e: IllegalArgumentException) {
-            throw ApplicationException(ErrorCode.ERR_02, e.message, e)
+            throw ExpenseDomainException(ExpenseErrors.ERR_02, e.message, e)
         }
 
         val domainPayers = request.payers.map {
@@ -145,28 +145,28 @@ class ExpenseController(
 
         val payerSum = request.payers.fold(0L) { sum, payer ->
             val pAmount = payer.amount.minor.toLongOrNull()
-                ?: throw ApplicationException(ErrorCode.ERR_02, "payer amount.minor must be a valid integer")
+                ?: throw ExpenseDomainException(ExpenseErrors.ERR_02, "payer amount.minor must be a valid integer")
             if (pAmount <= 0) {
-                throw ApplicationException(ErrorCode.ERR_02, "payer amount.minor must be positive")
+                throw ExpenseDomainException(ExpenseErrors.ERR_02, "payer amount.minor must be positive")
             }
             if (payer.amount.currency != request.amount.currency) {
-                throw ApplicationException(ErrorCode.ERR_02, "payer currency must match expense currency")
+                throw ExpenseDomainException(ExpenseErrors.ERR_02, "payer currency must match expense currency")
             }
             try {
                 FinancialArithmetic.add(sum, pAmount)
             } catch (e: IllegalArgumentException) {
-                throw ApplicationException(ErrorCode.ERR_02, e.message, e)
+                throw ExpenseDomainException(ExpenseErrors.ERR_02, e.message, e)
             }
         }
 
         if (payerSum != totalMinor) {
-            throw ApplicationException(ErrorCode.ERR_02, "Sum of payer amounts ($payerSum) must equal total ($totalMinor)")
+            throw ExpenseDomainException(ExpenseErrors.ERR_02, "Sum of payer amounts ($payerSum) must equal total ($totalMinor)")
         }
 
         val allocationMap = try {
             AllocationCalculator.calculate(request.allocation.mode, totalMinor, request.allocation.items)
         } catch (e: IllegalArgumentException) {
-            throw ApplicationException(ErrorCode.ERR_02, e.message, e)
+            throw ExpenseDomainException(ExpenseErrors.ERR_02, e.message, e)
         }
 
         val domainPayers = request.payers.map {
@@ -235,7 +235,7 @@ class ExpenseController(
     ): List<ExpenseResponse> {
         ensureActiveMember(groupId, principal)
         if (limit !in 1..100) {
-            throw ApplicationException(ErrorCode.ERR_02, "limit must be between 1 and 100")
+            throw ExpenseDomainException(ExpenseErrors.ERR_02, "limit must be between 1 and 100")
         }
         val list = expenseStore.list(groupId, category, cursor, limit)
         return list.map { expense ->
@@ -264,18 +264,18 @@ class ExpenseController(
     private fun ensureActiveMember(groupId: UUID, principal: Principal?) {
         val subject = principal?.name?.trim()
             ?.takeIf { it.isNotEmpty() }
-            ?: throw ApplicationException(ErrorCode.ERR_03, "Authenticated subject is required")
+            ?: throw ExpenseDomainException(ExpenseErrors.ERR_03, "Authenticated subject is required")
         if (!membershipRepository.existsByGroupIdAndSubject(groupId, subject)) {
-            throw ApplicationException(ErrorCode.ERR_05, "Group $groupId not found")
+            throw ExpenseDomainException(ExpenseErrors.ERR_05, "Group $groupId not found")
         }
         if (groupRepository.findById(groupId).map { it.status }.orElse(null) != "ACTIVE") {
-            throw ApplicationException(ErrorCode.ERR_06, "Group $groupId is archived")
+            throw ExpenseDomainException(ExpenseErrors.ERR_06, "Group $groupId is archived")
         }
     }
 
     private fun validateRequestBounds(request: CreateExpenseRequest, idempotencyKey: String) {
         if (idempotencyKey.length > ExpenseRequestLimits.MAX_IDEMPOTENCY_KEY_LENGTH) {
-            throw ApplicationException(ErrorCode.ERR_02, "Idempotency-Key is too long")
+            throw ExpenseDomainException(ExpenseErrors.ERR_02, "Idempotency-Key is too long")
         }
         validateRequestBounds(request.category, request.payers.size, request.allocation.items.size)
     }
@@ -286,10 +286,10 @@ class ExpenseController(
 
     private fun validateRequestBounds(category: String?, payerCount: Int, allocationCount: Int) {
         if (category != null && category.length > ExpenseRequestLimits.MAX_CATEGORY_LENGTH) {
-            throw ApplicationException(ErrorCode.ERR_02, "category is too long")
+            throw ExpenseDomainException(ExpenseErrors.ERR_02, "category is too long")
         }
         if (payerCount > ExpenseRequestLimits.MAX_PARTICIPANTS || allocationCount > ExpenseRequestLimits.MAX_PARTICIPANTS) {
-            throw ApplicationException(ErrorCode.ERR_02, "participant count exceeds the maximum")
+            throw ExpenseDomainException(ExpenseErrors.ERR_02, "participant count exceeds the maximum")
         }
     }
 }
