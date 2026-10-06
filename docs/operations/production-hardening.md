@@ -49,6 +49,9 @@ keys. Never place those values in the repository or disable TLS for a managed
 production endpoint.
 After Redis recovery, verify readiness returns healthy and run the documented
 local/managed-environment admission recovery probe before clearing the alert.
+JVM images use finite DNS cache lifetimes so a managed endpoint or disposable
+Redis container can receive a new address without requiring an application
+restart; verify this behavior during failover rehearsal.
 
 For host-native local verification, use
 `infra/observability/prometheus.local.yml`; it targets the four documented host

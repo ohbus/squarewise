@@ -552,6 +552,14 @@ online, requires login-start to fail closed with HTTP 429 on both, and verifies
 HTTP 202 recovery on both after Redis restarts. This remains disposable local
 cross-process evidence; hosted and production failover evidence remain open.
 
+The local Notifications outage probe exposed stale JVM DNS resolution after a
+Redis container restart changed its service IP: the running Accounts process
+continued targeting the old address and readiness remained down. Both local-fast
+and production JVM images now use finite positive and negative DNS cache TTLs so
+Redis endpoint replacement can recover without an application restart. The
+rebuilt local probe now passes the DLQ/no-dispatch/recovery journey; managed
+failover rehearsal remains required.
+
 Production/staging Compose now explicitly requires the managed Redis endpoint,
 credential, TLS mode, and deployment HMAC secret through environment contracts;
 all three Redis-backed applications map the host, port, TLS flag, and bounded
