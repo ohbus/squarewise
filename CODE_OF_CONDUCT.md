@@ -60,7 +60,7 @@ representative at an online or offline event.
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
 reported privately to the community leaders at
-[security@subhrodip.com](mailto:security@subhrodip.com). If the report concerns
+[conduct@subhrodip.com](mailto:conduct+pennywise@subhrodip.com). If the report concerns
 a community leader, that person will not participate in handling it. All
 complaints will be reviewed and investigated promptly and fairly.
 

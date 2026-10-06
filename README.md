@@ -268,7 +268,7 @@ squarewise/
 - Read the [Accessibility Statement](ACCESSIBILITY.md) for current priorities,
   known limitations, and barrier reporting.
 - Send every security question or suspected vulnerability privately to
-  [security@subhrodip.com](mailto:security@subhrodip.com) under the [Security
+  [security@subhrodip.com](mailto:security+pennywise@subhrodip.com) under the [Security
   Policy](SECURITY.md). Never disclose a suspected vulnerability in a public
   issue, discussion, or pull request.
 

@@ -52,7 +52,7 @@ incidents through its private enforcement channel rather than in a public issue.
 - **Security questions and vulnerabilities**: Do **not** file a public issue,
   discussion, or pull request. Send every security question and suspected
   vulnerability privately to
-  [security@subhrodip.com](mailto:security@subhrodip.com) and follow the
+  [security@subhrodip.com](mailto:security+pennywise@subhrodip.com) and follow the
   [Security Policy](SECURITY.md).
 
 ### Suggesting Enhancements
@@ -192,7 +192,7 @@ git commit -m "feat(expense-core): implement recurring expense calculator"
 4. Ensure all CI checks pass.
 
 Pull requests must not contain undisclosed vulnerability details. Send security
-questions and reports to [security@subhrodip.com](mailto:security@subhrodip.com)
+questions and reports to [security@subhrodip.com](mailto:security+pennywise@subhrodip.com)
 under the [Security Policy](SECURITY.md).
 
 ---
