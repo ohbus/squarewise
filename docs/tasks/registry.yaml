@@ -8499,7 +8499,7 @@
       "parent_id": "ERRC-01",
       "title": "Implement GraphQL mapper and upstream problem client",
       "phase": "platform",
-      "status": "todo",
+      "status": "in_progress",
       "owner_role": "platform",
       "owner_agent": "/root",
       "depends_on": [
@@ -8526,9 +8526,13 @@
         "uv run python tools/contracts/validate.py",
         "git diff --check"
       ],
-      "evidence": [],
+      "evidence": [
+        "Added typed UpstreamProblemException/Decoder, GraphQLExtensionsFormatter, BffGraphQLErrorResolver, and compatibility delegation in the existing resolver.",
+        "Focused BffErrorResolverTest and GraphQlExceptionResolverTest passed on 2026-10-07; contract validation and git diff --check passed.",
+        "Full :app:bff:test is not closed: 25 Spring-context tests fail during DataSource bean startup in this environment."
+      ],
       "reviewer": "/root",
-      "blocker": null
+      "blocker": "Full BFF test gate requires the test database configuration; focused ERRC-17 translation tests pass."
     },
     {
       "id": "ERRC-18",

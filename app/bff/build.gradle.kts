@@ -24,6 +24,7 @@ dependencies {
     implementation(libs.boot.amqp)
     implementation(libs.boot.webflux)
     implementation(libs.boot.webclient)
+    implementation(libs.jackson.databind)
     implementation(libs.kotlin.reflect)
     testImplementation(libs.boot.test)
     testImplementation(kotlin("test"))

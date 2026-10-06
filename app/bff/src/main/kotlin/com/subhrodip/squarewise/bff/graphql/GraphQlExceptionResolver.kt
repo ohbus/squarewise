@@ -1,8 +1,12 @@
 package com.subhrodip.squarewise.bff.graphql
 
+import com.subhrodip.squarewise.bff.errors.BffGraphQLErrorResolver
+import com.subhrodip.squarewise.bff.errors.UpstreamProblemException
 import com.subhrodip.squarewise.bff.transport.UpstreamServiceException
 import com.subhrodip.squarewise.errors.domain.ApplicationException
 import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
+import com.subhrodip.squarewise.errors.request.RequestIdContext
 import graphql.GraphQLError
 import graphql.GraphqlErrorBuilder
 import graphql.schema.DataFetchingEnvironment
@@ -14,7 +18,12 @@ import java.util.UUID
 /** Maps resolver failures to the public GraphQL error-code contract. */
 @Component
 class GraphQlExceptionResolver : DataFetcherExceptionResolverAdapter() {
+    private val governedResolver = BffGraphQLErrorResolver()
+
     override fun resolveToSingleError(exception: Throwable, environment: DataFetchingEnvironment): GraphQLError {
+        if (exception is UpstreamProblemException || exception is SquarewiseException || exception is java.util.concurrent.TimeoutException) {
+            return governedResolver.resolve(exception, environment, RequestIdContext.get())
+        }
         val error = classify(exception)
         val extensions = buildMap<String, Any> {
             put("code", error.code)

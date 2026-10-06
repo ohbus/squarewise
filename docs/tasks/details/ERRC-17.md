@@ -87,3 +87,20 @@ git diff --check
 - Deployed to BFF service.
 - Transparent to clients; extensions additions are purely additive.
 - Rollback: Revert resolver changes if GraphQL schema mapping errors occur.
+
+## Implementation Notes and Evidence
+
+- Added typed `UpstreamProblemException`, structural `UpstreamProblemDecoder`,
+  additive `GraphQLExtensionsFormatter`, and `BffGraphQLErrorResolver`.
+- Upstream `code`, `numericCode`, `errorName`, `requestId`, `source`, and
+  timestamp are preserved in GraphQL extensions; local catalog failures use
+  compiled BFF definitions, and `TimeoutException` maps to the frozen catalog
+  `UPSTREAM_TIMEOUT` (`426801`). No English message matching is used.
+- The existing resolver delegates governed/upstream typed failures to the new
+  boundary while retaining legacy `ApplicationException` compatibility.
+- Focused `BffErrorResolverTest` and the existing `GraphQlExceptionResolverTest`
+  passed on 2026-10-07. Contract validation and `git diff --check` passed.
+- The full `:app:bff:test` run remains open: 25 existing Spring-context tests
+  fail during DataSource bean startup in this environment. This task remains
+  `in_progress` until the declared full BFF gate is rerun with its required
+  test database configuration.
