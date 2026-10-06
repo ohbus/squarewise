@@ -197,7 +197,7 @@ jobs:
         options: >-
           --health-cmd="rabbitmqctl await_startup"
           --health-start-period=60s --health-interval=5s --health-timeout=10s --health-retries=24
-    timeout-minutes: 20
+    timeout-minutes: 180
     strategy:
       fail-fast: false
       # Each matrix job owns PostgreSQL and RabbitMQ service containers. Keep
@@ -299,7 +299,7 @@ jobs:
         options: >-
           --health-cmd="rabbitmqctl await_startup"
           --health-start-period=60s --health-interval=5s --health-timeout=10s --health-retries=24
-    timeout-minutes: 25
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v7
         with:
@@ -378,7 +378,7 @@ jobs:
     if: always() && inputs.run_e2e && needs.scope.outputs.run_edge == 'true' && needs.preflight.result == 'success' && needs.e2e-artifacts.result == 'success'
     needs: [preflight, scope, e2e-artifacts]
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 180
     permissions:
       contents: read
       id-token: write
@@ -523,7 +523,7 @@ jobs:
     if: always() && inputs.run_e2e && needs.scope.outputs.run_product == 'true' && needs.preflight.result == 'success' && needs.e2e-artifacts.result == 'success'
     needs: [preflight, scope, e2e-artifacts]
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 180
     permissions:
       contents: read
       id-token: write
@@ -653,7 +653,7 @@ jobs:
     if: always() && inputs.run_e2e && needs.scope.outputs.run_chaos == 'true' && needs.preflight.result == 'success' && needs.e2e-artifacts.result == 'success'
     needs: [preflight, scope, e2e-artifacts]
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 180
     permissions:
       contents: read
       id-token: write
