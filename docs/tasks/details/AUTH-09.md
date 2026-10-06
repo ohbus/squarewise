@@ -671,6 +671,13 @@ release assets, and completed the Gradle lint/check path. The release validator
 continues to report environment gates separately rather than inferring restore,
 security-scan, capacity, or rollback evidence.
 
+The direct shell smoke scripts now resolve either `uv` or Windows `uv.exe` and
+use the isolated `python` executable. `tests/e2e/contract-smoke.sh` passed from
+Git Bash with contract-only non-secret production placeholders, and the
+authenticated `tests/acceptance/run.sh --require-services` path passed all
+live acceptance scenarios. Production Compose requirements remain mandatory;
+the placeholders are scoped only to config validation.
+
 With fresh local Keycloak bearer tokens, `mingw32-make e2e-all` passed the
 complete local aggregate: cache resilience, authenticated admission surfaces,
 Accounts lookup isolation, passwordless auth-email, product lifecycle, offline
