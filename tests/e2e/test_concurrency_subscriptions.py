@@ -250,6 +250,26 @@ def resolve_membership_id(members: Any, *candidates: str | None) -> str:
     raise KeyError(f"None of candidates {valid_candidates} found in members: {members}")
 
 
+def wait_for_subscription_complete(
+    client: SimpleGraphQLWSClient,
+    subscription_id: str,
+    timeout_seconds: float = 10.0,
+) -> None:
+    """Wait for broker-driven revocation instead of assuming a fixed relay delay."""
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline:
+        if any(
+            message.get("type") == "complete" and message.get("id") == subscription_id
+            for message in client.messages
+        ):
+            return
+        time.sleep(0.1)
+    raise AssertionError(
+        f"Subscription {subscription_id} was not completed within {timeout_seconds:g}s: "
+        f"{client.messages}"
+    )
+
+
 def run_concurrency_and_subscriptions_test() -> None:
     """Run concurrency and subscription checks with explicit UTF-8 output."""
     if isinstance(sys.stdout, io.TextIOWrapper):
@@ -504,11 +524,7 @@ def run_concurrency_and_subscriptions_test() -> None:
         bearer=user_a,
     )
     assert remove_status == 204, f"Failed to remove Bob from the group: {remove_response}"
-    time.sleep(0.8)
-    assert any(
-        message.get("type") == "complete" and message.get("id") == "bob-sub"
-        for message in bob_ws.messages
-    ), f"Revoked member subscription was not completed: {bob_ws.messages}"
+    wait_for_subscription_complete(bob_ws, "bob-sub")
     bob_ws.close()
 
     revoked_reconnect = SimpleGraphQLWSClient(WS_HOST, WS_PORT, GRAPHQL_PATH, user_b)

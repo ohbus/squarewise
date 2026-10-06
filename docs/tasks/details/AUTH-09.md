@@ -554,6 +554,11 @@ active stream to complete, and reconnects with the same bearer token to verify
 the subscription is rejected. The local live run passed; hosted reconnect and
 production fanout evidence remain open.
 
+The subscription E2E waits up to ten seconds for the broker-driven `complete`
+frame after membership removal rather than assuming the outbox relay completes
+within a fixed sub-second delay. Timeout remains a failure; the bounded wait
+only removes relay-scheduling flakiness.
+
 The login verification path now performs a distinct shared Redis admission
 decision before credential redemption. Its key is HMAC-derived from the submitted
 credential and trusted network partition, its bounded policy is configurable via
