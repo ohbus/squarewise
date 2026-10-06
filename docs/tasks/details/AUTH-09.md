@@ -672,6 +672,12 @@ does not substitute for hosted selected/skipped artifact evidence or the
 managed-production Redis, alert-routing, broader query/latency, and production
 fanout/reconnect gates.
 
+With a fresh local Keycloak bearer token, `mingw32-make acceptance-live` also
+passed the live contract/registry, health, group-expense-settlement, offline
+replay, WebSocket resync, rollback, concurrency, authorization, BFF fanout,
+and recovery scenarios. This is additional local acceptance evidence and does
+not substitute for hosted or managed-production evidence.
+
 This increment does not claim completion of AUTH-09. The task remains
 `in_progress` because hosted selected/skipped E2E evidence, managed Redis
 selection/failover/rotation/capacity, deployed alert routing, broader query and
