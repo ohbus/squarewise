@@ -394,21 +394,23 @@ The BFF now applies a shared Redis-backed HTTP admission decision at the
 GraphQL WebFlux boundary before request parsing. Denials and store outages use
 structured HTTP 429 with bounded `Retry-After`; WebSocket upgrades are left to
 their dedicated admission slice. Filter and live GraphQL transport tests pass;
-WebSocket, query-count, failure-drill, and live multi-replica evidence remain
-open.
+local WebSocket, query-count, failure-drill, and multi-replica evidence is
+recorded below; hosted and production evidence remain open.
 
 WebSocket upgrades now receive a distinct `graphql-websocket` admission policy
 at the same BFF handshake boundary instead of bypassing rate limiting. The
 policy is separate from GraphQL HTTP and remains subject to the existing JWT
 security chain and subscription-cap controls. Focused handshake tests pass;
-multi-replica reconnect and revoked-token live evidence remain open.
+local multi-replica admission and membership-revocation reconnect evidence pass;
+hosted reconnect and production fanout evidence remain open.
 
 The existing Redis resilience E2E now targets the shared `squarewise:rl:v1:*`
 namespace and is part of `make e2e-all` and the selected edge/security CI
 stream. It proves refresh denial, targeted namespace eviction, Redis outage
 fail-closed behavior, and restart recovery when Docker-backed execution runs;
-multi-replica concurrency, query-count, notification, and capacity suites are
-still separate open evidence.
+login/refresh outage recovery, and telemetry when a token is supplied;
+multi-replica concurrency, query-count, notification, and capacity evidence is
+recorded in the following increments.
 
 The Redis resilience suite was executed against the local Docker Compose stack
 after building the four service boot JARs. It observed ten pre-limit `401`
@@ -438,9 +440,9 @@ denials, exercising the atomic shared-window decision.
 
 The same suite also stops Redis after clearing its namespace and verifies both
 GraphQL HTTP admission and WebSocket handshake admission return fail-closed
-`429` responses, then restarts Redis. Refresh outage/recovery and these BFF
-public-path checks are local evidence; hosted Notifications delivery and
-multi-replica failure evidence remain open.
+`429` responses, then restarts Redis. Refresh/login outage recovery and these
+BFF public-path checks are local evidence; hosted Notifications delivery and
+production multi-replica failure evidence remain open.
 
 The authenticated lookup-isolation probe stopped Accounts after acquiring a
 real Keycloak bearer token, then successfully read Expense Core groups directly
