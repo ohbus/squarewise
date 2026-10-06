@@ -35,6 +35,7 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-squarewise}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-squarewise-local-only}
+      RABBITMQ_ERLANG_COOKIE: ${RABBITMQ_ERLANG_COOKIE:-squarewise-local-erlang-cookie}
     ports: ["${SQUAREWISE_RABBITMQ_PORT:-28672}:5672", "${SQUAREWISE_RABBITMQ_MANAGEMENT_PORT:-28673}:15672"]
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]

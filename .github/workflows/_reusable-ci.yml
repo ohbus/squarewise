@@ -191,6 +191,8 @@ jobs:
         # Verification only needs the broker protocol and diagnostics; omit the
         # management plugin to reduce hosted service-container startup cost.
         image: rabbitmq:4.3
+        env:
+          RABBITMQ_ERLANG_COOKIE: squarewise-ci-erlang-cookie
         ports: ['5672:5672']
         options: >-
           --health-cmd="rabbitmq-diagnostics -q ping"
@@ -291,6 +293,8 @@ jobs:
         # Sonar only needs the broker protocol and diagnostics; omit the
         # management plugin to reduce hosted service-container startup cost.
         image: rabbitmq:4.3
+        env:
+          RABBITMQ_ERLANG_COOKIE: squarewise-ci-erlang-cookie
         ports: ['5672:5672']
         options: >-
           --health-cmd="rabbitmq-diagnostics -q ping"

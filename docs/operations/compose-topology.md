@@ -60,6 +60,10 @@ included in this narrow topology.
 
 ## Ports and local credentials
 
+The local RabbitMQ container uses a deterministic development Erlang cookie so
+the broker does not depend on generated cookie-file permissions. Set
+`RABBITMQ_ERLANG_COOKIE` to a private value outside local development.
+
 Local development uses a dedicated user-defined Docker bridge network (`squarewise-local-net`).
 Inside the bridge network, containers communicate via descriptive Docker hostnames on standard
 internal ports (`5432`, `5672`, `6379`, `1025`, `8080`). External access from developer host tools
