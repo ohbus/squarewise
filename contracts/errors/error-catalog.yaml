@@ -85,7 +85,7 @@
   runbook: https://runbooks.squarewise.internal/accounts/authentication
 - numericCode: '117201'
   errorName: AUTHENTICATED_PROFILE_NOT_FOUND
-  legacyCode: ERR-03
+  legacyCode: ERR-05
   domain: 1
   module: 1
   layer: 7
@@ -101,9 +101,9 @@
   transports:
   - REST
   - GRAPHQL
-  httpStatus: 401
-  graphqlClassification: UNAUTHENTICATED
-  retryPolicy: REAUTHENTICATE
+  httpStatus: 404
+  graphqlClassification: NOT_FOUND
+  retryPolicy: NEVER
   severity: WARNING
   introducedIn: 1.0.0
   deprecatedIn: null
@@ -119,7 +119,7 @@
   category: 2
   sequence: 2
   title: Access denied
-  safeDetail: You do not have permission to view or modify this profile.
+  safeDetail: Access denied to foreign profile
   messageKey: error.profile.access_denied
   owner: Accounts
   source: squarewise-accounts
@@ -146,7 +146,7 @@
   category: 2
   sequence: 3
   title: Unauthorized batch lookup
-  safeDetail: Workload authority is required for multi-subject profile lookup.
+  safeDetail: Batch profile lookup requires internal workload authority
   messageKey: error.profile.batch_unauthorized
   owner: Accounts
   source: squarewise-accounts

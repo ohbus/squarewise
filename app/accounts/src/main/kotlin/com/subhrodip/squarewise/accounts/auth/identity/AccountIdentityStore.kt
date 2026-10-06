@@ -1,5 +1,7 @@
 package com.subhrodip.squarewise.accounts.auth.identity
 
+import com.subhrodip.squarewise.accounts.errors.AccountsInputException
+
 import java.util.UUID
 
 /**
@@ -67,5 +69,5 @@ interface AccountIdentityStore {
      * @return Updated [AccountIdentity].
      */
     fun updateEmail(accountId: UUID, email: String, verified: Boolean): AccountIdentity =
-        findByAccountId(accountId) ?: throw IllegalArgumentException("Account not found")
+        findByAccountId(accountId) ?: throw AccountsInputException("Account not found")
 }

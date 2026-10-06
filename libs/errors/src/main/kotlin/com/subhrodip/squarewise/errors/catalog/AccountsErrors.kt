@@ -57,15 +57,15 @@ object AccountsErrors {
     val AUTHENTICATED_PROFILE_NOT_FOUND: ErrorDefinition = SimpleErrorDefinition(
     numericCode = ErrorCode("117201"),
     errorName = "AUTHENTICATED_PROFILE_NOT_FOUND",
-    legacyCode = "ERR-03",
+    legacyCode = "ERR-05",
     title = "Profile not found",
     safeDetail = "The profile associated with the authenticated subject was not found.",
     messageKey = "error.profile.not_found",
-    httpStatus = 401,
-    graphqlClassification = "UNAUTHENTICATED",
-    retryPolicy = RetryPolicy.REAUTHENTICATE,
+    httpStatus = 404,
+    graphqlClassification = "NOT_FOUND",
+    retryPolicy = RetryPolicy.NEVER,
     severity = ErrorSeverity.WARN,
-    disclosure = DisclosurePolicy.PUBLIC
+    disclosure = DisclosurePolicy.RESOURCE_HIDDEN_WHEN_UNAUTHORIZED
 )
 
     /** 117202: Access denied */
@@ -74,7 +74,7 @@ object AccountsErrors {
     errorName = "FOREIGN_PROFILE_ACCESS_DENIED",
     legacyCode = "ERR-04",
     title = "Access denied",
-    safeDetail = "You do not have permission to view or modify this profile.",
+    safeDetail = "Access denied to foreign profile",
     messageKey = "error.profile.access_denied",
     httpStatus = 403,
     graphqlClassification = "FORBIDDEN",
@@ -89,7 +89,7 @@ object AccountsErrors {
     errorName = "BATCH_LOOKUP_UNAUTHORIZED",
     legacyCode = "ERR-04",
     title = "Unauthorized batch lookup",
-    safeDetail = "Workload authority is required for multi-subject profile lookup.",
+    safeDetail = "Batch profile lookup requires internal workload authority",
     messageKey = "error.profile.batch_unauthorized",
     httpStatus = 403,
     graphqlClassification = null,

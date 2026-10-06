@@ -48,6 +48,6 @@ class AuthControllerRateLimitFailureTest {
         }
 
         assertEquals(ErrorCode.ERR_11, error.errorCode)
-        assertEquals("Rate-limit service unavailable", error.message)
+        assertEquals("LOGIN_LIMITER_UNAVAILABLE", error.message)
     }
 }

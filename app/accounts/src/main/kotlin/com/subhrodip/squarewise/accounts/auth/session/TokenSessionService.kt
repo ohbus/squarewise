@@ -6,8 +6,8 @@ import com.subhrodip.squarewise.accounts.auth.audit.SecurityAuditLogger
 import com.subhrodip.squarewise.accounts.auth.credential.CredentialDigest
 import com.subhrodip.squarewise.accounts.auth.identity.AccountIdentityStore
 import com.subhrodip.squarewise.accounts.auth.provider.IdentityProviderPort
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.accounts.errors.AccountsDomainException
+import com.subhrodip.squarewise.errors.catalog.AccountsErrors
 import java.security.SecureRandom
 import java.time.Instant
 import java.util.Base64
@@ -106,28 +106,28 @@ open class TokenSessionService(
      * @param deviceLabel Optional user-agent or client label.
      * @param now Current timestamp.
      * @return [TokenResponse] with fresh access token and child refresh token.
-     * @throws ApplicationException with [ErrorCode.ERR_03] when invalid, expired, revoked, or reused.
+     * @throws AccountsDomainException when the refresh token is invalid, expired, revoked, or reused.
      */
-    @Transactional(noRollbackFor = [ApplicationException::class])
+    @Transactional(noRollbackFor = [AccountsDomainException::class])
     open fun rotateSession(
         rawRefreshToken: String,
         deviceLabel: String?,
         now: Instant
     ): TokenResponse {
         if (rawRefreshToken.isBlank()) {
-            throw ApplicationException(ErrorCode.ERR_03, "Authentication required")
+            throw AccountsDomainException(AccountsErrors.REFRESH_TOKEN_INVALID)
         }
 
         val digest = credentialDigest.digest(rawRefreshToken)
         val existingSession = sessionRepository.findByRefreshTokenDigest(digest)
-            ?: throw ApplicationException(ErrorCode.ERR_03, "Authentication required")
+            ?: throw AccountsDomainException(AccountsErrors.REFRESH_TOKEN_INVALID)
 
         // Reuse detection: if this session was already replaced or revoked, revoke entire family
         if (existingSession.revokedAt != null || existingSession.replacedBySessionId != null) {
             log.warn("Refresh token reuse detected for session family {}. Revoking family.", existingSession.familyId)
             auditLogger.emit(SecurityAuditEvent.TOKEN_REUSE_DETECTED, accountId = existingSession.accountId)
             sessionRepository.revokeFamily(existingSession.familyId, now)
-            throw ApplicationException(ErrorCode.ERR_03, "Authentication required")
+            throw AccountsDomainException(AccountsErrors.SESSION_EXPIRED)
         }
 
         val existingExpiry = SessionExpiry(
@@ -136,7 +136,7 @@ open class TokenSessionService(
         )
         if (sessionPolicy.isExpired(existingExpiry, now)) {
             sessionRepository.revokeFamily(existingSession.familyId, now)
-            throw ApplicationException(ErrorCode.ERR_03, "Authentication required")
+            throw AccountsDomainException(AccountsErrors.SESSION_REVOKED)
         }
 
         val newSessionId = UUID.randomUUID()
@@ -145,18 +145,18 @@ open class TokenSessionService(
         val expiry = sessionPolicy.refreshedExpiry(now, existingSession.absoluteExpiresAt)
 
         val accountId = existingSession.accountId
-            ?: throw ApplicationException(ErrorCode.ERR_03, "Authentication required")
+            ?: throw AccountsDomainException(AccountsErrors.REFRESH_TOKEN_INVALID)
         val identity = accountIdentityStore.findByAccountId(accountId)
-            ?: throw ApplicationException(ErrorCode.ERR_03, "Authentication required")
+            ?: throw AccountsDomainException(AccountsErrors.REFRESH_TOKEN_INVALID)
         if (identity.deletionRequested) {
             auditLogger.emit(SecurityAuditEvent.SESSION_DENIED_DELETION_REQUESTED, accountId = accountId)
             sessionRepository.revokeFamily(existingSession.familyId, now)
-            throw ApplicationException(ErrorCode.ERR_03, "Authentication required")
+            throw AccountsDomainException(AccountsErrors.REFRESH_REPLAY_DETECTED)
         }
         if (existingSession.subject == null || existingSession.subject != identity.subject) {
             auditLogger.emit(SecurityAuditEvent.SESSION_SUBJECT_MISMATCH, accountId = accountId)
             sessionRepository.revokeFamily(existingSession.familyId, now)
-            throw ApplicationException(ErrorCode.ERR_03, "Authentication required")
+            throw AccountsDomainException(AccountsErrors.SESSION_SUBJECT_MISMATCH)
         }
 
         val newSession = AuthSessionEntity(
@@ -180,7 +180,7 @@ open class TokenSessionService(
         if (updatedCount != 1) {
             // Concurrent race or collision: fail closed and revoke family
             sessionRepository.revokeFamily(existingSession.familyId, now)
-            throw ApplicationException(ErrorCode.ERR_03, "Authentication required")
+            throw AccountsDomainException(AccountsErrors.SESSION_EXPIRED)
         }
 
         val issuedToken = identityProviderPort.issueAccessToken(accountId, identity.subject, identity.email)

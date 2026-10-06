@@ -16,11 +16,8 @@ import com.subhrodip.squarewise.accounts.requests.export.persistence.InMemoryExp
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito
 import org.springframework.http.MediaType
 import com.subhrodip.squarewise.errors.http.GlobalErrorHandler
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
 import com.subhrodip.squarewise.db.routing.DbContextHolder
 import com.subhrodip.squarewise.db.routing.DbOperationKind
 import com.subhrodip.squarewise.db.routing.ReadConsistency
@@ -89,14 +86,14 @@ class ProfileControllerTest {
     }
 
     @Test
-    fun `returns 401 unauthorized when authenticated profile does not exist`() {
+    fun `returns 404 when authenticated profile does not exist`() {
         val unmappedUser = RequestPostProcessor { request ->
             request.userPrincipal = Principal { "oidc|unmapped" }
             request
         }
         mvc.perform(get(ApiEndpoints.Accounts.V1.PATH_ME).with(unmappedUser))
-            .andExpect(status().isUnauthorized)
-            .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"))
+            .andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.code").value("NOT_FOUND"))
     }
 
     @Test
@@ -215,8 +212,8 @@ class ProfileControllerTest {
         }
 
         mvc.perform(get(ApiEndpoints.Accounts.V1.profileById(aliceId)).with(unmappedUser))
-            .andExpect(status().isUnauthorized)
-            .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"))
+            .andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.code").value("NOT_FOUND"))
     }
 
     @Test
@@ -338,8 +335,8 @@ class ProfileControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"accountIds\": [\"$aliceId\"]}")
         )
-            .andExpect(status().isUnauthorized)
-            .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"))
+            .andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.code").value("NOT_FOUND"))
     }
 
     @Test
@@ -379,31 +376,6 @@ class ProfileControllerTest {
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
     }
-
-    @Test
-    fun `controller problem handler maps validation and fallback error codes`() {
-        val validation = controller.applicationFailure(ApplicationException(ErrorCode.ERR_02, "invalid profile"))
-        val fallback = controller.applicationFailure(ApplicationException(ErrorCode.ERR_06, "conflict"))
-        val nullMessage = controller.applicationFailure(ApplicationException(ErrorCode.ERR_05))
-
-        val invalidStatusError = Mockito.mock(ApplicationException::class.java)
-        val mockCode = Mockito.mock(ErrorCode::class.java)
-        Mockito.`when`(mockCode.httpStatus).thenReturn(999)
-        Mockito.`when`(mockCode.safeDetail).thenReturn("Safe detail fallback")
-        Mockito.`when`(mockCode.name).thenReturn("ERR_CUSTOM")
-        Mockito.`when`(invalidStatusError.errorCode).thenReturn(mockCode)
-        Mockito.`when`(invalidStatusError.message).thenReturn(null)
-        val invalidStatus = controller.applicationFailure(invalidStatusError)
-
-        assertEquals("VALIDATION_FAILED", validation.body?.code)
-        assertEquals("ERR_06", fallback.body?.code)
-        assertEquals(400, validation.body?.status)
-        assertEquals(409, fallback.body?.status)
-        assertEquals("Resource not found", nullMessage.body?.detail)
-        assertEquals(500, invalidStatus.body?.status)
-        assertEquals("Safe detail fallback", invalidStatus.body?.detail)
-    }
-
 
     /** Verifies duplicate requested IDs produce one profile rather than duplicated response rows. */
     @Test

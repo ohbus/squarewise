@@ -1,5 +1,7 @@
 package com.subhrodip.squarewise.accounts.auth.delivery.security
 
+import com.subhrodip.squarewise.accounts.errors.AccountsInputException
+
 import com.subhrodip.squarewise.accounts.auth.delivery.model.CredentialDeliveryContext
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
@@ -36,7 +38,7 @@ class AesGcmCredentialEnvelopeProtector(
 
     override fun reveal(envelope: String, context: CredentialDeliveryContext): String {
         val encoded = runCatching { Base64.getUrlDecoder().decode(envelope) }
-            .getOrElse { throw IllegalArgumentException("invalid credential envelope", it) }
+            .getOrElse { throw AccountsInputException("invalid credential envelope", it) }
         require(encoded.size > 1 + NONCE_BYTES + TAG_BYTES) { "invalid credential envelope" }
         require(encoded[0] == FORMAT_VERSION) { "unsupported credential envelope version" }
         val nonce = encoded.copyOfRange(1, 1 + NONCE_BYTES)
@@ -47,9 +49,9 @@ class AesGcmCredentialEnvelopeProtector(
             cipher.updateAAD(context.aad())
             String(cipher.doFinal(ciphertext), StandardCharsets.UTF_8)
         } catch (error: AEADBadTagException) {
-            throw IllegalArgumentException("credential envelope authentication failed", error)
+            throw AccountsInputException("credential envelope authentication failed", error)
         } catch (error: GeneralSecurityException) {
-            throw IllegalArgumentException("invalid credential envelope", error)
+            throw AccountsInputException("invalid credential envelope", error)
         }
     }
 

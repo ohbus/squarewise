@@ -9,8 +9,8 @@ import com.subhrodip.squarewise.accounts.auth.identity.AccountIdentityStore
 import com.subhrodip.squarewise.accounts.auth.session.TokenResponse
 import com.subhrodip.squarewise.accounts.auth.session.TokenSessionService
 import com.subhrodip.squarewise.accounts.profile.persistence.ProfileStore
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.accounts.errors.AccountsDomainException
+import com.subhrodip.squarewise.errors.catalog.AccountsErrors
 import java.time.Instant
 import java.util.UUID
 import org.slf4j.LoggerFactory
@@ -51,7 +51,7 @@ open class LoginVerificationService(
      * @param deviceLabel Optional client or user-agent label.
      * @param now Current timestamp.
      * @return [TokenResponse] containing issued access and refresh tokens.
-     * @throws ApplicationException with [ErrorCode.ERR_03] on invalid, expired, or replayed credentials.
+     * @throws AccountsDomainException on invalid, expired, or replayed credentials.
      */
     @Transactional
     open fun verify(
@@ -64,15 +64,15 @@ open class LoginVerificationService(
         try {
             val admitted = loginVerificationRateLimitService.tryAcquire(credential, networkPartition, now)
             if (!admitted) {
-                throw ApplicationException(ErrorCode.ERR_11, "Login verification rate limit exceeded")
+                throw AccountsDomainException(AccountsErrors.LOGIN_RATE_LIMITED)
             }
         } catch (exception: RateLimitStoreUnavailableException) {
-            throw ApplicationException(ErrorCode.ERR_11, "Rate-limit service unavailable", exception)
+            throw AccountsDomainException(AccountsErrors.LOGIN_LIMITER_UNAVAILABLE, cause = exception)
         }
         val redeemed = credentialService.redeem(credential, now)
             ?: run {
                 auditLogger.emit(SecurityAuditEvent.LOGIN_FAILURE, detail = "invalid-or-expired-credential")
-                throw ApplicationException(ErrorCode.ERR_03, "Authentication required")
+                throw AccountsDomainException(AccountsErrors.LOGIN_CODE_INVALID)
             }
 
         val canonicalEmail = redeemed.canonicalEmail

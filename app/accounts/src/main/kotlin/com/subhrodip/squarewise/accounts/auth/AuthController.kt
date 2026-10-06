@@ -13,8 +13,8 @@ import com.subhrodip.squarewise.accounts.auth.session.RefreshTokenRequest
 import com.subhrodip.squarewise.accounts.auth.session.LogoutRequest
 import com.subhrodip.squarewise.accounts.auth.session.TokenResponse
 import com.subhrodip.squarewise.accounts.auth.session.TokenSessionService
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.accounts.errors.AccountsDomainException
+import com.subhrodip.squarewise.errors.catalog.AccountsErrors
 import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.Valid
@@ -62,7 +62,7 @@ class AuthController(
      * @param request Validated [LoginStartRequest].
      * @param servletRequest Incoming HTTP servlet request for network partitioning.
      * @return 202 Accepted with [LoginStartResponse] when admitted.
-     * @throws ApplicationException with ERR-11 when the login policy is exhausted.
+     * @throws AccountsDomainException when the login policy is exhausted.
      */
     @PostMapping(ApiEndpoints.Accounts.V1.LOGIN_START)
     fun startLogin(
@@ -91,7 +91,7 @@ class AuthController(
      * @param request Validated [LoginVerifyRequest].
      * @param servletRequest Incoming HTTP servlet request for client metadata.
      * @return 200 OK with [TokenResponse].
-     * @throws ApplicationException with ERR-11 when verification admission or the refresh admission limit
+     * @throws AccountsDomainException when verification admission or the refresh admission limit
      * is exhausted or its fail-closed store cannot decide.
      */
     @PostMapping(ApiEndpoints.Accounts.V1.LOGIN_VERIFY)
@@ -126,10 +126,10 @@ class AuthController(
         val networkPartition = clientAddressResolver.resolvePartition(servletRequest)
         try {
             if (!refreshRateLimitService.tryAcquire(networkPartition, Instant.now())) {
-                throw ApplicationException(ErrorCode.ERR_11, "Refresh rate limit exceeded")
+                throw AccountsDomainException(AccountsErrors.REFRESH_RATE_LIMITED)
             }
         } catch (exception: RateLimitStoreUnavailableException) {
-            throw ApplicationException(ErrorCode.ERR_11, "Rate-limit service unavailable", exception)
+            throw AccountsDomainException(AccountsErrors.LOGIN_LIMITER_UNAVAILABLE, cause = exception)
         }
         val tokenResponse = tokenSessionService.rotateSession(
             rawRefreshToken = request.refreshToken,
@@ -151,7 +151,7 @@ class AuthController(
         @Valid @RequestBody request: LogoutRequest
     ) {
         if (principal == null || principal.name.isBlank()) {
-            throw ApplicationException(ErrorCode.ERR_03, "Authentication required")
+            throw AccountsDomainException(AccountsErrors.PROFILE_SUBJECT_INVALID)
         }
         tokenSessionService.revokeSessionByRefreshToken(
             rawRefreshToken = request.refreshToken,

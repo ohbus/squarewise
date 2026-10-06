@@ -1,15 +1,6 @@
 # Legacy error-path debt quarantined for the bounded-context migration.
 # Every entry must be removed by its owner task; this is not a permanent waiver.
 entries:
-  - {file: app/accounts/src/main/kotlin/com/subhrodip/squarewise/accounts/auth/config/AuthenticationCredentialConfiguration.kt, line: 144, violation_type: generic_throw, owner_task: ERRC-19, expires_by_task: ERRC-19}
-  - {file: app/accounts/src/main/kotlin/com/subhrodip/squarewise/accounts/auth/config/AuthenticationCredentialConfiguration.kt, line: 149, violation_type: generic_throw, owner_task: ERRC-19, expires_by_task: ERRC-19}
-  - {file: app/accounts/src/main/kotlin/com/subhrodip/squarewise/accounts/auth/delivery/security/AesGcmCredentialEnvelopeProtector.kt, line: 39, violation_type: generic_throw, owner_task: ERRC-19, expires_by_task: ERRC-19}
-  - {file: app/accounts/src/main/kotlin/com/subhrodip/squarewise/accounts/auth/delivery/security/AesGcmCredentialEnvelopeProtector.kt, line: 50, violation_type: generic_throw, owner_task: ERRC-19, expires_by_task: ERRC-19}
-  - {file: app/accounts/src/main/kotlin/com/subhrodip/squarewise/accounts/auth/delivery/security/AesGcmCredentialEnvelopeProtector.kt, line: 52, violation_type: generic_throw, owner_task: ERRC-19, expires_by_task: ERRC-19}
-  - {file: app/accounts/src/main/kotlin/com/subhrodip/squarewise/accounts/auth/identity/AccountIdentityStore.kt, line: 70, violation_type: generic_throw, owner_task: ERRC-19, expires_by_task: ERRC-19}
-  - {file: app/accounts/src/main/kotlin/com/subhrodip/squarewise/accounts/auth/identity/EmailAddress.kt, line: 47, violation_type: generic_throw, owner_task: ERRC-19, expires_by_task: ERRC-19}
-  - {file: app/accounts/src/main/kotlin/com/subhrodip/squarewise/accounts/auth/identity/persistence/JpaAccountIdentityStore.kt, line: 147, violation_type: generic_throw, owner_task: ERRC-19, expires_by_task: ERRC-19}
-  - {file: app/accounts/src/main/kotlin/com/subhrodip/squarewise/accounts/profile/api/ProfileController.kt, line: 86, violation_type: direct_problem_constructor, owner_task: ERRC-19, expires_by_task: ERRC-19}
   - {file: app/bff/src/main/kotlin/com/subhrodip/squarewise/bff/config/BrowserOriginPolicy.kt, line: 28, violation_type: generic_throw, owner_task: ERRC-19, expires_by_task: ERRC-19}
   - {file: app/expense-core/src/main/kotlin/com/subhrodip/squarewise/expensecore/expenses/domain/FinancialArithmetic.kt, line: 9, violation_type: generic_throw, owner_task: ERRC-19, expires_by_task: ERRC-19}
   - {file: app/expense-core/src/main/kotlin/com/subhrodip/squarewise/expensecore/expenses/domain/FinancialArithmetic.kt, line: 16, violation_type: generic_throw, owner_task: ERRC-19, expires_by_task: ERRC-19}
@@ -22,5 +13,6 @@ entries:
   - {file: app/notifications/src/main/kotlin/com/subhrodip/squarewise/notifications/email/security/AuthEmailEnvelopeProtector.kt, line: 24, violation_type: generic_throw, owner_task: ERRC-19, expires_by_task: ERRC-19}
   - {file: app/notifications/src/main/kotlin/com/subhrodip/squarewise/notifications/email/security/AuthEmailSecurityConfiguration.kt, line: 18, violation_type: generic_throw, owner_task: ERRC-19, expires_by_task: ERRC-19}
   - {file: libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/http/ApiProblem.kt, line: 6, violation_type: direct_problem_constructor, owner_task: ERRC-19, expires_by_task: ERRC-19}
-  - {file: libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/http/GlobalErrorHandler.kt, line: 176, violation_type: direct_problem_constructor, owner_task: ERRC-19, expires_by_task: ERRC-19}
+  - {file: libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/http/GlobalErrorHandler.kt, line: 165, violation_type: direct_problem_constructor, owner_task: ERRC-19, expires_by_task: ERRC-19}
+  - {file: libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/http/GlobalErrorHandler.kt, line: 211, violation_type: direct_problem_constructor, owner_task: ERRC-19, expires_by_task: ERRC-19}
   - {file: libs/security/src/main/kotlin/com/subhrodip/squarewise/security/ratelimit/HmacRateLimitKeyDeriver.kt, line: 27, violation_type: generic_throw, owner_task: ERRC-19, expires_by_task: ERRC-19}

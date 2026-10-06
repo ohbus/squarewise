@@ -11,7 +11,7 @@ class CatalogParityTest {
             Expected("111101", "PROFILE_REQUEST_INVALID", "Invalid profile request", 400),
             Expected("111102", "TIMEZONE_INVALID", "Invalid timezone", 400),
             Expected("117101", "PROFILE_SUBJECT_INVALID", "Invalid authenticated subject", 401),
-            Expected("117201", "AUTHENTICATED_PROFILE_NOT_FOUND", "Profile not found", 401),
+            Expected("117201", "AUTHENTICATED_PROFILE_NOT_FOUND", "Profile not found", 404),
             Expected("117202", "FOREIGN_PROFILE_ACCESS_DENIED", "Access denied", 403),
             Expected("117203", "BATCH_LOOKUP_UNAUTHORIZED", "Unauthorized batch lookup", 403),
             Expected("127101", "LOGIN_CODE_INVALID", "Invalid login code", 401),

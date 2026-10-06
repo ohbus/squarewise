@@ -9,8 +9,8 @@ import com.subhrodip.squarewise.accounts.auth.credential.LoginCredentialService
 import com.subhrodip.squarewise.accounts.auth.delivery.model.AuthEmailMessage
 import com.subhrodip.squarewise.accounts.auth.delivery.service.AuthEmailSender
 import java.time.Instant
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.accounts.errors.AccountsDomainException
+import com.subhrodip.squarewise.errors.catalog.AccountsErrors
 
 /** Coordinates the low-friction passwordless login-start use case. */
 class LoginStartService(
@@ -29,8 +29,7 @@ class LoginStartService(
      * @param kind link or code delivery mode.
      * @param now request timestamp.
      * @return accepted when the request is admitted by the login policy.
-     * @throws ApplicationException with ERR-11 when the login policy denies the request.
-     * @throws ApplicationException with ERR-11 when the rate-limit store cannot make a safe decision.
+     * @throws AccountsDomainException when the login policy denies the request or its store cannot decide.
      */
     fun start(
         email: String,
@@ -41,11 +40,11 @@ class LoginStartService(
         val allowed = try {
             rateLimitService.tryAcquire(email, networkPartition, now)
         } catch (exception: RateLimitStoreUnavailableException) {
-            throw ApplicationException(ErrorCode.ERR_11, "Rate-limit service unavailable", exception)
+            throw AccountsDomainException(AccountsErrors.LOGIN_LIMITER_UNAVAILABLE, cause = exception)
         }
         if (!allowed) {
             auditLogger.emit(SecurityAuditEvent.LOGIN_RATE_LIMITED)
-            throw ApplicationException(ErrorCode.ERR_11, "Login rate limit exceeded")
+            throw AccountsDomainException(AccountsErrors.LOGIN_RATE_LIMITED)
         }
 
         val credential = runCatching {

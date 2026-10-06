@@ -3,8 +3,8 @@ package com.subhrodip.squarewise.accounts.profile.persistence
 import com.subhrodip.squarewise.accounts.profile.api.ProfilePatchRequest
 import com.subhrodip.squarewise.accounts.profile.api.ProfileResponse
 import com.subhrodip.squarewise.accounts.profile.service.ProfileRules
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.accounts.errors.AccountsDomainException
+import com.subhrodip.squarewise.errors.catalog.AccountsErrors
 import java.util.UUID
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -75,7 +75,7 @@ class JpaProfileStore(private val repository: ProfileRepository) : ProfileStore 
     override fun update(subject: String, patch: ProfilePatchRequest): ProfileResponse {
         ProfileRules.requireSubject(subject)
         val entity = repository.findBySubject(subject)
-            ?: throw ApplicationException(ErrorCode.ERR_03, "Profile not found")
+            ?: throw AccountsDomainException(AccountsErrors.AUTHENTICATED_PROFILE_NOT_FOUND)
         entity.displayName = patch.displayName ?: entity.displayName
         entity.timezone = patch.timezone?.also(ProfileRules::requireTimezone) ?: entity.timezone
         entity.defaultCurrency = patch.defaultCurrency ?: entity.defaultCurrency
@@ -89,7 +89,7 @@ class JpaProfileStore(private val repository: ProfileRepository) : ProfileStore 
     override fun requestDeletion(subject: String) {
         ProfileRules.requireSubject(subject)
         val entity = repository.findBySubject(subject)
-            ?: throw ApplicationException(ErrorCode.ERR_03, "Profile not found")
+            ?: throw AccountsDomainException(AccountsErrors.AUTHENTICATED_PROFILE_NOT_FOUND)
         entity.deletionRequested = true
         repository.save(entity)
     }

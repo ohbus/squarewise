@@ -8579,7 +8579,7 @@
       "parent_id": "ERRC-01",
       "title": "Migrate Accounts definitions and failures",
       "phase": "implementation",
-      "status": "todo",
+      "status": "done",
       "owner_role": "accounts",
       "owner_agent": "/root",
       "depends_on": [
@@ -8606,7 +8606,11 @@
         "uv run python tools/contracts/validate.py",
         "git diff --check"
       ],
-      "evidence": [],
+      "evidence": [
+        "Migrated Accounts production failures to AccountsErrors-backed AccountsDomainException and preserved v1 ApiProblem compatibility through the shared governed mapper.",
+        "Added AccountsInputException for low-level IllegalArgumentException-compatible validation and removed all Accounts-owned hygiene allowlist entries.",
+        "The complete Accounts suite passed 267 tests; error hygiene, contract validation, and git diff --check passed on 2026-10-07."
+      ],
       "reviewer": "/root",
       "blocker": null
     },

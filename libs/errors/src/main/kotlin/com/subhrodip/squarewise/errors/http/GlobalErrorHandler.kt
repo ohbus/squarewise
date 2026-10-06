@@ -4,6 +4,7 @@ package com.subhrodip.squarewise.errors.http
 
 import com.subhrodip.squarewise.errors.domain.ApplicationException
 import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
 import com.subhrodip.squarewise.errors.request.RequestIdContext
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
@@ -148,6 +149,40 @@ class GlobalErrorHandler(
             detail = ex.message ?: ex.errorCode.safeDetail,
             retryAfterSeconds = if (ex.errorCode == ErrorCode.ERR_11) RATE_LIMIT_RETRY_AFTER_SECONDS else null
         )
+    }
+
+    /** Map catalog-governed failures while preserving the legacy ApiProblem shape. */
+    @ExceptionHandler(SquarewiseException::class)
+    fun governedException(ex: SquarewiseException): ResponseEntity<ApiProblem> {
+        val definition = ex.definition
+        val status = HttpStatus.resolve(definition.httpStatus ?: 500) ?: HttpStatus.INTERNAL_SERVER_ERROR
+        return ResponseEntity.status(status)
+            .headers(HttpHeaders().apply {
+                if (definition.legacyCode == "ERR-11") set(HttpHeaders.RETRY_AFTER, RATE_LIMIT_RETRY_AFTER_SECONDS.toString())
+            })
+            .contentType(MediaType.APPLICATION_PROBLEM_JSON)
+            .body(
+                ApiProblem(
+                    type = "https://squarewise.example/problems/${definition.errorName.lowercase()}",
+                    title = definition.title,
+                    status = status.value(),
+                    code = legacyCode(definition.legacyCode),
+                    source = "accounts",
+                    requestId = RequestIdContext.get(),
+                    detail = definition.safeDetail,
+                    violations = emptyList()
+                )
+            )
+    }
+
+    private fun legacyCode(value: String?): String = when (value) {
+        "ERR-02" -> "VALIDATION_FAILED"
+        "ERR-03" -> "UNAUTHENTICATED"
+        "ERR-04" -> "FORBIDDEN"
+        "ERR-05" -> "NOT_FOUND"
+        "ERR-06" -> "ERR_06"
+        "ERR-11" -> "RATE_LIMITED"
+        else -> "INTERNAL_ERROR"
     }
 
     @ExceptionHandler(Exception::class)

@@ -77,3 +77,20 @@ git diff --check
 - Deployed to Accounts service.
 - Additive fields ensure complete backward compatibility with existing BFF and web clients.
 - Rollback: Standard Git revert of service branch if regressions occur.
+
+## Implementation Notes and Evidence
+
+- Replaced Accounts production `ApplicationException`/legacy error-code throw
+  sites with catalog-governed `AccountsDomainException` definitions for profile,
+  login, rate-limit, session, and identity failures.
+- Added `AccountsInputException` for low-level configuration, crypto, and
+  identity input contracts that intentionally remain `IllegalArgumentException`
+  compatible while eliminating anonymous generic throw sites.
+- Added governed exception compatibility handling in the shared legacy
+  `ApiProblem` mapper, preserving v1 response shape and rate-limit retry headers.
+- Profile absence now uses the catalog 404 anti-enumeration definition; callers
+  without authentication remain 401, while foreign and batch access remain 403.
+- Removed all Accounts-owned entries from `tools/qa/error_hygiene_allowlist.yaml`.
+- The complete Accounts suite passed 267 tests on 2026-10-07; the Accounts
+  production tree has no legacy `ApplicationException` or legacy error-code
+  references.
