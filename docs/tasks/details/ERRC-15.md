@@ -92,3 +92,23 @@ git diff --check
 
 - Replaces existing `GlobalErrorHandler` in `libs/errors` with backwards-compatible additive handler.
 - Rollback: Revert advice changes if response formatting regressions are detected.
+
+## Implementation Notes and Evidence
+
+- Added dedicated `ProblemDetailsDto` and `ViolationDto` models with additive
+  `numericCode` and `errorName` fields while preserving the legacy symbolic
+  `code` field.
+- Added explicit `GlobalErrorAdvice` handlers for governed exceptions,
+  validation, malformed bodies, unsupported methods, and non-fatal unexpected
+  failures. Response detail always comes from static catalog safe text; cause,
+  SQL, class, and stack text is never copied into the body.
+- Added `StaticErrorPageFilter` for non-dispatcher servlet failures with a
+  static problem JSON fallback and fatal-error rethrow behavior.
+- Adversarial tests verify additive identity fields, request correlation, safe
+  unexpected responses, and absence of simulated SQL/password cause text.
+- Validation passed on 2026-10-07: `./gradlew.bat :libs:errors:test
+  :libs:errors:jacocoTestReport --rerun-tasks --no-daemon --console=plain`,
+  `uv run python tools/contracts/validate.py`, and `git diff --check`.
+- The existing `GlobalErrorHandler` remains for legacy runtime compatibility;
+  this additive advice is the governed migration boundary for subsequent
+  service adoption.

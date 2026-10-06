@@ -8422,7 +8422,7 @@
       "parent_id": "ERRC-01",
       "title": "Implement servlet Problem mapper and containment",
       "phase": "platform",
-      "status": "todo",
+      "status": "done",
       "owner_role": "platform",
       "owner_agent": "/root",
       "depends_on": [
@@ -8449,7 +8449,11 @@
         "uv run python tools/contracts/validate.py",
         "git diff --check"
       ],
-      "evidence": [],
+      "evidence": [
+        "Added ProblemDetailsDto, ViolationDto, explicit GlobalErrorAdvice handlers, and StaticErrorPageFilter with static safe fallbacks.",
+        "Adversarial mapper tests cover additive identity fields, correlation, and cause/SQL/password containment.",
+        "libs:errors tests/JaCoCo, contract validation, and git diff --check passed on 2026-10-07; legacy GlobalErrorHandler remains for compatibility."
+      ],
       "reviewer": "/root",
       "blocker": null
     },
