@@ -542,6 +542,11 @@ was stopped and generic 401 after restart; its tokenless run explicitly skipped
 the Prometheus assertion. Hosted verification-limit, alert, and production Redis
 evidence remain open.
 
+The two-Accounts replica probe now also stops Redis while both replicas remain
+online, requires login-start to fail closed with HTTP 429 on both, and verifies
+HTTP 202 recovery on both after Redis restarts. This remains disposable local
+cross-process evidence; hosted and production failover evidence remain open.
+
 Rate-limit decisions now expose bounded Micrometer counters for `allowed`,
 `denied`, and `store_error`, tagged only by the centrally defined policy ID and
 outcome. No key, subject, IP, token, or request ID is used as a metric label.

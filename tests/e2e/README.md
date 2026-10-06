@@ -107,6 +107,8 @@ The end-to-end test suites run against the live local environment (`infra/local/
      ports and requires five `202` responses followed by one shared `429`.
    - Submits ten simultaneous login-start requests across both replicas and
      requires exactly five `202` responses and five `429` responses.
+   - Stops Redis while both Accounts replicas remain online and requires both
+     replicas to return 429, then verifies both return 202 after Redis recovery.
    - This proves local distributed-window behavior only; it is not a production
      scale or multi-zone capacity result.
 
