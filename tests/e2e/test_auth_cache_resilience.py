@@ -8,6 +8,7 @@ import os
 import subprocess
 import sys
 import time
+import uuid
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 from typing import Final
@@ -24,6 +25,7 @@ ACCOUNTS_URL: Final[str] = os.environ.get(
     "ACCOUNTS_URL", os.environ.get("SQUAREWISE_ACCOUNTS_URL", "http://localhost:28081")
 )
 REFRESH_PATH: Final[str] = "/accounts/v1/auth/token/refresh"
+LOGIN_START_PATH: Final[str] = "/accounts/v1/auth/login/start"
 PROBE_TOKEN: Final[str] = "auth-cache-resilience-invalid-refresh"
 RATE_LIMIT_KEY_PATTERN: Final[str] = "squarewise:rl:v1:*"
 
@@ -73,6 +75,22 @@ def refresh_status(timeout: float = 8.0) -> int:
         return error.code
 
 
+def login_start_status(email: str, timeout: float = 8.0) -> int:
+    """Return the passwordless login-start response status for a fresh probe email."""
+    body = json.dumps({"email": email}).encode("utf-8")
+    request = Request(
+        f"{ACCOUNTS_URL}{LOGIN_START_PATH}",
+        data=body,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urlopen(request, timeout=timeout) as response:
+            return response.status
+    except HTTPError as error:
+        return error.code
+
+
 def evict_rate_limit_keys() -> int:
     """Delete only Squarewise rate-limit keys and return the number removed."""
     raw_keys = redis_cli("--scan", "--pattern", RATE_LIMIT_KEY_PATTERN)
@@ -106,6 +124,7 @@ def main() -> int:
     if isinstance(sys.stdout, io.TextIOWrapper):
         sys.stdout.reconfigure(encoding="utf-8")
     print("Running authentication cache resilience checks")
+    probe_email = f"redis-outage-{uuid.uuid4()}@squarewise.local"
     evict_rate_limit_keys()
     try:
         for _ in range(10):
@@ -119,10 +138,12 @@ def main() -> int:
 
         compose("stop", "redis")
         expect("refresh with Redis unavailable", refresh_status(), 429)
+        expect("login start with Redis unavailable", login_start_status(probe_email), 429)
 
         compose("start", "redis")
         wait_for_redis()
         expect("refresh after Redis restart", refresh_status(), 401)
+        expect("login start after Redis restart", login_start_status(probe_email), 202)
     finally:
         compose("start", "redis")
     return 0

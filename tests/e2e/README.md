@@ -50,8 +50,9 @@ The end-to-end test suites run against the live local environment (`infra/local/
 5. **Redis Authentication Rate-Limit Resilience (`test_auth_cache_resilience.py`)**:
    - Shared Redis admission reaches the refresh limit, evicts only the
      `squarewise:rl:v1:*` namespace, and admits again after targeted cleanup.
-   - Redis outage fails closed with HTTP 429 and restart recovers with no
-     PostgreSQL or process-local fallback.
+   - Redis outage fails closed with HTTP 429 for both refresh and passwordless
+     login-start, and restart recovers with no PostgreSQL or process-local
+     fallback.
 
 6. **GraphQL Rate-Limit Surfaces (`test_auth_rate_limit_surfaces.py`)**:
    - Exercises the public `/graphql` HTTP boundary through the configured

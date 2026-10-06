@@ -471,6 +471,12 @@ recovered, a subsequent real auth-email event was delivered. This is local
 Compose evidence only; hosted outage alerts, managed Redis, and production
 recovery evidence remain open.
 
+The Redis resilience probe now also calls the public Accounts login-start path
+while Redis is stopped and observes the structured fail-closed HTTP 429, then
+repeats login-start after Redis recovery and observes HTTP 202. Refresh and
+login therefore have direct local outage/recovery evidence; hosted alerting and
+production failover evidence remain open.
+
 An isolated k6 admission probe was added and executed at 35 iterations per
 second for 10 seconds with 351 completed requests, zero HTTP failures, and
 approximately 12.08 ms p95 latency. The local BFF HTTP limit was temporarily
