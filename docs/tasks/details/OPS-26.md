@@ -76,3 +76,12 @@ Hosted API inspection also confirmed that master run `37355348264` and PR run
 E2E artifacts. A later feature-branch run (`37367449305`) was cancelled, so its
 skipped jobs are not treated as a passing matrix result. These runs predate the
 current branch HEAD and require a current-revision rerun for closure.
+
+## Implementation note
+
+The first-push full-scope fallback logs its diagnostic to the workflow step
+log and signals full scope through `full-run-fallback.txt`. Only
+machine-readable `name=value` records are written to `$GITHUB_OUTPUT`; this
+preserves the GitHub Actions output-file contract. Native `paths` filters are
+not a replacement for the resolver because they do not provide reverse
+Gradle-dependent selection or the repository's E2E stream classification.

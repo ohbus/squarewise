@@ -3,6 +3,8 @@
 The registry is the authoritative state machine. This ledger records meaningful
 execution checkpoints and evidence; it does not replace task acceptance criteria.
 
+| 2026-10-06 | OPS-26 | Repaired first-push scope output handling | The reusable workflow now logs the no-push-base diagnostic normally and uses its fallback marker for full-scope selection; invalid prose is no longer written to `$GITHUB_OUTPUT`. | rebase resolution; hosted evidence remains required |
+
 | 2026-10-06 | DOC-27 OSS community health | Added GitHub-recognized Code of Conduct, MIT license, Security Policy, Accessibility Statement, three structured issue forms, issue chooser routing, and a pull-request template; cross-linked contributor entry points and standardized every security question and vulnerability-report route on `security@subhrodip.com`. | Contract/task validation passed for 220 tasks; public-surface validation passed for 45 REST operations, 9 GraphQL roots, and 50 Bruno requests; YAML lint and explicit structure checks passed for all issue-form files; eight touched Markdown entry points passed local-link checks; security-contact audit and `git diff --check` passed. GitHub-hosted template activation and repository settings remain unverified until the commit reaches the default branch. | `b3b65094` |
 
 | 2026-10-05 | QA-10 BFF event-envelope increment | Added transport-boundary assertions for event identity, type, schema version, aggregate/group IDs, revision, timestamp, and payload mapping. | `./gradlew.bat :app:bff:test :app:bff:jacocoTestReport --rerun-tasks --no-daemon --console=plain` passed (20 actionable tasks); BFF report: 6,080/6,263 instructions, 441/446 branches, 797/799 lines, 439/452 methods; `git diff --check` passed. | `374c53c5` |

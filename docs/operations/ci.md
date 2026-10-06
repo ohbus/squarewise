@@ -20,6 +20,16 @@ pretended to be module-local checks. The scope resolver is
 `tools/ci/changed_scope.py`, with behavior tests in
 `tests/tools/test_changed_scope.py`.
 
+The scope job keeps human diagnostics on the step log and writes only the
+resolver's machine-readable `name=value` records to `$GITHUB_OUTPUT`. A
+first-push fallback logs its explanation normally and uses a workspace marker
+to request full scope; prose must never be appended to the GitHub Actions
+output file because the runner parses that file as structured data. Native
+`paths` and `paths-ignore` filters can gate simple globs, but they cannot
+calculate this repository's reverse Gradle-dependent closure or classify the
+three E2E streams, so the small typed resolver and first-party matrix jobs
+remain necessary.
+
 The reusable workflow applies Gradle dependency and build caching with
 content-addressed keys and restore fallbacks. E2E uses the same policy, while
 Docker BuildKit layers use the GitHub Actions cache backend. Cache misses only

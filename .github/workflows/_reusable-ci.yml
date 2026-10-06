@@ -59,7 +59,7 @@ jobs:
           elif [ -n "${BEFORE_SHA}" ] && [ "${BEFORE_SHA}" != "0000000000000000000000000000000000000000" ]; then
             git diff --name-only "${BEFORE_SHA}" "${HEAD_SHA}" > changed-paths.txt
           else
-            echo 'No usable push base was provided; selecting the full scope.' >> "$GITHUB_OUTPUT"
+            echo 'No usable push base was provided; selecting the full scope.'
             echo 'true' > full-run-fallback.txt
           fi
       - name: Resolve module and E2E scope

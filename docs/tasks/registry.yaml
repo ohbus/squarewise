@@ -7557,6 +7557,7 @@
       "evidence": [
         "Changed-scope resolver and focused tests implemented; current local revalidation passes all 5 scope tests, mypy for tools/ci and its tests, and workflow YAML parsing. Contract/public-surface checks pass separately; hosted PR, branch, and master scenario evidence remains required.",
         "The reusable E2E gate now delegates its selected-result decision to typed tools/ci/e2e_gate.py. Three focused tests prove unselected skipped streams are neutral and not reported as passed, while selected-stream, shared preflight, and artifact-preparation failures remain fatal; mypy and all workflow YAML parsing pass.",
+        "Fixed the first-push fallback by keeping its diagnostic on the step log instead of appending prose to GITHUB_OUTPUT; only machine-readable output records are emitted to the GitHub Actions output file. Native path filters remain insufficient for reverse Gradle-dependent and E2E-stream selection.",
         "Hosted PR, branch, and master scenario evidence remains required before status can become done."
       ],
       "reviewer": "/root",
