@@ -22,7 +22,7 @@ data class RateLimitPolicy(
     val cooldown: Duration = Duration.ZERO
 ) {
     init {
-        require(id.length in 1..64 && id.all { it.isLetterOrDigit() || it == '-' || it == '_' }) {
+        require(id.length in 1..64 && id.all { it.isAsciiIdentifierCharacter() }) {
             "Rate-limit policy id must be 1-64 ASCII identifier characters"
         }
         require(maximumPermits in 1..1_000_000) {
@@ -43,3 +43,7 @@ data class RateLimitPolicy(
         val MAXIMUM_WINDOW: Duration = Duration.ofHours(24)
     }
 }
+
+/** Returns whether a character is permitted in a stable ASCII policy identifier. */
+private fun Char.isAsciiIdentifierCharacter(): Boolean =
+    this in 'a'..'z' || this in 'A'..'Z' || this in '0'..'9' || this == '-' || this == '_'
