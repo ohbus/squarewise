@@ -10,8 +10,8 @@ If you use VS Code, Cursor, or JetBrains Gateway, you can skip manual toolchain 
 
 1. Clone and open the repository in your IDE:
    ```sh
-   git clone https://github.com/subhrodip/squarewise-devcontainers.git
-   cd squarewise-devcontainers
+   git clone https://github.com/ohbus/squarewise.git
+   cd squarewise
    code .   # or cursor .
    ```
 2. Click **Reopen in Container** when prompted.

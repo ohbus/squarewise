@@ -47,8 +47,8 @@ flowchart TB
 ### Visual Studio Code & Cursor (1-Click)
 1. Clone the repository:
    ```sh
-   git clone https://github.com/subhrodip/squarewise-devcontainers.git
-   cd squarewise-devcontainers
+   git clone https://github.com/ohbus/squarewise.git
+   cd squarewise
    ```
 2. Open in VS Code or Cursor:
    ```sh
