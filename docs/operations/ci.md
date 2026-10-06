@@ -121,7 +121,11 @@ summaries (`test-summary/action@v2`) and uploads JUnit XML and HTML reports as
 job artifacts with `if: always()` retention.
 A dedicated `sonar` job runs SonarQube / SonarCloud static analysis with cached
 Sonar packages (`~/.sonar/cache`) and Gradle cache, sending coverage and test analysis
-for `master` and pull requests.
+for `master` and internal pull requests when `SONAR_TOKEN` is available. For pull
+requests originating from forks (where repository secrets are withheld by GitHub Actions
+security boundaries), the Sonar job is gracefully skipped to uphold the principle of least
+privilege and prevent arbitrary code execution vulnerabilities (such as "pwn request" attacks),
+while all unit, integration, acceptance, contract, and E2E verification suites run in full.
 For application projects, `_reusable-ci.yml` uploads the built executable
 `bootJar` artifact (`app-jar-<service>`). Master image publishing in `ci-master.yml`
 downloads this pre-built artifact and packages the runtime image with

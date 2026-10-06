@@ -262,7 +262,7 @@ jobs:
 
   sonar:
     name: SonarQube quality analysis
-    if: needs.scope.outputs.run_sonar == 'true'
+    if: needs.scope.outputs.run_sonar == 'true' && secrets.SONAR_TOKEN != ''
     runs-on: ubuntu-latest
     needs: [preflight, scope]
     services:
