@@ -8302,7 +8302,7 @@
       "parent_id": "ERRC-01",
       "title": "Implement governed exception and typed-diagnostics contracts",
       "phase": "platform",
-      "status": "todo",
+      "status": "done",
       "owner_role": "platform",
       "owner_agent": "/root",
       "depends_on": [
@@ -8329,7 +8329,11 @@
         "uv run python tools/contracts/validate.py",
         "git diff --check"
       ],
-      "evidence": [],
+      "evidence": [
+        "Added catalog-governed SquarewiseException, bounded diagnostics, resource identifiers, three leaf exception types, and fatal throwable classifier.",
+        "JaCoCo coverage is 100% for exceptions (29/29 lines, 6/6 branches) and diagnostics (17/17 lines, 26/26 branches).",
+        "Gradle errors tests/JaCoCo, contract validation, and git diff --check passed on 2026-10-07."
+      ],
       "reviewer": "/root",
       "blocker": null
     },

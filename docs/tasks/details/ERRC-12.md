@@ -108,3 +108,20 @@ git diff --check
 - Additive library implementation in `libs/errors`.
 - Unused by production controllers until Phase 3 and Phase 4.
 - Rollback: Revert exception classes if API adjustments are needed.
+
+## Implementation Notes and Evidence
+
+- Added `SquarewiseException` with compiled-catalog identity enforcement,
+  immutable bounded diagnostics, cause preservation for internal logging, and a
+  safe identity-only `Throwable.message`.
+- Added dedicated diagnostics types: singleton empty diagnostics, bounded
+  immutable map diagnostics rejecting password/token/secret keys, and bounded
+  opaque resource identifiers.
+- Added governed validation, not-found, and concurrency leaf exceptions with
+  fixed catalog definitions, plus a fatal classifier for JVM termination,
+  interruption, Java cancellation, and Kotlin coroutine cancellation names.
+- JaCoCo evidence on 2026-10-07: `exceptions` reports 29/29 lines and 6/6
+  branches; `diagnostics` reports 17/17 lines and 26/26 branches.
+- Validation passed: `./gradlew.bat :libs:errors:test
+  :libs:errors:jacocoTestReport --rerun-tasks --no-daemon --console=plain`,
+  `uv run python tools/contracts/validate.py`, and `git diff --check`.
