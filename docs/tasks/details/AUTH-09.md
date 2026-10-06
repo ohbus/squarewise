@@ -473,10 +473,13 @@ hosted metric retention and broader request coverage remain open.
 Notifications delivery policy values are now bounded configuration properties,
 and both general notification dispatch and protected auth-email dispatch invoke
 the shared limiter immediately before provider dispatch. Unit/component tests
-cover admission and suppression. A live broker-to-provider denial/recovery
-drill now passes locally through Accounts outbox, RabbitMQ, Notifications, and
-Mailpit when the test-only delivery window is set to one permit per two seconds;
-the production-default and hosted evidence remain separate.
+cover admission and suppression. Two local broker-to-provider drills now pass:
+the auth-email path through Accounts outbox, and a general `expense.created.v1`
+envelope through RabbitMQ management, Notifications, and Mailpit. Both prove
+one-per-two-second admission, same-recipient suppression, and post-expiry
+recovery; the general drill is local-only because hosted CI uses the RabbitMQ
+protocol image without the management API. Production-default and hosted
+evidence remain separate.
 
 The typed Notifications outage probe queued a real auth-email event, stopped
 Redis while the Notifications consumer was running, and observed no Mailpit
