@@ -6,8 +6,9 @@ import json
 import os
 import re
 import subprocess
+import time
 from typing import Final
-from urllib.error import HTTPError
+from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 
@@ -62,6 +63,20 @@ def clear_rate_limit_namespace() -> None:
             "exec", "-T", "redis", "redis-cli", "-a", REDIS_PASSWORD,
             "--no-auth-warning", "DEL", *keys,
         )
+
+
+def wait_for_accounts_readiness(timeout_seconds: float = 30.0) -> None:
+    """Wait until Accounts is ready before a following E2E stream starts."""
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline:
+        try:
+            with urlopen("http://localhost:8081/actuator/health/readiness", timeout=3) as response:
+                if response.status == 200:
+                    return
+        except (HTTPError, OSError, URLError):
+            pass
+        time.sleep(0.5)
+    raise AssertionError("Accounts did not become ready after the lookup-isolation probe")
 
 
 def request_json(url: str, body: bytes | None = None) -> tuple[int, object]:
@@ -137,6 +152,7 @@ def main() -> int:
         return 0
     finally:
         compose("start", "accounts")
+        wait_for_accounts_readiness()
 
 
 if __name__ == "__main__":

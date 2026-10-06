@@ -641,6 +641,11 @@ selected Accounts, Notifications, BFF GraphQL HTTP/WebSocket, Redis outage and
 recovery, query-isolation, multi-replica admission, concurrent refresh, and
 capacity-probe paths. The repository-wide Gradle test gate also passes.
 
+The lookup-isolation E2E now waits for Accounts readiness after its intentional
+stop/start cycle, so a following selected stream cannot observe a transient
+connection reset. The isolation probe and passwordless auth-email stream pass
+back-to-back in the aggregate order.
+
 The repository Makefile is now executable on Windows as well as Unix-like
 hosts: it selects `gradlew.bat` under `Windows_NT`, and its package artifact
 listing uses the isolated Python runtime instead of a Unix-only `find` command.
