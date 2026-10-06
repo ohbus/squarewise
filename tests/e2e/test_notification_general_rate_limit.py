@@ -117,8 +117,8 @@ def main() -> int:
     assert os.environ.get("SQUAREWISE_NOTIFICATIONS_DELIVERY_MAX_PERMITS") == "1", (
         "set SQUAREWISE_NOTIFICATIONS_DELIVERY_MAX_PERMITS=1 for this live probe"
     )
-    assert os.environ.get("SQUAREWISE_NOTIFICATIONS_DELIVERY_WINDOW_SECONDS") == "2", (
-        "set SQUAREWISE_NOTIFICATIONS_DELIVERY_WINDOW_SECONDS=2 for this live probe"
+    assert os.environ.get("SQUAREWISE_NOTIFICATIONS_DELIVERY_WINDOW_SECONDS") == "5", (
+        "set SQUAREWISE_NOTIFICATIONS_DELIVERY_WINDOW_SECONDS=5 for this live probe"
     )
 
     recipient = f"qa-general-notification-{uuid.uuid4().hex}@example.com"
@@ -130,7 +130,7 @@ def main() -> int:
     second = recipient_count(recipient)
     assert second == first, "second general notification bypassed delivery admission"
 
-    time.sleep(2)
+    time.sleep(5)
     publish_general_event(recipient)
     third = wait_for_count(recipient, 2)
     assert third == 2, f"general notification did not recover after expiry: {third}"

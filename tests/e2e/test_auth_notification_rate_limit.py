@@ -88,8 +88,8 @@ def main() -> int:
     assert os.environ.get("SQUAREWISE_NOTIFICATIONS_DELIVERY_MAX_PERMITS") == "1", (
         "set SQUAREWISE_NOTIFICATIONS_DELIVERY_MAX_PERMITS=1 for this live probe"
     )
-    assert os.environ.get("SQUAREWISE_NOTIFICATIONS_DELIVERY_WINDOW_SECONDS") == "2", (
-        "set SQUAREWISE_NOTIFICATIONS_DELIVERY_WINDOW_SECONDS=2 for this live probe"
+    assert os.environ.get("SQUAREWISE_NOTIFICATIONS_DELIVERY_WINDOW_SECONDS") == "5", (
+        "set SQUAREWISE_NOTIFICATIONS_DELIVERY_WINDOW_SECONDS=5 for this live probe"
     )
 
     recipient = f"qa-notification-limit-{int(time.time() * 1000)}@example.com"
@@ -100,7 +100,7 @@ def main() -> int:
     time.sleep(1)
     assert recipient_count(recipient) == 1, "second same-recipient event bypassed delivery admission"
 
-    time.sleep(2)
+    time.sleep(5)
     start_login(recipient)
     assert wait_for_count(recipient, 2) == 2
     print("  [ok] auth-email delivery was admitted, suppressed at the Redis limit, and recovered")

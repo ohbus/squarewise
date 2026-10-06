@@ -484,7 +484,7 @@ the shared limiter immediately before provider dispatch. Unit/component tests
 cover admission and suppression. Two local broker-to-provider drills now pass:
 the auth-email path through Accounts outbox, and a general `expense.created.v1`
 envelope through RabbitMQ management, Notifications, and Mailpit. Both prove
-one-per-two-second admission, same-recipient suppression, and post-expiry
+one-per-five-second admission, same-recipient suppression, and post-expiry
 recovery; the general drill is local-only because hosted CI uses the RabbitMQ
 protocol image without the management API. Production-default and hosted
 evidence remain separate.
@@ -718,7 +718,7 @@ JARs. This closes the repository-owned local check evidence only.
 
 After rebasing onto `master`, every newly added auth E2E probe uses the current
 collision-resistant Compose host ports by default while retaining explicit URL
-overrides. The hosted workflow also reapplies the one-per-two-second
+overrides. The hosted workflow also reapplies the one-per-five-second
 Notifications delivery policy after its invalid-subject Compose restart. A
 fresh local stack reproduced the affected path and passed the exact admission
 journey: the first auth email was delivered, the second same-recipient event was

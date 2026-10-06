@@ -99,7 +99,7 @@ The end-to-end test suites run against the live local environment (`infra/local/
 10. **Auth-email delivery admission (`test_auth_notification_rate_limit.py`):**
    - Requires the test deployment overrides `SQUAREWISE_AUTH_LOGIN_RESEND_COOLDOWN_SECONDS=0`,
      `SQUAREWISE_NOTIFICATIONS_DELIVERY_MAX_PERMITS=1`, and
-     `SQUAREWISE_NOTIFICATIONS_DELIVERY_WINDOW_SECONDS=2`.
+     `SQUAREWISE_NOTIFICATIONS_DELIVERY_WINDOW_SECONDS=5`.
    - Emits real same-recipient login events through the Accounts outbox and
      RabbitMQ, verifies Notifications delivers the first, suppresses the
      second before provider dispatch, and delivers again after the Redis
@@ -115,7 +115,7 @@ The end-to-end test suites run against the live local environment (`infra/local/
    - Publishes valid `expense.created.v1` envelopes through the local RabbitMQ
      management API and observes the real Notifications consumer and Mailpit.
    - Requires one delivery, suppression of the second same-recipient event within
-     the two-second Redis window, and delivery after expiry.
+     the five-second Redis window, and delivery after expiry.
    - This target is local-only because hosted CI deliberately uses the RabbitMQ
      protocol image without the management API; it is not production evidence.
 
