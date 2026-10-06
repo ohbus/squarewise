@@ -8659,7 +8659,7 @@
       "parent_id": "ERRC-01",
       "title": "Migrate Notifications definitions and failures",
       "phase": "implementation",
-      "status": "todo",
+      "status": "done",
       "owner_role": "notifications",
       "owner_agent": "/root",
       "depends_on": [
@@ -8686,7 +8686,11 @@
         "uv run python tools/contracts/validate.py",
         "git diff --check"
       ],
-      "evidence": [],
+      "evidence": [
+        "Notifications tests and JaCoCo report passed: 144 tests, 0 failures, 21 Gradle tasks.",
+        "Error hygiene passed with 5 unrelated allowlisted violations and no Notifications entries.",
+        "Contract validation and git diff check passed."
+      ],
       "reviewer": "/root",
       "blocker": null
     },

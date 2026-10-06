@@ -2,13 +2,6 @@
 # Every entry must be removed by its owner task; this is not a permanent waiver.
 entries:
   - {file: app/bff/src/main/kotlin/com/subhrodip/squarewise/bff/config/BrowserOriginPolicy.kt, line: 28, violation_type: generic_throw, owner_task: ERRC-19, expires_by_task: ERRC-19}
-  - {file: app/notifications/src/main/kotlin/com/subhrodip/squarewise/notifications/consumer/service/NotificationEventConsumer.kt, line: 85, violation_type: catch_throwable, owner_task: ERRC-19, expires_by_task: ERRC-19}
-  - {file: app/notifications/src/main/kotlin/com/subhrodip/squarewise/notifications/consumer/transport/RabbitNotificationListener.kt, line: 55, violation_type: catch_throwable, owner_task: ERRC-19, expires_by_task: ERRC-19}
-  - {file: app/notifications/src/main/kotlin/com/subhrodip/squarewise/notifications/email/delivery/AuthEmailRabbitListener.kt, line: 36, violation_type: catch_throwable, owner_task: ERRC-19, expires_by_task: ERRC-19}
-  - {file: app/notifications/src/main/kotlin/com/subhrodip/squarewise/notifications/email/delivery/AuthEmailRabbitListener.kt, line: 48, violation_type: catch_throwable, owner_task: ERRC-19, expires_by_task: ERRC-19}
-  - {file: app/notifications/src/main/kotlin/com/subhrodip/squarewise/notifications/email/security/AuthEmailEnvelopeProtector.kt, line: 16, violation_type: generic_throw, owner_task: ERRC-19, expires_by_task: ERRC-19}
-  - {file: app/notifications/src/main/kotlin/com/subhrodip/squarewise/notifications/email/security/AuthEmailEnvelopeProtector.kt, line: 24, violation_type: generic_throw, owner_task: ERRC-19, expires_by_task: ERRC-19}
-  - {file: app/notifications/src/main/kotlin/com/subhrodip/squarewise/notifications/email/security/AuthEmailSecurityConfiguration.kt, line: 18, violation_type: generic_throw, owner_task: ERRC-19, expires_by_task: ERRC-19}
   - {file: libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/http/ApiProblem.kt, line: 6, violation_type: direct_problem_constructor, owner_task: ERRC-19, expires_by_task: ERRC-19}
   - {file: libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/http/GlobalErrorHandler.kt, line: 165, violation_type: direct_problem_constructor, owner_task: ERRC-19, expires_by_task: ERRC-19}
   - {file: libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/http/GlobalErrorHandler.kt, line: 211, violation_type: direct_problem_constructor, owner_task: ERRC-19, expires_by_task: ERRC-19}

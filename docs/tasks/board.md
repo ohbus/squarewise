@@ -190,7 +190,7 @@ This workstream manages the six-digit `DM-L-C-EE` domain/module error-code stand
 | --- | --- | --- | --- |
 | [ERRC-19](details/ERRC-19.md) | accounts | done | Migrate Accounts service definitions and throw sites to `AccountsErrors` |
 | [ERRC-20](details/ERRC-20.md) | core | done | Migrate Expense Core service definitions and throw sites while preserving ACID invariants |
-| [ERRC-21](details/ERRC-21.md) | notifications | todo | Migrate Notifications service definitions, remove broad catches, and wrap consumers |
+| [ERRC-21](details/ERRC-21.md) | notifications | done | Migrate Notifications service definitions, remove broad catches, and wrap consumers |
 | [ERRC-22](details/ERRC-22.md) | bff | todo | Migrate BFF resolvers, remove string matching, and preserve upstream error identities |
 | [ERRC-23](details/ERRC-23.md) | platform | todo | Migrate shared platform libraries (`libs/`) to `PlatformErrors` and empty hygiene allowlist |
 

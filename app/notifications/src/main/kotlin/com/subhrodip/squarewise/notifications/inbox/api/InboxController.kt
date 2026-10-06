@@ -11,8 +11,9 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import java.security.Principal
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.errors.catalog.NotificationErrors
+import com.subhrodip.squarewise.errors.catalog.PlatformErrors
+import com.subhrodip.squarewise.notifications.errors.NotificationDomainException
 import java.util.UUID
 
 import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
@@ -27,9 +28,9 @@ class InboxController(private val inbox: NotificationInboxService) {
         @RequestParam(defaultValue = "50") limit: Int
     ): InboxPage {
         val subject = principal?.name?.trim()?.takeIf { it.isNotEmpty() }
-            ?: throw ApplicationException(ErrorCode.ERR_03, "authenticated subject is required")
+            ?: throw NotificationDomainException(PlatformErrors.AUTHENTICATION_REQUIRED, "authenticated subject is required")
         if (limit !in 1..100) {
-            throw ApplicationException(ErrorCode.ERR_02, "limit must be between 1 and 100")
+            throw NotificationDomainException(NotificationErrors.INBOX_LIMIT_OUT_OF_RANGE, "limit must be between 1 and 100")
         }
         return inbox.page(subject, cursor, limit)
     }
@@ -39,9 +40,9 @@ class InboxController(private val inbox: NotificationInboxService) {
     fun markAsRead(@PathVariable notificationId: UUID, principal: Principal) {
         // Removed stray throw; method will perform normal logic.
         val subject = principal.name.trim().takeIf { it.isNotEmpty() }
-            ?: throw ApplicationException(ErrorCode.ERR_03, "authenticated subject is required")
+            ?: throw NotificationDomainException(PlatformErrors.AUTHENTICATION_REQUIRED, "authenticated subject is required")
         if (!inbox.markAsRead(subject, notificationId)) {
-            throw ApplicationException(ErrorCode.ERR_05, "Notification not found")
+            throw NotificationDomainException(NotificationErrors.INBOX_NOTIFICATION_NOT_FOUND, "Notification not found")
         }
     }
 }

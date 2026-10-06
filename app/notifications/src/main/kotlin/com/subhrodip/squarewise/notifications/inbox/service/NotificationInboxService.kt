@@ -7,8 +7,8 @@ import com.subhrodip.squarewise.db.routing.DbContextHolder
 import com.subhrodip.squarewise.db.routing.DbExecutionContext
 import com.subhrodip.squarewise.db.routing.DbOperationKind
 import com.subhrodip.squarewise.db.routing.ReadConsistency
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.errors.catalog.NotificationErrors
+import com.subhrodip.squarewise.notifications.errors.NotificationDomainException
 import com.subhrodip.squarewise.observability.db.DbTelemetry
 import java.time.Instant
 import java.util.Base64
@@ -30,5 +30,5 @@ class NotificationInboxService(private val store: NotificationInboxStore, privat
         return InboxPage(page, if (start + page.size < sorted.size) encodeCursor(page.last()) else null)
     }
     private fun encodeCursor(item: InboxItem): String = Base64.getUrlEncoder().withoutPadding().encodeToString("${item.occurredAt}|${item.notificationId}".toByteArray())
-    private fun decodeCursor(cursor: String): Pair<Instant, UUID> = runCatching { String(Base64.getUrlDecoder().decode(cursor)).split('|').also { require(it.size == 2) }.let { Instant.parse(it[0]) to UUID.fromString(it[1]) } }.getOrElse { throw ApplicationException(ErrorCode.ERR_02, "invalid inbox cursor") }
+    private fun decodeCursor(cursor: String): Pair<Instant, UUID> = runCatching { String(Base64.getUrlDecoder().decode(cursor)).split('|').also { require(it.size == 2) }.let { Instant.parse(it[0]) to UUID.fromString(it[1]) } }.getOrElse { throw NotificationDomainException(NotificationErrors.INBOX_CURSOR_INVALID, "invalid inbox cursor", it) }
 }

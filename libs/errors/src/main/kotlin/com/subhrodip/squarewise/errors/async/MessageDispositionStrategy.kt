@@ -9,7 +9,9 @@ object MessageDispositionStrategy {
     /** Decide without swallowing fatal JVM or cancellation conditions. */
     fun decide(definition: ErrorDefinition, attemptCount: Int, throwable: Throwable): MessageDisposition {
         if (FatalErrorClassifier.isFatal(throwable)) throw throwable
-        return if (definition.retryPolicy == RetryPolicy.RETRY_AFTER && attemptCount < MAX_RETRIES) {
+        return if (throwable is IllegalArgumentException) {
+            MessageDisposition.DEAD_LETTERED
+        } else if (definition.retryPolicy == RetryPolicy.RETRY_AFTER && attemptCount < MAX_RETRIES) {
             MessageDisposition.NACK_REQUEUE
         } else {
             MessageDisposition.DEAD_LETTERED

@@ -77,3 +77,21 @@ git diff --check
 - Deployed to Notifications service.
 - Fully compatible with existing event envelopes and REST inbox endpoints.
 - Rollback: Standard Git revert of service branch if regressions occur.
+
+## Implementation Notes and Evidence
+
+- Replaced Notifications production legacy exception and error-code references
+  with `NotificationDomainException`, `NotificationInputException`, and static
+  `NotificationErrors`/`PlatformErrors` definitions across inbox, preferences,
+  SMTP, and authentication-envelope boundaries.
+- Wrapped both Rabbit listeners in `AsyncExecutionTemplate`. Malformed
+  envelopes are rejected without requeue, typed input failures dead-letter, and
+  transport/SMTP failures use bounded retry disposition; fatal JVM errors remain
+  uncaught. The listener reads an optional `x-attempt` header and caps it at the
+  template's four-value context bound.
+- Removed all seven Notifications entries from the error-hygiene allowlist and
+  replaced the remaining broad consumer catches with `Exception` handling.
+- The shared async disposition strategy now treats `IllegalArgumentException`
+  as a poison-message failure, preventing invalid payloads from being retried.
+- Validation evidence is recorded in `docs/tasks/progress.md` after the full
+  declared command set completes.
