@@ -127,6 +127,11 @@ For application projects, `_reusable-ci.yml` uploads the built executable
 downloads this pre-built artifact and packages the runtime image with
 `infra/docker/Dockerfile.fast` (`eclipse-temurin:25-jre`), eliminating redundant
 JVM compilation inside Docker.
+Every uploaded workflow artifact is attested immediately after upload with
+GitHub's signed build-provenance action; the published container image is
+attested against the pushed digest. Jobs that produce attestations explicitly
+request `id-token: write` and `attestations: write`, and artifact digests—not
+mutable names or tags—are used as attestation subjects.
 Master image jobs create an explicit `docker-container` Buildx builder before
 using the GitHub Actions cache backend; each service matrix entry has its own
 cache scope. They publish SHA and branch tags to

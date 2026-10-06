@@ -6,6 +6,8 @@ on:
 permissions:
   contents: read
   pull-requests: read
+  id-token: write
+  attestations: write
 concurrency:
   group: squarewise-branch-${{ github.ref }}
   cancel-in-progress: true

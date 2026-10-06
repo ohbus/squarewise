@@ -3425,6 +3425,7 @@
         "_reusable-ci.yml uploads test XML/HTML reports and renders step summaries with test-summary/action@v2 under read-only permissions with if: always().",
         "_reusable-ci.yml uploads built bootJar artifacts for application matrix targets.",
         "ci-master.yml downloads pre-built JAR artifacts and builds container images with Dockerfile.fast, eliminating redundant Gradle compilation inside Docker.",
+        "Workflow-produced SBOMs, JARs, test reports, E2E artifacts, and published container images now receive signed build-provenance attestations using artifact or image digests with explicit OIDC and attestation permissions.",
         "make workflow-validate, python3 tools/contracts/validate.py, and git diff --check passed."
       ],
       "reviewer": "/root",
