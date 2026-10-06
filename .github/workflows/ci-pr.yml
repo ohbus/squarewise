@@ -3,14 +3,17 @@ on: { pull_request: {} }
 permissions:
   contents: read
   pull-requests: read
-  id-token: write
-  attestations: write
 concurrency:
   group: squarewise-pr-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 jobs:
   ci:
     name: Pull request verification (reusable)
+    permissions:
+      contents: read
+      pull-requests: read
+      id-token: write
+      attestations: write
     uses: ./.github/workflows/_reusable-ci.yml
     with:
       run_e2e: true

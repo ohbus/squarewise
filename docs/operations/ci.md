@@ -4,10 +4,10 @@ Three thin workflows select policy: `ci-pr.yml` validates pull requests,
 `ci-branch.yml` validates non-master pushes, and `ci-master.yml` validates master and
 publishes four application images. Verification, checks, and E2E execution live
 in `_reusable-ci.yml`, while container image delivery lives in `ci-master.yml`.
-The PR, branch, and master callers grant `pull-requests: read` because the reusable
-dependency-review job declares that least-privilege permission (skipped for non-PR events),
-as well as `id-token: write` and `attestations: write` so nested reusable workflow jobs
-(`lint`, `verify`, and other artifact producers) can attest build provenance.
+The PR, branch, and master callers configure read-only workflow-level permissions,
+and grant `pull-requests: read`, `id-token: write`, and `attestations: write` explicitly
+at the calling job level (`ci`) so nested reusable workflow jobs (`lint`, `verify`, and other
+artifact producers) can attest build provenance without escalating privileges across the workflow.
 
 PR and non-master branch runs now calculate a changed-scope plan before the Gradle
 matrix. The plan selects changed modules plus their reverse project dependents and

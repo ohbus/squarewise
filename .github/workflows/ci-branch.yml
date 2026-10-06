@@ -6,14 +6,17 @@ on:
 permissions:
   contents: read
   pull-requests: read
-  id-token: write
-  attestations: write
 concurrency:
   group: squarewise-branch-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   ci:
     name: Feature branch verification (reusable)
+    permissions:
+      contents: read
+      pull-requests: read
+      id-token: write
+      attestations: write
     uses: ./.github/workflows/_reusable-ci.yml
     with:
       run_e2e: true
