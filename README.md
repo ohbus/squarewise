@@ -28,6 +28,7 @@ A permanently free, privacy-centric expense-sharing platform for households, cou
   - [Option B: Native Development (IDE / Gradle)](#option-b-native-development-ide--gradle)
 - [Services & Port Mapping](#services--port-mapping)
 - [API & Schema Documentation](#api--schema-documentation)
+- [Six-Digit Error Code Architecture & Roadmap](#six-digit-error-code-architecture--roadmap)
 - [Quality & Verification](#quality--verification)
 - [Production Readiness](#production-readiness)
 - [Project Structure](#project-structure)
@@ -204,6 +205,29 @@ Squarewise enforces a contract-first design. All schema definitions reside under
 - **Central Constants**: All endpoints and headers are centralized in `com.subhrodip.squarewise.ids.ApiEndpoints`.
 
 Repository documentation is indexed in [`docs/README.md`](docs/README.md), with [`AGENTS.md`](AGENTS.md) as the working-agreement root.
+
+---
+
+## Six-Digit Error Code Architecture & Roadmap
+
+Squarewise is migrating from the initial flat 12-error taxonomy (`ERR-01` through `ERR-12`) to the immutable six-digit `DM-L-C-EE` domain/module standard. The workstream is opened and anchored by **[`ERRC-01`](docs/tasks/details/ERRC-01.md)**, establishing enterprise architectural patterns (Value Objects, Ports & Adapters, Exception Shielding, Anti-Corruption Layer, and Transactional Outbox) and common library responsibilities across `libs/errors`, `libs/ids`, `libs/observability`, `libs/security`, and `libs/db`.
+
+The implementation roadmap is partitioned into five sequential phases tracked in [`docs/tasks/board.md`](docs/tasks/board.md) and [`docs/tasks/registry.yaml`](docs/tasks/registry.yaml):
+
+- **Opening & Umbrella Specification**: [`docs/tasks/details/ERRC-01.md`](docs/tasks/details/ERRC-01.md)
+- **Phase 0: Governance & Frozen Evidence (Complete)**: [`ERRC-02`](docs/tasks/details/ERRC-02.md) (freeze audit baseline across 131 throw sites), [`ERRC-03`](docs/tasks/details/ERRC-03.md) (frozen namespace registries & schemas), [`ERRC-04`](docs/tasks/details/ERRC-04.md) (allocated 99 six-digit error codes, retired `ERR-12`)
+- **Phase 1: Contract-First Compatibility**: [`ERRC-05`](docs/tasks/details/ERRC-05.md), [`ERRC-06`](docs/tasks/details/ERRC-06.md), [`ERRC-07`](docs/tasks/details/ERRC-07.md), [`ERRC-08`](docs/tasks/details/ERRC-08.md), [`ERRC-09`](docs/tasks/details/ERRC-09.md)
+- **Phase 2: Static Error Core (Zero Reflection)**: [`ERRC-10`](docs/tasks/details/ERRC-10.md), [`ERRC-11`](docs/tasks/details/ERRC-11.md), [`ERRC-12`](docs/tasks/details/ERRC-12.md), [`ERRC-13`](docs/tasks/details/ERRC-13.md), [`ERRC-14`](docs/tasks/details/ERRC-14.md)
+- **Phase 3: Transport Boundaries**: [`ERRC-15`](docs/tasks/details/ERRC-15.md), [`ERRC-16`](docs/tasks/details/ERRC-16.md), [`ERRC-17`](docs/tasks/details/ERRC-17.md), [`ERRC-18`](docs/tasks/details/ERRC-18.md)
+- **Phase 4: Bounded-Context Migration**: [`ERRC-19`](docs/tasks/details/ERRC-19.md), [`ERRC-20`](docs/tasks/details/ERRC-20.md), [`ERRC-21`](docs/tasks/details/ERRC-21.md), [`ERRC-22`](docs/tasks/details/ERRC-22.md), [`ERRC-23`](docs/tasks/details/ERRC-23.md)
+- **Phase 5: Clients, Scale & Rollout**: [`ERRC-24`](docs/tasks/details/ERRC-24.md), [`ERRC-25`](docs/tasks/details/ERRC-25.md), [`ERRC-26`](docs/tasks/details/ERRC-26.md), [`ERRC-27`](docs/tasks/details/ERRC-27.md), [`ERRC-28`](docs/tasks/details/ERRC-28.md), [`ERRC-29`](docs/tasks/details/ERRC-29.md), [`ERRC-30`](docs/tasks/details/ERRC-30.md), [`ERRC-31`](docs/tasks/details/ERRC-31.md)
+
+Key specifications:
+- [Six-digit standard (`DM-L-C-EE`)](docs/architecture/error-code-standard.md)
+- [Domain & module namespace registry](docs/architecture/error-domain-registry.md) (`contracts/errors/domains.yaml`)
+- [Exception & boundary handling guide](docs/architecture/error-handling-guide.md)
+- [Refactoring and migration strategy](docs/architecture/error-code-refactoring.md)
+- [Per-context failure guides](docs/architecture/errors/README.md) ([Accounts](docs/architecture/errors/accounts.md), [Expense Core](docs/architecture/errors/expense-core.md), [Notifications](docs/architecture/errors/notifications.md), [BFF](docs/architecture/errors/bff.md), [Platform](docs/architecture/errors/platform-libraries.md))
 
 ---
 

@@ -134,19 +134,78 @@ query classification, and evidence gates are complete.
 | ERR-11 | operations | done | Bounded error metrics, dashboards, and alerts |
 | ERR-12 | coordinator | done | Governance review, release evidence, and completion gate |
 
-## Six-digit error-code redesign
+## Six-digit error-code migration workstream
 
-This documentation-only workstream reconciles the proposed `DM-L-C-EE` identity
-with the already delivered ERR-01 through ERR-12 public contract. No application
-implementation is authorized until the plan and compatibility decisions are
-reviewed and the follow-on tasks are registered.
+This workstream manages the six-digit `DM-L-C-EE` domain/module error-code standard and migration across all Squarewise deployables and shared libraries. [`ERRC-01`](details/ERRC-01.md) serves as the opening architecture baseline and umbrella milestone. The implementation roadmap is partitioned into five distinct, sequentially ordered phases with strict SOLID boundaries, proven enterprise design patterns, and full backward compatibility for API v1 consumers.
+
+### Opening & Umbrella Architecture Milestone
 
 | ID | Owner | Status | Deliverable |
 | --- | --- | --- | --- |
-| ERRC-01 | coordinator | done | Canonical standard, registry, decisions, exhaustive migration and onboarding plan |
-| ERRC-01A | review | done | Kotlin throw/catch/boundary inventory |
-| ERRC-01B | contracts | done | REST, GraphQL, event, and compatibility audit |
-| ERRC-01C | architecture | done | Exception, performance, fatal-failure, and operations policy review |
+| [ERRC-01](details/ERRC-01.md) | coordinator | done | Opening baseline: canonical standard, registry, decisions, and exhaustive migration roadmap |
+| [ERRC-01A](details/ERRC-01A.md) | review | done | Kotlin throw/catch/boundary inventory audit |
+| [ERRC-01B](details/ERRC-01B.md) | contracts | done | REST, GraphQL, event, and compatibility audit |
+| [ERRC-01C](details/ERRC-01C.md) | architecture | done | Exception, performance, fatal-failure, and operations policy review |
+
+### Phase 0: Governance and Frozen Evidence
+
+| ID | Owner | Status | Deliverable |
+| --- | --- | --- | --- |
+| [ERRC-02](details/ERRC-02.md) | quality | done | Freeze audit and characterization baseline across all 128 production throw sites |
+| [ERRC-03](details/ERRC-03.md) | architecture | done | Freeze namespace registries and author `error-catalog.schema.json` |
+| [ERRC-04](details/ERRC-04.md) | coordinator | done | Allocate and review complete six-digit error catalog; retire `ERR-12` |
+
+### Phase 1: Contract-First Compatibility
+
+| ID | Owner | Status | Deliverable |
+| --- | --- | --- | --- |
+| [ERRC-05](details/ERRC-05.md) | contracts | todo | Define additive RFC 9457 Problem Details contract with optional `numericCode`/`errorName` |
+| [ERRC-06](details/ERRC-06.md) | contracts | todo | Reconcile all REST OpenAPI contracts with complete non-2xx responses and headers |
+| [ERRC-07](details/ERRC-07.md) | contracts | todo | Define GraphQL error extensions and WebSocket custom close code contracts |
+| [ERRC-08](details/ERRC-08.md) | contracts | todo | Define messaging, outbox, and background execution failure contracts |
+| [ERRC-09](details/ERRC-09.md) | quality | todo | Upgrade Python contract validators and CI breaking-change detection gates |
+
+### Phase 2: Static Error Core, No Runtime Discovery
+
+| ID | Owner | Status | Deliverable |
+| --- | --- | --- | --- |
+| [ERRC-10](details/ERRC-10.md) | platform | todo | Implement zero-allocation `ErrorCode` value class and core metadata enums in `libs/errors` |
+| [ERRC-11](details/ERRC-11.md) | platform | todo | Generate compile-time static error catalog objects for all domains (zero reflection) |
+| [ERRC-12](details/ERRC-12.md) | platform | todo | Implement governed `SquarewiseException`, bounded diagnostics, and fatal classifiers |
+| [ERRC-13](details/ERRC-13.md) | quality | todo | Add static analysis rules and CI gates prohibiting raw throws, reflection, and broad catches |
+| [ERRC-14](details/ERRC-14.md) | observability | todo | Implement structured logging, bounded Micrometer metrics, and OpenTelemetry trace adapters |
+
+### Phase 3: Transport Boundaries
+
+| ID | Owner | Status | Deliverable |
+| --- | --- | --- | --- |
+| [ERRC-15](details/ERRC-15.md) | platform | todo | Implement Spring Web MVC Problem Details advice and static container fallbacks |
+| [ERRC-16](details/ERRC-16.md) | security | todo | Implement structured 401/403/404 ProblemDetails for Servlet and Reactive security filters |
+| [ERRC-17](details/ERRC-17.md) | platform | todo | Implement BFF GraphQL exception resolver and upstream WebClient problem client |
+| [ERRC-18](details/ERRC-18.md) | platform | todo | Implement fatal-safe `AsyncExecutionTemplate` and dead-letter disposition strategies |
+
+### Phase 4: Bounded-Context Migration
+
+| ID | Owner | Status | Deliverable |
+| --- | --- | --- | --- |
+| [ERRC-19](details/ERRC-19.md) | accounts | todo | Migrate Accounts service definitions and throw sites to `AccountsErrors` |
+| [ERRC-20](details/ERRC-20.md) | core | todo | Migrate Expense Core service definitions and throw sites while preserving ACID invariants |
+| [ERRC-21](details/ERRC-21.md) | notifications | todo | Migrate Notifications service definitions, remove broad catches, and wrap consumers |
+| [ERRC-22](details/ERRC-22.md) | bff | todo | Migrate BFF resolvers, remove string matching, and preserve upstream error identities |
+| [ERRC-23](details/ERRC-23.md) | platform | todo | Migrate shared platform libraries (`libs/`) to `PlatformErrors` and empty hygiene allowlist |
+
+### Phase 5: Clients, Acceptance, Scale, Rollout
+
+| ID | Owner | Status | Deliverable |
+| --- | --- | --- | --- |
+| [ERRC-24](details/ERRC-24.md) | quality | todo | Update Bruno collections and live multi-service end-to-end acceptance test suites |
+| [ERRC-25](details/ERRC-25.md) | security | todo | Execute adversarial fuzzing campaign proving zero stack, SQL, secret, or PII leakage |
+| [ERRC-26](details/ERRC-26.md) | quality | todo | Gather JMH (<50ns lookup) and k6 error storm evidence supporting 10M+-DAU scale |
+| [ERRC-27](details/ERRC-27.md) | operations | todo | Create Grafana dashboards, Prometheus alert rules, and operational runbooks |
+| [ERRC-28](details/ERRC-28.md) | operations | todo | Execute canary-driven staged production rollout across microservices |
+| [ERRC-29](details/ERRC-29.md) | contracts | todo | Promote `numericCode` and `errorName` to required fields after compatibility window |
+| [ERRC-30](details/ERRC-30.md) | coordinator | todo | Safely decommission legacy `ERR_XX` enums while retaining v1 response compatibility |
+| [ERRC-31](details/ERRC-31.md) | architecture | todo | Author architectural decision and prototype specifications for future API v2 |
 
 | ID | Owner | Status | Deliverable |
 | --- | --- | --- | --- |

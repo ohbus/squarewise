@@ -1,12 +1,12 @@
 # Platform and shared-library error ownership guide
 
-Status: proposed inventory; codes are not implemented or contractually published.
+Status: allocated and authoritative under `ERRC-04`; matches `contracts/errors/error-catalog.yaml`.
 
 Domain `9` owns failures whose semantic meaning is genuinely cross-cutting. A shared
 JAR that implements Accounts, Expense, or Notifications behavior keeps that business
 namespace; being a library does not make an error Platform-owned.
 
-## Candidate platform families
+## Allocated platform families
 
 | Candidate | Name | Default HTTP when applicable | Purpose |
 |---|---|:---:|---|

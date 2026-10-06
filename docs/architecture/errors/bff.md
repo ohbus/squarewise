@@ -1,12 +1,12 @@
 # BFF error ownership guide
 
-Status: proposed inventory; codes are not implemented or contractually published.
+Status: allocated and authoritative under `ERRC-04`; matches `contracts/errors/error-catalog.yaml`.
 
 The database-free BFF owns Domains `41`-`43`. It preserves valid upstream identities
 and creates a BFF identity only for a failure introduced by GraphQL, gateway transport,
 aggregation, or live-update behavior.
 
-## Candidate BFF-owned families
+## Allocated BFF-owned families
 
 | Candidate | Name | REST/GraphQL classification | Legacy `code` | Required distinction |
 |---|---|---|---|---|

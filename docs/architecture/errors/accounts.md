@@ -1,12 +1,12 @@
 # Accounts error ownership guide
 
-Status: proposed inventory; codes are not implemented or contractually published.
+Status: allocated and authoritative under `ERRC-04`; matches `contracts/errors/error-catalog.yaml`.
 
 Accounts owns Domains `11`-`15`. Existing v1 symbolic codes and statuses remain until
 an approved contract change. Profile-existence hiding and identity disclosure require
 security review before changing 401/404 behavior.
 
-## Candidate public families
+## Allocated public families
 
 | Candidate | Name | Current-compatible HTTP | Legacy `code` | Required distinction |
 |---|---|:---:|---|---|
