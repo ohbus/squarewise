@@ -5,6 +5,10 @@ import com.subhrodip.squarewise.accounts.auth.credential.HmacCredentialDigest
 import com.subhrodip.squarewise.accounts.auth.credential.LoginCredentialRepository
 import com.subhrodip.squarewise.accounts.auth.credential.LoginCredentialService
 import com.subhrodip.squarewise.accounts.auth.credential.OneTimeCredentialIssuer
+import com.subhrodip.squarewise.accounts.auth.abuse.LoginVerificationRateLimitService
+import com.subhrodip.squarewise.security.ratelimit.RateLimitDecision
+import com.subhrodip.squarewise.security.ratelimit.RateLimitPolicy
+import com.subhrodip.squarewise.security.ratelimit.RateLimiter
 import com.subhrodip.squarewise.accounts.auth.provider.InternalJwtTokenProvider
 import com.subhrodip.squarewise.accounts.auth.session.AuthSessionRepository
 import com.subhrodip.squarewise.accounts.auth.session.TokenSessionService
@@ -44,11 +48,19 @@ class LoginVerificationServiceTest @Autowired constructor(
         credentialDigest = digest,
         accountIdentityStore = profileStore
     )
+    private val verificationRateLimitService = LoginVerificationRateLimitService(
+        digest = digest,
+        rateLimiter = object : RateLimiter {
+            override fun consume(key: String, policy: RateLimitPolicy): RateLimitDecision =
+                RateLimitDecision(true, policy.maximumPermits - 1, Duration.ZERO, policy.id)
+        }
+    )
     private val service = LoginVerificationService(
         credentialService = credentialService,
         profileStore = profileStore,
         tokenSessionService = tokenSessionService,
-        accountIdentityStore = profileStore
+        accountIdentityStore = profileStore,
+        loginVerificationRateLimitService = verificationRateLimitService
     )
 
     @Test

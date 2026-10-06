@@ -72,6 +72,14 @@ class AuthenticationCredentialConfigurationTest {
         digestSecret: String = Base64.getEncoder().encodeToString(ByteArray(32)),
         envelopeKey: String = Base64.getEncoder().encodeToString(ByteArray(32)),
         loginResendCooldownSeconds: Long = 60,
+        loginVerifyMaximumRequests: Int = 5,
+        loginVerifyWindowSeconds: Long = 300,
     ): AuthenticationCredentialConfiguration =
-        AuthenticationCredentialConfiguration(digestSecret, envelopeKey, loginResendCooldownSeconds)
+        AuthenticationCredentialConfiguration(
+            digestSecret,
+            envelopeKey,
+            loginResendCooldownSeconds,
+            loginVerifyMaximumRequests,
+            loginVerifyWindowSeconds,
+        )
 }

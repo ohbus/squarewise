@@ -3,6 +3,7 @@
 package com.subhrodip.squarewise.accounts.auth.config
 import com.subhrodip.squarewise.accounts.auth.abuse.LoginRateLimitKeyDeriver
 import com.subhrodip.squarewise.accounts.auth.abuse.LoginRateLimitService
+import com.subhrodip.squarewise.accounts.auth.abuse.LoginVerificationRateLimitService
 import com.subhrodip.squarewise.accounts.auth.abuse.RefreshRateLimitService
 import com.subhrodip.squarewise.accounts.auth.delivery.service.AuthEmailSender
 import com.subhrodip.squarewise.accounts.auth.login.LoginStartService
@@ -40,11 +41,21 @@ class AuthenticationCredentialConfiguration(
     @Value("\${SQUAREWISE_SECURITY_AUTH_EMAIL_ENVELOPE_KEY}")
     private val encodedEnvelopeKey: String,
     @Value("\${SQUAREWISE_AUTH_LOGIN_RESEND_COOLDOWN_SECONDS:60}")
-    private val loginResendCooldownSeconds: Long
+    private val loginResendCooldownSeconds: Long,
+    @Value("\${SQUAREWISE_AUTH_LOGIN_VERIFY_MAX_REQUESTS:5}")
+    private val loginVerifyMaximumRequests: Int,
+    @Value("\${SQUAREWISE_AUTH_LOGIN_VERIFY_WINDOW_SECONDS:300}")
+    private val loginVerifyWindowSeconds: Long
 ) {
     init {
         require(loginResendCooldownSeconds in 0..900) {
             "SQUAREWISE_AUTH_LOGIN_RESEND_COOLDOWN_SECONDS must be between 0 and 900"
+        }
+        require(loginVerifyMaximumRequests in 1..1_000_000) {
+            "SQUAREWISE_AUTH_LOGIN_VERIFY_MAX_REQUESTS must be between 1 and 1000000"
+        }
+        require(loginVerifyWindowSeconds in 1..86_400) {
+            "SQUAREWISE_AUTH_LOGIN_VERIFY_WINDOW_SECONDS must be between 1 and 86400"
         }
     }
     /** Creates the mandatory Redis-backed distributed limiter for runtime profiles. */
@@ -87,6 +98,18 @@ class AuthenticationCredentialConfiguration(
         keyDeriver,
         rateLimiter,
         resendCooldown = Duration.ofSeconds(loginResendCooldownSeconds)
+    )
+
+    /** Creates the fail-closed credential-verification limiter. */
+    @Bean
+    fun loginVerificationRateLimitService(
+        digest: CredentialDigest,
+        rateLimiter: RateLimiter
+    ): LoginVerificationRateLimitService = LoginVerificationRateLimitService(
+        digest = digest,
+        rateLimiter = rateLimiter,
+        window = Duration.ofSeconds(loginVerifyWindowSeconds),
+        maximumRequests = loginVerifyMaximumRequests
     )
 
     /** Creates the fail-closed refresh-token rotation limiter. */

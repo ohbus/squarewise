@@ -14,6 +14,7 @@ import com.subhrodip.squarewise.accounts.auth.delivery.service.AuthEmailSender
 import com.subhrodip.squarewise.accounts.auth.abuse.LoginRateLimitKeyDeriver
 import com.subhrodip.squarewise.accounts.auth.abuse.LoginRateLimitService
 import com.subhrodip.squarewise.accounts.auth.abuse.RefreshRateLimitService
+import com.subhrodip.squarewise.accounts.auth.abuse.LoginVerificationRateLimitService
 import com.subhrodip.squarewise.accounts.auth.abuse.TestRateLimitBucketStore
 import com.subhrodip.squarewise.accounts.auth.login.LoginStartService
 import com.subhrodip.squarewise.accounts.auth.login.LoginVerificationService
@@ -22,6 +23,9 @@ import com.subhrodip.squarewise.accounts.auth.session.AuthSessionRepository
 import com.subhrodip.squarewise.accounts.auth.session.TokenSessionService
 import com.subhrodip.squarewise.accounts.auth.session.TokenResponse
 import com.subhrodip.squarewise.accounts.profile.persistence.InMemoryProfileStore
+import com.subhrodip.squarewise.security.ratelimit.RateLimitDecision
+import com.subhrodip.squarewise.security.ratelimit.RateLimitPolicy
+import com.subhrodip.squarewise.security.ratelimit.RateLimiter
 import com.subhrodip.squarewise.errors.http.GlobalErrorHandler
 import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
 import java.security.Principal
@@ -75,11 +79,19 @@ class AuthControllerTest @Autowired constructor(
         credentialDigest = digest,
         accountIdentityStore = profileStore
     )
+    private val verificationRateLimitService = LoginVerificationRateLimitService(
+        digest = digest,
+        rateLimiter = object : RateLimiter {
+            override fun consume(key: String, policy: RateLimitPolicy): RateLimitDecision =
+                RateLimitDecision(true, policy.maximumPermits - 1, Duration.ZERO, policy.id)
+        }
+    )
     private val verificationService = LoginVerificationService(
         credentialService = credentialService,
         profileStore = profileStore,
         tokenSessionService = tokenSessionService,
-        accountIdentityStore = profileStore
+        accountIdentityStore = profileStore,
+        loginVerificationRateLimitService = verificationRateLimitService
     )
 
     // No trusted proxies in tests — raw socket address is always used.

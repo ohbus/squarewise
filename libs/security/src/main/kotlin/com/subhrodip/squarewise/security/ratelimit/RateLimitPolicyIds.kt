@@ -5,6 +5,9 @@ object RateLimitPolicyIds {
     /** Passwordless login start/resend admission. */
     const val AUTH_LOGIN: String = "auth-login"
 
+    /** Passwordless credential verification admission. */
+    const val AUTH_LOGIN_VERIFY: String = "auth-login-verify"
+
     /** Refresh-token rotation admission. */
     const val AUTH_REFRESH: String = "auth-refresh"
 
