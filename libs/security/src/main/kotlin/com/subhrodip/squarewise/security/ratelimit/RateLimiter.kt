@@ -13,6 +13,6 @@ package com.subhrodip.squarewise.security.ratelimit
  * @param policy policy to apply to the key
  * @return bounded admission decision
  */
-interface RateLimiter {
+fun interface RateLimiter {
     fun consume(key: String, policy: RateLimitPolicy): RateLimitDecision
 }

@@ -4,10 +4,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
-  packages: write
   pull-requests: read
-  id-token: write
-  attestations: write
 concurrency: { group: squarewise-master, cancel-in-progress: false }
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
