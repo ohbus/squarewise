@@ -609,7 +609,7 @@ Rate-limit decisions now expose bounded Micrometer counters for `allowed`,
 centrally defined policy ID and outcome. No key, subject, IP, token, or request
 ID is used as a metric label.
 The atomic Redis decision path also records a bounded Micrometer decision timer
-tagged only by policy ID; its focused security test and root Spotless validation
+tagged only by policy ID; the focused security suite and root Spotless validation
 pass.
 Policy validation also rejects non-ASCII identifiers and sub-second windows or
 cooldowns because the atomic Redis script uses explicit whole-second units;
