@@ -107,7 +107,7 @@ workflow-validate: ## Parse all GitHub Actions workflow YAML files
 	@$(UV_RUN) yamllint -d '{extends: relaxed, rules: {truthy: disable, line-length: disable}}' .github/workflows
 
 observability-validate: ## Validate Prometheus rules and Grafana dashboard assets
-	@ruby -e 'require "yaml"; %w[infra/observability/prometheus.yml infra/observability/rules/squarewise.yml].each { |file| YAML.load_file(file); puts "valid observability YAML: #{file}" }'
+	@$(UV_RUN) python -c "import yaml; from pathlib import Path; [yaml.safe_load(path.read_text(encoding='utf-8')) for path in (Path('infra/observability/prometheus.yml'), Path('infra/observability/rules/squarewise.yml'))]; print('valid observability YAML')"
 	@$(UV_RUN) python -m json.tool infra/observability/grafana/dashboards/squarewise-overview.json >/dev/null
 	@$(UV_RUN) python -c 'import json; d=json.load(open("infra/observability/grafana/dashboards/squarewise-overview.json")); assert d["panels"] and all(p["targets"] for p in d["panels"]); print("valid Grafana dashboard")'
 

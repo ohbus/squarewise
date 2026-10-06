@@ -664,6 +664,13 @@ hosts: it selects `gradlew.bat` under `Windows_NT`, and its package artifact
 listing uses the isolated Python runtime instead of a Unix-only `find` command.
 The declared local `check` gate passes through `mingw32-make` on Windows.
 
+The observability and release validation targets are Windows-portable as well:
+`mingw32-make observability-validate release-gate lint` passed using the
+isolated Python YAML parser, validated the Prometheus/Grafana assets and five
+release assets, and completed the Gradle lint/check path. The release validator
+continues to report environment gates separately rather than inferring restore,
+security-scan, capacity, or rollback evidence.
+
 With fresh local Keycloak bearer tokens, `mingw32-make e2e-all` passed the
 complete local aggregate: cache resilience, authenticated admission surfaces,
 Accounts lookup isolation, passwordless auth-email, product lifecycle, offline
