@@ -1,1 +1,112 @@
-{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"https://squarewise.example/schemas/problem.json","title":"Squarewise API problem","type":"object","required":["type","title","status","code","source","requestId","detail","timestamp"],"properties":{"type":{"type":"string","format":"uri-reference"},"title":{"type":"string"},"status":{"type":"integer","minimum":400,"maximum":599},"code":{"type":"string","enum":["VALIDATION_FAILED","UNAUTHENTICATED","FORBIDDEN","NOT_FOUND","CONFLICT","IDEMPOTENCY_CONFLICT","RATE_LIMITED","INTERNAL_ERROR"]},"source":{"type":"string","minLength":1,"maxLength":80},"requestId":{"type":"string","minLength":1,"maxLength":128},"detail":{"type":"string"},"timestamp":{"type":"string","format":"date-time"},"violations":{"type":"array","items":{"type":"object","required":["field","message"],"properties":{"field":{"type":"string"},"message":{"type":"string"}},"additionalProperties":false}}},"additionalProperties":false}
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://squarewise.example/schemas/problem.json",
+  "title": "Squarewise API Problem Details",
+  "description": "RFC 9457 Problem Details with additive Squarewise error identity and bounded validation metadata.",
+  "type": "object",
+  "required": [
+    "type",
+    "title",
+    "status",
+    "code",
+    "source",
+    "requestId",
+    "detail",
+    "timestamp"
+  ],
+  "properties": {
+    "type": {
+      "type": "string",
+      "format": "uri-reference",
+      "maxLength": 256
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "status": {
+      "type": "integer",
+      "minimum": 400,
+      "maximum": 599
+    },
+    "code": {
+      "type": "string",
+      "enum": [
+        "VALIDATION_FAILED",
+        "UNAUTHENTICATED",
+        "FORBIDDEN",
+        "NOT_FOUND",
+        "CONFLICT",
+        "IDEMPOTENCY_CONFLICT",
+        "RATE_LIMITED",
+        "INTERNAL_ERROR"
+      ],
+      "description": "Stable v1 symbolic code retained for backward compatibility."
+    },
+    "numericCode": {
+      "type": "string",
+      "pattern": "^[1-9]{4}(0[1-9]|[1-9][0-9])$",
+      "description": "Optional canonical six-digit machine error code (DMLCEE)."
+    },
+    "errorName": {
+      "type": "string",
+      "pattern": "^[A-Z0-9_]{3,64}$",
+      "description": "Optional immutable SCREAMING_SNAKE_CASE error identity."
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80
+    },
+    "requestId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "detail": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512
+    },
+    "instance": {
+      "type": "string",
+      "format": "uri-reference",
+      "maxLength": 256
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "violations": {
+      "type": "array",
+      "maxItems": 50,
+      "items": {
+        "$ref": "#/$defs/violation"
+      }
+    }
+  },
+  "$defs": {
+    "violation": {
+      "type": "object",
+      "required": [
+        "field",
+        "message"
+      ],
+      "properties": {
+        "field": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "description": "Bounded JSON Pointer or request-field path."
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

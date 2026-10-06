@@ -1,0 +1,18 @@
+{
+  "type": "https://squarewise.example/problems/VALIDATION_FAILED",
+  "title": "Request validation failed",
+  "status": 400,
+  "code": "VALIDATION_FAILED",
+  "numericCode": "111101",
+  "errorName": "PROFILE_INPUT_INVALID",
+  "source": "squarewise-accounts",
+  "requestId": "00000000-0000-0000-0000-000000000004",
+  "detail": "One or more request fields are invalid.",
+  "timestamp": "2026-10-07T10:02:00Z",
+  "violations": [
+    {
+      "field": "/displayName",
+      "message": "must not be blank"
+    }
+  ]
+}

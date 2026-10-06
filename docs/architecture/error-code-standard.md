@@ -175,6 +175,14 @@ Existing v1 statuses remain unchanged until a separately reviewed contract
 change. In particular, sync cursor expiry currently remains 400 and
 rate-limiter-store failure remains 429 during compatibility rollout.
 
+The additive Problem Details contract keeps the v1 symbolic `code` required
+and makes `numericCode` and `errorName` optional until the compatibility window
+closes. Its public fields are bounded: `title` is at most 128 characters,
+`detail` 512, `source` 80, and `instance` 256; `requestId` is a UUID. Validation
+responses contain at most 50 closed violation objects, each with a field path
+of at most 256 characters and a message of at most 512 characters. Unknown
+top-level and violation properties are rejected to prevent accidental leakage.
+
 ## Allocation decision
 
 Create a new error only when at least one of these differs:

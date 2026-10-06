@@ -82,6 +82,23 @@ git diff --check
 - JSON schema validation output confirming backward and forward compatibility.
 - Test report proving both legacy and additive JSON payloads pass schema validation.
 
+## Implementation Notes and Verification
+
+- Updated `contracts/errors/problem.schema.json` with optional `numericCode` and
+  `errorName` fields, bounded RFC 9457 fields, bounded structured violations,
+  UUID request IDs, and closed top-level and violation objects.
+- Added `legacy-problem.json`, `additive-problem.json`, `validation-problem.json`,
+  and `security-problem.json` under `contracts/errors/examples/`.
+- `uv run --with jsonschema` validated all four examples using Draft 2020-12 and
+  format checks in an isolated environment.
+- `uv run python tools/contracts/validate.py` passed (252 tasks, 15 JSON files),
+  `uv run python tools/errors/validate_catalog.py` passed (99 unique codes),
+  catalog unit tests passed (7 tests), and `git diff --check` passed.
+
+The default `uv` environment does not install `jsonschema`; schema validation was
+therefore run with the isolated `uv --with jsonschema` dependency. Repository
+dependencies and runtime code were not changed.
+
 ## Rollout & Rollback Strategy
 
 - Contract change preceding application code updates.

@@ -24,7 +24,7 @@ Establish a frozen, reproducible baseline of all existing production error throw
 ## Architecture & Design Patterns
 
 - **Characterization Testing Pattern**: Golden-master snapshots capturing current runtime outputs (status codes, headers, Problem Details payloads) across Accounts, Expense Core, Notifications, and BFF.
-- **Single Source of Truth (SSOT)**: A machine-verifiable inventory of all 128 production `ApplicationException` usages, 181 `throw` expressions, 184 `require` calls, and 53 `catch` blocks.
+- **Single Source of Truth (SSOT)**: A machine-verifiable inventory of all 131 production `ApplicationException` usages, 184 `throw` expressions, 198 `require` calls, and 57 `catch` blocks.
 - **KISS & DRY**: Pure data snapshots and simple markdown tables; no speculative abstractions or runtime overhead.
 - **Separation of Concerns**: Strict boundary between baseline observation and future implementation; zero production code is modified in this task.
 
@@ -55,7 +55,7 @@ Establish a frozen, reproducible baseline of all existing production error throw
 
 ## Acceptance Criteria
 
-1. `docs/architecture/errors/baseline-audit-inventory.md` contains an exhaustive list of all 128 production `ApplicationException` call sites with file paths, line numbers, current codes, and planned migration targets.
+1. `docs/architecture/errors/baseline-audit-inventory.md` contains an exhaustive list of all 131 production `ApplicationException` call sites with file paths, line numbers, current codes, and planned migration targets.
 2. Exact golden-master fixtures for all current error response shapes are checked into `tests/fixtures/errors/baseline/`.
 3. All security filter and messaging unhandled exception pathways are mapped and classified.
 4. No production Kotlin source code, public schemas, or build configurations are modified.
@@ -77,4 +77,3 @@ git diff --check
 - Four known semantic status defects cataloged in the inconsistency register for intentional resolution in subsequent phases.
 - Zero production Kotlin code, public schemas, or build configurations modified.
 - `uv run python tools/contracts/validate.py`, `uv run python tools/errors/validate_catalog.py`, and `git diff --check` passed cleanly.
-

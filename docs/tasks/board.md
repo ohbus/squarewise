@@ -151,7 +151,7 @@ This workstream manages the six-digit `DM-L-C-EE` domain/module error-code stand
 
 | ID | Owner | Status | Deliverable |
 | --- | --- | --- | --- |
-| [ERRC-02](details/ERRC-02.md) | quality | done | Freeze audit and characterization baseline across all 128 production throw sites |
+| [ERRC-02](details/ERRC-02.md) | quality | done | Freeze audit and characterization baseline across all 131 production throw sites |
 | [ERRC-03](details/ERRC-03.md) | architecture | done | Freeze namespace registries and author `error-catalog.schema.json` |
 | [ERRC-04](details/ERRC-04.md) | coordinator | done | Allocate and review complete six-digit error catalog; retire `ERR-12` |
 
@@ -159,7 +159,7 @@ This workstream manages the six-digit `DM-L-C-EE` domain/module error-code stand
 
 | ID | Owner | Status | Deliverable |
 | --- | --- | --- | --- |
-| [ERRC-05](details/ERRC-05.md) | contracts | todo | Define additive RFC 9457 Problem Details contract with optional `numericCode`/`errorName` |
+| [ERRC-05](details/ERRC-05.md) | contracts | done | Define additive RFC 9457 Problem Details contract with optional `numericCode`/`errorName` |
 | [ERRC-06](details/ERRC-06.md) | contracts | todo | Reconcile all REST OpenAPI contracts with complete non-2xx responses and headers |
 | [ERRC-07](details/ERRC-07.md) | contracts | todo | Define GraphQL error extensions and WebSocket custom close code contracts |
 | [ERRC-08](details/ERRC-08.md) | contracts | todo | Define messaging, outbox, and background execution failure contracts |

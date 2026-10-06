@@ -8026,7 +8026,7 @@
       "parent_id": "ERRC-01",
       "title": "Define the additive Problem Details contract",
       "phase": "contracts",
-      "status": "todo",
+      "status": "done",
       "owner_role": "contracts",
       "owner_agent": "/root",
       "depends_on": [
@@ -8051,7 +8051,12 @@
         "uv run python tools/contracts/validate.py",
         "git diff --check"
       ],
-      "evidence": [],
+      "evidence": [
+        "Updated contracts/errors/problem.schema.json with optional numericCode/errorName, exact DMLCEE and SCREAMING_SNAKE_CASE constraints, bounded fields and violation arrays, UUID request IDs, and closed objects.",
+        "Added four canonical examples under contracts/errors/examples/ covering legacy, additive, validation, and security/anti-enumeration responses.",
+        "Schema validation with Draft202012Validator and FormatChecker passed for all four examples in an isolated uv --with jsonschema environment.",
+        "uv run python tools/contracts/validate.py passed (252 tasks, 15 JSON files); uv run python tools/errors/validate_catalog.py passed (99 unique codes); error catalog unit tests passed (7 tests); git diff --check passed."
+      ],
       "reviewer": "/root",
       "blocker": null
     },
