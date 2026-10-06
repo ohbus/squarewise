@@ -8342,7 +8342,7 @@
       "parent_id": "ERRC-01",
       "title": "Add static policy and reflection/generic-throw gates",
       "phase": "quality",
-      "status": "todo",
+      "status": "done",
       "owner_role": "quality",
       "owner_agent": "/root",
       "depends_on": [
@@ -8369,7 +8369,10 @@
         "uv run python tools/qa/check_error_hygiene.py",
         "git diff --check"
       ],
-      "evidence": [],
+      "evidence": [
+        "Added typed error hygiene scanner, explicit 23-entry allowlist, unit tests, and Makefile error-hygiene/check integration.",
+        "Strict mypy, unittest, repository scan, mingw32-make error-hygiene, and git diff --check passed on 2026-10-07."
+      ],
       "reviewer": "/root",
       "blocker": null
     },

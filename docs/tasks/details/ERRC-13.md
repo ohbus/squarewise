@@ -78,3 +78,20 @@ git diff --check
 - Tooling and CI gate addition.
 - Prevents introduction of new violations during migration.
 - Rollback: Adjust allowlist or rules if false positives occur on valid constructs.
+
+## Implementation Notes and Evidence
+
+- Added the typed `tools/qa/check_error_hygiene.py` scanner for generic throws,
+  raw six-digit literals at throw sites, reflection/classpath discovery,
+  `catch (Throwable)`, and direct Problem Details construction.
+- Added an explicit 23-entry migration allowlist with owner and expiry task
+  metadata. The scanner fails on both newly discovered violations and stale
+  allowlist entries, preventing debt from being silently ratcheted forward.
+- Added three unit tests covering every forbidden pattern, compliant catalog
+  references, and baseline allowlist structure. Wired `error-hygiene` into the
+  Makefile and the aggregate `check` target.
+- Validation passed on 2026-10-07:
+  `uv run --frozen --no-build mypy tools/qa tests/tools/test_check_error_hygiene.py`,
+  `uv run --frozen --no-build python -m unittest tests/tools/test_check_error_hygiene.py`,
+  `uv run python tools/qa/check_error_hygiene.py`,
+  `mingw32-make error-hygiene`, and `git diff --check`.
