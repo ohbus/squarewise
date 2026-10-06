@@ -46,4 +46,6 @@ safe to repeat.
 For an admission-focused limiter probe, run `rate-limit-graphql.js` with a
 temporarily raised isolated BFF HTTP limit. It uses `{ __typename }` so the
 measurement covers BFF/Redis admission and GraphQL parsing without downstream
-Accounts gateway latency. Local results are wiring/capacity evidence only.
+Accounts gateway latency. Set `BASE_URLS` to a comma-separated list to
+alternate requests across multiple BFF replicas. Local results are
+wiring/capacity evidence only.

@@ -1,6 +1,6 @@
 import http from 'k6/http';
 import { check } from 'k6';
-import { baseUrl, headers, commonThresholds } from './lib/config.js';
+import { baseUrls, headers, commonThresholds } from './lib/config.js';
 
 export const options = {
   thresholds: commonThresholds,
@@ -18,7 +18,7 @@ export const options = {
 
 export default function () {
   const response = http.post(
-    `${baseUrl}/graphql`,
+    `${baseUrls[__ITER % baseUrls.length]}/graphql`,
     JSON.stringify({ query: '{ __typename }' }),
     {
       headers: Object.assign({}, headers, { 'Content-Type': 'application/json' }),

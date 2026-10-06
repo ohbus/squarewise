@@ -483,6 +483,11 @@ approximately 12.08 ms p95 latency. The local BFF HTTP limit was temporarily
 raised to avoid measuring intentional abuse denials; this is single-replica
 local wiring/capacity evidence and is not a production capacity claim.
 
+The k6 admission probe now accepts comma-separated `BASE_URLS` and selects a
+replica per iteration. This keeps the default single-URL behavior while making
+multi-replica Redis throughput evidence repeatable without changing the normal
+policy defaults.
+
 The concurrent refresh probe now obtains one real passwordless session and
 submits two refresh requests with the same token in parallel. Against rebuilt
 local Compose it observed exactly one `200` and one `401`, then rejected the
