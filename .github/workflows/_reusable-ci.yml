@@ -246,47 +246,6 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
-  qa10-coverage-inventory:
-    name: QA-10 aggregate branch inventory
-    if: always() && needs.scope.outputs.full_scope == 'true' && needs.verify.result == 'success'
-    needs: [scope, verify]
-    runs-on: ubuntu-slim
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          persist-credentials: false
-      - name: Set up isolated Python tooling
-        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
-      - name: Install dependencies from lockfile
-        run: uv sync --frozen --no-build
-      - name: Download module test and JaCoCo artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: test-results-*
-          path: .qa10-reports
-          merge-multiple: false
-      - name: Restore JaCoCo reports into module paths
-        shell: bash
-        run: |
-          set -euo pipefail
-          for module in app/accounts app/expense-core app/notifications app/bff libs/db libs/errors libs/observability libs/security; do
-            report="$(find .qa10-reports -path "*/${module}/build/reports/jacoco/test/jacocoTestReport.xml" -print -quit)"
-            test -n "$report"
-            mkdir -p "${module}/build/reports/jacoco/test"
-            cp "$report" "${module}/build/reports/jacoco/test/jacocoTestReport.xml"
-          done
-      - name: Generate QA-10 branch inventory
-        run: uv run --frozen --no-build python tools/coverage/report_branch_gaps.py --format json | tee qa10-branch-gaps.json
-      - name: Upload QA-10 branch inventory
-        uses: actions/upload-artifact@v4
-        with:
-          name: qa10-branch-inventory
-          path: qa10-branch-gaps.json
-          if-no-files-found: error
-          retention-days: 14
-
   sonar:
     name: SonarQube quality analysis
     if: needs.scope.outputs.run_sonar == 'true'

@@ -101,12 +101,10 @@ requirement to third-party actions.
 The lightweight lint job also installs the same Microsoft JDK 25 and Gradle
 setup before generating the CycloneDX SBOM; every job that invokes Gradle owns
 its toolchain setup explicitly.
-QA-10 coverage is reported per module in the Gradle matrix and aggregated by
-the follow-up `qa10-coverage-inventory` job, which publishes one JSON inventory
-artifact. The aggregation runs only after every verification shard succeeds;
-when verification fails, it is skipped so it cannot mask the original shard
-failure with an incomplete-artifact error. A single matrix shard cannot prove repository-wide coverage. The
-eventual blocking gate command is
+QA-10 coverage is reported per module in the Gradle matrix. The repository-wide
+inventory remains a local QA-10 audit command because no matrix shard can prove
+aggregate coverage, and the former artifact-only follow-up job was removed from
+hosted CI. The eventual blocking gate command is
 `uv run --frozen --no-build python tools/coverage/report_branch_gaps.py --format json --fail-on-gaps`.
 The current local discovery baseline is 35 methods containing 61 missed
 branches. This is a backlog signal, not a target to reduce by deleting
