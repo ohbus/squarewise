@@ -1,4 +1,4 @@
-# IDE-01 — Resolve IntelliJ GraphQL schema detection and eliminate unnecessary constructor field injection
+# IDE-01: Resolve IntelliJ GraphQL schema detection and eliminate unnecessary constructor field injection
 
 ## Objective
 

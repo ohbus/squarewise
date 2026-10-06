@@ -1,4 +1,4 @@
-# ACC-05 — Expose batch profile lookup REST endpoint in Accounts service
+# ACC-05: Expose batch profile lookup REST endpoint in Accounts service
 
 ## Objective
 

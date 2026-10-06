@@ -1,4 +1,4 @@
-# DOC-15B — Code, build, CI, and test drift review
+# DOC-15B: Code, build, CI, and test drift review
 
 Reviewed 2026-09-17 against `AGENTS.md`, the task registry, implementation plan,
 architecture and quality documents. This review is limited to code, Gradle,
@@ -7,7 +7,7 @@ classified so intentional scaffold limits are not mistaken for defects.
 
 ## Findings
 
-### High — the reusable workflow declares unsupported workflow-call permissions
+### High: the reusable workflow declares unsupported workflow-call permissions
 
 `.github/workflows/_reusable-ci.yml` places a `permissions` mapping beneath
 `on.workflow_call`. GitHub reusable-workflow syntax supports inputs, secrets and
@@ -21,7 +21,7 @@ Evidence: `ruby -e 'require "yaml"; ...'` parses YAML syntax, but does not
 validate GitHub's workflow schema. A real GitHub Actions run has not been
 available locally.
 
-### Medium — the configured lint command is not a formatting gate
+### Medium: the configured lint command is not a formatting gate
 
 `make lint` runs contract validation and Gradle `check`; it does not run the
 Spotless/ktfmt check researched by DOC-14. DOC-14 correctly records 65 existing
@@ -30,7 +30,7 @@ documentation should therefore describe `make lint` as repository and Gradle
 quality checks, or add a separately named non-gating formatting report command.
 Calling this a complete lint gate would be drift from the documented blocker.
 
-### Medium — test fixtures still generate random UUIDs
+### Medium: test fixtures still generate random UUIDs
 
 Production-generated IDs use `libs:ids` and no production `UUID.randomUUID()`
 calls were found. Several tests use `UUID.randomUUID()` directly (notifications,
@@ -40,7 +40,7 @@ than the implementation. If UUIDv7 ordering is part of a test contract, fixtures
 need to use the shared generator; otherwise documentation should explicitly
 scope the UUIDv7 rule to application-generated identifiers.
 
-### Low — Docker runtime image is not Microsoft OpenJDK
+### Low: Docker runtime image is not Microsoft OpenJDK
 
 CI actions use `distribution: microsoft` as requested. `infra/docker/Dockerfile.jvm`
 still uses `eclipse-temurin:25-jre` for the runtime stage, while the build stage
@@ -49,7 +49,7 @@ consistency drift if the Microsoft JDK requirement applies to production images.
 Decide and document whether the requirement is CI-only; if it applies to images,
 select and verify a Microsoft OpenJDK runtime tag before changing it.
 
-### Low — Makefile repeats the complete test suite
+### Low: Makefile repeats the complete test suite
 
 `test` invokes `test-unit` and `test-integration`, while both currently execute
 the full Gradle `test` task. `ci` also invokes `test` and `check`, with `check`

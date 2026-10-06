@@ -919,6 +919,28 @@ class CoverageInventoryTest(unittest.TestCase):
                 msg=f"third-party action must use a full commit SHA: {ref}",
             )
 
+    def test_invalid_subject_ci_probe_matches_compose_host_port(self) -> None:
+        """Prevent the negative-OIDC CI probe from drifting from its fixture port."""
+
+        compose = (ROOT / "infra/local/docker-compose.invalid-subject.yml").read_text(
+            encoding="utf-8"
+        )
+        workflow = (ROOT / ".github/workflows/_reusable-ci.yml").read_text(encoding="utf-8")
+        port_match = re.search(r"INVALID_SUBJECT_HOST_PORT:-([0-9]+)", compose)
+        self.assertIsNotNone(port_match)
+        assert port_match is not None
+        self.assertIn(f"http://localhost:{port_match.group(1)}/token", workflow)
+
+    def test_qa10_inventory_requires_successful_verification_matrix(self) -> None:
+        """Prevent incomplete verification artifacts from masking the real shard failure."""
+
+        workflow = (ROOT / ".github/workflows/_reusable-ci.yml").read_text(encoding="utf-8")
+        job_start = workflow.index("  qa10-coverage-inventory:")
+        job_end = workflow.index("\n  sonar:", job_start)
+        job = workflow[job_start:job_end]
+        self.assertIn("if: needs.verify.result == 'success'", job)
+        self.assertIn('echo "Missing JaCoCo report for ${module}; downloaded files:"', job)
+
     def test_change_audit_reaches_current_branch_tip(self) -> None:
         audit = (ROOT / "docs/quality/test-coverage-change-audit.md").read_text(
             encoding="utf-8"

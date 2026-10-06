@@ -1,4 +1,4 @@
-# OPS-14 — Enable E2E smoke checks on feature branch CI
+# OPS-14: Enable E2E smoke checks on feature branch CI
 
 ## Objective
 

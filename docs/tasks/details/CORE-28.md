@@ -1,4 +1,4 @@
-# CORE-28 — Refactor Expense Core recurring persistence into separated SOLID files
+# CORE-28: Refactor Expense Core recurring persistence into separated SOLID files
 
 ## Objective
 

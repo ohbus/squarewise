@@ -5,9 +5,11 @@ from __future__ import annotations
 import json
 import io
 import os
+import re
 import subprocess
 import sys
 import time
+import uuid
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 from typing import Final
@@ -20,10 +22,22 @@ COMPOSE_PROJECT: Final[str] = os.environ.get("SQUAREWISE_COMPOSE_PROJECT", "")
 REDIS_PASSWORD: Final[str] = os.environ.get(
     "REDIS_PASSWORD", "squarewise-redis-local-only"
 )
-ACCOUNTS_URL: Final[str] = os.environ.get("ACCOUNTS_URL", "http://localhost:8081")
+ACCOUNTS_URL: Final[str] = os.environ.get(
+    "ACCOUNTS_URL", os.environ.get("SQUAREWISE_ACCOUNTS_URL", "http://localhost:28081")
+)
+SERVICE_READINESS_URLS: Final[tuple[str, ...]] = (
+    f"{os.environ.get('SQUAREWISE_BFF_URL', 'http://localhost:28080')}/actuator/health/readiness",
+    f"{ACCOUNTS_URL}/actuator/health/readiness",
+    f"{os.environ.get('SQUAREWISE_EXPENSE_CORE_URL', 'http://localhost:28082')}/actuator/health/readiness",
+    f"{os.environ.get('SQUAREWISE_NOTIFICATIONS_URL', 'http://localhost:28083')}/actuator/health/readiness",
+)
+BEARER_TOKEN: Final[str] = os.environ.get("BEARER_TOKEN", "")
+PROMETHEUS_PATH: Final[str] = "/actuator/prometheus"
 REFRESH_PATH: Final[str] = "/accounts/v1/auth/token/refresh"
+LOGIN_START_PATH: Final[str] = "/accounts/v1/auth/login/start"
+LOGIN_VERIFY_PATH: Final[str] = "/accounts/v1/auth/login/verify"
 PROBE_TOKEN: Final[str] = "auth-cache-resilience-invalid-refresh"
-RATE_LIMIT_KEY_PATTERN: Final[str] = "squarewise:rate-limit:v1:*"
+RATE_LIMIT_KEY_PATTERN: Final[str] = "squarewise:rl:v1:*"
 
 
 def compose(*arguments: str) -> str:
@@ -71,6 +85,22 @@ def refresh_status(timeout: float = 8.0) -> int:
         return error.code
 
 
+def login_start_status(email: str, timeout: float = 8.0) -> int:
+    """Return the passwordless login-start response status for a fresh probe email."""
+    body = json.dumps({"email": email}).encode("utf-8")
+    request = Request(
+        f"{ACCOUNTS_URL}{LOGIN_START_PATH}",
+        data=body,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urlopen(request, timeout=timeout) as response:
+            return response.status
+    except HTTPError as error:
+        return error.code
+
+
 def evict_rate_limit_keys() -> int:
     """Delete only Squarewise rate-limit keys and return the number removed."""
     raw_keys = redis_cli("--scan", "--pattern", RATE_LIMIT_KEY_PATTERN)
@@ -78,6 +108,45 @@ def evict_rate_limit_keys() -> int:
     if keys:
         redis_cli("DEL", *keys)
     return len(keys)
+
+
+def login_verify_status(credential: str, timeout: float = 8.0) -> int:
+    """Return the public verification response for a deliberately invalid credential."""
+    body = json.dumps({"credential": credential, "clientKind": "NATIVE"}).encode("utf-8")
+    request = Request(
+        f"{ACCOUNTS_URL}{LOGIN_VERIFY_PATH}",
+        data=body,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urlopen(request, timeout=timeout) as response:
+            return response.status
+    except HTTPError as error:
+        return error.code
+
+
+def rate_limit_outcome_counts(outcome: str) -> dict[str, int]:
+    """Read one bounded limiter outcome for each policy when metrics are authorized."""
+    if not BEARER_TOKEN:
+        return {}
+    request = Request(
+        f"{ACCOUNTS_URL}{PROMETHEUS_PATH}",
+        headers={"Authorization": f"Bearer {BEARER_TOKEN}"},
+    )
+    with urlopen(request, timeout=10) as response:
+        payload = response.read().decode("utf-8")
+    counts: dict[str, int] = {}
+    for line in payload.splitlines():
+        if "squarewise_rate_limit_decisions_total" not in line:
+            continue
+        if f'outcome="{outcome}"' not in line:
+            continue
+        policy_match = re.search(r'policy="([^"]+)"', line)
+        value_match = re.search(r"\s([0-9]+(?:\.[0-9]+)?)$", line)
+        if policy_match and value_match:
+            counts[policy_match.group(1)] = int(float(value_match.group(1)))
+    return counts
 
 
 def wait_for_redis() -> None:
@@ -92,6 +161,23 @@ def wait_for_redis() -> None:
     raise TimeoutError("Redis did not become ready after restart")
 
 
+def wait_for_service_readiness(timeout_seconds: float = 30.0) -> None:
+    """Wait until every Redis-dependent local service has recovered readiness."""
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline:
+        try:
+            ready = True
+            for url in SERVICE_READINESS_URLS:
+                with urlopen(url, timeout=3) as response:
+                    ready = ready and response.status == 200
+            if ready:
+                return
+        except (HTTPError, OSError, URLError):
+            pass
+        time.sleep(0.5)
+    raise TimeoutError("Redis-dependent services did not become ready after restart")
+
+
 def expect(label: str, actual: int, expected: int) -> None:
     """Assert and print one HTTP result from the cache-resilience matrix."""
     if actual != expected:
@@ -104,6 +190,7 @@ def main() -> int:
     if isinstance(sys.stdout, io.TextIOWrapper):
         sys.stdout.reconfigure(encoding="utf-8")
     print("Running authentication cache resilience checks")
+    probe_email = f"redis-outage-{uuid.uuid4()}@squarewise.local"
     evict_rate_limit_keys()
     try:
         for _ in range(10):
@@ -115,12 +202,45 @@ def main() -> int:
             raise AssertionError("rate-limit eviction removed no active cache key")
         expect("refresh after rate-limit cache eviction", refresh_status(), 401)
 
+        store_error_before = rate_limit_outcome_counts("store_error")
+        fail_closed_before = rate_limit_outcome_counts("fail_closed")
         compose("stop", "redis")
         expect("refresh with Redis unavailable", refresh_status(), 429)
+        expect("login start with Redis unavailable", login_start_status(probe_email), 429)
+        expect(
+            "login verification with Redis unavailable",
+            login_verify_status("auth-cache-resilience-invalid-credential"),
+            429,
+        )
+        store_error_after = rate_limit_outcome_counts("store_error")
+        fail_closed_after = rate_limit_outcome_counts("fail_closed")
+        if BEARER_TOKEN:
+            for policy in ("auth-refresh", "auth-login", "auth-login-verify"):
+                if store_error_after.get(policy, 0) <= store_error_before.get(policy, 0):
+                    raise AssertionError(
+                        f"{policy} store_error metric did not increase during outage"
+                    )
+                if fail_closed_after.get(policy, 0) <= fail_closed_before.get(policy, 0):
+                    raise AssertionError(
+                        f"{policy} fail_closed metric did not increase during Redis outage"
+                    )
+            print(
+                "  rate-limit store_error and fail_closed metrics increased for "
+                "login, verification, and refresh"
+            )
+        else:
+            print("  rate-limit metric assertions skipped (BEARER_TOKEN unset)")
 
         compose("start", "redis")
         wait_for_redis()
+        wait_for_service_readiness()
         expect("refresh after Redis restart", refresh_status(), 401)
+        expect("login start after Redis restart", login_start_status(probe_email), 202)
+        expect(
+            "login verification after Redis restart",
+            login_verify_status("auth-cache-resilience-invalid-credential"),
+            401,
+        )
     finally:
         compose("start", "redis")
     return 0

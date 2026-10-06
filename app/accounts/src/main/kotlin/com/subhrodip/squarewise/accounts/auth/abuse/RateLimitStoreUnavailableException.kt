@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.accounts.auth.abuse
 
-/** Indicates that a rate-limit decision could not be made and the request must fail closed. */
-class RateLimitStoreUnavailableException(cause: Throwable) : RuntimeException("Rate-limit store unavailable", cause)
+/** Compatibility alias for the shared fail-closed rate-limit exception. */
+typealias RateLimitStoreUnavailableException =
+    com.subhrodip.squarewise.security.ratelimit.RateLimitStoreUnavailableException

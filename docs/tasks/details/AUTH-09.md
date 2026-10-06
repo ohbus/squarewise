@@ -1,4 +1,4 @@
-# AUTH-09 — Distributed rate limiting and request-path security controls
+# AUTH-09: Distributed rate limiting and request-path security controls
 
 ## Objective
 
@@ -13,8 +13,7 @@ perform an Accounts or PostgreSQL lookup. Resource services validate signed OIDC
 tokens locally using cached discovery/JWK material, then perform only the domain
 authorization and business queries required by the operation.
 
-This task is implementation-ready but must be registered by the coordinator before
-code changes begin. AUTH-09 depends on AUTH-07 and AUTH-06. It may share the existing
+AUTH-09 is registered as an implementation task. It depends on AUTH-07 and AUTH-06. It may share the existing
 security and observability libraries, but it must not create cross-service entities,
 repositories, or business dependencies.
 
@@ -327,15 +326,21 @@ make check
 make acceptance-live
 make e2e-all
 make security-hygiene
-make load-test
+make load-k6-validate
 ```
 
 Add focused commands for the Redis suite, for example:
 
 ```text
 ./gradlew :libs:security:test :app:accounts:test :app:notifications:test :app:bff:test --no-daemon
-python3 tests/e2e/test_rate_limiting.py
-python3 tests/e2e/test_auth_query_counts.py
+uv run --frozen --no-build python tests/e2e/test_auth_cache_resilience.py
+uv run --frozen --no-build python tests/e2e/test_auth_no_accounts_lookup.py
+make e2e-auth-surfaces
+make e2e-auth-bff-replicas
+make e2e-auth-login-replicas
+make e2e-auth-refresh-concurrency
+make e2e-auth-notification-limit
+make e2e-auth-notification-outage
 ```
 
 Exact target names must match the repository after implementation; nonexistent
@@ -366,6 +371,253 @@ task before delegation. Registry and board updates remain coordinator-owned.
 No production launch approval is implied by local Redis tests.
 
 ## Current implementation evidence
+
+### Shared rate-limit contract increment (2026-10-05)
+
+Added the provider-neutral `RateLimiter`, bounded `RateLimitPolicy`, safe
+`RateLimitDecision`, fail-closed store exception, and atomic Redis adapter under
+`libs/security`. The adapter derives caller-provided canonical key material with
+a deployment HMAC secret before constructing the namespaced Redis key and maps
+the single-script result to bounded decision metadata. Policy and key-derivation
+tests pass. Service migration and live Redis/public-interface evidence remain
+open.
+
+Accounts login-start and refresh admission now consume the shared `RateLimiter`
+port in production wiring. The former Accounts-specific bucket port and Redis
+component have been removed; the local-oidc profile no longer registers its
+in-memory test double. Accounts behavior tests pass, while live distributed
+failure evidence remains open; the refresh-concurrency slice is recorded below.
+
+Notifications delivery now delegates to the shared `RateLimiter` through its
+delivery boundary. Recipient admission therefore uses the common atomic Redis
+adapter, while test-only delivery doubles remain direct unit-test dependencies.
+Focused adapter and Notifications context tests pass; live broker/Redis
+failure evidence is recorded below and hosted delivery evidence remains open.
+
+The BFF now applies a shared Redis-backed HTTP admission decision at the
+GraphQL WebFlux boundary before request parsing. Denials and store outages use
+structured HTTP 429 with bounded `Retry-After`; WebSocket upgrades are left to
+their dedicated admission slice. Filter and live GraphQL transport tests pass;
+local WebSocket, query-count, failure-drill, and multi-replica evidence is
+recorded below; hosted and production evidence remain open.
+
+WebSocket upgrades now receive a distinct `graphql-websocket` admission policy
+at the same BFF handshake boundary instead of bypassing rate limiting. The
+policy is separate from GraphQL HTTP and remains subject to the existing JWT
+security chain and subscription-cap controls. Focused handshake tests pass;
+local multi-replica admission and membership-revocation reconnect evidence pass;
+hosted reconnect and production fanout evidence remain open.
+
+The existing Redis resilience E2E now targets the shared `squarewise:rl:v1:*`
+namespace and is part of `make e2e-all` and the selected edge/security CI
+stream. It proves refresh denial, targeted namespace eviction, Redis outage
+fail-closed behavior, and restart recovery when Docker-backed execution runs;
+login/refresh outage recovery, and telemetry when a token is supplied;
+multi-replica concurrency, query-count, notification, and capacity evidence is
+recorded in the following increments.
+
+The public GraphQL admission probe now treats a missing `BEARER_TOKEN` as an
+intentional neutral skip for both HTTP and WebSocket checks. A supplied but
+invalid token still fails the probe; skipped coverage is neither passed nor
+failed by the aggregate E2E gate.
+
+The Redis resilience suite was executed against the local Docker Compose stack
+after building the four service boot JARs. It observed ten pre-limit `401`
+responses, an eleventh `429`, recovery to `401` after targeted namespace
+eviction, fail-closed `429` while Redis was stopped, and recovery to `401`
+after Redis restart. This is local Compose evidence only; it does not close
+hosted CI, production topology, multi-replica, or capacity acceptance.
+
+The public GraphQL surface suite now runs through the rebuilt local Compose BFF.
+It admitted requests through the configured HTTP window and returned `429` at
+cap plus one; it likewise admitted WebSocket handshakes through the distinct
+WebSocket window and returned `429` at cap plus one. The first live run exposed
+missing BFF Redis host/password wiring, which was corrected before the passing
+rerun. This remains local single-replica evidence, not hosted or production
+capacity evidence.
+
+The disposable Accounts replica overlay now starts two independently deployed
+Accounts containers against the same PostgreSQL and Redis services. The local
+login probe alternated six requests between the two published replica ports and
+observed `[202, 202, 202, 202, 202, 429]`, proving the login window is shared
+across processes. This is local distributed-behavior evidence, not production
+scale, multi-zone, or capacity evidence.
+
+The same probe also submits ten simultaneous requests for a fresh recipient
+across both replicas and requires exactly five `202` admissions and five `429`
+denials, exercising the atomic shared-window decision.
+
+The same suite also stops Redis after clearing its namespace and verifies both
+GraphQL HTTP admission and WebSocket handshake admission return fail-closed
+`429` responses, then restarts Redis. Refresh/login outage recovery and these
+BFF public-path checks are local evidence; hosted Notifications delivery and
+production multi-replica failure evidence remain open.
+
+The authenticated lookup-isolation probe stopped Accounts after acquiring a
+real Keycloak bearer token, then successfully read Expense Core groups directly
+and BFF groups through GraphQL. This proves those ordinary bearer paths do not
+require a request-time Accounts call in the local topology. The protected
+Prometheus counters recorded `Accounts groups.list 0->0` and `Expense Core
+groups.list 0->2` across representative authenticated reads, followed by the
+same reads while Accounts was stopped. This closes the representative read
+query-count evidence; broader write/query coverage and latency artifacts remain
+open.
+
+The shared JPA configuration now installs a Hibernate `StatementInspector` for
+non-test runtime profiles. It increments `squarewise.db.statement` with only
+the current bounded operation label and retains an in-process statement count;
+SQL text, parameters, identities, and request identifiers are not recorded.
+The local metric scrape and representative request-count artifact now pass;
+hosted metric retention and broader request coverage remain open.
+
+The focused `e2e-auth-query-latency` probe now extends that evidence through
+repeated authenticated Expense Core and BFF reads plus a real Expense Core group
+create/archive write. The rebuilt local run recorded Accounts `groups.list`
+`0->0`, Expense Core `groups.list` `293->423`, and p95 request measurements of
+25.77 ms for Expense Core groups, 118.03 ms for the BFF groups query, and
+21.43 ms for group creation. These are local representative measurements, not
+production SLO or capacity evidence.
+
+Notifications delivery policy values are now bounded configuration properties,
+and both general notification dispatch and protected auth-email dispatch invoke
+the shared limiter immediately before provider dispatch. Unit/component tests
+cover admission and suppression. Two local broker-to-provider drills now pass:
+the auth-email path through Accounts outbox, and a general `expense.created.v1`
+envelope through RabbitMQ management, Notifications, and Mailpit. Both prove
+one-per-five-second admission, same-recipient suppression, and post-expiry
+recovery; the general drill is local-only because hosted CI uses the RabbitMQ
+protocol image without the management API. Production-default and hosted
+evidence remain separate.
+
+The typed Notifications outage probe queued a real auth-email event, stopped
+Redis while the Notifications consumer was running, and observed no Mailpit
+dispatch. The listener rejected the transient Redis failure once for broker
+retry and then dead-lettered the event; after Redis and Accounts readiness
+recovered, a subsequent real auth-email event was delivered. This is local
+Compose evidence only; hosted outage alerts, managed Redis, and production
+recovery evidence remain open.
+
+The general notification consumer keeps the inbox event durable while suppressing
+provider dispatch if the shared limiter cannot decide; it does not fall back to a
+local or database limiter. Provider and preference failures remain isolated as
+before, and a focused unit test covers the distinction. The dedicated auth-email
+listener retains its separate bounded retry/DLQ behavior.
+Its preference, disabled-delivery, and limiter-denial diagnostics now use the
+existing opaque recipient representation rather than raw recipient identifiers.
+The full Notifications test suite now boots the non-web entrypoint with the
+Rabbit listener explicitly disabled in the test profile, avoiding accidental
+default `guest` authentication against a developer broker.
+
+The Redis resilience probe now also calls the public Accounts login-start path
+while Redis is stopped and observes the structured fail-closed HTTP 429, then
+repeats login-start after Redis recovery and observes HTTP 202. Refresh and
+login therefore have direct local outage/recovery evidence; hosted alerting and
+production failover evidence remain open.
+
+With `BEARER_TOKEN` supplied, the same probe reads Accounts Prometheus output
+and requires the bounded `store_error` and `fail_closed` counters for
+`auth-refresh`, `auth-login`, and `auth-login-verify` to increase during the
+outage. Tokenless ad-hoc runs report the metric assertion as skipped; they do
+not claim observability evidence.
+
+An isolated k6 admission probe was added and executed at 35 iterations per
+second for 10 seconds with 351 completed requests, zero HTTP failures, and
+approximately 12.08 ms p95 latency. The local BFF HTTP limit was temporarily
+raised to avoid measuring intentional abuse denials; this is single-replica
+local wiring/capacity evidence and is not a production capacity claim.
+
+The k6 admission probe now accepts comma-separated `BASE_URLS` and selects a
+replica per iteration. This keeps the default single-URL behavior while making
+multi-replica Redis throughput evidence repeatable without changing the normal
+policy defaults.
+
+The concurrent refresh probe now obtains one real passwordless session and
+submits two refresh requests with the same token in parallel. Against rebuilt
+local Compose it observed exactly one `200` and one `401`, then rejected the
+winning child token with `401`, proving that reuse detection revokes the entire
+PostgreSQL-authoritative family. The implementation keeps the rotation
+transaction from rolling back the security revocation when the expected
+`ApplicationException` is raised. This is local single-Accounts evidence;
+hosted and multi-replica refresh evidence remain open.
+
+The shared `rateLimitRedis` health contributor is explicitly imported into
+Accounts, Notifications, and BFF and included in each readiness group. In the
+rebuilt local Compose stack, Accounts and BFF readiness returned `200/UP` with
+Redis healthy, `503/DOWN` while Redis was stopped, and `200/UP` after Redis
+restart. All three services returned healthy after recovery. This is local
+readiness evidence; hosted health, alert, and production failover evidence
+remain open.
+
+A disposable BFF replica overlay and typed probe now alternate GraphQL HTTP and
+WebSocket admission across two BFF containers sharing Redis. Local runs pass
+the configured cap plus one as HTTP 429 for both policies. This is cross-process
+local evidence only. The probe now also stops Redis while both BFF processes
+remain running, requires HTTP and WebSocket admission to return 429 on each
+replica, and verifies HTTP recovery after Redis restart. Revoked-token reconnect,
+production topology, and capacity evidence remain open.
+
+The authenticated subscription E2E keeps a valid Bob subscription open, removes
+Bob from the group through the public Expense Core endpoint, requires the
+active stream to complete, and reconnects with the same bearer token to verify
+the subscription is rejected. The local live run passed; hosted reconnect and
+production fanout evidence remain open.
+
+The subscription E2E waits up to ten seconds for the broker-driven `complete`
+frame after membership removal rather than assuming the outbox relay completes
+within a fixed sub-second delay. Timeout remains a failure; the bounded wait
+only removes relay-scheduling flakiness.
+
+The login verification path now performs a distinct shared Redis admission
+decision before credential redemption. Its key is HMAC-derived from the submitted
+credential and trusted network partition, its bounded policy is configurable via
+`SQUAREWISE_AUTH_LOGIN_VERIFY_MAX_REQUESTS` and
+`SQUAREWISE_AUTH_LOGIN_VERIFY_WINDOW_SECONDS`, and store failures or denials map
+to the existing structured HTTP 429 boundary. The local Mailpit passwordless E2E
+passed the configured five generic invalid-credential responses followed by a
+429. The Redis resilience probe also returned 429 for verification while Redis
+was stopped and generic 401 after restart; the rebuilt authenticated run
+required both `store_error` and `fail_closed` Prometheus outcomes for
+verification, login, and refresh. Hosted verification-limit, alert, and
+production Redis evidence remain open.
+
+The two-Accounts replica probe now also stops Redis while both replicas remain
+online, requires login-start to fail closed with HTTP 429 on both, and verifies
+HTTP 202 recovery on both after Redis restarts. This remains disposable local
+cross-process evidence; hosted and production failover evidence remain open.
+
+The local Notifications outage probe exposed stale JVM DNS resolution after a
+Redis container restart changed its service IP: the running Accounts process
+continued targeting the old address and readiness remained down. Both local-fast
+and production JVM images now use finite positive and negative DNS cache TTLs so
+Redis endpoint replacement can recover without an application restart. The
+rebuilt local probe now passes the DLQ/no-dispatch/recovery journey; managed
+failover rehearsal remains required.
+
+Production/staging Compose now explicitly requires the managed Redis endpoint,
+credential, TLS mode, and deployment HMAC secret through environment contracts;
+all three Redis-backed applications map the host, port, TLS flag, and bounded
+connect/command timeouts to Spring Data Redis. This closes deployment wiring
+only; managed Redis selection, failover, rotation, capacity, and alert-routing
+evidence remain release gates.
+
+Local operations now expose `make redis-status`, `make redis-logs`, and
+`make redis-clear-rate-limit`; the clear command is restricted to the versioned
+`squarewise:rl:v1:*` namespace.
+
+Rate-limit decisions now expose bounded Micrometer counters for `allowed`,
+`denied`, `store_error`, `timeout`, and `fail_closed`, tagged only by the
+centrally defined policy ID and outcome. No key, subject, IP, token, or request
+ID is used as a metric label.
+The atomic Redis decision path also records a bounded Micrometer decision timer
+tagged only by policy ID; the focused security suite and root Spotless validation
+pass.
+Policy validation also rejects non-ASCII identifiers and sub-second windows or
+cooldowns because the atomic Redis script uses explicit whole-second units;
+disabled, oversized, and ambiguous policy values cannot be silently accepted.
+The shared policy identifier catalog is used by Accounts, Notifications, and
+the BFF. Prometheus now has a `SquarewiseRateLimitStoreUnavailable` alert and
+the shared Grafana dashboard exposes bounded outcome rates; deployed scrape,
+routing, and alert-firing evidence remains open.
 
 ### Current increment (2026-09-28)
 
@@ -400,9 +652,85 @@ translated by the shared validation handler. Notification delivery limits remain
 asynchronous and fail closed by suppressing dispatch when the limit/store path
 does not admit delivery.
 
-This increment does not claim completion of AUTH-09: the task is still absent
-from the authoritative registry, and distributed cross-surface Redis E2E,
-failure, query-count, and capacity evidence remain outstanding.
+The local implementation and disposable Compose verification now cover the
+selected Accounts, Notifications, BFF GraphQL HTTP/WebSocket, Redis outage and
+recovery, query-isolation, multi-replica admission, concurrent refresh, and
+capacity-probe paths. The repository-wide Gradle test gate also passes.
+
+The lookup-isolation E2E now waits for Accounts readiness after its intentional
+stop/start cycle, so a following selected stream cannot observe a transient
+connection reset. The isolation probe and passwordless auth-email stream pass
+back-to-back in the aggregate order.
+
+Expense Core is not a rate-limit consumer. Its aggregate actuator health was
+incorrectly probing the shared Redis starter at the default container-local
+`localhost:6379`, causing a transient/down health result after Redis recovery.
+The service now disables that irrelevant Redis health contributor while the
+Accounts, Notifications, and BFF rate-limit health indicators remain mandatory.
+After rebuilding, the full live product journey passed with Expense Core health
+`UP` and real outbox-to-Notifications inbox delivery.
+
+The repository Makefile is now executable on Windows as well as Unix-like
+hosts: it selects `gradlew.bat` under `Windows_NT`, and its package artifact
+listing uses the isolated Python runtime instead of a Unix-only `find` command.
+The declared local `check` gate passes through `mingw32-make` on Windows.
+
+The observability and release validation targets are Windows-portable as well:
+`mingw32-make observability-validate release-gate lint` passed using the
+isolated Python YAML parser, validated the Prometheus/Grafana assets and five
+release assets, and completed the Gradle lint/check path. The release validator
+continues to report environment gates separately rather than inferring restore,
+security-scan, capacity, or rollback evidence.
+
+The direct shell smoke scripts now resolve either `uv` or Windows `uv.exe` and
+use the isolated `python` executable. `tests/e2e/contract-smoke.sh` passed from
+Git Bash with contract-only non-secret production placeholders, and the
+authenticated `tests/acceptance/run.sh --require-services` path passed all
+live acceptance scenarios. Production Compose requirements remain mandatory;
+the placeholders are scoped only to config validation.
+
+With fresh local Keycloak bearer tokens, `mingw32-make e2e-all` passed the
+complete local aggregate: cache resilience, authenticated admission surfaces,
+Accounts lookup isolation, passwordless auth-email, product lifecycle, offline
+replay, concurrent subscription revocation, and chaos/broker recovery. This
+does not substitute for hosted selected/skipped artifact evidence or the
+managed-production Redis, alert-routing, broader query/latency, and production
+fanout/reconnect gates.
+
+With a fresh local Keycloak bearer token, `mingw32-make acceptance-live` also
+passed the live contract/registry, health, group-expense-settlement, offline
+replay, WebSocket resync, rollback, concurrency, authorization, BFF fanout,
+and recovery scenarios. This is additional local acceptance evidence and does
+not substitute for hosted or managed-production evidence.
+
+Hosted evidence is now confirmed for earlier revisions: master run
+`37355348264` at SHA `948e12c4e10849fd8c7e355ec8946b8a86862554` and PR run
+`37348315292` at SHA `95c6513f34d5f8ce4f1c64e79704601b6361ea89` both passed
+preflight, all three selected E2E streams, the aggregate E2E gate, and retained
+their E2E artifacts. These SHAs predate the current AUTH-09 branch HEAD, so a
+hosted rerun on the current revision remains required; historical hosted green
+results are not treated as current-HEAD proof.
+
+After the current limiter timing and query/latency increments, the full Windows
+`mingw32-make check` gate passed again: contracts/public surfaces, 58 JVM test
+tasks, strict mypy for 54 files, JaCoCo reports, and all four application boot
+JARs. This closes the repository-owned local check evidence only.
+
+After rebasing onto `master`, every newly added auth E2E probe uses the current
+collision-resistant Compose host ports by default while retaining explicit URL
+overrides. The hosted workflow also reapplies the one-per-five-second
+Notifications delivery policy after its invalid-subject Compose restart. A
+fresh local stack reproduced the affected path and passed the exact admission
+journey: the first auth email was delivered, the second same-recipient event was
+suppressed, and delivery recovered after the Redis window expired.
+
+This increment does not claim completion of AUTH-09. The task remains
+`in_progress` because hosted selected/skipped E2E evidence, managed Redis
+selection/failover/rotation/capacity, deployed alert routing, broader query and
+latency coverage, and production fanout/reconnect evidence remain release
+gates. Unselected E2E streams are intentionally neutral: they neither fail the
+aggregate gate nor appear as passed; selected failures, shared preflight
+failures, and artifact-preparation failures remain gate failures.
 
 - Accounts rate limiting uses the Redis bucket port and a mandatory Redis adapter;
   PostgreSQL rate-limit entities/repositories were removed and the table is retired

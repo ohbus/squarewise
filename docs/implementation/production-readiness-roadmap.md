@@ -2,7 +2,7 @@
 
 > **Last updated**: 2026-09-20
 > **Target**: 1–10 million DAU backend deployment
-> **Status**: Planning document — not yet registered in `docs/tasks/registry.yaml`
+> **Status**: Planning document: not yet registered in `docs/tasks/registry.yaml`
 
 ## How to read this document
 
@@ -28,7 +28,7 @@ with clear dependencies, so work can be parallelized safely.
 
 ```mermaid
 flowchart TD
-    A["production-readiness-audit.md<br/>(WHAT is wrong)"] --> B["production-readiness-roadmap.md<br/>(HOW to fix it — THIS FILE)"]
+    A["production-readiness-audit.md<br/>(WHAT is wrong)"] --> B["production-readiness-roadmap.md<br/>(HOW to fix it: THIS FILE)"]
     B --> C["production-readiness-tracker.md<br/>(WHO is doing WHAT and WHEN)"]
     B --> D["production-readiness-plan.md<br/>(Release gate checklist)"]
     C --> E["registry.yaml<br/>(Authoritative task state)"]
@@ -42,14 +42,14 @@ flowchart TD
 - [Governing principles](#governing-principles)
 - [Scale context: what 1–10M DAU means](#scale-context-what-110m-dau-means)
 - [Phase plan](#phase-plan)
-  - [Phase 0 — Baseline and inventory](#phase-0--baseline-and-inventory)
-  - [Phase 1 — Design and contract reconciliation](#phase-1--design-and-contract-reconciliation)
-  - [Phase 2 — Code quality and design hardening](#phase-2--code-quality-and-design-hardening)
-  - [Phase 3 — Domain, financial, and concurrency hardening](#phase-3--domain-financial-and-concurrency-hardening)
-  - [Phase 4 — Identity and authorization hardening](#phase-4--identity-and-authorization-hardening)
-  - [Phase 5 — Idempotency, offline replay, and messaging reliability](#phase-5--idempotency-offline-replay-and-messaging-reliability)
-  - [Phase 6 — CI and supply-chain enforcement](#phase-6--ci-and-supply-chain-enforcement)
-  - [Phase 7 — Production-like deployment and capacity proof](#phase-7--production-like-deployment-and-capacity-proof)
+  - [Phase 0: Baseline and inventory](#phase-0--baseline-and-inventory)
+  - [Phase 1: Design and contract reconciliation](#phase-1--design-and-contract-reconciliation)
+  - [Phase 2: Code quality and design hardening](#phase-2--code-quality-and-design-hardening)
+  - [Phase 3: Domain, financial, and concurrency hardening](#phase-3--domain-financial-and-concurrency-hardening)
+  - [Phase 4: Identity and authorization hardening](#phase-4--identity-and-authorization-hardening)
+  - [Phase 5: Idempotency, offline replay, and messaging reliability](#phase-5--idempotency-offline-replay-and-messaging-reliability)
+  - [Phase 6: CI and supply-chain enforcement](#phase-6--ci-and-supply-chain-enforcement)
+  - [Phase 7: Production-like deployment and capacity proof](#phase-7--production-like-deployment-and-capacity-proof)
 - [Phase dependency graph](#phase-dependency-graph)
 - [Required evidence format](#required-evidence-format)
 - [Design patterns and principles quick reference](#design-patterns-and-principles-quick-reference)
@@ -81,8 +81,8 @@ implementation follows them, stop and verify.
 | # | Principle | What it means in practice | Design pattern reference |
 |:---:|---|---|---|
 | 1 | **The smallest authoritative source owns each rule** | Don't duplicate validation in controllers and services. Don't copy version numbers. Don't repeat error codes. | **DRY** (Don't Repeat Yourself), **Single Source of Truth** |
-| 2 | **A passing unit test cannot substitute for persistence, transport, or live dependency evidence** | Testing an in-memory HashMap doesn't prove PostgreSQL behavior. Testing localhost doesn't prove network behavior. | **Testing Pyramid** — unit → integration → E2E → production |
-| 3 | **Local Compose is development, not production capacity evidence** | Your laptop running Docker is not the same as 3 replicas behind a load balancer with managed PostgreSQL | **Environment Parity Principle** — measure in production-like topology |
+| 2 | **A passing unit test cannot substitute for persistence, transport, or live dependency evidence** | Testing an in-memory HashMap doesn't prove PostgreSQL behavior. Testing localhost doesn't prove network behavior. | **Testing Pyramid**: unit → integration → E2E → production |
+| 3 | **Local Compose is development, not production capacity evidence** | Your laptop running Docker is not the same as 3 replicas behind a load balancer with managed PostgreSQL | **Environment Parity Principle**: measure in production-like topology |
 | 4 | **Security and financial-integrity failures are release blockers** | No exception. No workaround. No "we'll fix it later." | **Fail-Closed Security**, **Defense in Depth** |
 | 5 | **Every new endpoint, event, migration, configuration key, and alert requires documentation and tests in the same increment** | Don't merge code without tests. Don't merge features without docs. | **Continuous Documentation**, **Test-Driven Development** |
 | 6 | **Implementation tasks must remain independently reviewable and have disjoint owned paths or an explicit handoff** | Two people editing the same file = merge conflicts and confusion | **Single Responsibility Principle** applied to task ownership |
@@ -119,7 +119,7 @@ scale. These numbers drive every design decision in this roadmap.
 
 ## Phase plan
 
-### Phase 0 — Baseline and inventory
+### Phase 0: Baseline and inventory
 
 > **Objective**: Freeze the current state and eliminate ambiguity before
 > changing any code. You cannot fix what you haven't measured.
@@ -151,13 +151,13 @@ that all subsequent phases navigate by.
 
 #### Design patterns and principles to follow
 
-- **Inventory Pattern** — exhaustive cataloging before remediation
-- **Configuration as Code** — every setting must be traceable
-- **Evidence-Based Decision Making** — no assumptions about what "probably works"
+- **Inventory Pattern**: exhaustive cataloging before remediation
+- **Configuration as Code**: every setting must be traceable
+- **Evidence-Based Decision Making**: no assumptions about what "probably works"
 
 ---
 
-### Phase 1 — Design and contract reconciliation
+### Phase 1: Design and contract reconciliation
 
 > **Objective**: Make externally visible behavior unambiguous before writing
 > any implementation code. At 1M+ DAU, unclear API semantics cause cascading
@@ -174,13 +174,13 @@ This phase ensures every API operation has one unambiguous meaning.
 
 | # | Deliverable | Description | Design pattern reference |
 |:---:|---|---|---|
-| 1 | Consistent problem responses | Every error returns RFC 9457 Problem Detail with stable code, safe message, request ID, error ID | **Error Catalog Pattern** — see [error-flow.md](../architecture/error-flow.md) |
+| 1 | Consistent problem responses | Every error returns RFC 9457 Problem Detail with stable code, safe message, request ID, error ID | **Error Catalog Pattern**: see [error-flow.md](../architecture/error-flow.md) |
 | 2 | Authentication requirements | Every operation explicitly states: public, authenticated, member-of-group, admin, or service | **Authorization Matrix Pattern** |
-| 3 | Pagination semantics | Every list endpoint uses keyset cursor pagination with stable ordering and maximum page size | **Keyset Pagination** — see [pagination.md](../architecture/pagination.md) |
+| 3 | Pagination semantics | Every list endpoint uses keyset cursor pagination with stable ordering and maximum page size | **Keyset Pagination**: see [pagination.md](../architecture/pagination.md) |
 | 4 | Idempotency semantics | Every mutation specifies: idempotency key requirement, scope, retention, replay response, conflict behavior | **Idempotent Receiver Pattern** |
 | 5 | Retry semantics | Every operation specifies: safe to retry (yes/no), retry-after hint, backoff recommendation | **Retry Pattern** with **Circuit Breaker** awareness |
 | 6 | GraphQL error policy | Upstream failures → GraphQL `errors[]` with extensions; partial-result behavior documented; never silently empty | **Error Propagation** through BFF layer |
-| 7 | Event compatibility policy | Schema versioning, backward compatibility rules, envelope format, consumer tolerance | **Schema Evolution** — see [contracts/events/](../../contracts/events/) |
+| 7 | Event compatibility policy | Schema versioning, backward compatibility rules, envelope format, consumer tolerance | **Schema Evolution**: see [contracts/events/](../../contracts/events/) |
 | 8 | Migration policy | Expand/contract sequencing, forward-only migrations, rollback procedure | **Expand/Contract Migration Pattern** (see below) |
 
 > 📖 **What is the Expand/Contract Migration Pattern?**
@@ -193,7 +193,7 @@ This phase ensures every API operation has one unambiguous meaning.
 >    new one)
 >
 > This is critical for zero-downtime deployments at scale. Never rename a
-> column or change a type in a single migration — old application instances
+> column or change a type in a single migration: old application instances
 > (still running during rolling deployment) will crash.
 
 #### Exit criteria
@@ -205,7 +205,7 @@ This phase ensures every API operation has one unambiguous meaning.
 
 ---
 
-### Phase 2 — Code quality and design hardening
+### Phase 2: Code quality and design hardening
 
 > **Objective**: Enforce clean design and prevent future drift or duplication.
 > At 1M+ DAU, technical debt compounds exponentially.
@@ -251,7 +251,7 @@ grows.
 
 ---
 
-### Phase 3 — Domain, financial, and concurrency hardening
+### Phase 3: Domain, financial, and concurrency hardening
 
 > **Objective**: Prove correctness under real persistence and concurrent
 > execution. This is where money bugs are found and fixed.
@@ -269,7 +269,7 @@ transactions.
 
 | # | Deliverable | Description | Design pattern reference |
 |:---:|---|---|---|
-| 1 | PostgreSQL transaction and concurrency suites | Testcontainers-based tests with real PostgreSQL proving transaction isolation, locking, and deadlock handling | **Testcontainers Pattern** — real DB in tests |
+| 1 | PostgreSQL transaction and concurrency suites | Testcontainers-based tests with real PostgreSQL proving transaction isolation, locking, and deadlock handling | **Testcontainers Pattern**: real DB in tests |
 | 2 | Financial invariant/property tests | Property-based tests for: zero-sum per group/currency, rounding consistency, overflow rejection, posting completeness | **Property-Based Testing**, **Invariant Checking** |
 | 3 | Deadlock/lock-timeout/retry tests | Force and recover from PostgreSQL deadlocks, lock timeouts, connection exhaustion, and serialization failures | **Retry Pattern** with **Exponential Backoff** |
 | 4 | Migration tests at representative scale | Run migrations against a database with 1M+ rows; measure duration and verify indexes | **Migration Testing** at scale |
@@ -313,7 +313,7 @@ transactions.
 
 ---
 
-### Phase 4 — Identity and authorization hardening
+### Phase 4: Identity and authorization hardening
 
 > **Objective**: Make every execution boundary fail closed and auditable.
 > A single authentication or authorization bug at 1M DAU is a data breach.
@@ -327,7 +327,7 @@ transactions.
 |:---:|---|---|---|
 | 1 | Complete authorization matrix | Generated or centrally maintained matrix covering: identity, membership, lifecycle, resource, replay, and transport dimensions | **RBAC** (Role-Based Access Control) + **ABAC** elements |
 | 2 | Provider outage/refresh/rotation tests | JWKS refresh failure, key rotation, clock-skew tolerance, provider unavailability | **Circuit Breaker Pattern** for identity provider |
-| 3 | All-boundary identity coverage | REST, GraphQL HTTP, WebSocket, worker, and internal-service paths each have positive and negative evidence | **Defense in Depth** — check at every layer |
+| 3 | All-boundary identity coverage | REST, GraphQL HTTP, WebSocket, worker, and internal-service paths each have positive and negative evidence | **Defense in Depth**: check at every layer |
 | 4 | Abuse/rate-limit policies | Per-user, per-IP, and per-operation rate limits with monitoring | **Token Bucket** or **Sliding Window** rate limiting |
 | 5 | Secret rotation runbook | Step-by-step procedure for rotating JWT signing keys, DB credentials, broker credentials, and OIDC secrets without downtime | **Key Rotation Pattern** |
 
@@ -365,10 +365,10 @@ transactions.
 
 ---
 
-### Phase 5 — Idempotency, offline replay, and messaging reliability
+### Phase 5: Idempotency, offline replay, and messaging reliability
 
 > **Objective**: Guarantee safe retries and durable asynchronous processing.
-> At 1M+ DAU on mobile networks, retries are not edge cases — they're the
+> At 1M+ DAU on mobile networks, retries are not edge cases: they're the
 > normal operating mode.
 
 **Duration estimate**: 3–4 weeks
@@ -378,12 +378,12 @@ transactions.
 
 | # | Deliverable | Description | Design pattern reference |
 |:---:|---|---|---|
-| 1 | Unknown-outcome request tests | Client timeout during expense creation — verify no duplicate posting on retry | **Idempotent Receiver Pattern** |
-| 2 | Multi-replica idempotency tests | Two replicas receive the same idempotency key simultaneously — only one succeeds | **Optimistic Locking** with unique constraint |
+| 1 | Unknown-outcome request tests | Client timeout during expense creation: verify no duplicate posting on retry | **Idempotent Receiver Pattern** |
+| 2 | Multi-replica idempotency tests | Two replicas receive the same idempotency key simultaneously: only one succeeds | **Optimistic Locking** with unique constraint |
 | 3 | Idempotency retention/cleanup | Expired idempotency records are cleaned up; keys can be reused after retention period | **TTL-Based Cleanup** |
 | 4 | RabbitMQ durable/quorum topology | Quorum queues, publisher confirms, mandatory delivery | **Durable Messaging** with **Publisher Confirms** |
 | 5 | Consumer bounded retry and DLQ | Max 3 retries → exponential backoff → dead letter exchange → alerting | **Dead Letter Queue Pattern**, **Retry with Backoff** |
-| 6 | Event version compatibility | Old consumer + new event, new consumer + old event — both handled gracefully | **Tolerant Reader Pattern**, **Schema Evolution** |
+| 6 | Event version compatibility | Old consumer + new event, new consumer + old event: both handled gracefully | **Tolerant Reader Pattern**, **Schema Evolution** |
 
 > 📖 **What is the Tolerant Reader Pattern?**
 >
@@ -418,7 +418,7 @@ transactions.
 
 ---
 
-### Phase 6 — CI and supply-chain enforcement
+### Phase 6: CI and supply-chain enforcement
 
 > **Objective**: Make quality and safety repeatable for every change and
 > release. At 1M+ DAU, you deploy daily. Without CI gates, every deployment
@@ -468,7 +468,7 @@ flowchart LR
 
 ---
 
-### Phase 7 — Production-like deployment and capacity proof
+### Phase 7: Production-like deployment and capacity proof
 
 > **Objective**: Validate the system in an environment representative of
 > launch. This is the final gate before shipping to 1M+ users.

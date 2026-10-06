@@ -1,4 +1,4 @@
-# CORE-08 — Durable Expense Core persistence
+# CORE-08: Durable Expense Core persistence
 
 Move a meaningful aggregate from an in-memory implementation behind a
 service-local JPA adapter and Flyway migration. Preserve deterministic unit

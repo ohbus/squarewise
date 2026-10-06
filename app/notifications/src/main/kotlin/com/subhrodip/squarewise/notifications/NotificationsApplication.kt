@@ -6,9 +6,10 @@ import org.springframework.context.annotation.Import
 import com.subhrodip.squarewise.errors.http.GlobalErrorHandler
 import com.subhrodip.squarewise.errors.request.RequestIdFilter
 import com.subhrodip.squarewise.security.OidcConfigurationGuard
+import com.subhrodip.squarewise.db.config.DbStatementTelemetryConfiguration
 
 @SpringBootApplication
-@Import(GlobalErrorHandler::class, RequestIdFilter::class, OidcConfigurationGuard::class)
+@Import(GlobalErrorHandler::class, RequestIdFilter::class, OidcConfigurationGuard::class, DbStatementTelemetryConfiguration::class)
 class NotificationsApplication
 
 /** Starts the Notifications Spring Boot application for IDE and command-line launches. */

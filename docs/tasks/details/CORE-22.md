@@ -1,4 +1,4 @@
-# CORE-22 — Harden group updates with transactional change effects
+# CORE-22: Harden group updates with transactional change effects
 
 Define optimistic/concurrent rename semantics and atomically persist the group
 update, audit record, synchronization change, and outbox event. Depends on

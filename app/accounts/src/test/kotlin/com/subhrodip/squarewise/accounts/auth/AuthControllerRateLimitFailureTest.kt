@@ -1,7 +1,6 @@
 package com.subhrodip.squarewise.accounts.auth
 
 import com.subhrodip.squarewise.accounts.auth.abuse.ClientAddressResolver
-import com.subhrodip.squarewise.accounts.auth.abuse.RateLimitBucketStore
 import com.subhrodip.squarewise.accounts.auth.abuse.RateLimitStoreUnavailableException
 import com.subhrodip.squarewise.accounts.auth.abuse.RefreshRateLimitService
 import com.subhrodip.squarewise.accounts.auth.credential.HmacCredentialDigest
@@ -18,6 +17,7 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.springframework.mock.web.MockHttpServletRequest
 import org.mockito.Mockito.mock
+import com.subhrodip.squarewise.security.ratelimit.RateLimiter
 
 /** Verifies refresh admission fails closed when the rate-limit store is unavailable. */
 class AuthControllerRateLimitFailureTest {
@@ -26,7 +26,7 @@ class AuthControllerRateLimitFailureTest {
         val digest = HmacCredentialDigest(ByteArray(32) { it.toByte() })
         val unavailableLimiter = object : RefreshRateLimitService(
             digest,
-            mock(RateLimitBucketStore::class.java)
+            mock(RateLimiter::class.java)
         ) {
             override fun tryAcquire(networkPartition: String, now: Instant): Boolean {
                 throw RateLimitStoreUnavailableException(IllegalStateException("redis unavailable"))

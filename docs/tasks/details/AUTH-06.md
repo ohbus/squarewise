@@ -1,4 +1,4 @@
-# AUTH-06 — Keycloak environment and meaningful Compose hostnames
+# AUTH-06: Keycloak environment and meaningful Compose hostnames
 
 ## Objective
 

@@ -1,4 +1,4 @@
-# DOC-24 — Mandate strict SOLID file separation, comprehensive documentation linking, and pre-implementation documentation review
+# DOC-24: Mandate strict SOLID file separation, comprehensive documentation linking, and pre-implementation documentation review
 
 ## Objective
 

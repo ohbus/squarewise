@@ -1,4 +1,4 @@
-# AUTH-08 — RFC-aligned authentication and session hardening
+# AUTH-08: RFC-aligned authentication and session hardening
 
 ## Status
 
@@ -67,18 +67,18 @@ authorization.
 
 The implementation and tests must align with:
 
-- RFC 6749 — OAuth 2.0 Authorization Framework.
-- RFC 6750 — OAuth 2.0 Bearer Token Usage.
-- RFC 7009 — OAuth 2.0 Token Revocation.
-- RFC 7519 — JSON Web Token.
-- RFC 7636 — Proof Key for Code Exchange.
-- RFC 8252 — OAuth 2.0 for Native Apps.
-- RFC 8414 — OAuth 2.0 Authorization Server Metadata.
-- RFC 8725 — JSON Web Token Best Current Practices.
-- RFC 9068 — JWT Profile for OAuth 2.0 Access Tokens.
-- RFC 9449 — OAuth 2.0 Demonstrating Proof of Possession, where sender
+- RFC 6749: OAuth 2.0 Authorization Framework.
+- RFC 6750: OAuth 2.0 Bearer Token Usage.
+- RFC 7009: OAuth 2.0 Token Revocation.
+- RFC 7519: JSON Web Token.
+- RFC 7636: Proof Key for Code Exchange.
+- RFC 8252: OAuth 2.0 for Native Apps.
+- RFC 8414: OAuth 2.0 Authorization Server Metadata.
+- RFC 8725: JSON Web Token Best Current Practices.
+- RFC 9068: JWT Profile for OAuth 2.0 Access Tokens.
+- RFC 9449: OAuth 2.0 Demonstrating Proof of Possession, where sender
   constraint is selected for a client class.
-- RFC 6265 — HTTP State Management Mechanism for browser cookies.
+- RFC 6265: HTTP State Management Mechanism for browser cookies.
 - OpenID Connect Discovery and RP-Initiated Logout specifications.
 
 RFCs define protocol and security requirements, not universal timeout values.
@@ -157,14 +157,14 @@ The coordinator owns `docs/tasks/registry.yaml` and `docs/tasks/board.md`.
 
 ## Work packages
 
-### AUTH-08A — Policy and configuration
+### AUTH-08A: Policy and configuration
 
 Create a pure session-expiry policy and validated configuration properties.
 Reject contradictory or unsafe values at startup in production-like profiles.
 Keep policy calculations independent of Spring, JPA, Redis, HTTP, and OIDC
 providers.
 
-### AUTH-08B — Session persistence and atomic rotation
+### AUTH-08B: Session persistence and atomic rotation
 
 Add immutable absolute expiry to durable sessions, preserve idle expiry as the
 sliding boundary, and retain PostgreSQL as the writer-authoritative source.
@@ -177,7 +177,7 @@ must not weaken compare-and-set behavior or replay detection. If the active
 conditional transition fails, the service must fail closed and revoke the
 affected family according to the selected replay policy.
 
-### AUTH-08C — Trusted identity restoration
+### AUTH-08C: Trusted identity restoration
 
 Refresh must resolve the provider-qualified subject and account state from
 trusted Accounts-owned data. It must remove synthetic refresh identity values
@@ -187,7 +187,7 @@ from the HTTP caller.
 Deleted, suspended, unmapped, or identity-changed accounts must not receive a
 new access token. Failure responses remain generic `401` responses.
 
-### AUTH-08D — Logout and revocation
+### AUTH-08D: Logout and revocation
 
 Implement effective idempotent logout. Logout must revoke the intended session
 family, clear browser credentials where applicable, and coordinate with an
@@ -198,7 +198,7 @@ The public contract must state whether logout revokes one device session or all
 sessions. The default recommendation is current-family revocation, with account-
 wide revocation reserved for deletion and security events.
 
-### AUTH-08E — Existing endpoint protection
+### AUTH-08E: Existing endpoint protection
 
 Build and maintain an endpoint authentication matrix for every REST operation,
 GraphQL operation, and WebSocket handshake. Public routes must be explicit.
@@ -209,7 +209,7 @@ The matrix must cover missing, malformed, expired, forged, wrong-issuer,
 wrong-audience, blank-subject, non-member, removed-member, cross-group,
 rate-limit, dependency-failure, and timeout behavior.
 
-### AUTH-08F — Cache and database efficiency
+### AUTH-08F: Cache and database efficiency
 
 Use existing cache facilities for OIDC discovery/JWK material, distributed rate
 limits, bounded safe projections, and request-scoped BFF context. Do not use a
@@ -221,7 +221,7 @@ Refresh and logout must use the writer and the smallest secure number of round
 trips. Cache mutation/invalidation behavior must be tested during restart,
 eviction, stale-entry, and Redis-unavailable scenarios.
 
-### AUTH-08G — Browser and native clients
+### AUTH-08G: Browser and native clients
 
 Browser sessions should use a BFF-owned secure HttpOnly cookie, CSRF protection,
 strict CORS/origin policy, and no JavaScript-visible refresh token. Native
@@ -233,7 +233,7 @@ double-submit CSRF, exact Origin checks, and browser-safe response metadata.
 Native clients retain the bearer-token contract and use the provider's PKCE
 configuration; application secure-storage integration remains deferred.
 
-### AUTH-08H — GraphQL and WebSocket parity
+### AUTH-08H: GraphQL and WebSocket parity
 
 GraphQL HTTP and WebSocket boundaries must use the same token validation,
 identity, expiry, revocation, and authorization semantics as REST. A socket

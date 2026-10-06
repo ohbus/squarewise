@@ -1,4 +1,4 @@
-# BFF-10 — Resolve GraphQL scalar deprecation warnings
+# BFF-10: Resolve GraphQL scalar deprecation warnings
 
 Replace or narrowly suppress deprecated Spring GraphQL `Coercing` overrides in
 the custom Money/DateTime scalars. Preserve schema behavior, invalid literal

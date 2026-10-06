@@ -1,4 +1,4 @@
-# DOC-10 — IntelliJ developer run configurations
+# DOC-10: IntelliJ developer run configurations
 
 ## Objective
 

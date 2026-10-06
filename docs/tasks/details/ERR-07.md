@@ -1,4 +1,4 @@
-# ERR-07 — Settlement, recurrence, sync, and outbox errors
+# ERR-07: Settlement, recurrence, sync, and outbox errors
 
 Define specific codes for settlement validation/reversal, recurring schedule
 state, occurrence conflicts, expired cursors, revision conflicts, outbox publish

@@ -1,4 +1,4 @@
-# OPS-21 — Modular k6 load tests for high-value endpoints
+# OPS-21: Modular k6 load tests for high-value endpoints
 
 Create independently runnable k6 scenarios for Accounts, Expense Core,
 Notifications, and BFF GraphQL. Keep scripts modular, tag requests by bounded

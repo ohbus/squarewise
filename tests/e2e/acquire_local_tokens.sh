@@ -4,7 +4,7 @@ set -euo pipefail
 
 # Ensure keycloak container is reachable
 TOKEN_ENDPOINT="http://idp-keycloak:8080/realms/squarewise/protocol/openid-connect/token"
-RESOLVE_FLAG=("--connect-to" "idp-keycloak:8080:127.0.0.1:8090")
+RESOLVE_FLAG=("--connect-to" "idp-keycloak:8080:127.0.0.1:${KEYCLOAK_HOST_PORT:-28090}")
 
 fetch_token() {
   local client_id="$1"

@@ -15,7 +15,8 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-squarewise}
     volumes:
       - ./init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql:ro
-    ports: ["5432:5432"]
+      - postgres-data:/var/lib/postgresql/data
+    ports: ["${SQUAREWISE_POSTGRES_PORT:-25432}:5432"]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-squarewise} -d squarewise_accounts"]
       interval: 5s
@@ -34,7 +35,8 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-squarewise}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-squarewise-local-only}
-    ports: ["5672:5672", "15672:15672"]
+      RABBITMQ_ERLANG_COOKIE: ${RABBITMQ_ERLANG_COOKIE:-squarewise-local-erlang-cookie}
+    ports: ["${SQUAREWISE_RABBITMQ_PORT:-28672}:5672", "${SQUAREWISE_RABBITMQ_MANAGEMENT_PORT:-28673}:15672"]
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 5s
@@ -53,6 +55,7 @@ services:
     command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:-squarewise-redis-local-only}", "--appendonly", "no"]
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD:-squarewise-redis-local-only}
+    ports: ["${SQUAREWISE_REDIS_PORT:-28379}:6379"]
     healthcheck:
       test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" ping | grep -q PONG"]
       interval: 5s
@@ -68,7 +71,7 @@ services:
       resources:
         reservations: {cpus: "0.05", memory: 64m}
         limits: {cpus: "0.25", memory: 256m}
-    ports: ["1025:1025", "8025:8025"]
+    ports: ["${MAILPIT_SMTP_PORT:-21025}:1025", "${SQUAREWISE_MAILPIT_WEB_PORT:-28025}:8025"]
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:8025/ || exit 1"]
       interval: 5s
@@ -76,6 +79,9 @@ services:
       retries: 20
   idp-keycloak:
     hostname: ${SQUAREWISE_IDP_HOSTNAME:-idp-keycloak}
+    networks:
+      default:
+        aliases: ["${SQUAREWISE_IDP_HOSTNAME:-idp-keycloak}"]
     image: ${KEYCLOAK_IMAGE:-quay.io/keycloak/keycloak:26.7.4}
     command: ["start-dev", "--import-realm"]
     environment:
@@ -84,9 +90,16 @@ services:
       KC_HEALTH_ENABLED: "true"
     volumes:
       - ./keycloak/realm:/opt/keycloak/data/import:ro
-    ports: ["${KEYCLOAK_BIND_ADDRESS:-127.0.0.1}:${KEYCLOAK_HOST_PORT:-8090}:8080"]
+    ports: ["${KEYCLOAK_BIND_ADDRESS:-127.0.0.1}:${KEYCLOAK_HOST_PORT:-28090}:8080"]
     healthcheck:
       test: ["CMD-SHELL", "bash -ec 'exec 3<>/dev/tcp/127.0.0.1/9000; printf \"GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n\" >&3; grep -q \"200\" <&3'"]
       interval: 5s
       timeout: 3s
       retries: 30
+
+volumes:
+  postgres-data:
+
+networks:
+  default:
+    name: squarewise-local-net

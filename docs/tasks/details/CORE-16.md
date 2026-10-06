@@ -1,4 +1,4 @@
-# CORE-16 — Implement debt simplification and settlement suggestions engine
+# CORE-16: Implement debt simplification and settlement suggestions engine
 
 ## Objective
 

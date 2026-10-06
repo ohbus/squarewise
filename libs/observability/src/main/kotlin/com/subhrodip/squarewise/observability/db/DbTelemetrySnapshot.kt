@@ -9,5 +9,6 @@ data class DbTelemetrySnapshot(
     val deadlocks: Long = 0,
     val queries: Long = 0,
     val queryTotalMs: Long = 0,
-    val slowQueries: Long = 0
+    val slowQueries: Long = 0,
+    val jdbcStatements: Long = 0
 )

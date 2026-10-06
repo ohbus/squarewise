@@ -1,4 +1,4 @@
-# OPS-18 — Micrometer and Prometheus service metrics
+# OPS-18: Micrometer and Prometheus service metrics
 
 Expose production-safe Prometheus metrics for Accounts, Expense Core,
 Notifications, and BFF. Enable service identity tags, actuator health probes,

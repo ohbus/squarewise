@@ -1,4 +1,4 @@
-# OPS-22 — 1M-user capacity baseline and production readiness evidence
+# OPS-22: 1M-user capacity baseline and production readiness evidence
 
 Define a measurable one-million-registered-user workload model, infrastructure
 starting envelope, per-surface SLOs, and a mixed k6 profile. Validate it against

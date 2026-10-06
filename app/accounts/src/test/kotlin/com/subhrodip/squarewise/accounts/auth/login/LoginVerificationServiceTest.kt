@@ -5,6 +5,10 @@ import com.subhrodip.squarewise.accounts.auth.credential.HmacCredentialDigest
 import com.subhrodip.squarewise.accounts.auth.credential.LoginCredentialRepository
 import com.subhrodip.squarewise.accounts.auth.credential.LoginCredentialService
 import com.subhrodip.squarewise.accounts.auth.credential.OneTimeCredentialIssuer
+import com.subhrodip.squarewise.accounts.auth.abuse.LoginVerificationRateLimitService
+import com.subhrodip.squarewise.security.ratelimit.RateLimitDecision
+import com.subhrodip.squarewise.security.ratelimit.RateLimitPolicy
+import com.subhrodip.squarewise.security.ratelimit.RateLimiter
 import com.subhrodip.squarewise.accounts.auth.provider.InternalJwtTokenProvider
 import com.subhrodip.squarewise.accounts.auth.session.AuthSessionRepository
 import com.subhrodip.squarewise.accounts.auth.session.TokenSessionService
@@ -44,11 +48,19 @@ class LoginVerificationServiceTest @Autowired constructor(
         credentialDigest = digest,
         accountIdentityStore = profileStore
     )
+    private val verificationRateLimitService = LoginVerificationRateLimitService(
+        digest = digest,
+        rateLimiter = object : RateLimiter {
+            override fun consume(key: String, policy: RateLimitPolicy): RateLimitDecision =
+                RateLimitDecision(true, policy.maximumPermits - 1, Duration.ZERO, policy.id)
+        }
+    )
     private val service = LoginVerificationService(
         credentialService = credentialService,
         profileStore = profileStore,
         tokenSessionService = tokenSessionService,
-        accountIdentityStore = profileStore
+        accountIdentityStore = profileStore,
+        loginVerificationRateLimitService = verificationRateLimitService
     )
 
     @Test
@@ -122,5 +134,55 @@ class LoginVerificationServiceTest @Autowired constructor(
         assertEquals(accountId, profileStore.findByEmail("existing@example.com")?.accountId)
         assertEquals(subject, profileStore.findByEmail("existing@example.com")?.subject)
         assertEquals("Existing User", profileStore.get(subject)?.displayName)
+    }
+
+    @Test
+    fun `maps verification limiter outage to a generic rate-limit error`() {
+        val failingLimiter = LoginVerificationRateLimitService(
+            digest,
+            object : RateLimiter {
+                override fun consume(key: String, policy: RateLimitPolicy): RateLimitDecision =
+                    throw com.subhrodip.squarewise.security.ratelimit.RateLimitStoreUnavailableException(
+                        IllegalStateException("redis unavailable")
+                    )
+            }
+        )
+        val failingService = LoginVerificationService(
+            credentialService,
+            profileStore,
+            tokenSessionService,
+            profileStore,
+            failingLimiter
+        )
+
+        val exception = assertThrows(ApplicationException::class.java) {
+            failingService.verify("credential", "NATIVE", null, Instant.now())
+        }
+
+        assertEquals(ErrorCode.ERR_11, exception.errorCode)
+    }
+
+    @Test
+    fun `maps verification limiter denial to a generic rate-limit error`() {
+        val deniedLimiter = LoginVerificationRateLimitService(
+            digest,
+            object : RateLimiter {
+                override fun consume(key: String, policy: RateLimitPolicy): RateLimitDecision =
+                    RateLimitDecision(false, 0, policy.window, policy.id)
+            }
+        )
+        val deniedService = LoginVerificationService(
+            credentialService,
+            profileStore,
+            tokenSessionService,
+            profileStore,
+            deniedLimiter
+        )
+
+        val exception = assertThrows(ApplicationException::class.java) {
+            deniedService.verify("credential", "NATIVE", null, Instant.now())
+        }
+
+        assertEquals(ErrorCode.ERR_11, exception.errorCode)
     }
 }

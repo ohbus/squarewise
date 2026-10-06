@@ -1,4 +1,4 @@
-# ACC-06 — Refactor Accounts persistence into separated SOLID files
+# ACC-06: Refactor Accounts persistence into separated SOLID files
 
 ## Objective
 

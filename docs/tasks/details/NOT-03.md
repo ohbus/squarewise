@@ -1,4 +1,4 @@
-# NOT-03 — Durable inbox
+# NOT-03: Durable inbox
 
 Persist notification inbox events and event-id deduplication through a
 service-local JPA/Flyway adapter while preserving cursor ordering.

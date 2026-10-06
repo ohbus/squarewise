@@ -4,7 +4,7 @@ These scripts are reproducible probes for an isolated Squarewise environment.
 They do not provision infrastructure or claim production capacity.
 
 ```sh
-BASE_URL=http://localhost:8080 REQUESTS=50 CONCURRENCY=5 tests/performance/capacity-smoke.sh
+BASE_URL=http://localhost:28080 REQUESTS=50 CONCURRENCY=5 tests/performance/capacity-smoke.sh
 COMPOSE_FILE=infra/local/docker-compose.yml tests/performance/recovery-drill.sh
 tests/performance/cost-estimate.sh
 # Replica/routing smoke evidence (requires the merged local replica profile)

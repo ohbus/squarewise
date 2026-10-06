@@ -1,4 +1,4 @@
-# OPS-11 — Enable GitHub Actions BuildKit GHA image caching
+# OPS-11: Enable GitHub Actions BuildKit GHA image caching
 
 ## Objective
 

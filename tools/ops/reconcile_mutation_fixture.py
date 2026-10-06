@@ -172,7 +172,7 @@ def reconcile_group(
 def main() -> int:
     parser = argparse.ArgumentParser(description="Reconcile Expense Core mutation load fixture.")
     parser.add_argument("--group-id", help="UUID of group fixture to reconcile. If omitted, searches latest k6 group.")
-    parser.add_argument("--base-url", default="http://localhost:8082", help="Expense Core base URL")
+    parser.add_argument("--base-url", default="http://localhost:28082", help="Expense Core base URL")
     parser.add_argument("--token", default="test-user", help="Bearer token")
     args = parser.parse_args()
 

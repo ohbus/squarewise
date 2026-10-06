@@ -1,4 +1,4 @@
-# CORE-11 — Durable synchronization changes
+# CORE-11: Durable synchronization changes
 
 Persist group-scoped revisions, changes, and tombstones through JPA/Flyway while
 preserving opaque cursor pagination and expiry semantics.

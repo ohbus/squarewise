@@ -32,8 +32,8 @@ provisioned until the remaining code and configuration work is complete.
 
 This audit is the **single authoritative decision document** for whether the
 Squarewise backend can be shipped to production for 1–10 million daily active
-users. It is structured so that any engineer — including an intern with zero
-context — can:
+users. It is structured so that any engineer: including an intern with zero
+context: can:
 
 1. Understand **what** each finding means in plain English.
 2. Understand **why** it is dangerous at scale (with concrete attack/failure
@@ -163,11 +163,11 @@ closed before production-readiness approval.
 
 | ID | Severity | Area | Evidence-based blocker | Required closure | Design patterns to apply |
 |:---:|:---:|---|---|---|---|
-| CRIT-01 | 🔴 Critical | Financial correctness | Settlements are not included in the balance-posting aggregation; `SettlementSuggestionEngine` reads only expense balance postings, so recording a repayment does not change balances or suggestions | **One transactional financial model** — every financial effect (expense, settlement, reversal) must produce ledger postings that feed the same aggregation query. Add durable mutation idempotency, reconciliation scripts, and concurrent retry tests. | **Event Sourcing** / **Ledger Pattern** — all state changes produce immutable entries; **CQRS** — derive balances from the single posting stream |
-| CRIT-02 | 🔴 Critical | Data integrity | `JpaExpenseStore.create` accepts `idempotencyKey` but **never persists or compares it**. Idempotency is based only on client-supplied `expenseId`; a retry with a new expense ID creates duplicate financial postings. Cross-group collision: existing expense ID lookup happens before group verification | **Durable idempotency record** with unique constraint on `(groupId, actorId, operationScope, idempotencyKey)`, payload hash, replayed response, conflict semantics, and tests for unknown outcomes, cross-group collisions, concurrent retries, and altered payloads | **Idempotent Receiver** pattern — persist the idempotency key atomically with the side effect; **Optimistic Locking** for conflict detection |
+| CRIT-01 | 🔴 Critical | Financial correctness | Settlements are not included in the balance-posting aggregation; `SettlementSuggestionEngine` reads only expense balance postings, so recording a repayment does not change balances or suggestions | **One transactional financial model**: every financial effect (expense, settlement, reversal) must produce ledger postings that feed the same aggregation query. Add durable mutation idempotency, reconciliation scripts, and concurrent retry tests. | **Event Sourcing** / **Ledger Pattern**: all state changes produce immutable entries; **CQRS**: derive balances from the single posting stream |
+| CRIT-02 | 🔴 Critical | Data integrity | `JpaExpenseStore.create` accepts `idempotencyKey` but **never persists or compares it**. Idempotency is based only on client-supplied `expenseId`; a retry with a new expense ID creates duplicate financial postings. Cross-group collision: existing expense ID lookup happens before group verification | **Durable idempotency record** with unique constraint on `(groupId, actorId, operationScope, idempotencyKey)`, payload hash, replayed response, conflict semantics, and tests for unknown outcomes, cross-group collisions, concurrent retries, and altered payloads | **Idempotent Receiver** pattern: persist the idempotency key atomically with the side effect; **Optimistic Locking** for conflict detection |
 | CRIT-03 | 🔴 Critical | Authentication | `AuthSessionConfiguration.kt` is not profile-restricted and wires `InternalJwtTokenProvider` when no `IdentityProviderPort` bean exists. Constructor supplies **fallback JWT secret, issuer, and audience values**. Production passwordless flow can mint internally signed HMAC tokens instead of using the configured external OIDC provider | Production provider selection must **fail closed**. Remove fallback values. Use `@Profile("test", "local")` for internal JWT provider. Add startup validation that rejects missing OIDC configuration. Add provider-issued token integration test | **Fail-Closed Security** principle; **Dependency Injection** with profile-gated beans; **Strategy Pattern** for identity provider selection |
-| CRIT-04 | 🔴 Critical | Messaging | `OutboxRelayDaemon` supplies `InMemoryBroker` via `@ConditionalOnMissingBean(BrokerPublisher::class)`, while RabbitMQ publisher requires `squarewise.outbox.rabbit-enabled=true`. If outbox is enabled without RabbitMQ flag, committed financial events stay **process-local** and are lost on restart | Production must **require** an explicit durable broker publisher and fail startup when absent. `InMemoryBroker` must be `@Profile("test", "local")` only. Add Spring context test for production profile | **Transactional Outbox** pattern requires a durable downstream; **Fail-Fast** principle — detect misconfiguration at startup, not at runtime |
-| CRIT-05 | 🔴 Critical | Persistence | `InMemoryNotificationInboxStore` and `InMemoryProfileStore` are registered as Spring `@Service`/`@Component` alongside JPA implementations. `NotificationInbox` constructor defaults to `InMemoryNotificationInboxStore`. A missing bean or context change silently selects process-local storage that loses data on restart | Make in-memory stores `@Profile("test", "local")` only. Remove constructor default arguments that select in-memory stores. Add Spring context tests proving production profile selects JPA implementations | **Port/Adapter** pattern (Hexagonal Architecture) — adapters are wired via DI, not constructor defaults; **Liskov Substitution** violation risk — in-memory and durable stores have different durability contracts |
+| CRIT-04 | 🔴 Critical | Messaging | `OutboxRelayDaemon` supplies `InMemoryBroker` via `@ConditionalOnMissingBean(BrokerPublisher::class)`, while RabbitMQ publisher requires `squarewise.outbox.rabbit-enabled=true`. If outbox is enabled without RabbitMQ flag, committed financial events stay **process-local** and are lost on restart | Production must **require** an explicit durable broker publisher and fail startup when absent. `InMemoryBroker` must be `@Profile("test", "local")` only. Add Spring context test for production profile | **Transactional Outbox** pattern requires a durable downstream; **Fail-Fast** principle: detect misconfiguration at startup, not at runtime |
+| CRIT-05 | 🔴 Critical | Persistence | `InMemoryNotificationInboxStore` and `InMemoryProfileStore` are registered as Spring `@Service`/`@Component` alongside JPA implementations. `NotificationInbox` constructor defaults to `InMemoryNotificationInboxStore`. A missing bean or context change silently selects process-local storage that loses data on restart | Make in-memory stores `@Profile("test", "local")` only. Remove constructor default arguments that select in-memory stores. Add Spring context tests proving production profile selects JPA implementations | **Port/Adapter** pattern (Hexagonal Architecture): adapters are wired via DI, not constructor defaults; **Liskov Substitution** violation risk: in-memory and durable stores have different durability contracts |
 
 ---
 
@@ -176,7 +176,7 @@ closed before production-readiness approval.
 | Area | Current evidence | Level | Decision |
 |---|---|:---:|---|
 | Domain implementation | Kotlin services, JPA/Flyway persistence, modular boundaries, local E2E | 2–3 | Continue hardening |
-| API contracts | OpenAPI/GraphQL validators, 45 REST operations, 9 GraphQL roots | 2–3 | Not complete — operation gaps remain |
+| API contracts | OpenAPI/GraphQL validators, 45 REST operations, 9 GraphQL roots | 2–3 | Not complete: operation gaps remain |
 | Authentication | OIDC issuer/audience/signature/expiry/subject negative cases and passwordless journey | 2–3 | Strong local evidence; production operations open |
 | Authorization | REST, GraphQL, WebSocket, member/non-member coverage | 2–3 | Complete matrix and production failure evidence open |
 | Financial correctness | Minor units, reconciliation, postings, balances, idempotent writes | 2 | Sustained concurrency under real DB open |
@@ -195,11 +195,11 @@ These checks were rerun and must be resolved before CI readiness:
 
 | Check | Result | Required action |
 |---|---|---|
-| `python tools/ops/check_security_hygiene.py` | ❌ Failed — 2 test-only bearer token fixture lines in `tests/acceptance/test_qa05.py` | Narrow the scanner classification or move fixtures; rerun and record pass |
-| `uvx yamllint` | ❌ Failed — newline checks for `ci-branch.yml`, `ci-master.yml`, `ci-pr.yml`, `_reusable-ci.yml` | Normalize workflow files; revalidate without weakening other lint rules |
-| Production Compose rendering | ✅ Expected failure — missing required image variables | Record this as safety behavior; complete validation with injected references |
-| Public-surface validation | ✅ Passed — 45 REST ops, 9 GraphQL roots, 50 Bruno requests, 71 assertion-backed | No action required |
-| Repository release validator | ⚠️ Partial — tracked assets pass; restore, security-scan, capacity, rollback open | Complete QA-08 evidence |
+| `python tools/ops/check_security_hygiene.py` | ❌ Failed: 2 test-only bearer token fixture lines in `tests/acceptance/test_qa05.py` | Narrow the scanner classification or move fixtures; rerun and record pass |
+| `uvx yamllint` | ❌ Failed: newline checks for `ci-branch.yml`, `ci-master.yml`, `ci-pr.yml`, `_reusable-ci.yml` | Normalize workflow files; revalidate without weakening other lint rules |
+| Production Compose rendering | ✅ Expected failure: missing required image variables | Record this as safety behavior; complete validation with injected references |
+| Public-surface validation | ✅ Passed: 45 REST ops, 9 GraphQL roots, 50 Bruno requests, 71 assertion-backed | No action required |
+| Repository release validator | ⚠️ Partial: tracked assets pass; restore, security-scan, capacity, rollback open | Complete QA-08 evidence |
 
 ---
 
@@ -217,22 +217,22 @@ perspective. Users will record duplicate repayments. Settlement suggestions
 become meaningless. Financial data integrity is destroyed.
 
 **Where to look in code**:
-- `SettlementSuggestionEngine` — derives balances from `ExpenseStore.balances()`
-- `ExpenseStore.balances()` SQL — aggregates only from `balance_postings` table
-- Settlement recording — writes to `settlements` table, which is **not** part
+- `SettlementSuggestionEngine`: derives balances from `ExpenseStore.balances()`
+- `ExpenseStore.balances()` SQL: aggregates only from `balance_postings` table
+- Settlement recording: writes to `settlements` table, which is **not** part
   of the `balance_postings` aggregation
-- Settlement reversal — same problem
+- Settlement reversal: same problem
 
 **Design patterns to apply**:
 - **Ledger Pattern** (a.k.a. Double-Entry Bookkeeping): Every financial state
-  change — expense creation, settlement recording, settlement reversal — must
+  change: expense creation, settlement recording, settlement reversal: must
   produce immutable ledger entries (balance postings) that are the single source
   of truth for "who owes whom".
 
   > 📖 **What is the Ledger Pattern?** Think of it like a bank statement. Every
   > transaction (deposit, withdrawal, transfer) creates a line item. The current
   > balance is always the sum of all line items. You never update a "balance"
-  > field directly — you add entries, and the balance is derived.
+  > field directly: you add entries, and the balance is derived.
 
 - **Transactional Outbox Pattern**: The settlement posting, audit trail, and
   outbox event must all commit in the same database transaction. If any part
@@ -278,9 +278,9 @@ expenses per day**. Each creates incorrect balance postings. Financial
 reconciliation becomes impossible.
 
 **Where to look in code**:
-- `JpaExpenseStore.create()` — accepts `idempotencyKey` parameter but never
+- `JpaExpenseStore.create()`: accepts `idempotencyKey` parameter but never
   persists it to the database or uses it in any comparison
-- Expense ID lookup happens before group ownership verification — security risk:
+- Expense ID lookup happens before group ownership verification: security risk:
   a matching expense ID from another group could be returned
 
 **Design pattern to apply**:
@@ -325,7 +325,7 @@ reconciliation becomes impossible.
 2. Same key with different payload returns HTTP 409 Conflict.
 3. Same key in different group returns HTTP 409 Conflict (not another group's
    data).
-4. Concurrent duplicate requests (race condition) — only one succeeds.
+4. Concurrent duplicate requests (race condition): only one succeeds.
 5. After retention period, key is cleaned up and can be reused.
 6. Missing idempotency key on mutation returns HTTP 400 (required for financial
    operations).
@@ -347,7 +347,7 @@ secret (which is in the source code) can forge authentication tokens for any
 user.
 
 **Where to look in code**:
-- `app/accounts/.../AuthSessionConfiguration.kt` — not profile-restricted,
+- `app/accounts/.../AuthSessionConfiguration.kt`: not profile-restricted,
   wires `InternalJwtTokenProvider` when no `IdentityProviderPort` exists
 - Constructor supplies fallback values for JWT secret, issuer, and audience
 
@@ -406,7 +406,7 @@ discarded. Notifications are never sent. The BFF never receives change hints.
 Users see stale data. Financial audit trails are incomplete.
 
 **Where to look in code**:
-- `app/expense-core/.../OutboxRelayDaemon.kt` — `@ConditionalOnMissingBean(BrokerPublisher::class)`
+- `app/expense-core/.../OutboxRelayDaemon.kt`: `@ConditionalOnMissingBean(BrokerPublisher::class)`
   supplies `InMemoryBroker`
 - `squarewise.outbox.rabbit-enabled` property gates the RabbitMQ publisher
 
@@ -460,10 +460,10 @@ data could be stored in a HashMap instead of PostgreSQL. Every service restart
 Users lose their notification history. Profile changes disappear.
 
 **Where to look in code**:
-- `InMemoryNotificationInboxStore` — registered as `@Service` alongside
+- `InMemoryNotificationInboxStore`: registered as `@Service` alongside
   `JpaNotificationInboxStore`
-- `NotificationInbox` constructor — defaults to `InMemoryNotificationInboxStore`
-- `InMemoryProfileStore` — registered alongside JPA profile store
+- `NotificationInbox` constructor: defaults to `InMemoryNotificationInboxStore`
+- `InMemoryProfileStore`: registered alongside JPA profile store
 - Similar patterns in export, deletion, synchronization services
 
 **Design pattern**: **Hexagonal Architecture (Port/Adapter Pattern)**:
@@ -508,23 +508,23 @@ Users lose their notification history. Profile changes disappear.
 
 **What happens at 1M+ DAU**: An attacker with a valid account can enumerate
 UUIDs and harvest display names, timezones, and currencies of all users.
-This is an IDOR (Insecure Direct Object Reference) vulnerability — one of the
+This is an IDOR (Insecure Direct Object Reference) vulnerability: one of the
 OWASP Top 10.
 
 > 📖 **What is IDOR?** Insecure Direct Object Reference means the API uses a
 > user-controlled identifier (like a UUID) to access data without verifying
 > that the requesting user is authorized to access that specific object. It's
-> like a hotel where knowing a room number lets you open the door — there's
+> like a hotel where knowing a room number lets you open the door: there's
 > no key check.
 
 **Where to look in code**:
-- `ProfileController` — `getProfile(accountId)` and batch profile endpoints
+- `ProfileController`: `getProfile(accountId)` and batch profile endpoints
 - Only check: is the caller authenticated? (global filter)
 - Missing check: does the caller share a group with `accountId`?
 
-**Design pattern**: **Authorization Boundary Pattern** — check authorization
+**Design pattern**: **Authorization Boundary Pattern**: check authorization
 at the controller boundary before delegating to the service layer. Use the
-**Principle of Least Privilege** — return only the minimum fields needed.
+**Principle of Least Privilege**: return only the minimum fields needed.
 
 **Implementation steps**:
 1. Define the authorization contract:
@@ -554,10 +554,10 @@ versions (for targeted exploits), and use health endpoints to map the internal
 service topology.
 
 **Where to look in code**:
-- Security configuration in each service — `.requestMatchers("/actuator/**").permitAll()`
-- `application.yml` — `management.endpoints.web.exposure.include: health,info,prometheus`
+- Security configuration in each service: `.requestMatchers("/actuator/**").permitAll()`
+- `application.yml`: `management.endpoints.web.exposure.include: health,info,prometheus`
 
-**Design pattern**: **Defense in Depth** — security controls at multiple layers.
+**Design pattern**: **Defense in Depth**: security controls at multiple layers.
 
 **Implementation steps**:
 1. Expose only `/actuator/health/readiness` and `/actuator/health/liveness`
@@ -584,13 +584,13 @@ affect all concurrent requests. Repeated hits cause OutOfMemoryError and full
 service crash.
 
 **Where to look in code**:
-- `JpaExpenseStore.list()` — loads all matching expenses, applies `take(limit)`
+- `JpaExpenseStore.list()`: loads all matching expenses, applies `take(limit)`
   in Kotlin after the query. The cursor parameter is not applied to the SQL.
-- `JpaNotificationInboxStore` — loads and sorts the complete subject history
+- `JpaNotificationInboxStore`: loads and sorts the complete subject history
   before slicing a page
-- Group memberships, recurring schedules, balance postings, search, export —
+- Group memberships, recurring schedules, balance postings, search, export:
   all return unconstrained `List` results
-- `outbox.snapshot()` — reads ALL rows (must remain admin-only)
+- `outbox.snapshot()`: reads ALL rows (must remain admin-only)
 
 **Design pattern**: **Keyset Pagination** (cursor-based pagination):
 
@@ -629,7 +629,7 @@ service crash.
 **What happens at 1M+ DAU**: With multiple replicas (minimum 3 at scale), the
 recurring worker runs on every replica. Without locking, the same schedule is
 processed 3 times, creating 3 identical expenses. `maxCatchUpOccurrences` has
-no positive upper bound — a misconfiguration could turn one poll into
+no positive upper bound: a misconfiguration could turn one poll into
 thousands of operations.
 
 **Design pattern**: **Distributed Lock / Claim Pattern**:
@@ -668,7 +668,7 @@ email addresses get notifications "sent" to fake addresses, creating a false
 delivery record. Failed deliveries are silently acknowledged, losing the
 notification forever.
 
-**Design principle**: **Fail-Closed for Privacy** — when you can't determine
+**Design principle**: **Fail-Closed for Privacy**: when you can't determine
 user consent, assume they did NOT consent.
 
 **Implementation steps**:
@@ -759,7 +759,7 @@ Notifications DB, and modify any financial data. This violates the
 a known CVE. Nobody notices until the vulnerability is exploited. A developer
 commits a credential in a config file. Nobody notices until it's in production.
 
-**Design principle**: **Shift-Left Security** — catch security issues as early
+**Design principle**: **Shift-Left Security**: catch security issues as early
 as possible in the development lifecycle.
 
 **Implementation steps** (in CI workflow YAML):
@@ -813,7 +813,7 @@ authenticated user could disrupt the service for all users.
 with amount `Long.MAX_VALUE - 1`. Adding any payer amount causes overflow.
 The system records a negative total instead of rejecting the request.
 
-**Design pattern**: **Bounded Domain Types** — use types that enforce valid
+**Design pattern**: **Bounded Domain Types**: use types that enforce valid
 ranges at construction time.
 
 **Implementation steps**:
@@ -823,7 +823,7 @@ ranges at construction time.
    units = $100M)
 3. Validate at API boundary before any arithmetic
 4. Remove duplicate validation in `ExpenseController` (use `ExpenseValidator`
-   as single source of truth — **DRY principle**)
+   as single source of truth: **DRY principle**)
 5. Add property tests for boundary values: `Long.MAX_VALUE`, `Long.MIN_VALUE`,
    mixed positive/negative allocations
 
@@ -841,7 +841,7 @@ ranges at construction time.
 request (which started before removal) still modifies the group. At scale,
 these race windows are hit regularly.
 
-**Design pattern**: **Authorization Under Lock** — revalidate authorization
+**Design pattern**: **Authorization Under Lock**: revalidate authorization
 within the same transaction that holds the resource lock.
 
 > 📖 **Why revalidate?** Think of it like a concert venue. The security guard
@@ -994,7 +994,7 @@ members, and non-existent UUIDs.
 **Implementation**: Define shared constants for all limits. Enforce at
 validation layer and server configuration. Add rejection tests with oversized
 payloads. See **Robustness Principle** (be conservative in what you send,
-liberal in what you accept — but NOT for security-critical inputs).
+liberal in what you accept: but NOT for security-critical inputs).
 
 ---
 
@@ -1033,7 +1033,7 @@ subscriptions. Or: check membership on every delivery. Add test: remove member
 
 **Implementation**: Either integrate the rate limiter into the delivery path
 with durable/distributed state, or remove the unused class. Add enforcement
-and expiry tests. At 1M+ DAU, process-local rate limiting is insufficient —
+and expiry tests. At 1M+ DAU, process-local rate limiting is insufficient;
 use Redis or database-backed rate limiting.
 
 ---

@@ -1,4 +1,4 @@
-# CORE-15 — Durable recurring expense schedules, occurrences, and runner
+# CORE-15: Durable recurring expense schedules, occurrences, and runner
 
 Implement database-backed recurring expense scheduling, frozen occurrence uniqueness, and worker runner in `app/expense-core`.
 

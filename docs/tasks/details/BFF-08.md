@@ -1,4 +1,4 @@
-# BFF-08 — Test bounded group-member fanout behavior
+# BFF-08: Test bounded group-member fanout behavior
 
 ## Objective
 

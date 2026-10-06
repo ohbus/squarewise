@@ -4,18 +4,86 @@ on:
   workflow_call:
     inputs:
       run_e2e: { type: boolean, required: false, default: false }
+      full_run: { type: boolean, required: false, default: false }
 permissions:
   contents: read
 
 env:
   JAVA_VERSION: '25'
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-  # Ephemeral CI-only values used to render and boot the local fixture. They
-  # are not deployment credentials and must never be reused outside CI.
-  SQUAREWISE_SECURITY_CREDENTIAL_DIGEST_SECRET: 'AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=' # local-only CI fixture
-  SQUAREWISE_SECURITY_AUTH_EMAIL_ENVELOPE_KEY: 'ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj8='
+  # Cryptographic keys and backing service credentials. Can be overridden
+  # in GitHub Actions Repository Secrets (or inherited secrets), falling back
+  # to safe deterministic local fixtures when not set.
+  SQUAREWISE_SECURITY_CREDENTIAL_DIGEST_SECRET: ${{ secrets.SQUAREWISE_SECURITY_CREDENTIAL_DIGEST_SECRET || 'AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=' }}
+  SQUAREWISE_SECURITY_AUTH_EMAIL_ENVELOPE_KEY: ${{ secrets.SQUAREWISE_SECURITY_AUTH_EMAIL_ENVELOPE_KEY || 'ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj8=' }}
+  REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD || 'squarewise-redis-local-only' }}
+  POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD || 'squarewise-local-only' }}
+  RABBITMQ_DEFAULT_PASS: ${{ secrets.RABBITMQ_DEFAULT_PASS || 'squarewise-local-only' }}
 
 jobs:
+  scope:
+    name: Determine changed verification scope
+    runs-on: ubuntu-slim
+    permissions:
+      contents: read
+    outputs:
+      matrix: ${{ steps.scope.outputs.matrix }}
+      has_verify: ${{ steps.scope.outputs.has_verify }}
+      full_scope: ${{ steps.scope.outputs.full_scope }}
+      run_sonar: ${{ steps.scope.outputs.run_sonar }}
+      has_e2e: ${{ steps.scope.outputs.has_e2e }}
+      run_edge: ${{ steps.scope.outputs.run_edge }}
+      run_product: ${{ steps.scope.outputs.run_product }}
+      run_chaos: ${{ steps.scope.outputs.run_chaos }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up isolated Python tooling
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - name: Install dependencies from lockfile
+        run: uv sync --frozen --no-build
+      - name: Calculate changed paths
+        id: changed-paths
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          FULL_RUN: ${{ inputs.full_run }}
+          BEFORE_SHA: ${{ github.event.before }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          : > changed-paths.txt
+          if [ "${FULL_RUN}" = "true" ]; then
+            :
+          elif [ "${EVENT_NAME}" = "pull_request" ]; then
+            git diff --name-only "${BASE_SHA}" "${HEAD_SHA}" > changed-paths.txt
+          elif [ -n "${BEFORE_SHA}" ] && [ "${BEFORE_SHA}" != "0000000000000000000000000000000000000000" ]; then
+            git diff --name-only "${BEFORE_SHA}" "${HEAD_SHA}" > changed-paths.txt
+          else
+            echo 'No usable push base was provided; selecting the full scope.'
+            echo 'true' > full-run-fallback.txt
+          fi
+      - name: Resolve module and E2E scope
+        id: scope
+        shell: bash
+        env:
+          FULL_RUN: ${{ inputs.full_run }}
+        run: |
+          set -euo pipefail
+          full_run_args=()
+          if [ "${FULL_RUN}" = "true" ] || [ -f full-run-fallback.txt ]; then
+            full_run_args+=(--full-run)
+          fi
+          uv run --frozen --no-build python tools/ci/changed_scope.py "${full_run_args[@]}" < changed-paths.txt | tee scope.json
+          while IFS='=' read -r key value; do
+            case "${key}" in
+              matrix|has_verify|full_scope|run_sonar|has_e2e|run_edge|run_product|run_chaos)
+                echo "${key}=${value}" >> "$GITHUB_OUTPUT" ;;
+            esac
+          done < <(tail -n +2 scope.json)
   preflight:
     name: Contracts and Compose preflight
     runs-on: ubuntu-slim
@@ -23,11 +91,11 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
       - name: Set up isolated Python tooling
-        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
       - name: Install dependencies from lockfile
         run: uv sync --frozen --no-build
       - run: |
@@ -44,22 +112,26 @@ jobs:
       contents: read
       pull-requests: read
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
       - name: Review introduced dependencies
-        uses: actions/dependency-review-action@v4
+        uses: actions/dependency-review-action@v5
         with:
           fail-on-severity: high
 
   lint:
     name: Lightweight lint and repository checks
     runs-on: ubuntu-slim
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with: { persist-credentials: false }
       - name: Set up isolated Python tooling
-        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
       - name: Install dependencies from lockfile
         run: uv sync --frozen --no-build
       - name: Set up Java
@@ -67,14 +139,7 @@ jobs:
         with:
           distribution: microsoft
           java-version: ${{ env.JAVA_VERSION }}
-          cache: gradle
-      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
-      - name: Cache Gradle wrapper distribution
-        uses: actions/cache@v4
-        with:
-          path: ~/.gradle/wrapper
-          key: gradle-wrapper-${{ runner.os }}-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties') }}
-          restore-keys: gradle-wrapper-${{ runner.os }}-
+      - uses: gradle/actions/setup-gradle@b9bee63ef481cc545e4517ec730544a4d8b1dfa0 # v6.4.0
       - name: Check formatting and contracts
         run: |
           git diff --check
@@ -87,19 +152,30 @@ jobs:
           uv run --frozen --no-build python3 -m unittest discover -s tests/acceptance
           make workflow-validate
       - name: Upload CycloneDX SBOM
-        uses: actions/upload-artifact@v4
+        id: upload-sbom
+        uses: actions/upload-artifact@v7
         with:
           name: squarewise-sbom
           path: '**/build/reports/cyclonedx/*.json'
           if-no-files-found: error
           retention-days: 14
+      - name: Attest CycloneDX SBOM
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-name: squarewise-sbom
+          subject-digest: sha256:${{ steps.upload-sbom.outputs.artifact-digest }}
       - name: Run Python type checker
         run: uv run --frozen --no-build mypy tests tools
 
   verify:
     name: Verify ${{ matrix.kind }} / ${{ matrix.name }}
     runs-on: ubuntu-latest
-    needs: preflight
+    if: needs.scope.outputs.has_verify == 'true'
+    needs: [preflight, scope]
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
     services:
       postgres:
         image: postgres:17
@@ -112,11 +188,13 @@ jobs:
         # Verification only needs the broker protocol and diagnostics; omit the
         # management plugin to reduce hosted service-container startup cost.
         image: rabbitmq:4.3
+        env:
+          RABBITMQ_ERLANG_COOKIE: squarewise-ci-erlang-cookie
         ports: ['5672:5672']
         options: >-
-          --health-cmd="rabbitmq-diagnostics -q ping"
+          --health-cmd="rabbitmqctl await_startup"
           --health-start-period=60s --health-interval=5s --health-timeout=10s --health-retries=24
-    timeout-minutes: 20
+    timeout-minutes: 180
     strategy:
       fail-fast: false
       # Each matrix job owns PostgreSQL and RabbitMQ service containers. Keep
@@ -125,53 +203,38 @@ jobs:
       # failures caused by launching all 18 service containers at once.
       max-parallel: 4
       matrix:
-        include:
-          - { kind: app, name: accounts, path: ':app:accounts', report: 'app/accounts/build/reports/jacoco/test/jacocoTestReport.xml' }
-          - { kind: app, name: expense-core, path: ':app:expense-core', report: 'app/expense-core/build/reports/jacoco/test/jacocoTestReport.xml' }
-          - { kind: app, name: notifications, path: ':app:notifications', report: 'app/notifications/build/reports/jacoco/test/jacocoTestReport.xml' }
-          - { kind: app, name: bff, path: ':app:bff', report: 'app/bff/build/reports/jacoco/test/jacocoTestReport.xml' }
-          - { kind: library, name: db, path: ':libs:db', report: 'libs/db/build/reports/jacoco/test/jacocoTestReport.xml' }
-          - { kind: library, name: errors, path: ':libs:errors', report: 'libs/errors/build/reports/jacoco/test/jacocoTestReport.xml' }
-          - { kind: library, name: observability, path: ':libs:observability', report: 'libs/observability/build/reports/jacoco/test/jacocoTestReport.xml' }
-          - { kind: library, name: security, path: ':libs:security', report: 'libs/security/build/reports/jacoco/test/jacocoTestReport.xml' }
-          - { kind: library, name: test-support, path: ':libs:test-support', report: '' }
+        include: ${{ fromJSON(needs.scope.outputs.matrix) }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
       - name: Set up isolated Python tooling
-        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
       - uses: actions/setup-java@v6
         with:
           distribution: microsoft
           java-version: ${{ env.JAVA_VERSION }}
-          cache: gradle
-      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
-      - name: Cache Gradle wrapper distribution
-        uses: actions/cache@v4
-        with:
-          path: ~/.gradle/wrapper
-          key: gradle-wrapper-${{ runner.os }}-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties') }}
-          restore-keys: gradle-wrapper-${{ runner.os }}-
-      - name: Restore shared Gradle build cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.gradle/caches/build-cache-*
-          key: squarewise-gradle-build-${{ runner.os }}-${{ hashFiles('**/*.gradle.kts', '**/gradle.properties', 'gradle/libs.versions.toml') }}
-          restore-keys: squarewise-gradle-build-${{ runner.os }}-
+      - uses: gradle/actions/setup-gradle@b9bee63ef481cc545e4517ec730544a4d8b1dfa0 # v6.4.0
       - name: Build, test, check, and coverage
-        run: ./gradlew ${{ matrix.path }}:test ${{ matrix.path }}:check jacocoTestReport --no-daemon
+        run: ./gradlew ${{ matrix.path }}:test ${{ matrix.path }}:check ${{ matrix.path }}:jacocoTestReport --no-daemon
       - name: Build application artifact
         if: matrix.kind == 'app'
         run: ./gradlew ${{ matrix.path }}:bootJar --no-daemon
       - name: Upload application jar artifact
         if: matrix.kind == 'app'
-        uses: actions/upload-artifact@v4
+        id: upload-app-jar
+        uses: actions/upload-artifact@v7
         with:
           name: app-jar-${{ matrix.name }}
           path: app/${{ matrix.name }}/build/libs/squarewise-${{ matrix.name }}-0.1.0-SNAPSHOT.jar
           if-no-files-found: error
           retention-days: 5
+      - name: Attest application jar artifact
+        if: matrix.kind == 'app'
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-name: app-jar-${{ matrix.name }}
+          subject-digest: sha256:${{ steps.upload-app-jar.outputs.artifact-digest }}
       - name: Publish test summary
         uses: test-summary/action@37b508cfee6d4d080eedd00b5bb240a6a784a6a5 # v2
         if: always()
@@ -179,7 +242,8 @@ jobs:
           paths: "**/build/test-results/test/TEST-*.xml"
           show: "fail, skip"
       - name: Upload test results and reports
-        uses: actions/upload-artifact@v4
+        id: upload-test-results
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: test-results-${{ matrix.name }}
@@ -189,52 +253,18 @@ jobs:
             ${{ matrix.report }}
           if-no-files-found: ignore
           retention-days: 14
-
-  qa10-coverage-inventory:
-    name: QA-10 aggregate branch inventory
-    if: always()
-    needs: verify
-    runs-on: ubuntu-slim
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v5
+      - name: Attest test results and reports artifact
+        if: always() && steps.upload-test-results.outputs.artifact-digest != ''
+        uses: actions/attest-build-provenance@v4
         with:
-          persist-credentials: false
-      - name: Set up isolated Python tooling
-        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
-      - name: Install dependencies from lockfile
-        run: uv sync --frozen --no-build
-      - name: Download module test and JaCoCo artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: test-results-*
-          path: .qa10-reports
-          merge-multiple: false
-      - name: Restore JaCoCo reports into module paths
-        shell: bash
-        run: |
-          set -euo pipefail
-          for module in app/accounts app/expense-core app/notifications app/bff libs/db libs/errors libs/observability libs/security; do
-            report="$(find .qa10-reports -path "*/${module}/build/reports/jacoco/test/jacocoTestReport.xml" -print -quit)"
-            test -n "$report"
-            mkdir -p "${module}/build/reports/jacoco/test"
-            cp "$report" "${module}/build/reports/jacoco/test/jacocoTestReport.xml"
-          done
-      - name: Generate QA-10 branch inventory
-        run: uv run --frozen --no-build python tools/coverage/report_branch_gaps.py --format json | tee qa10-branch-gaps.json
-      - name: Upload QA-10 branch inventory
-        uses: actions/upload-artifact@v4
-        with:
-          name: qa10-branch-inventory
-          path: qa10-branch-gaps.json
-          if-no-files-found: error
-          retention-days: 14
+          subject-name: test-results-${{ matrix.name }}
+          subject-digest: sha256:${{ steps.upload-test-results.outputs.artifact-digest }}
 
   sonar:
     name: SonarQube quality analysis
+    if: needs.scope.outputs.run_sonar == 'true'
     runs-on: ubuntu-latest
-    needs: preflight
+    needs: [preflight, scope]
     services:
       postgres:
         image: postgres:17
@@ -247,82 +277,113 @@ jobs:
         # Sonar only needs the broker protocol and diagnostics; omit the
         # management plugin to reduce hosted service-container startup cost.
         image: rabbitmq:4.3
+        env:
+          RABBITMQ_ERLANG_COOKIE: squarewise-ci-erlang-cookie
         ports: ['5672:5672']
         options: >-
-          --health-cmd="rabbitmq-diagnostics -q ping"
+          --health-cmd="rabbitmqctl await_startup"
           --health-start-period=60s --health-interval=5s --health-timeout=10s --health-retries=24
-    timeout-minutes: 25
+    timeout-minutes: 180
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           persist-credentials: false
       - name: Set up isolated Python tooling
-        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
       - uses: actions/setup-java@v6
         with:
           distribution: microsoft
           java-version: ${{ env.JAVA_VERSION }}
-          cache: gradle
-      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+      - uses: gradle/actions/setup-gradle@b9bee63ef481cc545e4517ec730544a4d8b1dfa0 # v6.4.0
       - name: Cache SonarQube packages
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.sonar/cache
           key: ${{ runner.os }}-sonar
           restore-keys: ${{ runner.os }}-sonar
-      - name: Cache Gradle wrapper distribution
-        uses: actions/cache@v4
-        with:
-          path: ~/.gradle/wrapper
-          key: gradle-wrapper-${{ runner.os }}-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties') }}
-          restore-keys: gradle-wrapper-${{ runner.os }}-
-      - name: Cache Gradle packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.gradle/caches
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', 'gradle/libs.versions.toml') }}
-          restore-keys: ${{ runner.os }}-gradle-
       - name: Build, test, and analyze with Sonar
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./gradlew build jacocoTestReport sonar --info --no-daemon
+        run: |
+          if [ -z "${SONAR_TOKEN:-}" ]; then
+            echo "SONAR_TOKEN is not set (e.g. running from fork PR). Skipping SonarCloud analysis."
+            exit 0
+          fi
+          ./gradlew build jacocoTestReport sonar --info --no-daemon
+
+  e2e-artifacts:
+    name: Package application artifacts for selected E2E
+    if: always() && inputs.run_e2e && needs.scope.outputs.has_e2e == 'true' && needs.preflight.result == 'success'
+    needs: [preflight, scope]
+    runs-on: ubuntu-slim
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v6
+        with:
+          distribution: microsoft
+          java-version: ${{ env.JAVA_VERSION }}
+      - uses: gradle/actions/setup-gradle@b9bee63ef481cc545e4517ec730544a4d8b1dfa0 # v6.4.0
+      - name: Build all application boot JARs without rerunning tests
+        run: ./gradlew :app:accounts:bootJar :app:expense-core:bootJar :app:notifications:bootJar :app:bff:bootJar --no-daemon
+      - name: Upload E2E application JARs
+        id: upload-e2e-jars
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-app-jars
+          path: app/*/build/libs/*.jar
+          if-no-files-found: error
+          retention-days: 5
+      - name: Attest E2E application JARs
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-name: e2e-app-jars
+          subject-digest: sha256:${{ steps.upload-e2e-jars.outputs.artifact-digest }}
 
   e2e-edge-and-security:
     name: E2E edge cases, negative OIDC, and contract smoke
-    if: inputs.run_e2e
-    needs: [preflight, verify]
+    if: always() && inputs.run_e2e && needs.scope.outputs.run_edge == 'true' && needs.preflight.result == 'success' && needs.e2e-artifacts.result == 'success'
+    needs: [preflight, scope, e2e-artifacts]
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 180
     permissions:
       contents: read
+      id-token: write
+      attestations: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
       - name: Set up isolated Python tooling
-        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
       - name: Install dependencies from lockfile
         run: uv sync --frozen --no-build
       - name: Download application JAR artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
-          pattern: app-jar-*
+          name: e2e-app-jars
           path: app/
-          merge-multiple: false
-      - name: Organize application JAR artifacts
+      - name: Verify application JAR artifacts
         run: |
           for svc in accounts expense-core notifications bff; do
-            mkdir -p "app/${svc}/build/libs"
-            artifact="app/app-jar-${svc}/squarewise-${svc}-0.1.0-SNAPSHOT.jar"
+            artifact="app/${svc}/build/libs/squarewise-${svc}-0.1.0-SNAPSHOT.jar"
             test -f "$artifact"
-            mv "$artifact" "app/${svc}/build/libs/"
-            test -f "app/${svc}/build/libs/squarewise-${svc}-0.1.0-SNAPSHOT.jar"
           done
       - name: Run contract and deployment smoke checks
         run: bash tests/e2e/contract-smoke.sh
       - name: Start the complete local application stack
+        env:
+          SQUAREWISE_AUTH_LOGIN_RESEND_COOLDOWN_SECONDS: "0"
+          SQUAREWISE_NOTIFICATIONS_DELIVERY_MAX_PERMITS: "1"
+          SQUAREWISE_NOTIFICATIONS_DELIVERY_WINDOW_SECONDS: "5"
         run: docker compose -f infra/local/docker-compose.dev.yml up -d --build --wait
       - name: Diagnose local stack startup failure
         if: failure()
@@ -336,6 +397,7 @@ jobs:
           INCLUDE_EXPIRED=true tests/e2e/acquire_local_tokens.sh
       - name: Run negative OIDC security paths and live REST edge checks
         env:
+          SQUAREWISE_AUTH_LOGIN_RESEND_COOLDOWN_SECONDS: "0"
           BEARER_TOKEN: ${{ steps.oidc-token.outputs.token }}
           SQUAREWISE_E2E_TOKEN_A: ${{ steps.oidc-token.outputs.token }}
           SQUAREWISE_E2E_TOKEN_B: ${{ steps.oidc-token.outputs.e2e_bob_token }}
@@ -354,8 +416,11 @@ jobs:
           wait "$algorithm_pid"
           uv run --frozen --no-build python3 tests/e2e/test_oidc_negative.py --variant provider
           uv run --frozen --no-build python3 tests/e2e/test_oidc_websocket_negative.py
-          docker compose -f infra/local/docker-compose.dev.yml -f infra/local/docker-compose.invalid-subject.yml up -d --build --wait
-          invalid_subject_token="$(curl --fail-with-body --silent --show-error -X POST http://localhost:8091/token | uv run --frozen --no-build python3 -c 'import json,sys; print(json.load(sys.stdin)["access_token"])')"
+          invalid_subject_compose=(docker compose -f infra/local/docker-compose.dev.yml -f infra/local/docker-compose.invalid-subject.yml)
+          "${invalid_subject_compose[@]}" up -d --build --wait
+          invalid_subject_host_port="$("${invalid_subject_compose[@]}" port invalid-subject-oidc 8080 | sed 's/.*://')"
+          test -n "$invalid_subject_host_port"
+          invalid_subject_token="$(curl --fail-with-body --silent --show-error -X POST "http://127.0.0.1:${invalid_subject_host_port}/token" | uv run --frozen --no-build python3 -c 'import json,sys; print(json.load(sys.stdin)["access_token"])')"
           test -n "$invalid_subject_token"
           INVALID_SUBJECT_TOKEN="$invalid_subject_token" uv run --frozen --no-build python3 tests/e2e/test_oidc_negative.py --variant provider
           INVALID_SUBJECT_TOKEN="$invalid_subject_token" BEARER_TOKEN="$BEARER_TOKEN" uv run --frozen --no-build python3 tests/e2e/test_oidc_websocket_negative.py
@@ -363,7 +428,10 @@ jobs:
             (cd tools/bruno && npx --yes @usebruno/cli@4.1.0 run "../../$request" -r --env local-oidc --env-var "invalidSubjectToken=$invalid_subject_token")
           done
           docker compose -f infra/local/docker-compose.dev.yml -f infra/local/docker-compose.invalid-subject.yml down
-          docker compose -f infra/local/docker-compose.dev.yml up -d --build --wait
+          SQUAREWISE_AUTH_LOGIN_RESEND_COOLDOWN_SECONDS=0 \
+          SQUAREWISE_NOTIFICATIONS_DELIVERY_MAX_PERMITS=1 \
+            SQUAREWISE_NOTIFICATIONS_DELIVERY_WINDOW_SECONDS=5 \
+            docker compose -f infra/local/docker-compose.dev.yml up -d --build --wait
           tests/e2e/acquire_local_tokens.sh
           # The stack was restarted above; Keycloak generated new signing keys, so the
           # tokens from the step-level env: block are now invalid.  acquire_local_tokens.sh
@@ -372,6 +440,28 @@ jobs:
           fresh_token="$(grep '^BEARER_TOKEN=' "$GITHUB_ENV" | tail -1 | cut -d= -f2-)"
           fresh_bob="$(grep '^SQUAREWISE_E2E_TOKEN_B=' "$GITHUB_ENV" | tail -1 | cut -d= -f2-)"
           fresh_nonmember="$(grep '^SQUAREWISE_E2E_TOKEN_NONMEMBER=' "$GITHUB_ENV" | tail -1 | cut -d= -f2-)"
+          # BFF replicas depend on Notifications; Compose re-renders and recreates it on
+          # config drift, so the replica `up` must carry the same delivery-limit overrides.
+          SQUAREWISE_NOTIFICATIONS_DELIVERY_MAX_PERMITS=1 \
+            SQUAREWISE_NOTIFICATIONS_DELIVERY_WINDOW_SECONDS=5 \
+            docker compose -f infra/local/docker-compose.dev.yml \
+            -f infra/local/docker-compose.auth-replicas.yml \
+            up -d --build --wait accounts-replica-a accounts-replica-b bff-replica-a bff-replica-b
+          docker compose -f infra/local/docker-compose.dev.yml exec -T notifications sh -c '
+            test "$SQUAREWISE_NOTIFICATIONS_DELIVERY_MAX_PERMITS" = "1" &&
+            test "$SQUAREWISE_NOTIFICATIONS_DELIVERY_WINDOW_SECONDS" = "5"
+          '
+          trap 'docker compose -f infra/local/docker-compose.dev.yml -f infra/local/docker-compose.auth-replicas.yml rm -sf accounts-replica-a accounts-replica-b bff-replica-a bff-replica-b' EXIT
+          make e2e-auth-login-replicas 2>&1 | tee build/reports/e2e/auth-login-replicas.log
+          BEARER_TOKEN="$fresh_token" make e2e-auth-bff-replicas 2>&1 | tee build/reports/e2e/auth-bff-replicas.log
+          SQUAREWISE_AUTH_LOGIN_RESEND_COOLDOWN_SECONDS=0 \
+            SQUAREWISE_NOTIFICATIONS_DELIVERY_MAX_PERMITS=1 \
+          SQUAREWISE_NOTIFICATIONS_DELIVERY_WINDOW_SECONDS=5 \
+            make e2e-auth-notification-limit 2>&1 | tee build/reports/e2e/auth-notification-rate-limit.log
+          make e2e-auth-notification-outage 2>&1 | tee build/reports/e2e/auth-notification-outage.log
+          BEARER_TOKEN="$fresh_token" make e2e-auth-surfaces 2>&1 | tee build/reports/e2e/auth-rate-limit-surfaces.log
+          BEARER_TOKEN="$fresh_token" make e2e-auth-no-accounts 2>&1 | tee build/reports/e2e/auth-no-accounts.log
+          BEARER_TOKEN="$fresh_token" make e2e-auth-cache 2>&1 | tee build/reports/e2e/auth-cache-resilience.log
           BEARER_TOKEN="$fresh_token" \
             SQUAREWISE_E2E_TOKEN_B="$fresh_bob" \
             SQUAREWISE_E2E_TOKEN_NONMEMBER="$fresh_nonmember" \
@@ -393,43 +483,48 @@ jobs:
         run: docker compose -f infra/local/docker-compose.dev.yml down -v
       - name: Upload edge and security E2E evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        id: upload-edge-evidence
+        uses: actions/upload-artifact@v7
         with:
           name: e2e-edge-security-evidence
           path: build/reports/e2e/
           if-no-files-found: warn
           retention-days: 14
+      - name: Attest edge and security E2E evidence
+        if: always() && steps.upload-edge-evidence.outputs.artifact-digest != ''
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-name: e2e-edge-security-evidence
+          subject-digest: sha256:${{ steps.upload-edge-evidence.outputs.artifact-digest }}
 
   e2e-product-and-offline:
     name: E2E acceptance, Bruno, product journey, and offline sync
-    if: inputs.run_e2e
-    needs: [preflight, verify]
+    if: always() && inputs.run_e2e && needs.scope.outputs.run_product == 'true' && needs.preflight.result == 'success' && needs.e2e-artifacts.result == 'success'
+    needs: [preflight, scope, e2e-artifacts]
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 180
     permissions:
       contents: read
+      id-token: write
+      attestations: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
       - name: Set up isolated Python tooling
-        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
       - name: Install dependencies from lockfile
         run: uv sync --frozen --no-build
       - name: Download application JAR artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
-          pattern: app-jar-*
+          name: e2e-app-jars
           path: app/
-          merge-multiple: false
-      - name: Organize application JAR artifacts
+      - name: Verify application JAR artifacts
         run: |
           for svc in accounts expense-core notifications bff; do
-            mkdir -p "app/${svc}/build/libs"
-            artifact="app/app-jar-${svc}/squarewise-${svc}-0.1.0-SNAPSHOT.jar"
+            artifact="app/${svc}/build/libs/squarewise-${svc}-0.1.0-SNAPSHOT.jar"
             test -f "$artifact"
-            mv "$artifact" "app/${svc}/build/libs/"
-            test -f "app/${svc}/build/libs/squarewise-${svc}-0.1.0-SNAPSHOT.jar"
           done
       - name: Start the complete local application stack
         run: docker compose -f infra/local/docker-compose.dev.yml up -d --build --wait
@@ -459,6 +554,7 @@ jobs:
           set -o pipefail
           mkdir -p build/reports/e2e
           make e2e-auth-email E2E_AUTH_EMAIL_ARGS="--evidence-output build/reports/e2e/auth-email-operation-execution.json --source-revision $GITHUB_SHA --environment ci-compose-oidc" 2>&1 | tee build/reports/e2e/auth-email.log
+          make e2e-auth-refresh-concurrency 2>&1 | tee build/reports/e2e/auth-refresh-concurrency.log
           make acceptance-live 2>&1 | tee build/reports/e2e/acceptance-live.log
           BRUNO_REPORT="$GITHUB_WORKSPACE/build/reports/e2e/bruno.json" \
             make bruno-run BRUNO_ENV="$BRUNO_ENV" BRUNO_TOKEN="$BRUNO_TOKEN"
@@ -515,7 +611,8 @@ jobs:
         run: docker compose -f infra/local/docker-compose.dev.yml down -v
       - name: Upload product and offline E2E evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        id: upload-product-evidence
+        uses: actions/upload-artifact@v7
         with:
           name: e2e-product-offline-evidence
           path: |
@@ -523,37 +620,41 @@ jobs:
             build/reports/e2e/
           if-no-files-found: warn
           retention-days: 14
+      - name: Attest product and offline E2E evidence
+        if: always() && steps.upload-product-evidence.outputs.artifact-digest != ''
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-name: e2e-product-offline-evidence
+          subject-digest: sha256:${{ steps.upload-product-evidence.outputs.artifact-digest }}
 
   e2e-concurrency-and-chaos:
     name: E2E concurrency, WebSocket subscriptions, and broker chaos
-    if: inputs.run_e2e
-    needs: [preflight, verify]
+    if: always() && inputs.run_e2e && needs.scope.outputs.run_chaos == 'true' && needs.preflight.result == 'success' && needs.e2e-artifacts.result == 'success'
+    needs: [preflight, scope, e2e-artifacts]
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 180
     permissions:
       contents: read
+      id-token: write
+      attestations: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
       - name: Set up isolated Python tooling
-        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
       - name: Install dependencies from lockfile
         run: uv sync --frozen --no-build
       - name: Download application JAR artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
-          pattern: app-jar-*
+          name: e2e-app-jars
           path: app/
-          merge-multiple: false
-      - name: Organize application JAR artifacts
+      - name: Verify application JAR artifacts
         run: |
           for svc in accounts expense-core notifications bff; do
-            mkdir -p "app/${svc}/build/libs"
-            artifact="app/app-jar-${svc}/squarewise-${svc}-0.1.0-SNAPSHOT.jar"
+            artifact="app/${svc}/build/libs/squarewise-${svc}-0.1.0-SNAPSHOT.jar"
             test -f "$artifact"
-            mv "$artifact" "app/${svc}/build/libs/"
-            test -f "app/${svc}/build/libs/squarewise-${svc}-0.1.0-SNAPSHOT.jar"
           done
       - name: Start the complete local application stack
         run: docker compose -f infra/local/docker-compose.dev.yml up -d --build --wait
@@ -596,33 +697,45 @@ jobs:
         run: docker compose -f infra/local/docker-compose.dev.yml down -v
       - name: Upload concurrency and chaos E2E evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        id: upload-concurrency-evidence
+        uses: actions/upload-artifact@v7
         with:
           name: e2e-concurrency-chaos-evidence
           path: build/reports/e2e/
           if-no-files-found: warn
           retention-days: 14
+      - name: Attest concurrency and chaos E2E evidence
+        if: always() && steps.upload-concurrency-evidence.outputs.artifact-digest != ''
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-name: e2e-concurrency-chaos-evidence
+          subject-digest: sha256:${{ steps.upload-concurrency-evidence.outputs.artifact-digest }}
 
   e2e-gate:
-    name: E2E verification gate
-    if: always() && inputs.run_e2e
-    needs: [e2e-edge-and-security, e2e-product-and-offline, e2e-concurrency-and-chaos]
+    name: E2E verification gate (selected suites)
+    if: always() && inputs.run_e2e && needs.scope.outputs.has_e2e == 'true'
+    needs: [scope, preflight, e2e-artifacts, e2e-edge-and-security, e2e-product-and-offline, e2e-concurrency-and-chaos]
     runs-on: ubuntu-slim
+    timeout-minutes: 15
     permissions:
       contents: read
     steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Set up isolated Python tooling
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
       - name: Aggregate parallel E2E results
         run: |
-          edge_result="${{ needs.e2e-edge-and-security.result }}"
-          product_result="${{ needs.e2e-product-and-offline.result }}"
-          chaos_result="${{ needs.e2e-concurrency-and-chaos.result }}"
-          echo "e2e-edge-and-security: ${edge_result}"
-          echo "e2e-product-and-offline: ${product_result}"
-          echo "e2e-concurrency-and-chaos: ${chaos_result}"
-          if [ "${edge_result}" = "success" ] && [ "${product_result}" = "success" ] && [ "${chaos_result}" = "success" ]; then
-            echo "All parallelized E2E test suites passed successfully."
-            exit 0
-          else
-            echo "One or more parallelized E2E test suites failed or were cancelled."
-            exit 1
-          fi
+          set -euo pipefail
+          args=(
+            --preflight "${{ needs.preflight.result }}"
+            --artifacts "${{ needs.e2e-artifacts.result }}"
+            --edge-result "${{ needs.e2e-edge-and-security.result }}"
+            --product-result "${{ needs.e2e-product-and-offline.result }}"
+            --chaos-result "${{ needs.e2e-concurrency-and-chaos.result }}"
+          )
+          if [ "${{ needs.scope.outputs.run_edge }}" = true ]; then args+=(--edge-selected); fi
+          if [ "${{ needs.scope.outputs.run_product }}" = true ]; then args+=(--product-selected); fi
+          if [ "${{ needs.scope.outputs.run_chaos }}" = true ]; then args+=(--chaos-selected); fi
+          uv run --frozen --no-build python tools/ci/e2e_gate.py "${args[@]}"

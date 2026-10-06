@@ -1,4 +1,4 @@
-# CORE-17 — Expose group members endpoint and durable member listing in Expense Core
+# CORE-17: Expose group members endpoint and durable member listing in Expense Core
 
 ## Objective
 

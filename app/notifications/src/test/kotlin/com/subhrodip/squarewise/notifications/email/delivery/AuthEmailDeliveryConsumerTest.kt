@@ -2,6 +2,7 @@ package com.subhrodip.squarewise.notifications.email.delivery
 import org.mockito.ArgumentMatchers.anyString
 
 import com.subhrodip.squarewise.notifications.email.security.AuthEmailEnvelopeProtector
+import com.subhrodip.squarewise.notifications.delivery.rate.DeliveryRateLimiter
 import java.time.Instant
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -23,13 +24,15 @@ import org.mockito.Mockito.verify
 class AuthEmailDeliveryConsumerTest {
     private val protector = mock(AuthEmailEnvelopeProtector::class.java)
     private val dispatcher = mock(EmailDispatcher::class.java)
+    private val deliveryRateLimiter = mock(DeliveryRateLimiter::class.java)
     private lateinit var consumer: AuthEmailDeliveryConsumer
 
     private val now = Instant.parse("2026-10-01T12:00:00Z")
 
     @BeforeEach
     fun setUp() {
-        consumer = AuthEmailDeliveryConsumer(protector, dispatcher)
+        doReturn(true).`when`(deliveryRateLimiter).allow("alice@example.com")
+        consumer = AuthEmailDeliveryConsumer(protector, dispatcher, deliveryRateLimiter)
     }
 
     @Test
@@ -108,6 +111,17 @@ class AuthEmailDeliveryConsumerTest {
             anyString(),
             anyString()
         )
+    }
+
+    @Test
+    fun `delivery rate denial suppresses reveal and dispatch`() {
+        doReturn(false).`when`(deliveryRateLimiter).allow("alice@example.com")
+
+        val outcome = consumer.consume(event(template = "LOGIN_CODE"), now)
+
+        assertThat(outcome).isEqualTo(EmailDeliveryOutcome.SKIPPED)
+        verify(protector, never()).reveal(anyString(), anyString(), anyString())
+        verify(dispatcher, never()).send(anyString(), anyString(), anyString())
     }
 
     private fun event(

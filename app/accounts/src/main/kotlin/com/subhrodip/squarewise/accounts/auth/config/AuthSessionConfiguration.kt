@@ -4,6 +4,7 @@ package com.subhrodip.squarewise.accounts.auth.config
 
 import com.subhrodip.squarewise.accounts.auth.credential.CredentialDigest
 import com.subhrodip.squarewise.accounts.auth.credential.LoginCredentialService
+import com.subhrodip.squarewise.accounts.auth.abuse.LoginVerificationRateLimitService
 import com.subhrodip.squarewise.accounts.auth.identity.AccountIdentityStore
 import com.subhrodip.squarewise.accounts.auth.login.LoginVerificationService
 import com.subhrodip.squarewise.accounts.auth.jwks.DefaultRsaKeyProvider
@@ -107,13 +108,15 @@ class AuthSessionConfiguration(
         credentialService: LoginCredentialService,
         profileStore: ProfileStore,
         tokenSessionService: TokenSessionService,
-        accountIdentityStore: AccountIdentityStore
+        accountIdentityStore: AccountIdentityStore,
+        loginVerificationRateLimitService: LoginVerificationRateLimitService
     ): LoginVerificationService =
         LoginVerificationService(
             credentialService = credentialService,
             profileStore = profileStore,
             tokenSessionService = tokenSessionService,
             accountIdentityStore = accountIdentityStore,
+            loginVerificationRateLimitService = loginVerificationRateLimitService,
             issuerUri = issuerUri
         )
 

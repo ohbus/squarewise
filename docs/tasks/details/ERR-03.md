@@ -1,4 +1,4 @@
-# ERR-03 — Structured security errors
+# ERR-03: Structured security errors
 
 Install shared servlet and reactive authentication entrypoints and access-denied
 handlers. Missing, malformed, invalid, and expired bearer tokens map to

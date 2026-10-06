@@ -108,7 +108,7 @@ open class TokenSessionService(
      * @return [TokenResponse] with fresh access token and child refresh token.
      * @throws ApplicationException with [ErrorCode.ERR_03] when invalid, expired, revoked, or reused.
      */
-    @Transactional
+    @Transactional(noRollbackFor = [ApplicationException::class])
     open fun rotateSession(
         rawRefreshToken: String,
         deviceLabel: String?,

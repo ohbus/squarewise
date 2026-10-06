@@ -1,4 +1,4 @@
-# DOC-23 — Mandate continuous documentation updates and Javadoc/KDoc comments in working agreement
+# DOC-23: Mandate continuous documentation updates and Javadoc/KDoc comments in working agreement
 
 ## Objective
 

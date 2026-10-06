@@ -1,4 +1,4 @@
-# DOC-17C — Current implementation and contract drift review
+# DOC-17C: Current implementation and contract drift review
 
 Date: 2026-09-18  
 Scope: the uncommitted CORE-18, BFF-06, NOT-09, and ACC-05 increments, their
@@ -23,7 +23,7 @@ completion.
 
 ## Findings
 
-### Critical — tracker completion exceeds implemented MVP and evidence
+### Critical: tracker completion exceeds implemented MVP and evidence
 
 `CORE-01`, `CORE-05`, `CORE-06`, `QA-01`, and `OPS-02` are marked `done`, but the
 authoritative product scope still requires group archive, named placeholders,
@@ -44,7 +44,7 @@ search and bounded CSV transport, (4) authenticated real-dependency acceptance,
 and (5) actual restore/capacity/cost evidence. Do not use `done` for launch gates
 until the prescribed evidence exists.
 
-### High — CORE-18 rename is not an auditable synchronized group change
+### High: CORE-18 rename is not an auditable synchronized group change
 
 `JpaGroupStore.update` only checks membership, changes the entity, and increments
 its numeric revision (`JpaGroupStore.kt:132-139`). `GroupEntity` has no optimistic
@@ -61,7 +61,7 @@ and atomically append audit, sync, and outbox records. Add a two-transaction
 PostgreSQL concurrency test and public-interface evidence. Until then, narrow the
 CORE-18 objective/evidence rather than claiming audited behavior.
 
-### High — BFF-06 does not satisfy its list/member and test acceptance
+### High: BFF-06 does not satisfy its list/member and test acceptance
 
 The `groups` resolver still directly returns `gateway.listGroups(...)`
 (`GroupGraphqlController.kt:30-35`), and `listGroups` deserializes only group
@@ -81,7 +81,7 @@ are resolved as a field/batched loader; do not silently return empty on upstream
 errors. Add WebClient request/response tests, GraphQL transport tests, mutation
 invalidation tests, and error-code propagation tests.
 
-### High — live invalidation remains process-local, not architecture-complete
+### High: live invalidation remains process-local, not architecture-complete
 
 `updateGroup` emits directly into the current controller's in-memory fanout after
 the REST call (`GroupGraphqlController.kt:45-55`). CORE-18 emits no outbox event,
@@ -94,7 +94,7 @@ event and connect each BFF replica's queue to the fanout. Retain direct emission
 only if deduplication is defined, or remove it to avoid duplicate hints. Verify
 two-replica delivery and reconnect/resync through an integration scenario.
 
-### Medium — contract and operation-status documentation is stale/incomplete
+### Medium: contract and operation-status documentation is stale/incomplete
 
 `contracts/graphql/operation-mapping.md:14-17` still says `me`, `group`,
 `createExpense`, and `recordRepayment` are planned, although their controllers
@@ -110,7 +110,7 @@ operation map, apply the shared problem/error vocabulary consistently, state
 authentication requirements, and add operation-level implementation status
 rather than relying on a path-level marker that covers both GET and PATCH.
 
-### Medium — ACC-05 batch semantics and security are underspecified
+### Medium: ACC-05 batch semantics and security are underspecified
 
 The request is bounded to 1..100 IDs and both stores return existing profiles,
 which matches the basic task slice. However, neither the task nor OpenAPI defines
@@ -127,7 +127,7 @@ model before BFF adoption. Prefer a response keyed by account ID or explicitly
 guarantee unique input and stable request order. Add security-enabled MVC tests,
 duplicate/order tests for both adapters, and a 101-ID boundary test.
 
-### Low — NOT-09 is implemented but lacks transport/security edge evidence
+### Low: NOT-09 is implemented but lacks transport/security edge evidence
 
 The controller and both stores enforce subject scoping and persist `read=true`;
 repeated marking is harmless. Focused tests cover success, unknown ID, wrong

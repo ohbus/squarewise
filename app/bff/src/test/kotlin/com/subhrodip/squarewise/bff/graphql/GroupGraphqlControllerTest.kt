@@ -481,7 +481,7 @@ class GroupGraphqlControllerTest {
             .subscribe { received.add(it) }
 
         try {
-            // Emit an event — should be received while still subscribed.
+            // Emit an event: should be received while still subscribed.
             fanout.emitInvalidation(groupId, 1L, "change-1")
             assertEquals(1, received.size)
             assertFalse(completed, "stream must still be active before revocation")

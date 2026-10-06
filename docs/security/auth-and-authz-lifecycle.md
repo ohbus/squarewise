@@ -4,7 +4,7 @@
 
 This document provides a comprehensive, authoritative specification of the authentication and
 authorization lifecycle for both unauthenticated and authenticated actors across Squarewise /
-Pennywise. It details the complete state transitions, authorization matrix, sequence flows,
+Squarewise. It details the complete state transitions, authorization matrix, sequence flows,
 event emissions, and security guarantees across REST, GraphQL, WebSocket, and asynchronous worker
 boundaries.
 

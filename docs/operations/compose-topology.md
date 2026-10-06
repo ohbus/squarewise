@@ -47,6 +47,11 @@ Every row also has a `-config` target. `make compose-config` validates all six
 files without starting containers. `make help` lists these commands and the
 exact Compose file each command uses.
 
+For rate-limit diagnostics, use `make redis-status` and `make redis-logs`. To
+reset disposable local limiter state, use `make redis-clear-rate-limit`; it
+deletes only keys matching `squarewise:rl:v1:*` and never removes PostgreSQL
+volumes or unrelated Redis keys.
+
 The BFF is database-free. Its standalone topology therefore starts its real
 Accounts and Expense Core HTTP upstreams rather than PostgreSQL for the BFF
 itself. Those upstreams require PostgreSQL, and Expense Core also requires
@@ -55,18 +60,73 @@ included in this narrow topology.
 
 ## Ports and local credentials
 
+The local RabbitMQ container uses a deterministic development Erlang cookie so
+the broker does not depend on generated cookie-file permissions. Set
+`RABBITMQ_ERLANG_COOKIE` to a private value outside local development.
+
+Local development uses a dedicated user-defined Docker bridge network (`squarewise-local-net`).
+Inside the bridge network, containers communicate via descriptive Docker hostnames on standard
+internal ports (`5432`, `5672`, `6379`, `1025`, `8080`). External access from developer host tools
+(browsers, IDEs, Bruno, DataGrip, `psql`) maps to deterministic, collision-free `28xxx` ports.
+
+```mermaid
+flowchart TB
+    subgraph Host["Developer Workstation (macOS / Windows / Linux)"]
+        Browser["Web Browser & Bruno<br/>(localhost:28080, :28025)"]
+        IDE["IDE & CLI Probes<br/>(localhost:28081, :28082, :28083)"]
+        DBTools["Database Client / psql<br/>(localhost:25432)"]
+    end
+
+    subgraph BridgeNet["Docker Bridge Network: squarewise-local-net"]
+        subgraph Apps["Application Microservices"]
+            BFF["squarewise-bff<br/>:8080"]
+            Accounts["accounts-api<br/>:8080"]
+            ExpenseCore["expense-core-api<br/>:8080"]
+            Notifications["notifications-api<br/>:8080"]
+        end
+
+        subgraph Deps["Backing Infrastructure"]
+            PG[("postgres-db<br/>:5432")]
+            RMQ["message-broker<br/>:5672 (AMQP) / :15672 (UI)"]
+            Redis["rate-limit-redis<br/>:6379"]
+            Mail["mailpit-email<br/>:1025 (SMTP) / :8025 (UI)"]
+            IdP["idp-keycloak<br/>:8080"]
+        end
+    end
+
+    Browser -->|Host Port 28080| BFF
+    Browser -->|Host Port 28025| Mail
+    IDE -->|Host Port 28081| Accounts
+    IDE -->|Host Port 28082| ExpenseCore
+    IDE -->|Host Port 28083| Notifications
+    DBTools -->|Host Port 25432| PG
+
+    BFF -->|DNS accounts-api:8080| Accounts
+    BFF -->|DNS expense-core-api:8080| ExpenseCore
+    BFF -->|DNS idp-keycloak:8080| IdP
+    Accounts -->|DNS postgres-db:5432| PG
+    Accounts -->|DNS rate-limit-redis:6379| Redis
+    ExpenseCore -->|DNS postgres-db:5432| PG
+    ExpenseCore -->|DNS message-broker:5672| RMQ
+    Notifications -->|DNS postgres-db:5432| PG
+    Notifications -->|DNS mailpit-email:1025| Mail
+```
+
+### Deterministic port mapping matrix
+
 | Component | Container port | Host port | Local access |
 | --- | ---: | ---: | --- |
-| PostgreSQL | 5432 | 5432 | user `squarewise`, password `squarewise-local-only` |
-| RabbitMQ AMQP | 5672 | 5672 | user `squarewise`, password `squarewise-local-only` |
-| RabbitMQ management | 15672 | 15672 | `http://localhost:15672` with the RabbitMQ local credentials |
-| Mailpit SMTP | 1025 | 1025 | no authentication |
-| Mailpit web UI | 8025 | 8025 | `http://localhost:8025` |
-| Keycloak OIDC | 8080 | 8090 | `http://localhost:8090` (`idp-keycloak` inside Compose) |
-| BFF | 8080 | 8080 | `http://localhost:8080` |
-| Accounts | 8080 | 8081 | `http://localhost:8081` |
-| Expense Core | 8080 | 8082 | `http://localhost:8082` |
-| Notifications | 8080 | 8083 | `http://localhost:8083` |
+| PostgreSQL | 5432 | 25432 | user `squarewise`, password `squarewise-local-only` |
+| RabbitMQ AMQP | 5672 | 28672 | user `squarewise`, password `squarewise-local-only` |
+| RabbitMQ management | 15672 | 28673 | `http://localhost:28673` with the RabbitMQ local credentials |
+| Redis | 6379 | 28379 | password `squarewise-redis-local-only` |
+| Mailpit SMTP | 1025 | 21025 | no authentication |
+| Mailpit web UI | 8025 | 28025 | `http://localhost:28025` |
+| Keycloak OIDC | 8080 | 28090 | `http://localhost:28090` (`idp-keycloak` inside Compose) |
+| BFF | 8080 | 28080 | `http://localhost:28080` |
+| Accounts | 8080 | 28081 | `http://localhost:28081` |
+| Expense Core | 8080 | 28082 | `http://localhost:28082` |
+| Notifications | 8080 | 28083 | `http://localhost:28083` |
 
 On first creation PostgreSQL runs `init-databases.sql`, which creates
 `squarewise_accounts`, `squarewise_expense_core`, and
@@ -81,14 +141,31 @@ shell launches must set them before the corresponding Gradle `bootRun` task.
 
 | Application | Port | Required local environment |
 | --- | ---: | --- |
-| Accounts | 8081 | `SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/squarewise_accounts`, datasource user/password above |
-| Expense Core | 8082 | `SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/squarewise_expense_core`, datasource credentials, RabbitMQ host `localhost`, port `5672`, and credentials |
-| Notifications | 8083 | `SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/squarewise_notifications`, datasource and RabbitMQ values, email host `localhost`, email port `1025` |
-| BFF | 8080 | Accounts URL `http://localhost:8081`, Expense Core URL `http://localhost:8082` |
+| Accounts | 28081 | `SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:25432/squarewise_accounts`, datasource user/password above, Redis port `28379` |
+| Expense Core | 28082 | `SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:25432/squarewise_expense_core`, datasource credentials, RabbitMQ host `localhost`, port `28672`, and credentials |
+| Notifications | 28083 | `SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:25432/squarewise_notifications`, datasource and RabbitMQ values, email host `localhost`, email port `21025`, Redis port `28379` |
+| BFF | 28080 | Accounts URL `http://localhost:28081`, Expense Core URL `http://localhost:28082`, Notifications URL `http://localhost:28083`, RabbitMQ port `28672` |
 
 Set `SPRING_PROFILES_ACTIVE=local-oidc`, configure the local Keycloak issuer and
 audience, and set `SERVER_PORT` to the table's port. The
 exact variable names are version-controlled in `.run/`.
+
+## Cross-platform networking architecture (macOS, Windows, Linux)
+
+To ensure multi-developer collaboration without configuration divergence, Squarewise avoids host-only networking (`network_mode: host`) and standard colliding ports (5432, 8080, 6379).
+
+### Cross-platform behavior comparison
+
+| Host OS | Engine runtime | `network_mode: host` behavior | User-defined bridge + deterministic ports (Squarewise) |
+|---|---|---|---|
+| **macOS** | Hypervisor VM (Virtualization.framework) | ❌ Incompatible: containers bind to the Linux VM loopback, unreachable from host browser/IDE. | ✅ Fully supported: Docker forwards deterministic `28xxx` ports to macOS `localhost`. |
+| **Windows** | WSL2 lightweight VM | ❌ Incompatible: containers attach to WSL2 VM virtual network adapter, breaking host-port discovery. | ✅ Fully supported: WSL2 port forwarding bridges to Windows `localhost`. |
+| **Linux** | Native kernel namespaces | ⚠️ High collision risk: binds directly to host interfaces, colliding with any host DBs or services. | ✅ Fully supported: strict port isolation + deterministic port mapping. |
+
+### Host-to-container and container-to-host resolution
+1. **Container to Container**: All services communicate via Docker internal DNS using descriptive hostnames (`postgres-db:5432`, `message-broker:5672`, `idp-keycloak:8080`, `accounts-api:8080`).
+2. **Host to Container**: Developer tools (IntelliJ, VS Code, Bruno, browser, `psql`) connect via deterministic published ports (`localhost:28080`, `localhost:28081`, `localhost:25432`).
+3. **Container to Host**: Where containers need to access host-bound services, `extra_hosts: ["host.docker.internal:host-gateway"]` provides seamless cross-platform parity on Linux alongside macOS and Windows.
 
 ## Health and startup order
 

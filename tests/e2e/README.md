@@ -36,6 +36,8 @@ The end-to-end test suites run against the live local environment (`infra/local/
    - Conflict resolution: stale client fetches latest state and reapplies cleanly.
    - When invoked with `--evidence-output`, emits retained QA-10 evidence only
      after all subscription and concurrency assertions pass.
+   - Removes an active member, verifies the existing subscription terminates,
+     and verifies the removed bearer cannot reconnect and subscribe again.
 
 4. **Message Broker Outage Chaos & Transactional Outbox Recovery (`test_chaos_recovery.py`)**:
    - Fault injection: pauses Expense Core and verifies GraphQL `groups` returns a
@@ -47,13 +49,104 @@ The end-to-end test suites run against the live local environment (`infra/local/
    - Fault healing: unpauses RabbitMQ; verifies outbox relay daemon drains `PENDING` records to `PUBLISHED`.
    - End-to-end verification: Notifications service receives and confirms delivered events.
 
-5. **Passwordless Auth-Email Delivery (`test_auth_email_delivery.py`)**:
+5. **Redis Authentication Rate-Limit Resilience (`test_auth_cache_resilience.py`)**:
+   - Shared Redis admission reaches the refresh limit, evicts only the
+     `squarewise:rl:v1:*` namespace, and admits again after targeted cleanup.
+   - Redis outage fails closed with HTTP 429 for both refresh and passwordless
+     login-start, and restart recovers with no PostgreSQL or process-local
+     fallback.
+   - When `BEARER_TOKEN` is supplied, the probe also verifies bounded
+     `store_error` counters increase for both policies during the outage.
+
+6. **GraphQL Rate-Limit Surfaces (`test_auth_rate_limit_surfaces.py`)**:
+   - Exercises the public `/graphql` HTTP boundary through the configured
+     120-request window and verifies the next request returns HTTP 429.
+   - Exercises 20 public GraphQL WebSocket handshakes and verifies the next
+     handshake returns HTTP 429 under the distinct WebSocket policy.
+   - Stops Redis and verifies both public GraphQL admission paths fail closed
+     with HTTP 429 before restarting it.
+   - Clears only `squarewise:rl:v1:*`; it requires a real `BEARER_TOKEN` for
+     both authenticated public paths. If the fixture is absent, the selected
+     stream reports an intentional neutral skip rather than a pass or failure.
+     It must run against the dedicated local/CI stack.
+
+7. **BFF Replica Rate-Limit Sharing (`test_auth_bff_replicas.py`)**:
+   - Alternates authenticated GraphQL HTTP requests across two disposable BFF
+     containers sharing one Redis instance and verifies the shared cap plus one
+     response is HTTP 429.
+   - Repeats the same check for WebSocket handshakes across both containers.
+   - Stops the shared Redis instance while both replicas remain running and
+     requires HTTP and WebSocket admission to fail closed with 429 on each;
+     after restart, HTTP admission recovers on both replicas.
+   - This proves local cross-process admission only; revoked-token reconnect,
+     production topology, and capacity evidence remain separate.
+
+8. **Local JWT identity lookup isolation (`test_auth_no_accounts_lookup.py`)**:
+   - Stops Accounts after token acquisition and verifies authenticated Expense
+     Core and BFF group reads still succeed through local JWT validation.
+   - This proves no request-time Accounts call is required; it is local
+     dependency-isolation evidence and does not replace SQL/query telemetry.
+
+9. **Authenticated query and latency evidence (`test_auth_query_latency.py`)**:
+   - Measures repeated public Expense Core and BFF authenticated group reads and
+     a real Expense Core group create/archive write.
+   - Records bounded p95 request latency and requires the Accounts
+     `groups.list` SQL counter to remain unchanged while Expense Core query
+     telemetry increases.
+   - Run with `make e2e-auth-query-latency`; this is local measurement evidence,
+     not a production SLO or capacity claim.
+
+10. **Auth-email delivery admission (`test_auth_notification_rate_limit.py`):**
+   - Requires the test deployment overrides `SQUAREWISE_AUTH_LOGIN_RESEND_COOLDOWN_SECONDS=0`,
+     `SQUAREWISE_NOTIFICATIONS_DELIVERY_MAX_PERMITS=1`, and
+     `SQUAREWISE_NOTIFICATIONS_DELIVERY_WINDOW_SECONDS=5`.
+   - Emits real same-recipient login events through the Accounts outbox and
+     RabbitMQ, verifies Notifications delivers the first, suppresses the
+     second before provider dispatch, and delivers again after the Redis
+     window expires.
+   - The overrides are test-only; production defaults remain unchanged.
+
+9. **Auth-email Redis outage (`test_auth_notification_redis_outage.py`)**:
+   - Queues a real auth-email event, stops Redis only while Notifications consumes
+     it, and requires the event to reach the auth-email DLQ without Mailpit dispatch.
+   - Restarts Redis and requires a subsequent real auth-email event to be delivered.
+
+10. **General notification delivery admission (`test_notification_general_rate_limit.py`)**:
+   - Publishes valid `expense.created.v1` envelopes through the local RabbitMQ
+     management API and observes the real Notifications consumer and Mailpit.
+   - Requires one delivery, suppression of the second same-recipient event within
+     the five-second Redis window, and delivery after expiry.
+   - This target is local-only because hosted CI deliberately uses the RabbitMQ
+     protocol image without the management API; it is not production evidence.
+
+11. **Cross-process login admission (`test_auth_login_replicas.py`)**:
+   - Starts the disposable `docker-compose.auth-replicas.yml` overlay with two
+     Accounts containers sharing PostgreSQL and Redis.
+   - Alternates six login-start requests between the two published replica
+     ports and requires five `202` responses followed by one shared `429`.
+   - Submits ten simultaneous login-start requests across both replicas and
+     requires exactly five `202` responses and five `429` responses.
+   - Stops Redis while both Accounts replicas remain online and requires both
+     replicas to return 429, then verifies both return 202 after Redis recovery.
+   - This proves local distributed-window behavior only; it is not a production
+     scale or multi-zone capacity result.
+
+12. **Concurrent refresh rotation (`test_auth_refresh_concurrency.py`)**:
+    - Obtains one real passwordless session, submits two concurrent refresh
+      requests with the same token, and requires exactly one `200` plus one
+      reuse `401`.
+    - Presents the winning child token again and requires `401`, proving the
+      PostgreSQL-authoritative family revocation path after reuse detection.
+
+13. **Passwordless Auth-Email Delivery (`test_auth_email_delivery.py`):**
    - Real Accounts outbox/RabbitMQ/Notifications/Mailpit CODE delivery.
    - One-time credential redemption and replay rejection.
    - Refresh-family revocation after logout and idempotent logout replay.
-   - Remaining acceptance work is explicit: LINK delivery, expiry, wrong-subject
-     redemption, rate-limit/error redaction, broker retry/DLQ, and log/output
-     secret absence.
+   - Exercises the verification admission cap with generic invalid-credential
+     responses followed by structured HTTP 429; log/output secret absence remains
+     a separate acceptance dimension.
+   - The Redis resilience suite separately checks verification fail-closed 429
+     behavior during outage and generic 401 recovery after restart.
    - When invoked with `--evidence-output`, emits success-only QA-10 evidence
      for `startLogin`, `verifyLogin`, `logout`, and `refreshToken`.
 
@@ -62,6 +155,10 @@ The end-to-end test suites run against the live local environment (`infra/local/
 ```sh
 # Run individual test suites
 make e2e-live
+make e2e-auth-cache
+make e2e-auth-surfaces
+make e2e-auth-no-accounts
+make e2e-notification-general-limit
 make e2e-offline
 make e2e-concurrency
 make e2e-chaos

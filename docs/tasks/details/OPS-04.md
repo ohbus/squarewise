@@ -1,4 +1,4 @@
-# OPS-04 — GitHub Actions CI and GHCR delivery
+# OPS-04: GitHub Actions CI and GHCR delivery
 
 ## Outcome
 

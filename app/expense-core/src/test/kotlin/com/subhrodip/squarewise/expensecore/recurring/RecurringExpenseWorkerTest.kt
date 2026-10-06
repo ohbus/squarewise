@@ -100,6 +100,8 @@ class RecurringExpenseWorkerTest @Autowired constructor(
 
         assertEquals(false, defaults.enabled)
         assertEquals(12, defaults.maxCatchUpOccurrences)
+        defaults.maxCatchUpOccurrences = 6
+        assertEquals(6, defaults.maxCatchUpOccurrences)
 
         val today = LocalDate.now()
         `when`(mockedService.processDueOccurrences(today, 3)).thenReturn(2)

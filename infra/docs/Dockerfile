@@ -1,5 +1,8 @@
-FROM node:22.14.0-bookworm-slim
-ARG MERMAID_CLI_VERSION
+# syntax=docker/dockerfile:1
+ARG NODE_IMAGE=node:22.14.0-bookworm-slim
+FROM ${NODE_IMAGE}
+
+ARG MERMAID_CLI_VERSION=11.12.0
 RUN apt-get update \
     && apt-get install --no-install-recommends --yes chromium \
     && rm -rf /var/lib/apt/lists/* \

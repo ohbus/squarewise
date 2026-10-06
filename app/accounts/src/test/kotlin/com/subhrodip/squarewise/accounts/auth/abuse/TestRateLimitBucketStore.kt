@@ -5,17 +5,20 @@ import java.util.concurrent.ConcurrentHashMap
 import org.springframework.context.annotation.Profile
 import org.springframework.context.annotation.Primary
 import org.springframework.stereotype.Component
+import com.subhrodip.squarewise.security.ratelimit.RateLimitDecision
+import com.subhrodip.squarewise.security.ratelimit.RateLimitPolicy
+import com.subhrodip.squarewise.security.ratelimit.RateLimiter
 
 /** Test-profile limiter; never registered in staging or production. */
 @Component
-@Profile("test", "local-oidc")
+@Profile("test")
 @Primary
-class TestRateLimitBucketStore : RateLimitBucketStore {
+class TestRateLimitBucketStore : RateLimiter {
     private data class Bucket(var started: Instant, var count: Int, var last: Instant)
 
     private val buckets = ConcurrentHashMap<String, Bucket>()
 
-    override fun acquireAtomically(
+    private fun acquireAtomically(
         key: ByteArray,
         now: Instant,
         windowStart: Instant,
@@ -37,4 +40,19 @@ class TestRateLimitBucketStore : RateLimitBucketStore {
         }
         return allowed
     }
+
+    override fun consume(key: String, policy: RateLimitPolicy): RateLimitDecision {
+        val now = Instant.now()
+        val allowed = acquireAtomically(
+            key.hexToBytes(), now, now.minus(policy.window), now.minus(policy.cooldown), policy.maximumPermits
+        ) == 1
+        return RateLimitDecision(
+            allowed,
+            if (allowed) policy.maximumPermits - 1 else 0,
+            if (allowed) java.time.Duration.ZERO else policy.window,
+            policy.id
+        )
+    }
+
+    private fun String.hexToBytes(): ByteArray = chunked(2).map { it.toInt(16).toByte() }.toByteArray()
 }

@@ -1,4 +1,4 @@
-# FND-07 — UUIDv7 generation
+# FND-07: UUIDv7 generation
 
 Java 25 does not provide the Java 26 UUIDv7 factory API. Verify and centrally
 version a compatible RFC 9562 UUIDv7 library, expose one small foundation

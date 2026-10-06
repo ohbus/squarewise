@@ -1,4 +1,4 @@
-# MSG-02 — Deliver committed group changes to every BFF replica
+# MSG-02: Deliver committed group changes to every BFF replica
 
 Publish committed group-change events from Expense Core and consume them through
 per-replica BFF queues into live-update fanout with deduplication and resync-safe

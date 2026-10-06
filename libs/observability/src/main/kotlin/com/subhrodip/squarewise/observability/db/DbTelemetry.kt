@@ -19,6 +19,7 @@ class DbTelemetry(
     private val queryCount = AtomicLong()
     private val queryTotalMs = AtomicLong()
     private val slowQueryCount = AtomicLong()
+    private val jdbcStatementCount = AtomicLong()
 
     /** Records a connection route for a validated operation name. */
     fun route(operation: String, route: String) {
@@ -50,6 +51,12 @@ class DbTelemetry(
             slowQueryCount.incrementAndGet()
             registry?.counter("squarewise.db.query.slow", "operation", operation)?.increment()
         }
+    }
+
+    /** Records one Hibernate/JDBC statement without retaining SQL text or parameters. */
+    fun jdbcStatement(operation: String) {
+        jdbcStatementCount.incrementAndGet()
+        registry?.counter("squarewise.db.statement", "operation", operation)?.increment()
     }
 
     /** Measures one bounded query block without capturing SQL, parameters, or payloads. */
@@ -88,6 +95,7 @@ class DbTelemetry(
         deadlocks = deadlockCount.get(),
         queries = queryCount.get(),
         queryTotalMs = queryTotalMs.get(),
-        slowQueries = slowQueryCount.get()
+        slowQueries = slowQueryCount.get(),
+        jdbcStatements = jdbcStatementCount.get()
     )
 }

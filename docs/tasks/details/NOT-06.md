@@ -1,4 +1,4 @@
-# NOT-06 — SMTP email dispatch adapter in Notifications service
+# NOT-06: SMTP email dispatch adapter in Notifications service
 
 Implement real SMTP email dispatch adapter in `app/notifications` connecting to local Mailpit (`localhost:1025`).
 

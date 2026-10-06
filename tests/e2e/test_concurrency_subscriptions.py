@@ -33,12 +33,14 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 from tests.e2e.qa10_evidence import write_execution_evidence
 
-BFF_URL = "http://localhost:8080"
-EXPENSE_CORE_URL = "http://localhost:8082"
+BFF_URL = os.environ.get("SQUAREWISE_BFF_URL", "http://localhost:28080")
+ACCOUNTS_URL = os.environ.get("SQUAREWISE_ACCOUNTS_URL", "http://localhost:28081")
+EXPENSE_CORE_URL = os.environ.get("SQUAREWISE_EXPENSE_CORE_URL", "http://localhost:28082")
+REMOVE_MEMBER_PATH = "/expense-core/v1/groups/{group_id}/members/{membership_id}"
 HTTP_TIMEOUT_SECONDS = 10
 SOCKET_SETUP_TIMEOUT_SECONDS = 10
 WS_HOST = "localhost"
-WS_PORT = 8080
+WS_PORT = int(os.environ.get("SQUAREWISE_BFF_PORT", "28080"))
 
 
 
@@ -55,7 +57,8 @@ def request_json(url: str, method: str = "GET", body: Any = None,
     req = Request(url, data=data, headers=headers, method=method)
     try:
         with urlopen(req, timeout=HTTP_TIMEOUT_SECONDS) as resp:
-            return resp.status, json.loads(resp.read().decode("utf-8"))
+            raw = resp.read().decode("utf-8")
+            return resp.status, json.loads(raw) if raw else {}
     except HTTPError as e:
         raw = e.read().decode("utf-8")
         try:
@@ -247,6 +250,26 @@ def resolve_membership_id(members: Any, *candidates: str | None) -> str:
     raise KeyError(f"None of candidates {valid_candidates} found in members: {members}")
 
 
+def wait_for_subscription_complete(
+    client: SimpleGraphQLWSClient,
+    subscription_id: str,
+    timeout_seconds: float = 10.0,
+) -> None:
+    """Wait for broker-driven revocation instead of assuming a fixed relay delay."""
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline:
+        if any(
+            message.get("type") == "complete" and message.get("id") == subscription_id
+            for message in client.messages
+        ):
+            return
+        time.sleep(0.1)
+    raise AssertionError(
+        f"Subscription {subscription_id} was not completed within {timeout_seconds:g}s: "
+        f"{client.messages}"
+    )
+
+
 def run_concurrency_and_subscriptions_test() -> None:
     """Run concurrency and subscription checks with explicit UTF-8 output."""
     if isinstance(sys.stdout, io.TextIOWrapper):
@@ -265,11 +288,11 @@ def run_concurrency_and_subscriptions_test() -> None:
     if not user_a or not user_b or not user_nonmember:
         raise RuntimeError("E2E persona variables must contain signed tokens")
 
-    status, profile_a = request_json(f"http://localhost:8081/accounts/v1/me", bearer=user_a)
+    status, profile_a = request_json(f"{ACCOUNTS_URL}/accounts/v1/me", bearer=user_a)
     assert status == 200, f"Failed to get profile for Alice: {profile_a}"
     alice_id = profile_a["accountId"]
 
-    status, profile_b = request_json(f"http://localhost:8081/accounts/v1/me", bearer=user_b)
+    status, profile_b = request_json(f"{ACCOUNTS_URL}/accounts/v1/me", bearer=user_b)
     assert status == 200, f"Failed to get profile for Bob: {profile_b}"
     bob_id = profile_b["accountId"]
 
@@ -349,6 +372,13 @@ def run_concurrency_and_subscriptions_test() -> None:
     time.sleep(0.3)
     ws_client.complete("cancelled-sub")
     time.sleep(0.2)
+
+    bob_ws = SimpleGraphQLWSClient(WS_HOST, WS_PORT, GRAPHQL_PATH, user_b)
+    bob_ws.connect()
+    bob_ws.subscribe("bob-sub", sub_query, {"groupId": group_id})
+    time.sleep(0.4)
+    assert not bob_ws.errors, f"Active member subscription was rejected: {bob_ws.errors}"
+    print("  Active member subscription established for revocation check")
     print("  ✓ Authenticated subscription re-established after disconnect")
 
     # Step 3: Trigger Live Mutations and Observe Invalidation Events
@@ -486,6 +516,24 @@ def run_concurrency_and_subscriptions_test() -> None:
     assert status_resolved == 200, f"Failed to apply conflict-resolved update: {resolved_res}"
     assert resolved_res["version"] == 3, f"Expected version 3 after resolution, got {resolved_res['version']}"
     print(f"  ✓ Conflict-resolved update successfully saved: version={resolved_res['version']}")
+
+    print("\n[Step 6] Revoking membership and verifying WebSocket reconnect denial...")
+    remove_status, remove_response = request_json(
+        f"{EXPENSE_CORE_URL}{REMOVE_MEMBER_PATH.format(group_id=group_id, membership_id=bob_id)}",
+        method="DELETE",
+        bearer=user_a,
+    )
+    assert remove_status == 204, f"Failed to remove Bob from the group: {remove_response}"
+    wait_for_subscription_complete(bob_ws, "bob-sub")
+    bob_ws.close()
+
+    revoked_reconnect = SimpleGraphQLWSClient(WS_HOST, WS_PORT, GRAPHQL_PATH, user_b)
+    revoked_reconnect.connect()
+    revoked_reconnect.subscribe("revoked-sub", sub_query, {"groupId": group_id})
+    time.sleep(0.5)
+    assert revoked_reconnect.errors, "Revoked member reconnected without subscription authorization failure"
+    revoked_reconnect.close()
+    print("  Removed member stream terminated and reconnect subscription was rejected")
 
     # Clean up WebSocket
     ws_client.close()

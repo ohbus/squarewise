@@ -3,8 +3,15 @@ package com.subhrodip.squarewise.notifications.consumer.config
 import com.subhrodip.squarewise.ids.events.EventConstants
 import com.subhrodip.squarewise.notifications.delivery.rate.DeliveryRateLimiter
 import com.subhrodip.squarewise.notifications.delivery.rate.RedisDeliveryRateLimiter
+import java.time.Duration
 import com.subhrodip.squarewise.notifications.email.config.EmailProperties
 import com.subhrodip.squarewise.notifications.consumer.transport.BrokerEnvelopeParser
+import com.subhrodip.squarewise.security.ratelimit.RateLimiter
+import com.subhrodip.squarewise.security.ratelimit.HmacRateLimitKeyDeriver
+import com.subhrodip.squarewise.security.ratelimit.RedisRateLimiter
+import com.subhrodip.squarewise.security.ratelimit.RateLimitRedisHealthIndicator
+import io.micrometer.core.instrument.MeterRegistry
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.amqp.core.Binding
 import org.springframework.amqp.core.BindingBuilder
 import org.springframework.amqp.core.Declarables
@@ -13,13 +20,23 @@ import org.springframework.amqp.core.TopicExchange
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Import
 import org.springframework.data.redis.core.StringRedisTemplate
 import tools.jackson.databind.ObjectMapper
 
 /** Declares the notification event exchange, queues, and domain-event bindings. */
 @Configuration
+@Import(RateLimitRedisHealthIndicator::class)
 @EnableConfigurationProperties(NotificationMessagingProperties::class, EmailProperties::class)
-class NotificationMessagingConfiguration {
+class NotificationMessagingConfiguration(
+    @Value("\${SQUAREWISE_SECURITY_CREDENTIAL_DIGEST_SECRET:}")
+    private val encodedRateLimitSecret: String
+) {
+
+    /** Creates the mandatory Redis-backed distributed limiter for runtime profiles. */
+    @Bean
+    fun rateLimiter(redis: StringRedisTemplate, meterRegistry: MeterRegistry): RateLimiter =
+        RedisRateLimiter(redis, HmacRateLimitKeyDeriver.fromBase64(encodedRateLimitSecret), meterRegistry)
 
     /** Requires the application-managed mapper for broker envelope parsing. */
     @Bean
@@ -27,7 +44,14 @@ class NotificationMessagingConfiguration {
 
     /** Provides the bounded per-recipient delivery policy used by consumers. */
     @Bean
-    fun deliveryRateLimiter(redis: StringRedisTemplate): DeliveryRateLimiter = RedisDeliveryRateLimiter(redis)
+    fun deliveryRateLimiter(
+        rateLimiter: RateLimiter,
+        properties: NotificationMessagingProperties
+    ): DeliveryRateLimiter = RedisDeliveryRateLimiter(
+        rateLimiter,
+        limit = properties.deliveryMaxPermits,
+        window = Duration.ofSeconds(properties.deliveryWindowSeconds)
+    )
 
     /** Declares the shared durable event exchange. */
     @Bean

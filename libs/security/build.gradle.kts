@@ -3,6 +3,8 @@ kotlin { jvmToolchain(25) }
 dependencies {
     api(libs.boot.security)
     api(libs.boot.resource.server)
+    api(libs.boot.data.redis)
+    api(libs.boot.actuator)
     testImplementation(libs.boot.test)
     testImplementation(libs.boot.web)
     testImplementation(libs.boot.webflux)

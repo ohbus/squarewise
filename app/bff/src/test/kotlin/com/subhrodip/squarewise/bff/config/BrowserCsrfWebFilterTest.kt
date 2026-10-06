@@ -46,7 +46,7 @@ class BrowserCsrfWebFilterTest {
     }
 
     // ---------------------------------------------------------------------------
-    // Legacy endpoint coverage — token refresh and logout
+    // Legacy endpoint coverage: token refresh and logout
     // ---------------------------------------------------------------------------
 
     @Test
@@ -120,7 +120,7 @@ class BrowserCsrfWebFilterTest {
     }
 
     // ---------------------------------------------------------------------------
-    // GraphQL mutation — cookie-authenticated (SEC-006)
+    // GraphQL mutation: cookie-authenticated (SEC-006)
     // ---------------------------------------------------------------------------
 
     @Test
@@ -196,7 +196,7 @@ class BrowserCsrfWebFilterTest {
     }
 
     // ---------------------------------------------------------------------------
-    // GraphQL non-POST (queries via GET — safe methods)
+    // GraphQL non-POST (queries via GET: safe methods)
     // ---------------------------------------------------------------------------
 
     @Test

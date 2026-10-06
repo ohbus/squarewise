@@ -15,8 +15,8 @@ from urllib.request import Request, urlopen
 from tests.http_constants import AUTHORIZATION, CONTENT_TYPE
 from tests.e2e.qa10_evidence import write_execution_evidence
 
-ACCOUNTS_URL = os.environ.get("SQUAREWISE_ACCOUNTS_URL", "http://localhost:8081")
-MAILPIT_URL = os.environ.get("SQUAREWISE_MAILPIT_URL", "http://localhost:8025")
+ACCOUNTS_URL = os.environ.get("SQUAREWISE_ACCOUNTS_URL", "http://localhost:28081")
+MAILPIT_URL = os.environ.get("SQUAREWISE_MAILPIT_URL", "http://localhost:28025")
 
 
 def request_json(
@@ -75,7 +75,7 @@ def wait_for_credential(recipient: str) -> str:
 
 
 def main(evidence_output: Path | None = None, source_revision: str = "local-worktree", environment: str = "local-compose-oidc") -> int:
-    """Verify login replay rejection, logout revocation, and logout idempotency."""
+    """Verify passwordless redemption, verification throttling, and revocation."""
     recipient = f"qa-e2e-{int(time.time() * 1000)}@example.com"
     start_status, start_response = request_json(
         f"{ACCOUNTS_URL}/accounts/v1/auth/login/start",
@@ -102,6 +102,33 @@ def main(evidence_output: Path | None = None, source_revision: str = "local-work
         body={"credential": credential, "clientKind": "NATIVE"},
     )
     assert replay_status == 401, "verifyLogin must reject a replayed one-time credential"
+
+    verification_limit = int(os.environ.get("SQUAREWISE_AUTH_LOGIN_VERIFY_MAX_REQUESTS", "5"))
+    invalid_credential = f"{credential}-invalid"
+    invalid_statuses = [
+        request_json(
+            f"{ACCOUNTS_URL}/accounts/v1/auth/login/verify",
+            method="POST",
+            body={"credential": invalid_credential, "clientKind": "NATIVE"},
+        )[0]
+        for _ in range(verification_limit)
+    ]
+    assert invalid_statuses == [401] * verification_limit, (
+        "invalid verification attempts must remain generic before the limit: "
+        f"observed {invalid_statuses}"
+    )
+    verification_denial_status, verification_denial = request_json(
+        f"{ACCOUNTS_URL}/accounts/v1/auth/login/verify",
+        method="POST",
+        body={"credential": invalid_credential, "clientKind": "NATIVE"},
+    )
+    assert verification_denial_status == 429, (
+        "verification admission must fail closed with HTTP 429 after the configured window is exhausted"
+    )
+    assert isinstance(verification_denial, dict)
+    assert verification_denial.get("code") == "RATE_LIMITED", (
+        "verification denial must retain the structured RATE_LIMITED error code"
+    )
 
     logout_status, logout_response = request_json(
         f"{ACCOUNTS_URL}/accounts/v1/auth/logout",
@@ -130,7 +157,7 @@ def main(evidence_output: Path | None = None, source_revision: str = "local-work
     )
     print(
         "  [ok] startLogin delivered, verifyLogin redeemed once, replay was rejected, "
-        "logout revoked refresh, and logout replay was idempotent"
+        "verification attempts were throttled, logout revoked refresh, and logout replay was idempotent"
     )
     if evidence_output is not None:
         artifact = str(evidence_output)
@@ -157,6 +184,8 @@ def main(evidence_output: Path | None = None, source_revision: str = "local-work
                     "assertions": [
                         "delivered credential returned access and refresh tokens",
                         "replayed one-time credential returned HTTP 401",
+                        "invalid verification attempts remained HTTP 401 until the configured cap",
+                        "the next verification attempt returned HTTP 429",
                     ],
                 },
                 {

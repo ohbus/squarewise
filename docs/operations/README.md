@@ -49,10 +49,10 @@ flowchart TD
 
 | # | Document | What it answers | Location |
 |:---:|---|---|---|
-| 1 | **Production Readiness Audit** | "What is wrong and why?" — 5 critical + 24 high-severity findings with code references, scale impact analysis, and design pattern remediation guidance | [`docs/reviews/production-readiness-audit.md`](../reviews/production-readiness-audit.md) |
-| 2 | **Production Readiness Roadmap** | "How do we fix it?" — 8 phases with dependencies, deliverables, exit criteria, and ~11–17 week critical path estimate | [`docs/implementation/production-readiness-roadmap.md`](../implementation/production-readiness-roadmap.md) |
-| 3 | **Production Readiness Tracker** | "Who is doing what, when?" — 17 workstreams (PR-00 through PR-16) with owner roles, acceptance criteria, cross-cutting rules, and dependency graph | [`docs/tasks/production-readiness-tracker.md`](../tasks/production-readiness-tracker.md) |
-| 4 | **Production Readiness Plan** | "Is it ready to ship?" — 9-section pre-launch gate checklist with measurable pass/fail criteria and release approval form | [production-readiness-plan.md](production-readiness-plan.md) |
+| 1 | **Production Readiness Audit** | "What is wrong and why?": 5 critical + 24 high-severity findings with code references, scale impact analysis, and design pattern remediation guidance | [`docs/reviews/production-readiness-audit.md`](../reviews/production-readiness-audit.md) |
+| 2 | **Production Readiness Roadmap** | "How do we fix it?": 8 phases with dependencies, deliverables, exit criteria, and ~11–17 week critical path estimate | [`docs/implementation/production-readiness-roadmap.md`](../implementation/production-readiness-roadmap.md) |
+| 3 | **Production Readiness Tracker** | "Who is doing what, when?": 17 workstreams (PR-00 through PR-16) with owner roles, acceptance criteria, cross-cutting rules, and dependency graph | [`docs/tasks/production-readiness-tracker.md`](../tasks/production-readiness-tracker.md) |
+| 4 | **Production Readiness Plan** | "Is it ready to ship?": 9-section pre-launch gate checklist with measurable pass/fail criteria and release approval form | [production-readiness-plan.md](production-readiness-plan.md) |
 
 ### Current status
 
@@ -70,7 +70,8 @@ current classification is:
 | [Production hardening](production-hardening.md) | Observability, error attribution, metric cardinality, and release hardening requirements |
 | [Compose topology](compose-topology.md) | Local development Docker Compose topology |
 | [Quickstart](quickstart.md) | Clone-and-run guide for new developers |
-| [CI](ci.md) | Continuous integration pipeline documentation |
+| [CI](ci.md) | Continuous integration pipeline documentation and secrets configuration |
+| [Secrets & Keys Matrix](../../infra/local/env-secrets-matrix.example) | Complete catalog of security keys, passwords, and `make generate-secrets` utility |
 
 ## Production deployment
 

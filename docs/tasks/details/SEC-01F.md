@@ -1,4 +1,4 @@
-# SEC-01F — Make security operations, telemetry, supply chain, and release evidence executable
+# SEC-01F: Make security operations, telemetry, supply chain, and release evidence executable
 
 ## Status
 
@@ -107,7 +107,7 @@ Rewrote `docs/quality/public-interface-operation-matrix.md` to:
   (SEC-001 through SEC-013) to workstream, code evidence, and final status
 - Update `groupChanged` WebSocket row with SEC-01D revocation evidence
 
-## Acceptance Criteria — Verification
+## Acceptance Criteria: Verification
 
 1. ✅ Asymmetric key rotation procedures are documented with overlap tests verified.
 2. ✅ Structured security audit events are logged for key security events without secret leakage.
@@ -117,11 +117,11 @@ Rewrote `docs/quality/public-interface-operation-matrix.md` to:
 
 ## Verification Commands
 
-- `./gradlew :app:accounts:test --no-daemon` — BUILD SUCCESSFUL (19 tasks)
-- `uv run python tools/contracts/validate.py` — valid (207 tasks)
-- `uv run python tools/ops/check_security_hygiene.py` — passed
-- `uv run python tools/ops/check_architecture.py` — passed
-- `uv run python tools/ops/validate_sbom_baseline.py` — passed
+- `./gradlew :app:accounts:test --no-daemon`: BUILD SUCCESSFUL (19 tasks)
+- `uv run python tools/contracts/validate.py`: valid (207 tasks)
+- `uv run python tools/ops/check_security_hygiene.py`: passed
+- `uv run python tools/ops/check_architecture.py`: passed
+- `uv run python tools/ops/validate_sbom_baseline.py`: passed
 
 ## Known Limitations
 

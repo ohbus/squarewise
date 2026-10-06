@@ -1,4 +1,4 @@
-# CORE-19 — Complete group lifecycle and membership administration
+# CORE-19: Complete group lifecycle and membership administration
 
 Implement the missing MVP group archive, named placeholders, member removal,
 and invitation revocation behavior with durable authorization and history

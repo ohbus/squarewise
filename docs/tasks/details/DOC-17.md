@@ -1,4 +1,4 @@
-# DOC-17 — Current-state task, Git, and drift audit
+# DOC-17: Current-state task, Git, and drift audit
 
 ## Objective
 

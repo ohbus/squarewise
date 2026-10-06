@@ -1,0 +1,69 @@
+name: Bug report
+description: Report a reproducible defect in Squarewise
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve Squarewise. Search existing issues first.
+
+        **Do not report security vulnerabilities here.** Read the [Security Policy](https://github.com/ohbus/squarewise/security/policy) and email security@subhrodip.com instead.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What went wrong, and what impact did it have?
+      placeholder: A concise description of the problem and its impact.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: Provide the smallest deterministic sequence that reproduces the problem. Redact secrets and personal data.
+      placeholder: |
+        1. Configure ...
+        2. Run ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should have happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include the commit/tag, service, OS, Java/Docker versions, profile, and relevant configuration with secrets removed.
+      placeholder: |
+        Commit:
+        Component:
+        OS:
+        Java/Docker:
+        Run mode:
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Logs and additional evidence
+      description: Add minimal logs, screenshots, traces, or related links. Remove tokens, credentials, personal data, and other sensitive content.
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Submission checklist
+      options:
+        - label: I searched for an existing issue that describes this problem.
+          required: true
+        - label: I removed secrets, credentials, personal data, and other sensitive information.
+          required: true
+        - label: This is not a security vulnerability; security reports go to security@subhrodip.com.
+          required: true
+        - label: I agree to follow the repository's Code of Conduct.
+          required: true

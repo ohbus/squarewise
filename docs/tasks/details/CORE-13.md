@@ -1,4 +1,4 @@
-# CORE-13 — Durable expense ledger entity and posting persistence
+# CORE-13: Durable expense ledger entity and posting persistence
 
 Implement persistent JPA entities, Flyway migrations, and repositories for expense creation,
 payers, and allocation splits in `app/expense-core`.

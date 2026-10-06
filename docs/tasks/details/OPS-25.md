@@ -1,4 +1,4 @@
-# OPS-25 — Migrate Python tooling to pyproject.toml + uv sync + uv run
+# OPS-25: Migrate Python tooling to pyproject.toml + uv sync + uv run
 
 ## Status
 `completed`
@@ -14,7 +14,7 @@ authoritative `pyproject.toml` at the repository root that:
 3. Lets `uv sync` produce a reproducible `.venv` in one step.
 4. Replaces every `python3` call in the `Makefile` and CI with `uv run`, which
    automatically activates the project virtual environment.
-5. Eliminates all `PYTHONPATH=.` prefixes — package resolution comes from the
+5. Eliminates all `PYTHONPATH=.` prefixes: package resolution comes from the
    editable install instead.
 6. Makes the immutable commit-pinned `astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e` (`v6`)
    the *only* Python environment setup step in CI;
@@ -30,14 +30,14 @@ authoritative `pyproject.toml` at the repository root that:
 | `PYTHONPATH=.` scattered in 7+ Makefile targets + 4 CI step `env:` blocks | No single source of truth for the import root |
 | `uvx --from mypy==1.17.1 mypy` | Tool version pinned in two places (Makefile and CI `run:` blocks); no lock file |
 | `uvx --from yamllint==1.37.1 yamllint` | Same issue; ephemeral `uvx` tool fetches are not reproducible across runners |
-| `python3` used for scripts, `uvx` used for tools — no unified entrypoint | Split-brain: local developers need both system Python and uv; CI has the same split |
+| `python3` used for scripts, `uvx` used for tools: no unified entrypoint | Split-brain: local developers need both system Python and uv; CI has the same split |
 | `tests/fixtures/invalid_subject_oidc/server.py` had to inline constants because it ran inside Docker without `PYTHONPATH=.` | Symptom of the structural problem fixed per-file rather than systemically |
 
 ### Why pyproject.toml + uv is the right fix
 
 - **`uv sync`** resolves and installs all declared dependencies (including editable
   packages) into `.venv` in a single, deterministic step.
-- **`uv run <script>`** activates `.venv` automatically — no `source .venv/bin/activate`
+- **`uv run <script>`** activates `.venv` automatically: no `source .venv/bin/activate`
   or `PYTHONPATH` management needed.
 - **`uv.lock`** records exact resolved versions of every transitive dependency,
   making CI reproducible without pinning in multiple files.
@@ -66,7 +66,7 @@ docs/implementation/technology-decisions.md (record uv as Python environment man
 ```
 
 ## Dependencies
-- `QA-09` (done) — CI pipeline structure is stable; safe to refactor Python invocations.
+- `QA-09` (done): CI pipeline structure is stable; safe to refactor Python invocations.
 - No Kotlin/Gradle changes required.
 
 ## Design decisions
@@ -115,7 +115,7 @@ python_version = "3.12"
 hatchling's wheel builder includes them as proper packages, and so `uv run`
 resolves `from tests.http_constants import …` without `PYTHONPATH`.
 
-`tests/acceptance/` already has `__init__.py` — no change needed there.
+`tests/acceptance/` already has `__init__.py`: no change needed there.
 
 ### 3. Lock file
 
@@ -166,7 +166,7 @@ new `uv sync --frozen --no-build` step is added after the pinned setup action in
 every job that runs Python.
 
 The `verify` matrix jobs that don't run Python scripts themselves do not need
-`uv sync` — only the `lint`, `e2e-*`, and `preflight` jobs need it.
+`uv sync`: only the `lint`, `e2e-*`, and `preflight` jobs need it.
 
 `preflight` currently runs raw `python3` without `setup-uv`. After this task it
 adds the pinned setup action + `uv sync --frozen --no-build` and uses
@@ -232,7 +232,7 @@ python3 tools/contracts/validate.py   # contracts validator uses only stdlib
 ## Known limitations and non-goals
 
 - The `tests/fixtures/invalid_subject_oidc/server.py` Docker container is excluded
-  from the `uv` ecosystem — it has its own `requirements.txt` and runs standalone.
+  from the `uv` ecosystem: it has its own `requirements.txt` and runs standalone.
 - The `make doctor` target checks for `python3` and `uv`; after this task it should
   check only for `uv` (Python is managed by uv).
 - No changes to Kotlin/Gradle, JVM tooling, or Spring Boot services.

@@ -1,4 +1,4 @@
-# DOC-11 — Document endpoint-specific pagination policy
+# DOC-11: Document endpoint-specific pagination policy
 
 Document endpoint-specific pagination policy across collection resources in Squarewise,
 establishing bounded pagination limits, opaque cursor semantics, and point operation guidance.

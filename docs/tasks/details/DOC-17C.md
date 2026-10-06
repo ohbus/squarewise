@@ -1,4 +1,4 @@
-# DOC-17C — Implementation and contract drift review
+# DOC-17C: Implementation and contract drift review
 
 Review current application changes, contracts, tests, and documented scope for
 drift or missing work. Write findings to `docs/reviews/current-drift-review.md`;

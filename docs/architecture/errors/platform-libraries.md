@@ -29,11 +29,11 @@ namespace; being a library does not make an error Platform-owned.
 | `934801` | `DATABASE_UNAVAILABLE` | 503 | Required database unavailable |
 | `934802` | `DATABASE_OPERATION_TIMEOUT` | 503 | Persistence timeout when not domain-translated |
 | `934601` | `DATABASE_DATA_INCONSISTENT` | 500 | Unknown integrity/corruption |
-| `945701` | `MESSAGE_PUBLISH_FAILED` | — | Publish/nack/protocol failure |
-| `945801` | `BROKER_UNAVAILABLE` | — | Broker/circuit/timeout availability |
-| `945702` | `MESSAGE_ENVELOPE_INVALID` | — | Shared envelope protocol |
-| `948901` | `PLATFORM_CONFIGURATION_INVALID` | — | Startup configuration failure |
-| `958901` | `OBSERVABILITY_PIPELINE_FAILED` | — | Telemetry degradation; avoid recursive logging |
+| `945701` | `MESSAGE_PUBLISH_FAILED` | - | Publish/nack/protocol failure |
+| `945801` | `BROKER_UNAVAILABLE` | - | Broker/circuit/timeout availability |
+| `945702` | `MESSAGE_ENVELOPE_INVALID` | - | Shared envelope protocol |
+| `948901` | `PLATFORM_CONFIGURATION_INVALID` | - | Startup configuration failure |
+| `958901` | `OBSERVABILITY_PIPELINE_FAILED` | - | Telemetry degradation; avoid recursive logging |
 | `968901` | `IDENTIFIER_GENERATION_FAILED` | 500 | ID source invariant/availability |
 
 Candidate digits are subject to catalog freeze. Async/startup-only failures have no

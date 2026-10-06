@@ -3,15 +3,41 @@
 Three thin workflows select policy: `ci-pr.yml` validates pull requests,
 `ci-branch.yml` validates non-master pushes, and `ci-master.yml` validates master and
 publishes four application images. Verification, checks, and E2E execution live
-in `_reusable-ci.yml`, while container image delivery lives in `ci-master.yml` so
-feature branch and pull request workflows can operate with read-only permissions
-without encountering GitHub Actions reusable workflow permission validation errors.
-The PR, branch, and master callers grant `pull-requests: read` because the reusable
-dependency-review job declares that least-privilege permission; the job remains
-skipped for non-PR events.
+in `_reusable-ci.yml`, while container image delivery lives in `ci-master.yml`.
+The PR, branch, and master callers configure read-only workflow-level permissions,
+and grant `pull-requests: read`, `id-token: write`, and `attestations: write` explicitly
+at the calling job level (`ci`) so nested reusable workflow jobs (`lint`, `verify`, and other
+artifact producers) can attest build provenance without escalating privileges across the workflow.
 
-The reusable workflow applies Gradle dependency and build caching with
-content-addressed keys and restore fallbacks. E2E uses the same policy, while
+PR and non-master branch runs now calculate a changed-scope plan before the Gradle
+matrix. The plan selects changed modules plus their reverse project dependents and
+selects only the E2E streams affected by the changed paths. Master and manually
+dispatched master runs pass `full_run: true` and retain the complete matrix and all
+E2E streams. Repository-wide preflight, lint, contract, security, and Sonar jobs
+remain global checks where their tools need the complete repository; they are not
+pretended to be module-local checks. The scope resolver is
+`tools/ci/changed_scope.py`, with behavior tests in
+`tests/tools/test_changed_scope.py`.
+
+The scope job keeps human diagnostics on the step log and writes only the
+resolver's machine-readable `name=value` records to `$GITHUB_OUTPUT`. A
+first-push fallback logs its explanation normally and uses a workspace marker
+to request full scope; prose must never be appended to the GitHub Actions
+output file because the runner parses that file as structured data. Native
+`paths` and `paths-ignore` filters can gate simple globs, but they cannot
+calculate this repository's reverse Gradle-dependent closure or classify the
+three E2E streams, so the small typed resolver and first-party matrix jobs
+remain necessary.
+
+The comprehensive E2E job applies the notification delivery-limit variables
+again when it restarts Compose after the invalid-subject checks. Compose
+interpolation is evaluated at startup, so a restart without those variables
+would silently restore the default ten-per-minute policy and invalidate the
+suppression probe.
+
+The reusable workflow delegates Gradle dependency, wrapper, and build caching
+natively to `gradle/actions/setup-gradle`, providing content-addressed caching
+and automatic cache cleanup without conflicting user-home restoration steps.
 Docker BuildKit layers use the GitHub Actions cache backend. Cache misses only
 reduce speed and never change verification behavior.
 Workflows declare `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'` in their top-level
@@ -42,13 +68,20 @@ four artifact paths before Compose starts, so a missing artifact fails at the
 handoff instead of later as an opaque Docker `COPY` checksum error.
 The monolithic E2E stage is split into three parallel streams:
 1. `e2e-edge-and-security`: Contract smoke, Redis authentication-cache
-   eviction/outage/restart checks (`make e2e-auth-cache`), negative OIDC JWT
-   path probes, and live REST edge cases (`make e2e-rest-edge`).
+   eviction/outage/restart checks (`make e2e-auth-cache`), public GraphQL HTTP
+   and WebSocket rate-limit surface checks (`make e2e-auth-surfaces`), Accounts
+   lookup-isolation checks (`make e2e-auth-no-accounts`), cross-process BFF
+   admission (`make e2e-auth-bff-replicas`), negative OIDC JWT path probes, and
+   live REST edge cases (`make e2e-rest-edge`).
 2. `e2e-product-and-offline`: Passwordless auth-email delivery (`make e2e-auth-email`), public acceptance suite (`make acceptance-live`), ordered Bruno collection (`make bruno-run`), live multi-service product lifecycle (`make e2e-live`), and offline client synchronization / replay resilience (`make e2e-offline`).
 3. `e2e-concurrency-and-chaos`: Real-time WebSocket GraphQL subscription invalidation, concurrent member edit race resolution (`make e2e-concurrency`), message broker outage chaos, and transactional outbox drain recovery (`make e2e-chaos`).
 
-An aggregate gate job (`e2e-gate`) monitors all parallel streams and provides a single,
-authoritative status check for branch protection rules.
+An aggregate gate job (`e2e-gate`) monitors the selected parallel streams and provides
+a single status check for branch protection rules. It fails only when a selected
+stream fails, or when the shared preflight/artifact preparation fails. Intentionally
+unselected streams are reported as not evaluated and do not fail the gate. If no E2E
+stream is selected, the gate is skipped rather than falsely reporting a full E2E pass.
+Master always selects all three streams.
 
 The matrix tests every application and library in parallel after a single
 preflight, validates contracts, REST path structure, GraphQL schema/resolver
@@ -61,7 +94,7 @@ hosted-runner broker startup contention without removing or changing any shard.
 Jobs use Microsoft Build of OpenJDK. Python dependencies
 and tooling are deterministically managed via `pyproject.toml` and `uv.lock`.
 CI workflows install dependencies via the immutable commit
-`astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e` (the `v6` tag)
+`astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7` (the `v10.2.0` tag)
 with `uv sync --frozen --no-build`, running tools and scripts via
 `uv run --frozen --no-build`. `--frozen` prevents lockfile resolution changes;
 `--no-build` prevents dependency/project build hooks from executing during the
@@ -74,10 +107,10 @@ requirement to third-party actions.
 The lightweight lint job also installs the same Microsoft JDK 25 and Gradle
 setup before generating the CycloneDX SBOM; every job that invokes Gradle owns
 its toolchain setup explicitly.
-QA-10 coverage is reported per module in the Gradle matrix and aggregated by
-the follow-up `qa10-coverage-inventory` job, which publishes one JSON inventory
-artifact. A single matrix shard cannot prove repository-wide coverage. The
-eventual blocking gate command is
+QA-10 coverage is reported per module in the Gradle matrix. The repository-wide
+inventory remains a local QA-10 audit command because no matrix shard can prove
+aggregate coverage, and the former artifact-only follow-up job was removed from
+hosted CI. The eventual blocking gate command is
 `uv run --frozen --no-build python tools/coverage/report_branch_gaps.py --format json --fail-on-gaps`.
 The current local discovery baseline is 35 methods containing 61 missed
 branches. This is a backlog signal, not a target to reduce by deleting
@@ -88,12 +121,17 @@ summaries (`test-summary/action@v2`) and uploads JUnit XML and HTML reports as
 job artifacts with `if: always()` retention.
 A dedicated `sonar` job runs SonarQube / SonarCloud static analysis with cached
 Sonar packages (`~/.sonar/cache`) and Gradle cache, sending coverage and test analysis
-for `master` and pull requests.
+for `master` and internal pull requests when `SONAR_TOKEN` is available. For pull
+requests originating from forks (where repository secrets are withheld by GitHub Actions
+security boundaries), the Sonar job is gracefully skipped to uphold the principle of least
+privilege and prevent arbitrary code execution vulnerabilities (such as "pwn request" attacks),
+while all unit, integration, acceptance, contract, and E2E verification suites run in full.
 For application projects, `_reusable-ci.yml` uploads the built executable
 `bootJar` artifact (`app-jar-<service>`). Master image publishing in `ci-master.yml`
 downloads this pre-built artifact and packages the runtime image with
 `infra/docker/Dockerfile.fast` (`eclipse-temurin:25-jre`), eliminating redundant
 JVM compilation inside Docker.
+In adherence to industry standards for secure software supply chains (such as SLSA / OpenSSF provenance standards), cryptographic attestations must be generated for all build artifacts and container images. Every uploaded workflow artifact (SBOMs, application `bootJar` packages, JUnit/HTML test and coverage reports, and E2E diagnostic bundles) is attested immediately after creation and upload using GitHub's signed build-provenance action (`actions/attest-build-provenance`). The published container images are attested against their pushed immutable container digests. All workflows and jobs that produce or invoke jobs producing build artifacts must declare explicit OIDC and attestation permissions (`id-token: write` and `attestations: write`), and artifact digests—never mutable tags or names—are strictly used as attestation subjects.
 Master image jobs create an explicit `docker-container` Buildx builder before
 using the GitHub Actions cache backend; each service matrix entry has its own
 cache scope. They publish SHA and branch tags to
@@ -146,3 +184,30 @@ the 54-operation matrix. The same hosted step feeds it to the operation-gap
 reporter and retains `qa10-operation-inventory.json`; review the resulting
 `EXECUTION-ARTIFACT-PASSED`, `FAILED`, and `BLOCKED` statuses before crediting
 any operation.
+
+## CI secrets and environment variables
+
+Squarewise workflows ([`.github/workflows/_reusable-ci.yml`](../../.github/workflows/_reusable-ci.yml))
+support secure secret overrides through GitHub Actions repository secrets while falling back
+to safe, deterministic local fixtures when secrets are omitted:
+
+| Variable | GitHub Secret Name | Purpose |
+|---|---|---|
+| `SQUAREWISE_SECURITY_CREDENTIAL_DIGEST_SECRET` | `SQUAREWISE_SECURITY_CREDENTIAL_DIGEST_SECRET` | 32-byte Base64 key for passwordless HMAC token digest |
+| `SQUAREWISE_SECURITY_AUTH_EMAIL_ENVELOPE_KEY` | `SQUAREWISE_SECURITY_AUTH_EMAIL_ENVELOPE_KEY` | 32-byte Base64 key for AES-GCM auth email encryption |
+| `REDIS_PASSWORD` | `REDIS_PASSWORD` | Redis authentication password |
+| `POSTGRES_PASSWORD` | `POSTGRES_PASSWORD` | PostgreSQL database user password |
+| `RABBITMQ_DEFAULT_PASS` | `RABBITMQ_DEFAULT_PASS` | RabbitMQ broker password |
+| `KEYCLOAK_ADMIN_PASSWORD` | `KEYCLOAK_ADMIN_PASSWORD` | Keycloak admin console bootstrap password |
+| `SONAR_TOKEN` | `SONAR_TOKEN` | SonarCloud code quality scanner token |
+
+To generate a complete, fresh set of cryptographically strong secrets for GitHub Actions:
+
+```sh
+make generate-secrets
+# or: python3 tools/ops/generate_secrets.py
+```
+
+A complete configuration catalog and policy matrix is documented in
+[`infra/local/env-secrets-matrix.example`](../../infra/local/env-secrets-matrix.example).
+

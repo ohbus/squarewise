@@ -11,7 +11,7 @@ It is deliberately separate from QA-07's executable local public-interface cover
 
 This document tracks the gap between "works locally" and "works in production."
 Every dimension below requires evidence from a **production-like environment**
-(Level 4 or Level 5 in the evidence classification — see
+(Level 4 or Level 5 in the evidence classification: see
 [production-readiness-audit.md](../reviews/production-readiness-audit.md#evidence-classification-standard)).
 
 > [!IMPORTANT]

@@ -1,0 +1,49 @@
+package com.subhrodip.squarewise.security.ratelimit
+
+import java.time.Duration
+
+/**
+ * Immutable policy supplied to one atomic rate-limit decision.
+ *
+ * The policy is configuration, not runtime state. Bounds prevent accidental
+ * unbounded Redis values and make a disabled protection policy impossible.
+ *
+ * @property id stable bounded policy identifier used for metrics and diagnostics
+ * @property algorithm counter algorithm implemented by the shared adapter
+ * @property maximumPermits maximum admitted operations in one window
+ * @property window duration after which the ephemeral counter expires
+ * @property cooldown minimum delay between admitted operations for a key
+ */
+data class RateLimitPolicy(
+    val id: String,
+    val algorithm: RateLimitAlgorithm = RateLimitAlgorithm.FIXED_WINDOW,
+    val maximumPermits: Int,
+    val window: Duration,
+    val cooldown: Duration = Duration.ZERO
+) {
+    init {
+        require(id.length in 1..64 && id.all { it.isAsciiIdentifierCharacter() }) {
+            "Rate-limit policy id must be 1-64 ASCII identifier characters"
+        }
+        require(maximumPermits in 1..1_000_000) {
+            "Rate-limit maximum permits must be between 1 and 1000000"
+        }
+        require(window.nano == 0 && cooldown.nano == 0) {
+            "Rate-limit window and cooldown must use whole seconds"
+        }
+        require(window.seconds >= 1 && window <= MAXIMUM_WINDOW) {
+            "Rate-limit window must be positive and no longer than 24 hours"
+        }
+        require(!cooldown.isNegative && cooldown <= window) {
+            "Rate-limit cooldown must be non-negative and no longer than the window"
+        }
+    }
+
+    private companion object {
+        val MAXIMUM_WINDOW: Duration = Duration.ofHours(24)
+    }
+}
+
+/** Returns whether a character is permitted in a stable ASCII policy identifier. */
+private fun Char.isAsciiIdentifierCharacter(): Boolean =
+    this in 'a'..'z' || this in 'A'..'Z' || this in '0'..'9' || this == '-' || this == '_'

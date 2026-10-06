@@ -2,6 +2,8 @@ package com.subhrodip.squarewise.accounts.auth.login
 
 import com.subhrodip.squarewise.accounts.auth.audit.SecurityAuditEvent
 import com.subhrodip.squarewise.accounts.auth.audit.SecurityAuditLogger
+import com.subhrodip.squarewise.accounts.auth.abuse.LoginVerificationRateLimitService
+import com.subhrodip.squarewise.accounts.auth.abuse.RateLimitStoreUnavailableException
 import com.subhrodip.squarewise.accounts.auth.credential.LoginCredentialService
 import com.subhrodip.squarewise.accounts.auth.identity.AccountIdentityStore
 import com.subhrodip.squarewise.accounts.auth.session.TokenResponse
@@ -35,6 +37,7 @@ open class LoginVerificationService(
     private val profileStore: ProfileStore,
     private val tokenSessionService: TokenSessionService,
     private val accountIdentityStore: AccountIdentityStore,
+    private val loginVerificationRateLimitService: LoginVerificationRateLimitService,
     private val issuerUri: String = "squarewise-internal",
     private val auditLogger: SecurityAuditLogger = SecurityAuditLogger()
 ) {
@@ -55,8 +58,17 @@ open class LoginVerificationService(
         credential: String,
         clientKind: String,
         deviceLabel: String?,
-        now: Instant
+        now: Instant,
+        networkPartition: String = "unknown"
     ): TokenResponse {
+        try {
+            val admitted = loginVerificationRateLimitService.tryAcquire(credential, networkPartition, now)
+            if (!admitted) {
+                throw ApplicationException(ErrorCode.ERR_11, "Login verification rate limit exceeded")
+            }
+        } catch (exception: RateLimitStoreUnavailableException) {
+            throw ApplicationException(ErrorCode.ERR_11, "Rate-limit service unavailable", exception)
+        }
         val redeemed = credentialService.redeem(credential, now)
             ?: run {
                 auditLogger.emit(SecurityAuditEvent.LOGIN_FAILURE, detail = "invalid-or-expired-credential")

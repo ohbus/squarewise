@@ -145,21 +145,24 @@ class ExpenseJavaBeanCompatibilityTest {
         assertEquals(400, settlement.getAmountMinor());
         assertEquals(SettlementStatus.RECORDED, settlement.getStatus());
 
+        UUID changeId = UUID.randomUUID();
         SyncChangeEntity change = new SyncChangeEntity();
-        change.setChangeId(UUID.randomUUID());
+        change.setChangeId(changeId);
         change.setGroupId(groupId.toString());
         change.setRevision(3);
         change.setEntityId(expenseId.toString());
         change.setDeleted(false);
         change.setPayload("{}");
         change.setCreatedAt(NOW);
+        assertEquals(changeId, change.getChangeId());
         assertEquals(groupId.toString(), change.getGroupId());
         assertEquals(3, change.getRevision());
         assertEquals(expenseId.toString(), change.getEntityId());
         assertEquals("{}", change.getPayload());
 
+        UUID postingId = UUID.randomUUID();
         BalancePostingEntity posting = new BalancePostingEntity();
-        posting.setPostingId(UUID.randomUUID());
+        posting.setPostingId(postingId);
         posting.setGroupId(groupId);
         posting.setExpenseId(expenseId);
         posting.setSettlementId(null);
@@ -167,6 +170,7 @@ class ExpenseJavaBeanCompatibilityTest {
         posting.setCurrency("EUR");
         posting.setAmountMinor(-400);
         posting.setCreatedAt(NOW);
+        assertEquals(postingId, posting.getPostingId());
         assertEquals(groupId, posting.getGroupId());
         assertEquals(expenseId, posting.getExpenseId());
         assertEquals(participantId, posting.getParticipantId());
@@ -191,21 +195,34 @@ class ExpenseJavaBeanCompatibilityTest {
         assertEquals(OutboxStatus.PENDING, outbox.getStatus());
         assertEquals(1, outbox.getAttempts());
 
+        UUID scheduleId = UUID.randomUUID();
         RecurringExpenseSchedule schedule = new RecurringExpenseSchedule(
-                UUID.randomUUID(), groupId, "Monthly dinner", 1200, "EUR", RecurrenceFrequency.MONTHLY,
+                scheduleId, groupId, "Monthly dinner", 1200, "EUR", RecurrenceFrequency.MONTHLY,
                 null, LocalDate.of(2026, 1, 1), null, LocalDate.of(2026, 1, 1), false, NOW, 1);
+        schedule.setScheduleId(scheduleId);
+        schedule.setGroupId(groupId);
+        schedule.setCreatedAt(NOW);
         schedule.setPaused(true);
         schedule.setVersion(4);
+        assertEquals(scheduleId, schedule.getScheduleId());
+        assertEquals(groupId, schedule.getGroupId());
+        assertEquals(NOW, schedule.getCreatedAt());
         assertEquals("Monthly dinner", schedule.getDescription());
         assertEquals(RecurrenceFrequency.MONTHLY, schedule.getFrequency());
         assertEquals(true, schedule.getPaused());
         assertEquals(4, schedule.getVersion());
 
+        UUID occurrenceId = UUID.randomUUID();
         RecurringExpenseOccurrence occurrence = new RecurringExpenseOccurrence(
-                UUID.randomUUID(), schedule.getScheduleId(), LocalDate.of(2026, 1, 1), null, NOW);
+                occurrenceId, schedule.getScheduleId(), LocalDate.of(2026, 1, 1), null, NOW);
+        occurrence.setOccurrenceId(occurrenceId);
+        occurrence.setScheduleId(schedule.getScheduleId());
+        occurrence.setOccurrenceDate(LocalDate.of(2026, 1, 1));
         occurrence.setExpenseId(expenseId);
         occurrence.setCreatedAt(NOW);
+        assertEquals(occurrenceId, occurrence.getOccurrenceId());
         assertEquals(schedule.getScheduleId(), occurrence.getScheduleId());
+        assertEquals(LocalDate.of(2026, 1, 1), occurrence.getOccurrenceDate());
         assertEquals(expenseId, occurrence.getExpenseId());
         assertEquals(NOW, occurrence.getCreatedAt());
     }

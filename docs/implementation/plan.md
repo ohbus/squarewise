@@ -91,7 +91,7 @@ final release approval.
 
 These documents are planning artifacts until the coordinator registers the
 workstreams in `docs/tasks/registry.yaml` and `docs/tasks/board.md`. The audit
-decision — **do not approve production launch** — remains in effect until
+decision: **do not approve production launch**: remains in effect until
 evidence is produced in an approved production-like environment.
 # Error reporting evolution
 
@@ -148,8 +148,8 @@ Documentation completion does not establish runtime completion. The future works
 finishes only when every audited boundary has catalog/contract/test evidence, all
 public paths are redaction-safe, upstream identity is preserved, async terminal states
 are explicit, static/no-reflection gates pass, metrics remain bounded, mixed-version
-rollout and rollback are proven, and measured performance evidence supports—not merely
-asserts—the scale target.
+rollout and rollback are proven, and measured performance evidence supports, not merely
+asserts, the scale target.
 
 Canonical references:
 

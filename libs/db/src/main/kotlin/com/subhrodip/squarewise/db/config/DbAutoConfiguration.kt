@@ -10,6 +10,7 @@ import javax.sql.DataSource
 import org.springframework.boot.autoconfigure.AutoConfiguration
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.boot.context.properties.EnableConfigurationProperties
+import org.springframework.boot.hibernate.autoconfigure.HibernatePropertiesCustomizer
 import org.springframework.boot.jdbc.DataSourceBuilder
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary
@@ -27,6 +28,13 @@ class DbAutoConfiguration {
     /** Creates telemetry even when an application has no metrics registry, preserving diagnostics. */
     @Bean
     fun squarewiseDbTelemetry(registry: ObjectProvider<MeterRegistry>): DbTelemetry = DbTelemetry(registry.getIfAvailable())
+
+    /** Installs the same bounded SQL statement telemetry for routed Hibernate sessions. */
+    @Bean
+    fun dbStatementInspectorCustomizer(telemetry: DbTelemetry): HibernatePropertiesCustomizer =
+        HibernatePropertiesCustomizer { properties ->
+            properties["hibernate.session_factory.statement_inspector"] = DbStatementInspector(telemetry)
+        }
     /** Exposes the bounded scheduler interval to the scheduled probe expression. */
     @Bean(name = ["squarewiseDbHealthProbeIntervalMs"])
     fun squarewiseDbHealthProbeIntervalMs(properties: DbProperties): Long {

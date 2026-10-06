@@ -17,9 +17,9 @@ from tests.http_constants import ACCEPT, APPLICATION_JSON, AUTHORIZATION, CONTEN
 from tests.e2e.qa10_evidence import write_execution_evidence
 
 
-ACCOUNTS_URL = os.environ.get("ACCOUNTS_URL", "http://localhost:8081")
-EXPENSE_CORE_URL = os.environ.get("EXPENSE_CORE_URL", "http://localhost:8082")
-NOTIFICATIONS_URL = os.environ.get("NOTIFICATIONS_URL", "http://localhost:8083")
+ACCOUNTS_URL = os.environ.get("ACCOUNTS_URL", "http://localhost:28081")
+EXPENSE_CORE_URL = os.environ.get("EXPENSE_CORE_URL", "http://localhost:28082")
+NOTIFICATIONS_URL = os.environ.get("NOTIFICATIONS_URL", "http://localhost:28083")
 TOKEN = os.environ.get("BEARER_TOKEN")
 SECONDARY_TOKEN = os.environ.get("SQUAREWISE_E2E_TOKEN_B", TOKEN)
 NON_MEMBER_TOKEN = os.environ.get("SQUAREWISE_E2E_TOKEN_NONMEMBER", SECONDARY_TOKEN)

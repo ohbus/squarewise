@@ -67,7 +67,7 @@ separate QA-08/OPS-22 release gates.
 Keycloak should remain a local and test-environment OIDC provider, not a
 Squarewise domain dependency. Squarewise should own the user experience and its
 application authorization model. The provider adapter should only supply
-identity proof, issuer metadata, signing keys, and—when required—provider-hosted
+identity proof, issuer metadata, signing keys, and, when required, provider-hosted
 step-up/MFA/consent interaction.
 
 The replacement seam is the OIDC configuration and validation port, not a

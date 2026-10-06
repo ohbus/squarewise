@@ -1,4 +1,4 @@
-# BFF-04 — Settlement suggestions GraphQL resolver
+# BFF-04: Settlement suggestions GraphQL resolver
 
 ## Objective
 

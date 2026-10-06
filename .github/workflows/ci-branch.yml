@@ -12,6 +12,13 @@ concurrency:
 jobs:
   ci:
     name: Feature branch verification (reusable)
+    permissions:
+      contents: read
+      pull-requests: read
+      id-token: write
+      attestations: write
     uses: ./.github/workflows/_reusable-ci.yml
-    with: { run_e2e: true }
+    with:
+      run_e2e: true
+      full_run: ${{ github.event_name == 'workflow_dispatch' }}
     secrets: inherit

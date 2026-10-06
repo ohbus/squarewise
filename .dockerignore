@@ -4,6 +4,7 @@
 .gitattributes
 .idea
 .vscode
+.devcontainer
 *.iml
 
 # Local environment and secret material

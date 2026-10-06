@@ -1,4 +1,4 @@
-# CORE-26 — Refactor Expense Core groups and settlements persistence into separated SOLID files
+# CORE-26: Refactor Expense Core groups and settlements persistence into separated SOLID files
 
 ## Objective
 

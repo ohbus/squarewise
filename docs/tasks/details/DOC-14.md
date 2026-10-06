@@ -1,4 +1,4 @@
-# DOC-14 — Kotlin lint compatibility research
+# DOC-14: Kotlin lint compatibility research
 
 Investigate a stable lint/format implementation that works with Kotlin 2.4.20
 using actual dependency resolution. Do not lower the Kotlin version or enable a

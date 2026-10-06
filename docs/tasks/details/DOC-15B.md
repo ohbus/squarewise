@@ -1,4 +1,4 @@
-# DOC-15B — Audit code build CI and test drift
+# DOC-15B: Audit code build CI and test drift
 
 Child review task under `DOC-15` focusing on build logic, CI configuration, dependency integrity, and test coverage.
 

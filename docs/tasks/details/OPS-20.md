@@ -1,4 +1,4 @@
-# OPS-20 — Reliability, security, and capacity release gates
+# OPS-20: Reliability, security, and capacity release gates
 
 Add production rehearsals for backup/restore, migration rollback, dependency
 loss, broker backlog, rate limiting, secret rotation, image/dependency scanning,

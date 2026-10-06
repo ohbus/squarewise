@@ -1,4 +1,4 @@
-# CORE-25 — Verify group-rename concurrency against PostgreSQL
+# CORE-25: Verify group-rename concurrency against PostgreSQL
 
 Replace the H2/JPA concurrency smoke with a real PostgreSQL two-transaction
 scenario. Hold one row lock, start a competing rename, release the first

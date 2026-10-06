@@ -91,7 +91,7 @@ class AuthController(
      * @param request Validated [LoginVerifyRequest].
      * @param servletRequest Incoming HTTP servlet request for client metadata.
      * @return 200 OK with [TokenResponse].
-     * @throws ApplicationException with ERR-11 when the refresh admission limit
+     * @throws ApplicationException with ERR-11 when verification admission or the refresh admission limit
      * is exhausted or its fail-closed store cannot decide.
      */
     @PostMapping(ApiEndpoints.Accounts.V1.LOGIN_VERIFY)
@@ -104,7 +104,8 @@ class AuthController(
             credential = request.credential,
             clientKind = request.clientKind,
             deviceLabel = userAgent,
-            now = Instant.now()
+            now = Instant.now(),
+            networkPartition = clientAddressResolver.resolvePartition(servletRequest)
         )
         return tokenResponse(tokenResponse)
     }

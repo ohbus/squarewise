@@ -141,7 +141,7 @@ validated provider-qualified subject and enforce its own resource policy.
 | P0 | AUTH-06 | Prove local Keycloak integration | real REST/GraphQL/WS token journeys | done |
 | P0 | AUTH-07 | Define Squarewise-owned auth contracts | API/session contract and threat model | done |
 | P0 | AUTH-08 | Implement identity and session issuance | persistence, provider-boundary, session lifecycle, cache-failure, and endpoint evidence | done for local implementation |
-| P0 | AUTH-09 | Implement passwordless links/codes | replay, brute force, enumeration, Mailpit tests | planned |
+| P0 | AUTH-09 | Implement passwordless links/codes | replay, brute force, enumeration, Mailpit tests | in progress; shared Redis/HMAC admission and local distributed/outage/telemetry evidence pass, hosted and production evidence open |
 | P0 | AUTH-10 | Implement rotating refresh lifecycle | hashing, rotation, family revocation, reuse detection | planned |
 | P0 | AUTH-11 | Implement logout and session revocation | races, deletion, provider-subject changes | implemented in AUTH-08 increment |
 | P0 | AUTH-12 | Define browser/native security policy | CSRF/CORS/PKCE/state/nonce/cookie tests | implemented in AUTH-08 increment |

@@ -1,4 +1,4 @@
-# OPS-08 — Compose dev environment configuration hardening and live acceptance workflow
+# OPS-08: Compose dev environment configuration hardening and live acceptance workflow
 
 ## Objective
 

@@ -1,4 +1,4 @@
-# CORE-24 — Cover group-rename request and authorization edge cases
+# CORE-24: Cover group-rename request and authorization edge cases
 
 ## Objective
 

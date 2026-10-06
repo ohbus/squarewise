@@ -1,4 +1,4 @@
-# DOC-26 — Reconcile local smoke-demo delivery evidence
+# DOC-26: Reconcile local smoke-demo delivery evidence
 
 ## Objective
 

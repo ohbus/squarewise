@@ -27,6 +27,15 @@ class DbAutoConfigurationTest {
     }
 
     @Test
+    fun `customizes Hibernate statement inspection`() {
+        val properties = mutableMapOf<String, Any>()
+
+        configuration.dbStatementInspectorCustomizer(DbTelemetry()).customize(properties)
+
+        assertEquals(DbStatementInspector::class, properties["hibernate.session_factory.statement_inspector"]!!::class)
+    }
+
+    @Test
     fun `builds validated writer pool and causal filter registration`() {
         val properties = DbProperties(
             writer = PoolProperties(

@@ -1,4 +1,4 @@
-# CORE-07 — Expense categories
+# CORE-07: Expense categories
 
 Add categories to expense creation and retrieval using a stable default
 taxonomy, validated identifiers, and an extension point for group custom

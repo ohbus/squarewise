@@ -19,3 +19,6 @@ services:
     extends:
       file: docker-compose.yml
       service: mailpit
+
+volumes:
+  postgres-data:

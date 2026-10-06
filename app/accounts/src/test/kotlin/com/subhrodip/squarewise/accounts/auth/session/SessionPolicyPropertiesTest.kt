@@ -30,4 +30,19 @@ class SessionPolicyPropertiesTest {
         assertEquals(Duration.ofDays(30), properties.absoluteSessionLifetime)
         assertEquals(Duration.ofSeconds(15), properties.clockSkew)
     }
+
+    @Test
+    fun `mutable configuration binding updates every timing property`() {
+        val properties = SessionPolicyProperties()
+
+        properties.accessTokenLifetime = Duration.ofMinutes(20)
+        properties.refreshIdleLifetime = Duration.ofDays(14)
+        properties.absoluteSessionLifetime = Duration.ofDays(180)
+        properties.clockSkew = Duration.ofMinutes(2)
+
+        assertEquals(Duration.ofMinutes(20), properties.accessTokenLifetime)
+        assertEquals(Duration.ofDays(14), properties.refreshIdleLifetime)
+        assertEquals(Duration.ofDays(180), properties.absoluteSessionLifetime)
+        assertEquals(Duration.ofMinutes(2), properties.clockSkew)
+    }
 }

@@ -1,12 +1,17 @@
+# syntax=docker/dockerfile:1
 # One build definition for every Squarewise JVM application.
 # Build: docker build --build-arg APP_PROJECT=accounts -t squarewise-accounts -f infra/docker/Dockerfile.jvm .
-FROM gradle:9.7.1-jdk25 AS build
+
+ARG JVM_BUILD_IMAGE=gradle:9.7.1-jdk25
+ARG JVM_RUNTIME_IMAGE=eclipse-temurin:25-jre
+
+FROM ${JVM_BUILD_IMAGE} AS build
 ARG APP_PROJECT
 WORKDIR /workspace
 COPY . .
 RUN gradle ":app:${APP_PROJECT}:bootJar" --no-daemon
 
-FROM eclipse-temurin:25-jre
+FROM ${JVM_RUNTIME_IMAGE} AS runtime
 ARG APP_PROJECT
 ENV APP_PROJECT=${APP_PROJECT}
 WORKDIR /app
@@ -14,4 +19,6 @@ RUN useradd --system --create-home --uid 10001 squarewise
 COPY --from=build "/workspace/app/${APP_PROJECT}/build/libs/squarewise-${APP_PROJECT}-0.1.0-SNAPSHOT.jar" /app/app.jar
 USER squarewise
 EXPOSE 8080
-ENTRYPOINT ["java", "-XX:MaxRAMPercentage=65", "-jar", "/app/app.jar"]
+# Keep service-name resolution refreshable across Redis failover or container
+# replacement; a running limiter must reconnect without an application restart.
+ENTRYPOINT ["java", "-Dsun.net.inetaddr.ttl=30", "-Dsun.net.inetaddr.negative.ttl=5", "-XX:MaxRAMPercentage=65", "-jar", "/app/app.jar"]

@@ -1,6 +1,9 @@
 package com.subhrodip.squarewise.accounts.auth.abuse
 
 import com.subhrodip.squarewise.accounts.auth.credential.CredentialDigest
+import com.subhrodip.squarewise.security.ratelimit.RateLimitPolicy
+import com.subhrodip.squarewise.security.ratelimit.RateLimitPolicyIds
+import com.subhrodip.squarewise.security.ratelimit.RateLimiter
 import java.time.Duration
 import java.time.Instant
 import org.springframework.transaction.annotation.Transactional
@@ -8,7 +11,7 @@ import org.springframework.transaction.annotation.Transactional
 /** Applies a fail-closed, network-partition limit to refresh-token rotation. */
 open class RefreshRateLimitService(
     private val digest: CredentialDigest,
-    private val repository: RateLimitBucketStore,
+    private val rateLimiter: RateLimiter,
     private val window: Duration = Duration.ofMinutes(1),
     private val maximumRequests: Int = 10
 ) {
@@ -35,14 +38,13 @@ open class RefreshRateLimitService(
             "Refresh network partition contains invalid characters"
         }
         val key = digest.digest("v1|refresh|$partition")
-        return repository.acquireAtomically(
-            key = key,
-            now = now,
-            windowStart = now.minus(window),
-            cooldownCutoff = now,
-            maximumRequests = maximumRequests
-        ) == 1
+        return rateLimiter.consume(
+            key = key.toHex(),
+            policy = RateLimitPolicy(RateLimitPolicyIds.AUTH_REFRESH, maximumPermits = maximumRequests, window = window)
+        ).allowed
     }
+
+    private fun ByteArray.toHex(): String = joinToString("") { "%02x".format(it) }
 
     private companion object {
         const val MAX_PARTITION_LENGTH = 128

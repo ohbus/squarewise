@@ -22,7 +22,7 @@ product journeys or persistence integrations are complete.
 
 ## Findings
 
-### D-01 — High: REST contracts do not cover implemented public endpoints
+### D-01: High: REST contracts do not cover implemented public endpoints
 
 The Expense Core source exposes synchronization (`/snapshot`, `/changes`),
 allocation preview (`/preview`), settlements and reversal, and invite claim;
@@ -42,7 +42,7 @@ operation mapping before treating the corresponding product slices as
 complete; rerun `python3 tools/contracts/validate.py` and public-interface
 tests.
 
-### D-02 — High: architecture promises durable ownership while most implemented slices are in-memory
+### D-02: High: architecture promises durable ownership while most implemented slices are in-memory
 
 The architecture assigns PostgreSQL ownership of financial records, group
 membership, synchronization, audit, and outbox state to Expense Core and
@@ -60,7 +60,7 @@ Flyway migrations, transactional boundaries, and concurrent integration tests
 provide evidence. Do not describe the scaffold as production-ready product
 behavior.
 
-### D-03 — Medium: accepted architecture says three REST services, but BFF is an additional deployable
+### D-03: Medium: accepted architecture says three REST services, but BFF is an additional deployable
 
 The architecture text correctly calls this “three REST services plus a BFF,”
 and the project contains four applications. This is consistent, but some
@@ -71,7 +71,7 @@ Classification: terminology drift, low risk.
 Remediation: use “three resource REST services plus one database-free GraphQL
 BFF” consistently in plans, CI, deployment, and acceptance documents.
 
-### D-04 — Medium: toolchain statements are inconsistent
+### D-04: Medium: toolchain statements are inconsistent
 
 `AGENTS.md` and the current build use Java 25, while
 `docs/implementation/technology-decisions.md` and the implementation plan
@@ -83,7 +83,7 @@ Remediation: record one verified baseline and mark historical candidates as
 superseded, with dependency-resolution evidence in the technology decision and
 version catalog.
 
-### D-05 — Medium: product scope claims MVP capabilities ahead of public behavior evidence
+### D-05: Medium: product scope claims MVP capabilities ahead of public behavior evidence
 
 The product document lists expenses, balances, repayments, recurrence, offline
 creation, search/export, and notifications as MVP behavior. The acceptance plan
@@ -95,7 +95,7 @@ Classification: milestone/status drift rather than a product-scope defect.
 Remediation: retain the scope, but label each capability as planned, slice
 implemented, or end-to-end accepted in the task registry and acceptance report.
 
-### D-06 — Low: UUIDv7 policy has deterministic identity exceptions that need explicit documentation
+### D-06: Low: UUIDv7 policy has deterministic identity exceptions that need explicit documentation
 
 The shared generator uses UUIDv7 for newly generated IDs. Occurrence identity
 and account linkage use deterministic UUID derivation, and tests use random UUIDs

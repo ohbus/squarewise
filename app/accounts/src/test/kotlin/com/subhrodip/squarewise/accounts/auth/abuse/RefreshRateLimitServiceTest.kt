@@ -1,6 +1,9 @@
 package com.subhrodip.squarewise.accounts.auth.abuse
 
 import com.subhrodip.squarewise.accounts.auth.credential.HmacCredentialDigest
+import com.subhrodip.squarewise.security.ratelimit.RateLimitDecision
+import com.subhrodip.squarewise.security.ratelimit.RateLimitPolicy
+import com.subhrodip.squarewise.security.ratelimit.RateLimiter
 import java.time.Instant
 import java.time.Duration
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -25,14 +28,9 @@ class RefreshRateLimitServiceTest {
 
     @Test
     fun `fails closed when the rate-limit store cannot decide`() {
-        val unavailable = object : RateLimitBucketStore {
-            override fun acquireAtomically(
-                key: ByteArray,
-                now: Instant,
-                windowStart: Instant,
-                cooldownCutoff: Instant,
-                maximumRequests: Int
-            ): Int = throw RateLimitStoreUnavailableException(IllegalStateException("redis down"))
+        val unavailable = object : RateLimiter {
+            override fun consume(key: String, policy: RateLimitPolicy): RateLimitDecision =
+                throw RateLimitStoreUnavailableException(IllegalStateException("redis down"))
         }
         val service = RefreshRateLimitService(digest, unavailable)
 

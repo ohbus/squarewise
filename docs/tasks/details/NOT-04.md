@@ -1,4 +1,4 @@
-# NOT-04 — Transactional notification consumption
+# NOT-04: Transactional notification consumption
 
 Consume broker events so persistent deduplication and inbox effects commit in
 one local transaction. Duplicate deliveries must not repeat effects, and failed

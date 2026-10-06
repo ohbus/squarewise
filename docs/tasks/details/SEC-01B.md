@@ -1,4 +1,4 @@
-# SEC-01B — Make durable identity independent of email
+# SEC-01B: Make durable identity independent of email
 
 ## Status
 

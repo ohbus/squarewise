@@ -43,7 +43,7 @@ class OidcDiscoveryController(
         produces = [MediaType.APPLICATION_JSON_VALUE]
     )
     fun openIdConfiguration(): Map<String, Any> {
-        val issuer = configuredIssuerUri.ifBlank { "http://localhost:8081" }
+        val issuer = configuredIssuerUri.ifBlank { "http://localhost:28081" }
         return mapOf(
             "issuer" to issuer,
             "jwks_uri" to "$issuer${ApiEndpoints.Accounts.V1.WELL_KNOWN_JWKS}",

@@ -1,4 +1,4 @@
-# OPS-05 — CI hardening and local parity
+# OPS-05: CI hardening and local parity
 
 Review the reusable workflows for least privilege, current action versions,
 parallel dependency edges, and trigger isolation. Align local Make targets and

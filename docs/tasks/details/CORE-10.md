@@ -1,4 +1,4 @@
-# CORE-10 — Durable transactional outbox
+# CORE-10: Durable transactional outbox
 
 Persist outbox records and worker state through JPA/Flyway. Competing workers
 must claim safely, while retry, acknowledgement, and parking semantics remain

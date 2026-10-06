@@ -1,4 +1,4 @@
-# ERR-02 — Typed shared error model
+# ERR-02: Typed shared error model
 
 Refactor `libs/errors` to expose typed definitions and domain exceptions with
 code, status, component, operation, retryability, severity, and safe metadata.

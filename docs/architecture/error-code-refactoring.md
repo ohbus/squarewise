@@ -250,9 +250,9 @@ Implementation begins only after the tasks below are registered. Each increment 
 small, independently reviewable, documented, tested, and committed. Contract changes
 precede producer changes; consumer tolerance precedes producer emission.
 
-### Phase 0 — governance and frozen evidence
+### Phase 0: governance and frozen evidence
 
-#### `ERRC-02` — Freeze audit and baseline behavior
+#### `ERRC-02`: Freeze audit and baseline behavior
 
 - Depends on: `ERRC-01`.
 - Owns: task detail, generated audit reports, no production source.
@@ -265,7 +265,7 @@ precede producer changes; consumer tolerance precedes producer emission.
   reconciliation of every throw/catch/boundary.
 - Evidence: versioned inventory with counts, commands, limitations, and diff review.
 
-#### `ERRC-03` — Freeze registries and catalog schema
+#### `ERRC-03`: Freeze registries and catalog schema
 
 - Depends on: `ERRC-02`.
 - Owns: `contracts/errors/domains.yaml`, new catalog JSON Schema, catalog lifecycle
@@ -279,7 +279,7 @@ precede producer changes; consumer tolerance precedes producer emission.
 - Evidence: reviewed schema examples for REST, GraphQL, async, startup, deprecated, and
   retired records.
 
-#### `ERRC-04` — Allocate and review the complete error catalog
+#### `ERRC-04`: Allocate and review the complete error catalog
 
 - Depends on: `ERRC-03`.
 - Owns: `contracts/errors/error-catalog.yaml`, per-context guides.
@@ -292,9 +292,9 @@ precede producer changes; consumer tolerance precedes producer emission.
   operations review.
 - Evidence: zero unexplained audited scenarios and explicit intentional collapses.
 
-### Phase 1 — contract-first compatibility
+### Phase 1: contract-first compatibility
 
-#### `ERRC-05` — Define the additive Problem Details contract
+#### `ERRC-05`: Define the additive Problem Details contract
 
 - Depends on: `ERRC-04`.
 - Owns: `contracts/errors/problem.schema.json`, canonical examples.
@@ -306,7 +306,7 @@ precede producer changes; consumer tolerance precedes producer emission.
   redaction strings, `additionalProperties` decision.
 - Evidence: both old-only and additive responses validate during the transition.
 
-#### `ERRC-06` — Reconcile all REST OpenAPI contracts
+#### `ERRC-06`: Reconcile all REST OpenAPI contracts
 
 - Depends on: `ERRC-05`.
 - Owns: all REST OpenAPI contracts and API status documentation.
@@ -319,7 +319,7 @@ precede producer changes; consumer tolerance precedes producer emission.
   validation, breaking diff.
 - Evidence: endpoint/status coverage matrix for all three REST services.
 
-#### `ERRC-07` — Define GraphQL and WebSocket error contracts
+#### `ERRC-07`: Define GraphQL and WebSocket error contracts
 
 - Depends on: `ERRC-04`.
 - Owns: GraphQL contract documentation/schema directives and live-update contracts.
@@ -330,7 +330,7 @@ precede producer changes; consumer tolerance precedes producer emission.
   malformed upstream errors.
 - Evidence: exhaustive extension/close behavior table.
 
-#### `ERRC-08` — Define messaging and background error records
+#### `ERRC-08`: Define messaging and background error records
 
 - Depends on: `ERRC-04`.
 - Owns: event contracts, retry/parking attempt schema, scheduler/startup error docs.
@@ -341,7 +341,7 @@ precede producer changes; consumer tolerance precedes producer emission.
 - Validation: JSON/event schema fixtures and failure-state transition model.
 - Evidence: matrix from every consumer/scheduler/startup entry point to terminal state.
 
-#### `ERRC-09` — Upgrade contract validation and breaking-change gates
+#### `ERRC-09`: Upgrade contract validation and breaking-change gates
 
 - Depends on: `ERRC-03`, `ERRC-05`-`ERRC-08`.
 - Owns: typed tools under `tools/contracts/`, CI/Make wiring, fixtures.
@@ -353,9 +353,9 @@ precede producer changes; consumer tolerance precedes producer emission.
 - Validation: `make python-typecheck`, validator unit fixtures, `make contracts`.
 - Evidence: each forbidden mutation fails a fixture; no untyped containers/functions.
 
-### Phase 2 — static error core, no runtime discovery
+### Phase 2: static error core, no runtime discovery
 
-#### `ERRC-10` — Implement core value and metadata types
+#### `ERRC-10`: Implement core value and metadata types
 
 - Depends on: `ERRC-09`.
 - Owns: narrowly separated files in `libs/errors/.../code/`.
@@ -366,7 +366,7 @@ precede producer changes; consumer tolerance precedes producer emission.
   measurement.
 - Evidence: no regex or formatting on normal response path; no ordinal-derived ID.
 
-#### `ERRC-11` — Generate or compile static catalogs
+#### `ERRC-11`: Generate or compile static catalogs
 
 - Depends on: `ERRC-10`.
 - Owns: build-time generator or explicit manifest inputs/outputs, generated-source
@@ -378,7 +378,7 @@ precede producer changes; consumer tolerance precedes producer emission.
 - Evidence: startup/request path contains no YAML parse, reflection, scanning,
   annotations, or `ServiceLoader`.
 
-#### `ERRC-12` — Implement governed exception and typed-diagnostics contracts
+#### `ERRC-12`: Implement governed exception and typed-diagnostics contracts
 
 - Depends on: `ERRC-10`, `ERRC-11`.
 - Owns: separate exception/diagnostic files in `libs/errors`.
@@ -390,7 +390,7 @@ precede producer changes; consumer tolerance precedes producer emission.
   raw message, fatal/cancellation/interrupt tests.
 - Evidence: arbitrary `ErrorDefinition` override is impossible on leaf APIs.
 
-#### `ERRC-13` — Add static policy and reflection/generic-throw gates
+#### `ERRC-13`: Add static policy and reflection/generic-throw gates
 
 - Depends on: `ERRC-12`.
 - Owns: lint/static-analysis rules, allowlist with expiry metadata, CI wiring.
@@ -401,7 +401,7 @@ precede producer changes; consumer tolerance precedes producer emission.
 - Validation: positive/negative source fixtures and repository scan.
 - Evidence: every allowlist item has owner, reason, scope, and removal task.
 
-#### `ERRC-14` — Implement logging, metrics, and trace adapter
+#### `ERRC-14`: Implement logging, metrics, and trace adapter
 
 - Depends on: `ERRC-11`, `ERRC-12`.
 - Owns: `libs/errors` observability adapter and configuration docs.
@@ -412,9 +412,9 @@ precede producer changes; consumer tolerance precedes producer emission.
   redaction tests.
 - Evidence: expected 4xx and unexpected 5xx fixtures demonstrate different treatment.
 
-### Phase 3 — transport boundaries
+### Phase 3: transport boundaries
 
-#### `ERRC-15` — Implement servlet Problem mapper and containment
+#### `ERRC-15`: Implement servlet Problem mapper and containment
 
 - Depends on: `ERRC-05`, `ERRC-12`, `ERRC-14`.
 - Owns: `libs/errors` HTTP DTO/mapper/advice and tests.
@@ -427,7 +427,7 @@ precede producer changes; consumer tolerance precedes producer emission.
   headers/content types, old/additive schema validation.
 - Evidence: no response path reads `Throwable.message` or root cause.
 
-#### `ERRC-16` — Implement servlet and reactive security boundaries
+#### `ERRC-16`: Implement servlet and reactive security boundaries
 
 - Depends on: `ERRC-15`.
 - Owns: security entry points/access-denied handlers and app security tests.
@@ -438,7 +438,7 @@ precede producer changes; consumer tolerance precedes producer emission.
   security redaction and challenge fixtures.
 - Evidence: no bodyless security response except explicitly documented negotiation.
 
-#### `ERRC-17` — Implement GraphQL mapper and upstream problem client
+#### `ERRC-17`: Implement GraphQL mapper and upstream problem client
 
 - Depends on: `ERRC-07`, `ERRC-12`, `ERRC-14`.
 - Owns: `libs/errors` GraphQL adapter and BFF upstream problem model/client.
@@ -449,7 +449,7 @@ precede producer changes; consumer tolerance precedes producer emission.
   cancellation and context tests.
 - Evidence: known upstream codes survive byte-for-byte; unknown inputs become BFF code.
 
-#### `ERRC-18` — Implement messaging/background boundary toolkit
+#### `ERRC-18`: Implement messaging/background boundary toolkit
 
 - Depends on: `ERRC-08`, `ERRC-12`, `ERRC-14`.
 - Owns: shared messaging adapters and background-operation boundary.
@@ -460,9 +460,9 @@ precede producer changes; consumer tolerance precedes producer emission.
 - Validation: redelivery/crash/retry/parking/ack/fatal/cancel/interrupt/concurrency tests.
 - Evidence: no reviewed path acknowledges fatal or loses a terminal failure.
 
-### Phase 4 — bounded-context migration
+### Phase 4: bounded-context migration
 
-#### `ERRC-19` — Migrate Accounts definitions and failures
+#### `ERRC-19`: Migrate Accounts definitions and failures
 
 - Depends on: `ERRC-16`, `ERRC-18`.
 - Owns: Accounts sources/tests/contracts already prepared in Phase 1.
@@ -474,7 +474,7 @@ precede producer changes; consumer tolerance precedes producer emission.
   parity, generic-throw gate.
 - Evidence: zero unexplained Accounts throws/catches and explicit auth oracle review.
 
-#### `ERRC-20` — Migrate Expense Core definitions and failures
+#### `ERRC-20`: Migrate Expense Core definitions and failures
 
 - Depends on: `ERRC-15`, `ERRC-18`.
 - Owns: Expense Core sources/tests/contracts already prepared in Phase 1.
@@ -486,7 +486,7 @@ precede producer changes; consumer tolerance precedes producer emission.
   parity, application/integration tests.
 - Evidence: zero unexplained throws/catches and audited posting/audit/sync/outbox state.
 
-#### `ERRC-21` — Migrate Notifications definitions and failures
+#### `ERRC-21`: Migrate Notifications definitions and failures
 
 - Depends on: `ERRC-15`, `ERRC-18`.
 - Owns: Notifications sources/tests/contracts already prepared in Phase 1.
@@ -497,7 +497,7 @@ precede producer changes; consumer tolerance precedes producer emission.
   application tests.
 - Evidence: every message state is terminal, retried, or parked by documented policy.
 
-#### `ERRC-22` — Migrate BFF definitions and failures
+#### `ERRC-22`: Migrate BFF definitions and failures
 
 - Depends on: `ERRC-17`.
 - Owns: BFF sources/tests/contracts already prepared in Phase 1.
@@ -507,7 +507,7 @@ precede producer changes; consumer tolerance precedes producer emission.
 - Validation: guide matrix, GraphQL/WebSocket E2E, upstream fault injection.
 - Evidence: no status-only mapping, random replacement request ID, or English matching.
 
-#### `ERRC-23` — Migrate shared libraries and startup failures
+#### `ERRC-23`: Migrate shared libraries and startup failures
 
 - Depends on: `ERRC-12`-`ERRC-18`.
 - Owns: relevant library boundaries and startup tests; no business errors relocated.
@@ -519,9 +519,9 @@ precede producer changes; consumer tolerance precedes producer emission.
 - Evidence: each shared failure either stays platform-owned or has one documented
   semantic translation.
 
-### Phase 5 — clients, acceptance, scale, rollout
+### Phase 5: clients, acceptance, scale, rollout
 
-#### `ERRC-24` — Update client fixtures, Bruno, and end-to-end acceptance
+#### `ERRC-24`: Update client fixtures, Bruno, and end-to-end acceptance
 
 - Depends on: `ERRC-19`-`ERRC-23`.
 - Owns: Bruno collections, E2E tests, acceptance docs.
@@ -531,7 +531,7 @@ precede producer changes; consumer tolerance precedes producer emission.
 - Validation: complete collections/E2E across services and failure injection.
 - Evidence: old-client and new-client fixture suites both pass.
 
-#### `ERRC-25` — Security and privacy leakage campaign
+#### `ERRC-25`: Security and privacy leakage campaign
 
 - Depends on: `ERRC-24`.
 - Owns: adversarial tests and security review evidence.
@@ -541,7 +541,7 @@ precede producer changes; consumer tolerance precedes producer emission.
 - Validation: REST/GraphQL/WebSocket/container/log/trace response inspection and fuzzing.
 - Evidence: zero prohibited public leakage; internal access/residency controls reviewed.
 
-#### `ERRC-26` — Performance, allocation, and regional load evidence
+#### `ERRC-26`: Performance, allocation, and regional load evidence
 
 - Depends on: `ERRC-19`-`ERRC-25`.
 - Owns: JMH/load scenarios, reports, performance budgets; not production claims.
@@ -552,7 +552,7 @@ precede producer changes; consumer tolerance precedes producer emission.
 - Validation: repeatable JMH/allocation profiles and production-like load/fault tests.
 - Evidence: recorded hardware/JVM/config, thresholds, regressions, and limitations.
 
-#### `ERRC-27` — Observability, alerts, and runbooks
+#### `ERRC-27`: Observability, alerts, and runbooks
 
 - Depends on: `ERRC-14`, `ERRC-19`-`ERRC-23`.
 - Owns: operations docs, dashboards/alerts/runbooks, SLO mappings.
@@ -563,7 +563,7 @@ precede producer changes; consumer tolerance precedes producer emission.
 - Evidence: every critical/retryable/data/availability definition resolves to an owner
   and tested runbook.
 
-#### `ERRC-28` — Dual-read/dual-write staged rollout
+#### `ERRC-28`: Dual-read/dual-write staged rollout
 
 - Depends on: `ERRC-24`-`ERRC-27`.
 - Owns: rollout configuration/docs/evidence.
@@ -575,7 +575,7 @@ precede producer changes; consumer tolerance precedes producer emission.
 - Validation: mixed-version matrix, canary smoke/load, rollback rehearsal.
 - Evidence: each region/service gate records field/status/schema and client health.
 
-#### `ERRC-29` — Make additive fields required after compatibility window
+#### `ERRC-29`: Make additive fields required after compatibility window
 
 - Depends on: `ERRC-28` and explicit product/client approval.
 - Owns: schemas/OpenAPI/GraphQL contracts and migration notice.
@@ -585,7 +585,7 @@ precede producer changes; consumer tolerance precedes producer emission.
 - Validation: client adoption evidence, breaking diff, E2E and rollback plan.
 - Evidence: approved compatibility-window exit; no inferred deadline.
 
-#### `ERRC-30` — Retire legacy infrastructure, not the v1 field
+#### `ERRC-30`: Retire legacy infrastructure, not the v1 field
 
 - Depends on: `ERRC-29`.
 - Owns: old enum/mappers/dead code and final docs.
@@ -595,7 +595,7 @@ precede producer changes; consumer tolerance precedes producer emission.
 - Validation: source searches, complete suites, catalog parity, clean dependency graph.
 - Evidence: zero old enum runtime references and no loss of contract history.
 
-#### `ERRC-31` — Optional future major-version numeric `code`
+#### `ERRC-31`: Optional future major-version numeric `code`
 
 - Depends on: separately approved API major version; not part of this migration.
 - Owns: future versioned contracts and client migration.
@@ -679,4 +679,4 @@ an explicit handoff.
 This plan is intentionally implementation-ready but not implementation-authorizing.
 The next action after documentation acceptance is to register `ERRC-02` through the
 required implementation sequence, assign non-overlapping owners, and begin with the
-repeatable baseline—not with runtime code.
+repeatable baseline, not with runtime code.

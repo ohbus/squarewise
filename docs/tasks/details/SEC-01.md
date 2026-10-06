@@ -1,4 +1,4 @@
-# SEC-01 — Whole-security remediation plan
+# SEC-01: Whole-security remediation plan
 
 ## Status, objective, and evidence boundary
 
@@ -102,7 +102,7 @@ identity model determine the claims that authorization, session, browser, and
 workload boundaries may trust. Operations and release evidence consume the
 resulting implementation rather than declaring it secure in advance.
 
-## SEC-01A — establish an operational token authority
+## SEC-01A: establish an operational token authority
 
 **Closes:** SEC-001 and SEC-009. **Prerequisite:** an explicit architecture
 decision approved before any deployed-profile token code changes.
@@ -157,7 +157,7 @@ runtime failure.
   token exchange, discovery/JWKS, rotation overlap, and restart; Compose/E2E
   covers the selected deployed profile.
 
-## SEC-01B — make durable identity independent of email
+## SEC-01B: make durable identity independent of email
 
 **Closes:** SEC-002. **Depends on:** SEC-01A claim and issuer decision.
 
@@ -196,7 +196,7 @@ service receives direct access to Accounts tables.
 - Refresh and access claims use the stable identity mapping while preserving
   current session-family revocation and deletion invariants.
 
-## SEC-01C — enforce object authorization and workload trust
+## SEC-01C: enforce object authorization and workload trust
 
 **Closes:** SEC-004 and SEC-005. **Depends on:** SEC-01A and SEC-01B for
 trusted caller and subject semantics.
@@ -239,7 +239,7 @@ cross-service SQL access as a shortcut; use a narrow HTTPS/event contract.
 - Contract/public-surface validation and live E2E probes prove no accidental
   reintroduction of broad profile discovery or service trust by network alone.
 
-## SEC-01D — close browser mutation and subscription time-of-check gaps
+## SEC-01D: close browser mutation and subscription time-of-check gaps
 
 **Closes:** SEC-003 and SEC-006. **Depends on:** SEC-01B for membership and
 account lifecycle events.
@@ -283,7 +283,7 @@ the browser proof must be rejected before its resolver/service executes.
   invalidations, broker/cache outage, reconnect, token expiry, and resolver
   non-execution on rejected browser requests.
 
-## SEC-01E — formalize rate-limit and bearer-revocation guarantees
+## SEC-01E: formalize rate-limit and bearer-revocation guarantees
 
 **Closes:** SEC-007 and SEC-008. **Depends on:** SEC-01A and SEC-01B.
 
@@ -325,7 +325,7 @@ revocation/version decision but never becomes the authority.
 - Rate-limit authority failure never silently permits a protected login/verify
   request, and cache eviction/restart cannot resurrect a revoked session.
 
-## SEC-01F — make security operations and release evidence executable
+## SEC-01F: make security operations and release evidence executable
 
 **Closes:** SEC-010, SEC-011, SEC-012, and SEC-013. **Consumes:** evidence
 from SEC-01A through SEC-01E.

@@ -6,6 +6,10 @@ spring:
       host: ${SQUAREWISE_REDIS_HOST}
       port: ${SQUAREWISE_REDIS_PORT:6379}
       password: ${SQUAREWISE_REDIS_PASSWORD}
+      ssl:
+        enabled: ${SQUAREWISE_REDIS_SSL_ENABLED:false}
+      connect-timeout: ${SQUAREWISE_REDIS_CONNECT_TIMEOUT:2s}
+      timeout: ${SQUAREWISE_REDIS_COMMAND_TIMEOUT:2s}
   security:
     oauth2:
       resourceserver:
@@ -25,6 +29,9 @@ management:
     health:
       probes:
         enabled: true
+      group:
+        readiness:
+          include: readinessState,rateLimitRedis
   metrics:
     tags:
       service: notifications
@@ -36,6 +43,8 @@ management:
 
 squarewise:
   notifications:
+    delivery-max-permits: ${SQUAREWISE_NOTIFICATIONS_DELIVERY_MAX_PERMITS:10}
+    delivery-window-seconds: ${SQUAREWISE_NOTIFICATIONS_DELIVERY_WINDOW_SECONDS:60}
     email:
       host: ${SQUAREWISE_NOTIFICATIONS_EMAIL_HOST}
       port: ${SQUAREWISE_NOTIFICATIONS_EMAIL_PORT}

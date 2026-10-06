@@ -1,4 +1,4 @@
-# OPS-19 — Dashboards, alerts, SLOs, and production runbooks
+# OPS-19: Dashboards, alerts, SLOs, and production runbooks
 
 Create deployment-owned Prometheus recording rules, Grafana dashboards, paging
 routes, and runbooks for API RED metrics, database/broker saturation, outbox

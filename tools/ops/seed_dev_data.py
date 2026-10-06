@@ -28,13 +28,16 @@ from typing import Any, Final
 
 from tests.http_constants import ACCEPT, APPLICATION_JSON, AUTHORIZATION, CONTENT_TYPE
 
-BFF_URL: Final[str] = os.environ.get("SQUAREWISE_BFF_URL", "http://localhost:8080")
-ACCOUNTS_URL: Final[str] = os.environ.get("SQUAREWISE_ACCOUNTS_URL", "http://localhost:8081")
-EXPENSE_CORE_URL: Final[str] = os.environ.get("SQUAREWISE_EXPENSE_CORE_URL", "http://localhost:8082")
-NOTIFICATIONS_URL: Final[str] = os.environ.get("SQUAREWISE_NOTIFICATIONS_URL", "http://localhost:8083")
-KEYCLOAK_URL: Final[str] = os.environ.get("SQUAREWISE_KEYCLOAK_URL", "http://localhost:8090")
+BFF_URL: Final[str] = os.environ.get("SQUAREWISE_BFF_URL", "http://localhost:28080")
+ACCOUNTS_URL: Final[str] = os.environ.get("SQUAREWISE_ACCOUNTS_URL", "http://localhost:28081")
+EXPENSE_CORE_URL: Final[str] = os.environ.get("SQUAREWISE_EXPENSE_CORE_URL", "http://localhost:28082")
+NOTIFICATIONS_URL: Final[str] = os.environ.get("SQUAREWISE_NOTIFICATIONS_URL", "http://localhost:28083")
+KEYCLOAK_URL: Final[str] = os.environ.get("SQUAREWISE_KEYCLOAK_URL", "http://localhost:28090")
 POSTGRES_CONTAINER: Final[str] = os.environ.get("SQUAREWISE_POSTGRES_CONTAINER", "local-postgres-1")
 POSTGRES_USER: Final[str] = os.environ.get("POSTGRES_USER", "squarewise")
+POSTGRES_HOST: Final[str] = os.environ.get("SQUAREWISE_POSTGRES_HOST", os.environ.get("PGHOST", ""))
+POSTGRES_PORT: Final[str] = os.environ.get("SQUAREWISE_POSTGRES_PORT", os.environ.get("PGPORT", "25432"))
+POSTGRES_PASSWORD: Final[str] = os.environ.get("POSTGRES_PASSWORD", "squarewise-local-only")
 
 
 @dataclass(frozen=True)
@@ -178,18 +181,44 @@ def extract_jwt_sub(token: str) -> str:
 
 
 def exec_psql(db: str, query: str) -> None:
-    """Execute SQL query inside the local Postgres container."""
-    cmd = [
-        "docker", "exec", POSTGRES_CONTAINER,
-        "psql", "-U", POSTGRES_USER, "-d", db, "-c", query,
-    ]
-    subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+    """Execute SQL query inside the local Postgres container or via direct TCP connection."""
+    if POSTGRES_HOST:
+        cmd = [
+            "psql",
+            "-h",
+            POSTGRES_HOST,
+            "-p",
+            POSTGRES_PORT,
+            "-U",
+            POSTGRES_USER,
+            "-d",
+            db,
+            "-c",
+            query,
+        ]
+        env = dict(os.environ, PGPASSWORD=POSTGRES_PASSWORD)
+        subprocess.run(cmd, env=env, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+    else:
+        cmd = [
+            "docker",
+            "exec",
+            POSTGRES_CONTAINER,
+            "psql",
+            "-U",
+            POSTGRES_USER,
+            "-d",
+            db,
+            "-c",
+            query,
+        ]
+        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 
 
-def ensure_postgres_personas() -> None:
+def ensure_postgres_personas(personas: list[Persona] | None = None) -> None:
     """Ensure all personas exist in squarewise_accounts account_profiles & account_identities."""
+    target_personas = personas if personas is not None else PERSONAS
     print("Provisioning account profiles and identities...")
-    for p in PERSONAS:
+    for p in target_personas:
         profile_sql = f"""
         INSERT INTO account_profiles (account_id, subject, display_name, timezone, default_currency, deletion_requested)
         VALUES ('{p.account_id}', '{p.subject}', '{p.name}', 'UTC', 'EUR', false)
@@ -512,21 +541,36 @@ def main() -> int:
     print("🌱 SQUAREWISE DEVELOPMENT DATA SEEDER")
     print("=" * 70)
 
-    # 1. Ensure Postgres account profiles & identities
-    ensure_postgres_personas()
-
-    # 2. Reset if requested
+    # 1. Reset if requested
     if args.reset:
         reset_dev_data()
 
-    # 3. Acquire Keycloak signed tokens for Alice and Bob
+    # 2. Acquire Keycloak signed tokens for Alice, Bob, and Charlie
     print("\nAcquiring OIDC tokens from Keycloak...")
     alice_token = acquire_keycloak_token("squarewise-ci", "squarewise-ci-local-only")
     bob_token = acquire_keycloak_token("squarewise-ci-e2e-bob", "squarewise-ci-e2e-bob-local-only")
     charlie_token = acquire_keycloak_token("squarewise-ci-e2e-nonmember", "squarewise-ci-e2e-nonmember-local-only")
     print("  ✓ Keycloak tokens acquired for Alice, Bob, and Charlie.")
 
-    # 4. Standard Realistic Groups
+    # 3. Synchronize actual Keycloak subjects into personas list
+    alice_sub = extract_jwt_sub(alice_token) or PERSONAS[0].subject
+    bob_sub = extract_jwt_sub(bob_token) or PERSONAS[1].subject
+    charlie_sub = extract_jwt_sub(charlie_token) or PERSONAS[2].subject
+
+    active_personas: list[Persona] = [
+        Persona(PERSONAS[0].name, PERSONAS[0].email, PERSONAS[0].keycloak_client, PERSONAS[0].keycloak_secret, PERSONAS[0].account_id, alice_sub),
+        Persona(PERSONAS[1].name, PERSONAS[1].email, PERSONAS[1].keycloak_client, PERSONAS[1].keycloak_secret, PERSONAS[1].account_id, bob_sub),
+        Persona(PERSONAS[2].name, PERSONAS[2].email, PERSONAS[2].keycloak_client, PERSONAS[2].keycloak_secret, PERSONAS[2].account_id, charlie_sub),
+        PERSONAS[3],
+        PERSONAS[4],
+    ]
+    PERSONAS.clear()
+    PERSONAS.extend(active_personas)
+
+    # 4. Ensure Postgres account profiles & identities with synchronized subjects
+    ensure_postgres_personas(PERSONAS)
+
+    # 5. Standard Realistic Groups
     # Group 1: Apartment 4B - Rent & Living (HOUSEHOLD, EUR)
     seed_group_with_expenses(
         group_name="Apartment 4B - Rent & Living",
@@ -600,7 +644,7 @@ def main() -> int:
         record_settlement=True,
     )
 
-    # 5. Large dataset generation if requested
+    # 6. Large dataset generation if requested
     if args.large:
         generate_large_scale_data(
             alice_token=alice_token,
@@ -620,12 +664,12 @@ def main() -> int:
     print("  • Dave    : dave@squarewise.local")
     print("  • Eve     : eve@squarewise.local")
     print("\nEndpoints Ready to Explore:")
-    print("  • BFF GraphQL HTTP & WS : http://localhost:8080/graphql")
-    print("  • Accounts REST         : http://localhost:8081/accounts/v1/")
-    print("  • Expense Core REST     : http://localhost:8082/expense-core/v1/")
-    print("  • Notifications REST    : http://localhost:8083/notifications/v1/")
-    print("  • Mailpit Web UI        : http://localhost:8025")
-    print("  • RabbitMQ Management   : http://localhost:15672 (user: squarewise / pass: squarewise-local-only)")
+    print("  • BFF GraphQL HTTP & WS : http://localhost:28080/graphql")
+    print("  • Accounts REST         : http://localhost:28081/accounts/v1/")
+    print("  • Expense Core REST     : http://localhost:28082/expense-core/v1/")
+    print("  • Notifications REST    : http://localhost:28083/notifications/v1/")
+    print("  • Mailpit Web UI        : http://localhost:28025")
+    print("  • RabbitMQ Management   : http://localhost:28673 (user: squarewise / pass: squarewise-local-only)")
     print("=" * 70)
     return 0
 

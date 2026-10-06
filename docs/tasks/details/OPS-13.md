@@ -1,4 +1,4 @@
-# OPS-13 — Align CI triggers, workflows, and documentation with master branch
+# OPS-13: Align CI triggers, workflows, and documentation with master branch
 
 ## Objective
 

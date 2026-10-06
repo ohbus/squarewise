@@ -33,6 +33,12 @@ query classification, and evidence gates are complete.
 
 ## Current milestone: documentation and contracts
 
+## OSS community health
+
+| ID | Owner | Status | Deliverable |
+| --- | --- | --- | --- |
+| DOC-27 | coordinator | done | GitHub community standards, security reporting, issue/PR templates, MIT license, and accessibility statement |
+
 ## Exhaustive public-interface coverage
 
 | ID | Owner | Status | Deliverable |
@@ -42,6 +48,12 @@ query classification, and evidence gates are complete.
 | QA-09 | coordinator | done | Optimized and parallelized E2E pipeline with artifact reuse |
 | QA-10 | coordinator | done | Repository-wide unit, integration, and E2E test gap audit and closure criteria |
 | OPS-25 | coordinator | done | Migrate Python tooling to pyproject.toml + uv sync + uv run |
+| OPS-26 | coordinator | done | Decouple dev data seeder and prepare local stack for non-docker runtimes |
+| OPS-27 | coordinator | done | Register devcontainer version baseline and security hygiene rules |
+| OPS-28 | coordinator | done | Create devcontainer scaffolding and multi-service compose integration |
+| OPS-29 | coordinator | done | Implement zero-friction startup automation and background data seeding |
+| OPS-30 | coordinator | done | Validate devcontainer workflows across IDEs and document clone-and-run experience |
+| OPS-31 | coordinator | done | Centralize runtime and toolchain versions and unify Docker anti-drift build patterns |
 
 ## Production hardening milestone
 
@@ -96,6 +108,7 @@ query classification, and evidence gates are complete.
 | SEC-01E | coordinator | done | Formalize rate-limit proxy topology and bearer-revocation guarantees (SEC-007, SEC-008) |
 | SEC-01F | coordinator | done | Make security operations, telemetry, supply chain, and release evidence executable (SEC-010 - SEC-013) |
 | OPS-24 | coordinator | done | Remove undeclared Ruby dependency and E2E Compose host-port collisions from CI |
+| OPS-32 | coordinator | in_progress | Select changed-scope PR and branch CI while keeping master full |
 | OPS-17 | coordinator | done | Stable error taxonomy and service/source attribution |
 | OPS-18 | coordinator | done | Micrometer and Prometheus metrics for all services |
 | OPS-19 | operations | done | Dashboards, alerts, SLOs, and runbooks baseline |
@@ -254,5 +267,6 @@ reviewed and the follow-on tasks are registered.
 | CORE-28 | core | done | Refactor Expense Core recurring persistence into separated SOLID files |
 | FND-08 | coordinator | done | Refactor domain ports, in-memory stores, and consumer services into dedicated files |
 | OBS-01 | coordinator | done | Implement cross-cutting structured logging, MDC correlation, and observability tools |
+| AUTH-09 | coordinator | in_progress | Implement distributed Redis rate limiting and request-path security controls |
 | DOC-26 | coordinator | done | Reconcile local smoke-demo delivery evidence and Bruno API collection |
 | SEC-02 | coordinator | done | Implement and verify whole security audit remediation (H-1, H-2, M-1 to M-5, L-1 to L-6) |

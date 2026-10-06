@@ -1,4 +1,4 @@
-# DOC-09 — Mermaid visual documentation
+# DOC-09: Mermaid visual documentation
 
 ## Objective
 
@@ -8,13 +8,13 @@ Node toolchain on the host.
 
 ## Deliverables
 
-- `docs/visuals/high-level-architecture.mmd` — system context and deployment flow.
-- `docs/visuals/low-level-expense-flow.mmd` — request, transaction, outbox, and
+- `docs/visuals/high-level-architecture.mmd`: system context and deployment flow.
+- `docs/visuals/low-level-expense-flow.mmd`: request, transaction, outbox, and
   asynchronous delivery sequence.
-- `docs/visuals/component-boundaries.mmd` — service and library component
+- `docs/visuals/component-boundaries.mmd`: service and library component
   boundaries, ownership, and forbidden cross-service persistence access.
-- `docs/visuals/README.md` — edit conventions, source links, and render commands.
-- `infra/docs/Dockerfile` and `infra/docs/docker-compose.yml` — pinned Mermaid CLI
+- `docs/visuals/README.md`: edit conventions, source links, and render commands.
+- `infra/docs/Dockerfile` and `infra/docs/docker-compose.yml`: pinned Mermaid CLI
   renderer with mounted source/output directories.
 
 ## Acceptance criteria

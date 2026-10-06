@@ -1,8 +1,11 @@
+# syntax=docker/dockerfile:1
 # Development image: use the Gradle binary shipped by the pinned base image.
 # This avoids a fresh container downloading the wrapper distribution before the
 # application can start. Dependency resolution may still use the configured
 # Gradle repositories, but the build tool itself is available offline.
-FROM gradle:9.7.1-jdk25
+ARG JVM_BUILD_IMAGE=gradle:9.7.1-jdk25
+
+FROM ${JVM_BUILD_IMAGE}
 WORKDIR /workspace
 COPY . .
 ENTRYPOINT ["gradle", "--no-daemon"]

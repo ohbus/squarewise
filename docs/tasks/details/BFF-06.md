@@ -1,4 +1,4 @@
-# BFF-06 — Add group update mutation and member query resolvers in GraphQL BFF
+# BFF-06: Add group update mutation and member query resolvers in GraphQL BFF
 
 ## Objective
 

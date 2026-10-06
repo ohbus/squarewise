@@ -38,6 +38,28 @@ class OutboxRelayDaemonTest {
         RequiredOutboxConfiguration(OutboxRelayProperties(enabled = true, rabbitEnabled = true))
     }
 
+    /** Verifies every mutable relay property participates in configuration binding. */
+    @Test
+    fun `binds all relay property values`() {
+        val properties = OutboxRelayProperties().apply {
+            enabled = true
+            rabbitEnabled = true
+            batchSize = 25
+            pollDelayMs = 2500
+            leaseSeconds = 45
+            maxAttempts = 8
+            retryAfterSeconds = 12
+        }
+
+        assertEquals(true, properties.enabled)
+        assertEquals(true, properties.rabbitEnabled)
+        assertEquals(25, properties.batchSize)
+        assertEquals(2500, properties.pollDelayMs)
+        assertEquals(45, properties.leaseSeconds)
+        assertEquals(8, properties.maxAttempts)
+        assertEquals(12, properties.retryAfterSeconds)
+    }
+
     @Test
     fun `daemon is active and publishes available messages when enabled`() {
         contextRunner

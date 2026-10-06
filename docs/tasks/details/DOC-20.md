@@ -1,4 +1,4 @@
-# DOC-20 — Establish a non-breaking Kotlin formatting baseline
+# DOC-20: Establish a non-breaking Kotlin formatting baseline
 
 Use the DOC-14-compatible Spotless/ktfmt toolchain to remediate or baseline the
 known formatting violations in bounded increments, then replace or close the

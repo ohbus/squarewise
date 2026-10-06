@@ -1,4 +1,4 @@
-# CORE-27 — Refactor Expense Core expenses, sync, and outbox persistence into separated SOLID files
+# CORE-27: Refactor Expense Core expenses, sync, and outbox persistence into separated SOLID files
 
 ## Objective
 

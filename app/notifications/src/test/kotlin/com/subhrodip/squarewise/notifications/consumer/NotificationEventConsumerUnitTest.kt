@@ -125,6 +125,19 @@ class NotificationEventConsumerUnitTest {
     }
 
     @Test
+    fun `suppresses limiter store failure without dispatching`() {
+        val event = sampleEvent(subject = "rate-store@example.com")
+        doReturn(NotificationConsumptionOutcome.APPLIED).`when`(processor).process(event)
+        doReturn(NotificationPreferences(emailEnabled = true)).`when`(preferenceStore)
+            .get("rate-store@example.com")
+        doThrow(IllegalStateException("redis unavailable"))
+            .`when`(deliveryRateLimiter).allow("rate-store@example.com")
+
+        assertEquals(NotificationConsumptionOutcome.APPLIED, consumer.consume(event))
+        verify(emailDispatcher, never()).send(anyString(), anyString(), anyString())
+    }
+
+    @Test
     fun `propagates non-duplicate processor failures for broker retry`() {
         val event = sampleEvent(subject = "alice")
         val failure = IllegalStateException("database unavailable")

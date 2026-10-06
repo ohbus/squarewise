@@ -1,4 +1,4 @@
-# ERR-10 — Cross-interface error tests
+# ERR-10: Cross-interface error tests
 
 Build a negative-path matrix covering auth, validation, not-found, forbidden,
 conflict, idempotency, dependency, timeout, and unexpected failures. Assert

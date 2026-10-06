@@ -61,9 +61,44 @@ class AuthenticationCredentialConfigurationTest {
         )
     }
 
+    @Test
+    fun `rejects an unsafe login resend cooldown`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            configuration(loginResendCooldownSeconds = -1)
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            configuration(loginResendCooldownSeconds = 901)
+        }
+    }
+
+    @Test
+    fun `rejects invalid verification request bounds`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            configuration(loginVerifyMaximumRequests = 0)
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            configuration(loginVerifyMaximumRequests = 1_000_001)
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            configuration(loginVerifyWindowSeconds = 0)
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            configuration(loginVerifyWindowSeconds = 86_401)
+        }
+    }
+
     private fun configuration(
         digestSecret: String = Base64.getEncoder().encodeToString(ByteArray(32)),
         envelopeKey: String = Base64.getEncoder().encodeToString(ByteArray(32)),
+        loginResendCooldownSeconds: Long = 60,
+        loginVerifyMaximumRequests: Int = 5,
+        loginVerifyWindowSeconds: Long = 300,
     ): AuthenticationCredentialConfiguration =
-        AuthenticationCredentialConfiguration(digestSecret, envelopeKey)
+        AuthenticationCredentialConfiguration(
+            digestSecret,
+            envelopeKey,
+            loginResendCooldownSeconds,
+            loginVerifyMaximumRequests,
+            loginVerifyWindowSeconds,
+        )
 }

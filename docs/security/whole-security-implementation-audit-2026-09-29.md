@@ -110,7 +110,7 @@ against its own resource state; cache and BFF filtering never grant access.**
 
 ## Detailed findings
 
-### SEC-001 — Passwordless verification cannot issue deployed access tokens
+### SEC-001: Passwordless verification cannot issue deployed access tokens
 
 **Severity:** Critical
 **Evidence level:** Direct source inspection; isolated tests use a different
@@ -151,11 +151,10 @@ must start from login start, retrieve the delivered credential, verify it,
 validate the returned token at all four resource boundaries, rotate it, replay
 the old refresh token, and verify generic failure without raw-token logging.
 
-### SEC-002 — Identity lifecycle is email-derived rather than provider-qualified
+### SEC-002: Identity lifecycle is email-derived rather than provider-qualified
 
 **Severity:** High
 **Evidence level:** Direct source inspection.
-
 `LoginVerificationService.kt:53-56` constructs `internal:$canonicalEmail` and
 passes it as the durable subject. `JpaProfileStore.get` provisions a profile if
 the subject does not exist. This conflicts with the documented target model in
@@ -178,7 +177,7 @@ or provision only through an explicit enrollment/linking policy. Store email as
 normalized contact data with its own uniqueness and verification state. Never
 derive an authorization subject by concatenating email.
 
-### SEC-003 — Existing WebSocket subscriptions are not re-authorized after membership changes
+### SEC-003: Existing WebSocket subscriptions are not re-authorized after membership changes
 
 **Severity:** High
 **Evidence level:** Direct source inspection; initial-subscription tests do not
@@ -208,7 +207,7 @@ The preferred design is event-driven invalidation plus a bounded periodic
 verification fallback. Add tests for removal, account deletion, session family
 revocation, token expiry, reconnect, duplicate subscriptions, and stale events.
 
-### SEC-004 — Authenticated profile lookup endpoints permit arbitrary account-ID reads
+### SEC-004: Authenticated profile lookup endpoints permit arbitrary account-ID reads
 
 **Severity:** High
 **Evidence level:** Direct source inspection and contract review.
@@ -234,7 +233,7 @@ Add tests for a valid user reading another unrelated account, batch mixing
 authorized and unauthorized IDs, deleted accounts, and direct access when the
 BFF is bypassed. Do not rely on UUID unpredictability as authorization.
 
-### SEC-005 — Service-to-service trust is network-dependent, not cryptographically scoped
+### SEC-005: Service-to-service trust is network-dependent, not cryptographically scoped
 
 **Severity:** High
 **Evidence level:** Source/configuration review; production network proof not
@@ -257,7 +256,7 @@ exposes only the BFF publicly. If the BFF acts on behalf of a user, use a
 proper delegation model (for example RFC 8693) or a verifiable actor claim;
 do not infer trust from a private network alone.
 
-### SEC-006 — CSRF protection is narrower than the complete cookie-authenticated surface
+### SEC-006: CSRF protection is narrower than the complete cookie-authenticated surface
 
 **Severity:** Medium
 **Evidence level:** Direct source inspection and focused BFF tests.
@@ -279,10 +278,16 @@ Keep exact Origin validation as an additional control. Add tests for every
 mutation, missing/mismatched nonce, origin-less requests, same-site untrusted
 origins, preflight, and WebSocket origin handling.
 
-### SEC-007 — Refresh/login rate limiting uses a coarse and proxy-sensitive network key
+### SEC-007: Refresh/login rate limiting uses a coarse and proxy-sensitive network key
 
 **Severity:** Medium
-**Evidence level:** Direct source inspection.
+**Evidence level:** Historical source inspection; implementation status updated below.
+
+**Current status (2026-10-06):** The former direct `remoteAddr` bucket path has
+been replaced by the shared HMAC-derived limiter and bounded client-address
+partition resolver. Local tests and shared-Redis multi-replica/outage probes
+cover the current path. Hosted proxy-chain validation and production edge
+configuration remain open.
 
 `AuthController.kt:158-161` uses `remoteAddr`, and for IPv4 reduces it to the
 first two octets. There is no explicit trusted-proxy configuration in this
@@ -300,7 +305,7 @@ client identifier, and a verified network partition. Use framework-supported
 forwarded-header handling only when the trusted proxy list is explicit. Test
 IPv4, IPv6, NAT, proxy chains, spoofed forwarding headers, and Redis outage.
 
-### SEC-008 — Access-token revocation is not immediate
+### SEC-008: Access-token revocation is not immediate
 
 **Severity:** Medium
 **Evidence level:** Confirmed design behavior.
@@ -320,7 +325,7 @@ introspection check with a safe cache strategy. Do not make every request
 database-bound without measuring the cost. Add a test and operational metric
 for the maximum post-revocation access window.
 
-### SEC-009 — External-provider portability is an interface, not an implementation
+### SEC-009: External-provider portability is an interface, not an implementation
 
 **Severity:** Medium
 **Evidence level:** Direct source inspection and documentation reconciliation.
@@ -338,7 +343,7 @@ authenticated token endpoint calls, bound all network operations, redact
 requests/responses, and run a second-provider compatibility suite. Do not claim
 managed-provider support from the SPI alone.
 
-### SEC-010 — Key rotation and incident-response controls are incomplete
+### SEC-010: Key rotation and incident-response controls are incomplete
 
 **Severity:** Medium
 **Evidence level:** Documentation/configuration review.
@@ -360,7 +365,7 @@ verification windows, rotation runbooks, rotation rehearsal tests, incident
 roles, and evidence artifacts. Store production secrets in a managed secret
 system; never rely on environment variables as the entire operational control.
 
-### SEC-011 — Supply-chain and deployment security are only partially evidenced
+### SEC-011: Supply-chain and deployment security are only partially evidenced
 
 **Severity:** Medium
 **Evidence level:** CI/repository review.
@@ -377,7 +382,7 @@ renovation, secret scanning, license review, minimal runtime images, and a
 reproducible deployment verification step. Record exceptions with owner,
 expiry, affected artifact, and compensating control.
 
-### SEC-012 — Security telemetry is useful but not a complete audit trail
+### SEC-012: Security telemetry is useful but not a complete audit trail
 
 **Severity:** Low/Medium
 **Evidence level:** Source/docs review.
@@ -394,7 +399,7 @@ class, service, and timestamp. Exclude credentials, tokens, email where not
 needed, raw IP where policy prohibits it, and request bodies. Protect event
 integrity, retention, access, and clock synchronization.
 
-### SEC-013 — Endpoint evidence is broad but not yet complete for all security dimensions
+### SEC-013: Endpoint evidence is broad but not yet complete for all security dimensions
 
 **Severity:** Low/Medium  
 **Evidence level:** Matrix/documentation review.
@@ -490,9 +495,10 @@ identity, and financial authorization. Redis is used for rate limiting and is
 expected to fail closed with bounded waits. Local cache-resilience evidence
 covers eviction, restart, and Redis outage.
 
-The remaining concerns are rate-limit key quality (SEC-007), observability of
-cache uncertainty, and ensuring no future profile or membership cache becomes a
-stale authorization authority.
+The rate-limit key-quality concern is addressed in the current implementation
+by deployment-HMAC derivation and bounded client partitioning. Remaining
+concerns are hosted alert/cardinality evidence and ensuring no future profile
+or membership cache becomes a stale authorization authority.
 
 ### Input, protocol, and error security
 

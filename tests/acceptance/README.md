@@ -43,14 +43,14 @@ python3 tests/acceptance/runner.py
 Run against live running services (fails if services are unreachable):
 
 ```sh
-BFF_BASE_URL=http://localhost:8080 EXPENSE_CORE_BASE_URL=http://localhost:8082 tests/acceptance/run.sh --require-services
+BFF_BASE_URL=http://localhost:28080 EXPENSE_CORE_BASE_URL=http://localhost:28082 tests/acceptance/run.sh --require-services
 ```
 
 Options:
 - `--require-services`: Exit with code 1 if services are unreachable/offline.
 - `--timeout SECONDS`: HTTP request timeout (default: 2.0s).
-- `--bff-url URL`: Base URL for BFF service (default: `http://localhost:8080` or `$BFF_BASE_URL`).
-- `--expense-core-url URL`: Base URL for Expense Core service (default: `http://localhost:8082` or `$EXPENSE_CORE_BASE_URL`).
+- `--bff-url URL`: Base URL for BFF service (default: `http://localhost:28080` or `$BFF_BASE_URL`).
+- `--expense-core-url URL`: Base URL for Expense Core service (default: `http://localhost:28082` or `$EXPENSE_CORE_BASE_URL`).
 - `--report-path PATH`: Custom path for JSON report output (default: `build/reports/acceptance/qa-01.json`).
 
 Run runner unit and integration tests:
