@@ -11,6 +11,7 @@ class ApplicationEntrypointTest {
                 "--spring.profiles.active=test",
                 "--spring.main.web-application-type=none",
                 "--spring.main.register-shutdown-hook=false",
+                "--spring.rabbitmq.listener.simple.auto-startup=false",
                 "--spring.datasource.url=jdbc:h2:mem:notifications-entrypoint;DB_CLOSE_DELAY=-1"
             )
         )

@@ -493,6 +493,9 @@ before, and a focused unit test covers the distinction. The dedicated auth-email
 listener retains its separate bounded retry/DLQ behavior.
 Its preference, disabled-delivery, and limiter-denial diagnostics now use the
 existing opaque recipient representation rather than raw recipient identifiers.
+The full Notifications test suite now boots the non-web entrypoint with the
+Rabbit listener explicitly disabled in the test profile, avoiding accidental
+default `guest` authentication against a developer broker.
 
 The Redis resilience probe now also calls the public Accounts login-start path
 while Redis is stopped and observes the structured fail-closed HTTP 429, then
