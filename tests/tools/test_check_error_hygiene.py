@@ -15,7 +15,7 @@ class ErrorHygieneScannerTest(unittest.TestCase):
                 'throw RuntimeException("bad")',
                 'throw IllegalArgumentException("213201")',
                 'val type = Class.forName("Example")',
-                "catch (error: Throwable) {", 
+                "catch (error: Throwable) {",
                 "val problem = ApiProblem(",
             ]
         )
