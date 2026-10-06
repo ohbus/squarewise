@@ -117,13 +117,17 @@ def main(evidence_output: Path | None = None, source_revision: str = "local-work
         "invalid verification attempts must remain generic before the limit: "
         f"observed {invalid_statuses}"
     )
-    verification_denial_status, _ = request_json(
+    verification_denial_status, verification_denial = request_json(
         f"{ACCOUNTS_URL}/accounts/v1/auth/login/verify",
         method="POST",
         body={"credential": invalid_credential, "clientKind": "NATIVE"},
     )
     assert verification_denial_status == 429, (
         "verification admission must fail closed with HTTP 429 after the configured window is exhausted"
+    )
+    assert isinstance(verification_denial, dict)
+    assert verification_denial.get("code") == "RATE_LIMITED", (
+        "verification denial must retain the structured RATE_LIMITED error code"
     )
 
     logout_status, logout_response = request_json(
