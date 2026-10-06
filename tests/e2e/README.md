@@ -79,7 +79,12 @@ The end-to-end test suites run against the live local environment (`infra/local/
      window expires.
    - The overrides are test-only; production defaults remain unchanged.
 
-9. **Cross-process login admission (`test_auth_login_replicas.py`)**:
+9. **Auth-email Redis outage (`test_auth_notification_redis_outage.py`)**:
+   - Queues a real auth-email event, stops Redis only while Notifications consumes
+     it, and requires the event to reach the auth-email DLQ without Mailpit dispatch.
+   - Restarts Redis and requires a subsequent real auth-email event to be delivered.
+
+10. **Cross-process login admission (`test_auth_login_replicas.py`)**:
    - Starts the disposable `docker-compose.auth-replicas.yml` overlay with two
      Accounts containers sharing PostgreSQL and Redis.
    - Alternates six login-start requests between the two published replica
@@ -87,14 +92,14 @@ The end-to-end test suites run against the live local environment (`infra/local/
    - This proves local distributed-window behavior only; it is not a production
      scale or multi-zone capacity result.
 
-6. **Concurrent refresh rotation (`test_auth_refresh_concurrency.py`)**:
+11. **Concurrent refresh rotation (`test_auth_refresh_concurrency.py`)**:
     - Obtains one real passwordless session, submits two concurrent refresh
       requests with the same token, and requires exactly one `200` plus one
       reuse `401`.
     - Presents the winning child token again and requires `401`, proving the
       PostgreSQL-authoritative family revocation path after reuse detection.
 
-7. **Passwordless Auth-Email Delivery (`test_auth_email_delivery.py`)**:
+12. **Passwordless Auth-Email Delivery (`test_auth_email_delivery.py`):**
    - Real Accounts outbox/RabbitMQ/Notifications/Mailpit CODE delivery.
    - One-time credential redemption and replay rejection.
    - Refresh-family revocation after logout and idempotent logout replay.

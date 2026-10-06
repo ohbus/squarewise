@@ -465,8 +465,9 @@ jobs:
           make e2e-auth-login-replicas 2>&1 | tee build/reports/e2e/auth-login-replicas.log
           SQUAREWISE_AUTH_LOGIN_RESEND_COOLDOWN_SECONDS=0 \
             SQUAREWISE_NOTIFICATIONS_DELIVERY_MAX_PERMITS=1 \
-            SQUAREWISE_NOTIFICATIONS_DELIVERY_WINDOW_SECONDS=2 \
+          SQUAREWISE_NOTIFICATIONS_DELIVERY_WINDOW_SECONDS=2 \
             make e2e-auth-notification-limit 2>&1 | tee build/reports/e2e/auth-notification-rate-limit.log
+          make e2e-auth-notification-outage 2>&1 | tee build/reports/e2e/auth-notification-outage.log
           BEARER_TOKEN="$fresh_token" make e2e-auth-surfaces 2>&1 | tee build/reports/e2e/auth-rate-limit-surfaces.log
           BEARER_TOKEN="$fresh_token" make e2e-auth-no-accounts 2>&1 | tee build/reports/e2e/auth-no-accounts.log
           make e2e-auth-cache 2>&1 | tee build/reports/e2e/auth-cache-resilience.log

@@ -336,6 +336,7 @@ Add focused commands for the Redis suite, for example:
 python3 tests/e2e/test_rate_limiting.py
 python3 tests/e2e/test_auth_query_counts.py
 make e2e-auth-refresh-concurrency
+make e2e-auth-notification-outage
 ```
 
 Exact target names must match the repository after implementation; nonexistent
@@ -386,8 +387,8 @@ failure evidence remains open; the refresh-concurrency slice is recorded below.
 Notifications delivery now delegates to the shared `RateLimiter` through its
 delivery boundary. Recipient admission therefore uses the common atomic Redis
 adapter, while test-only delivery doubles remain direct unit-test dependencies.
-Focused adapter and Notifications context tests pass; GraphQL/WebSocket
-admission, failure drills, and live broker/Redis evidence remain open.
+Focused adapter and Notifications context tests pass; live broker/Redis
+failure evidence is recorded below and hosted delivery evidence remains open.
 
 The BFF now applies a shared Redis-backed HTTP admission decision at the
 GraphQL WebFlux boundary before request parsing. Denials and store outages use
@@ -434,7 +435,7 @@ scale, multi-zone, or capacity evidence.
 The same suite also stops Redis after clearing its namespace and verifies both
 GraphQL HTTP admission and WebSocket handshake admission return fail-closed
 `429` responses, then restarts Redis. Refresh outage/recovery and these BFF
-public-path checks are local evidence; Notifications delivery outage and
+public-path checks are local evidence; hosted Notifications delivery and
 multi-replica failure evidence remain open.
 
 The authenticated lookup-isolation probe stopped Accounts after acquiring a
@@ -461,6 +462,14 @@ cover admission and suppression. A live broker-to-provider denial/recovery
 drill now passes locally through Accounts outbox, RabbitMQ, Notifications, and
 Mailpit when the test-only delivery window is set to one permit per two seconds;
 the production-default and hosted evidence remain separate.
+
+The typed Notifications outage probe queued a real auth-email event, stopped
+Redis while the Notifications consumer was running, and observed no Mailpit
+dispatch. The listener rejected the transient Redis failure once for broker
+retry and then dead-lettered the event; after Redis and Accounts readiness
+recovered, a subsequent real auth-email event was delivered. This is local
+Compose evidence only; hosted outage alerts, managed Redis, and production
+recovery evidence remain open.
 
 An isolated k6 admission probe was added and executed at 35 iterations per
 second for 10 seconds with 351 completed requests, zero HTTP failures, and
