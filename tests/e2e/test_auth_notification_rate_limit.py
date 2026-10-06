@@ -4,16 +4,91 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 import time
 from collections.abc import Mapping
-from typing import cast
-from urllib.error import HTTPError
+from typing import Final, cast
+from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from tests.http_constants import CONTENT_TYPE
 
-ACCOUNTS_URL = os.environ.get("SQUAREWISE_ACCOUNTS_URL", "http://localhost:28081")
-MAILPIT_URL = os.environ.get("SQUAREWISE_MAILPIT_URL", "http://localhost:28025")
+COMPOSE_FILE: Final[str] = os.environ.get(
+    "SQUAREWISE_COMPOSE_FILE", "infra/local/docker-compose.dev.yml"
+)
+COMPOSE_PROJECT: Final[str] = os.environ.get("SQUAREWISE_COMPOSE_PROJECT", "")
+REDIS_PASSWORD: Final[str] = os.environ.get(
+    "REDIS_PASSWORD", "squarewise-redis-local-only"
+)
+ACCOUNTS_URL: Final[str] = os.environ.get("SQUAREWISE_ACCOUNTS_URL", "http://localhost:28081")
+NOTIFICATIONS_URL: Final[str] = os.environ.get(
+    "SQUAREWISE_NOTIFICATIONS_URL", "http://localhost:28083"
+)
+MAILPIT_URL: Final[str] = os.environ.get("SQUAREWISE_MAILPIT_URL", "http://localhost:28025")
+RATE_LIMIT_KEY_PATTERN: Final[str] = "squarewise:rl:v1:*"
+
+
+def compose(*arguments: str) -> str:
+    """Run a Compose command against the explicitly selected local topology."""
+    command: list[str] = ["docker", "compose"]
+    if COMPOSE_PROJECT:
+        command.extend(("--project-name", COMPOSE_PROJECT))
+    command.extend(("-f", COMPOSE_FILE, *arguments))
+    completed = subprocess.run(command, check=True, capture_output=True, text=True)
+    return completed.stdout.strip()
+
+
+def clear_rate_limit_namespace() -> None:
+    """Clear disposable limiter keys before running the isolated delivery test."""
+    try:
+        raw_keys = compose(
+            "exec",
+            "-T",
+            "redis",
+            "redis-cli",
+            "-a",
+            REDIS_PASSWORD,
+            "--no-auth-warning",
+            "--scan",
+            "--pattern",
+            RATE_LIMIT_KEY_PATTERN,
+        )
+        keys = [key for key in raw_keys.splitlines() if key]
+        if keys:
+            compose(
+                "exec",
+                "-T",
+                "redis",
+                "redis-cli",
+                "-a",
+                REDIS_PASSWORD,
+                "--no-auth-warning",
+                "DEL",
+                *keys,
+            )
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        pass
+
+
+def wait_for_service_readiness(timeout_seconds: float = 60.0) -> None:
+    """Wait until Accounts and Notifications have established Redis-backed readiness."""
+    deadline = time.monotonic() + timeout_seconds
+    urls = (
+        f"{ACCOUNTS_URL}/actuator/health/readiness",
+        f"{NOTIFICATIONS_URL}/actuator/health/readiness",
+    )
+    while time.monotonic() < deadline:
+        try:
+            ready = True
+            for url in urls:
+                with urlopen(url, timeout=3) as response:
+                    ready = ready and response.status == 200
+            if ready:
+                return
+        except (HTTPError, OSError, URLError):
+            pass
+        time.sleep(0.5)
+    raise AssertionError("Services did not reach readiness before auth notification limit test")
 
 
 def request_json(
@@ -91,6 +166,9 @@ def main() -> int:
     assert os.environ.get("SQUAREWISE_NOTIFICATIONS_DELIVERY_WINDOW_SECONDS") == "5", (
         "set SQUAREWISE_NOTIFICATIONS_DELIVERY_WINDOW_SECONDS=5 for this live probe"
     )
+
+    wait_for_service_readiness()
+    clear_rate_limit_namespace()
 
     recipient = f"qa-notification-limit-{int(time.time() * 1000)}@example.com"
     start_login(recipient)
