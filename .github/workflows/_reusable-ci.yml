@@ -453,6 +453,7 @@ jobs:
             (cd tools/bruno && npx --yes @usebruno/cli@4.1.0 run "../../$request" -r --env local-oidc --env-var "invalidSubjectToken=$invalid_subject_token")
           done
           docker compose -f infra/local/docker-compose.dev.yml -f infra/local/docker-compose.invalid-subject.yml down
+          SQUAREWISE_AUTH_LOGIN_RESEND_COOLDOWN_SECONDS=0 \
           SQUAREWISE_NOTIFICATIONS_DELIVERY_MAX_PERMITS=1 \
             SQUAREWISE_NOTIFICATIONS_DELIVERY_WINDOW_SECONDS=5 \
             docker compose -f infra/local/docker-compose.dev.yml up -d --build --wait
