@@ -79,6 +79,21 @@ git diff --check
 - Clean contract validation report for all 45 REST operations.
 - OpenAPI diff demonstrating unified `ProblemDetails` components and expanded non-2xx status definitions.
 
+## Implementation Notes and Verification
+
+- Reconciled all three OpenAPI contracts to the additive Problem Details schema
+  and added a `ProblemDetails` component with a compatibility alias for the
+  existing `Problem` component.
+- Added shared response components for 400, 401, 403, 404, 405, 409, 429, and
+  500. The 401, 405, and 429 components declare `WWW-Authenticate`, `Allow`,
+  and `Retry-After` respectively.
+- Added all eight predictable status declarations to each of the 45 operations
+  and documented the complete matrix in `docs/api/implementation-status.md`.
+- The matrix is contract evidence only; controller/runtime behavior remains a
+  later implementation and migration concern.
+- ProblemDetails parity, response-matrix coverage, JSON parsing, repository
+  contract validation, and `git diff --check` passed.
+
 ## Rollout & Rollback Strategy
 
 - Specification-only update; non-breaking to existing clients.

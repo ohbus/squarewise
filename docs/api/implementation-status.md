@@ -55,3 +55,60 @@ acceptance and signed-persona product, offline, WebSocket/concurrency, and chaos
 recovery journeys, but this
 does not claim production OIDC, production-scale capacity, restore, multi-region
 failover, security-scan, or deployment-rollback evidence.
+
+## ERRC-06 REST error-contract coverage
+
+This matrix records OpenAPI declarations only. It is not evidence that every
+runtime controller currently emits every declared status. All 45 operations
+reference the shared `ProblemDetails` schema and explicitly declare the
+predictable failure statuses below. `401` carries `WWW-Authenticate`, `405`
+carries `Allow`, and `429` carries `Retry-After` through shared response
+components.
+
+| Service | Method | Path | Declared statuses |
+|---|---|---|---|
+| accounts | POST | `/auth/login/start` | 400, 401, 403, 404, 405, 409, 429, 500 |
+| accounts | POST | `/auth/login/verify` | 400, 401, 403, 404, 405, 409, 429, 500 |
+| accounts | POST | `/auth/token/refresh` | 400, 401, 403, 404, 405, 409, 429, 500 |
+| accounts | POST | `/auth/logout` | 400, 401, 403, 404, 405, 409, 429, 500 |
+| accounts | GET | `/me` | 400, 401, 403, 404, 405, 409, 429, 500 |
+| accounts | PATCH | `/me` | 400, 401, 403, 404, 405, 409, 429, 500 |
+| accounts | POST | `/me/deletion-request` | 400, 401, 403, 404, 405, 409, 429, 500 |
+| accounts | POST | `/me/export-request` | 400, 401, 403, 404, 405, 409, 429, 500 |
+| accounts | GET | `/me/export-requests` | 400, 401, 403, 404, 405, 409, 429, 500 |
+| accounts | GET | `/profiles/{accountId}` | 400, 401, 403, 404, 405, 409, 429, 500 |
+| accounts | POST | `/profiles/batch` | 400, 401, 403, 404, 405, 409, 429, 500 |
+| expense-core | POST | `/groups` | 400, 401, 403, 404, 405, 409, 429, 500 |
+| expense-core | GET | `/groups` | 400, 401, 403, 404, 405, 409, 429, 500 |
+| expense-core | GET | `/groups/{groupId}` | 400, 401, 403, 404, 405, 409, 429, 500 |
+| expense-core | PATCH | `/groups/{groupId}` | 400, 401, 403, 404, 405, 409, 429, 500 |
+| expense-core | POST | `/allocations/preview` | 400, 401, 403, 404, 405, 409, 429, 500 |
+| expense-core | POST | `/groups/{groupId}/archive` | 400, 401, 403, 404, 405, 409, 429, 500 |
+| expense-core | GET | `/groups/{groupId}/members` | 400, 401, 403, 404, 405, 409, 429, 500 |
+| expense-core | POST | `/groups/{groupId}/placeholders` | 400, 401, 403, 404, 405, 409, 429, 500 |
+| expense-core | DELETE | `/groups/{groupId}/members/{membershipId}` | 400, 401, 403, 404, 405, 409, 429, 500 |
+| expense-core | POST | `/groups/{groupId}/invites` | 400, 401, 403, 404, 405, 409, 429, 500 |
+| expense-core | POST | `/groups/{groupId}/invites/{token}/revoke` | 400, 401, 403, 404, 405, 409, 429, 500 |
+| expense-core | POST | `/invites/{token}/claim` | 400, 401, 403, 404, 405, 409, 429, 500 |
+| expense-core | POST | `/groups/{groupId}/expenses` | 400, 401, 403, 404, 405, 409, 429, 500 |
+| expense-core | GET | `/groups/{groupId}/expenses` | 400, 401, 403, 404, 405, 409, 429, 500 |
+| expense-core | PUT | `/groups/{groupId}/expenses/{expenseId}` | 400, 401, 403, 404, 405, 409, 429, 500 |
+| expense-core | DELETE | `/groups/{groupId}/expenses/{expenseId}` | 400, 401, 403, 404, 405, 409, 429, 500 |
+| expense-core | POST | `/groups/{groupId}/settlements` | 400, 401, 403, 404, 405, 409, 429, 500 |
+| expense-core | GET | `/groups/{groupId}/settlements/suggestions` | 400, 401, 403, 404, 405, 409, 429, 500 |
+| expense-core | POST | `/groups/{groupId}/settlements/{settlementId}/reversal` | 400, 401, 403, 404, 405, 409, 429, 500 |
+| expense-core | GET | `/groups/{groupId}/balances` | 400, 401, 403, 404, 405, 409, 429, 500 |
+| expense-core | GET | `/groups/{groupId}/sync/snapshot` | 400, 401, 403, 404, 405, 409, 429, 500 |
+| expense-core | GET | `/groups/{groupId}/sync/changes` | 400, 401, 403, 404, 405, 409, 429, 500 |
+| expense-core | GET | `/groups/{groupId}/search` | 400, 401, 403, 404, 405, 409, 429, 500 |
+| expense-core | GET | `/groups/{groupId}/export` | 400, 401, 403, 404, 405, 409, 429, 500 |
+| expense-core | POST | `/groups/{groupId}/schedules` | 400, 401, 403, 404, 405, 409, 429, 500 |
+| expense-core | GET | `/groups/{groupId}/schedules` | 400, 401, 403, 404, 405, 409, 429, 500 |
+| expense-core | GET | `/groups/{groupId}/schedules/{scheduleId}` | 400, 401, 403, 404, 405, 409, 429, 500 |
+| expense-core | PUT | `/groups/{groupId}/schedules/{scheduleId}` | 400, 401, 403, 404, 405, 409, 429, 500 |
+| expense-core | POST | `/groups/{groupId}/schedules/{scheduleId}/pause` | 400, 401, 403, 404, 405, 409, 429, 500 |
+| expense-core | POST | `/groups/{groupId}/schedules/{scheduleId}/resume` | 400, 401, 403, 404, 405, 409, 429, 500 |
+| notifications | GET | `/inbox` | 400, 401, 403, 404, 405, 409, 429, 500 |
+| notifications | POST | `/inbox/{notificationId}/read` | 400, 401, 403, 404, 405, 409, 429, 500 |
+| notifications | GET | `/preferences` | 400, 401, 403, 404, 405, 409, 429, 500 |
+| notifications | PUT | `/preferences` | 400, 401, 403, 404, 405, 409, 429, 500 |

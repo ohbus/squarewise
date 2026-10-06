@@ -8065,7 +8065,7 @@
       "parent_id": "ERRC-01",
       "title": "Reconcile all REST OpenAPI contracts",
       "phase": "contracts",
-      "status": "todo",
+      "status": "done",
       "owner_role": "contracts",
       "owner_agent": "/root",
       "depends_on": [
@@ -8090,7 +8090,12 @@
         "uv run python tools/contracts/validate.py",
         "git diff --check"
       ],
-      "evidence": [],
+      "evidence": [
+        "Reconciled accounts, expense-core, and notifications OpenAPI contracts with identical ProblemDetails components derived from contracts/errors/problem.schema.json.",
+        "Added shared 400/401/403/404/405/409/429/500 response components; 401 declares WWW-Authenticate, 405 declares Allow, and 429 declares Retry-After.",
+        "Added all eight predictable status declarations to all 45 REST operations and documented the complete endpoint matrix in docs/api/implementation-status.md.",
+        "ProblemDetails parity and response-matrix audits passed; uv run python tools/contracts/validate.py passed; git diff --check passed."
+      ],
       "reviewer": "/root",
       "blocker": null
     },
