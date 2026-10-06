@@ -8462,7 +8462,7 @@
       "parent_id": "ERRC-01",
       "title": "Implement servlet and reactive security boundaries",
       "phase": "security",
-      "status": "todo",
+      "status": "done",
       "owner_role": "security",
       "owner_agent": "/root",
       "depends_on": [
@@ -8486,7 +8486,11 @@
         "uv run python tools/contracts/validate.py",
         "git diff --check"
       ],
-      "evidence": [],
+      "evidence": [
+        "Added servlet and reactive authentication/access-denied handlers, challenge builder, static security body renderer, and anti-enumeration behavior.",
+        "JaCoCo security error package coverage is 100% line (38/38) and branch (12/12).",
+        "libs:security tests/JaCoCo, contract validation, and git diff --check passed on 2026-10-07."
+      ],
       "reviewer": "/root",
       "blocker": null
     },

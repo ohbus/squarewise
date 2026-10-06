@@ -81,3 +81,19 @@ git diff --check
 - Replaces default Spring Security error handling in `libs/security`.
 - Backward-compatible; clients expecting 401/403 now receive structured JSON rather than empty responses.
 - Rollback: Revert security filter configuration if header conflicts emerge.
+
+## Implementation Notes and Evidence
+
+- Added dedicated servlet and WebFlux authentication-entry-point and
+  access-denied handlers under `libs/security`, with non-empty Problem Details
+  bodies and RFC 6750 `WWW-Authenticate: Bearer error="invalid_token"`.
+- Added opt-in anti-enumeration behavior that maps protected-resource denial to
+  the static 404 `RESOURCE_NOT_FOUND` definition without revealing existence.
+- Added a provider-independent security body renderer using only compiled
+  Platform catalog definitions; no token, exception, or request payload text is
+  serialized.
+- JaCoCo package evidence on 2026-10-07: `com/subhrodip/squarewise/security/errors`
+  reports 38/38 lines and 12/12 branches.
+- Validation passed: `./gradlew.bat :libs:security:test
+  :libs:security:jacocoTestReport --rerun-tasks --no-daemon --console=plain`,
+  `uv run python tools/contracts/validate.py`, and `git diff --check`.
