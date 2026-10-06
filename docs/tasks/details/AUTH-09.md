@@ -711,6 +711,11 @@ their E2E artifacts. These SHAs predate the current AUTH-09 branch HEAD, so a
 hosted rerun on the current revision remains required; historical hosted green
 results are not treated as current-HEAD proof.
 
+After the current limiter timing and query/latency increments, the full Windows
+`mingw32-make check` gate passed again: contracts/public surfaces, 58 JVM test
+tasks, strict mypy for 54 files, JaCoCo reports, and all four application boot
+JARs. This closes the repository-owned local check evidence only.
+
 This increment does not claim completion of AUTH-09. The task remains
 `in_progress` because hosted selected/skipped E2E evidence, managed Redis
 selection/failover/rotation/capacity, deployed alert routing, broader query and
