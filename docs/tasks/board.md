@@ -169,7 +169,7 @@ This workstream manages the six-digit `DM-L-C-EE` domain/module error-code stand
 
 | ID | Owner | Status | Deliverable |
 | --- | --- | --- | --- |
-| [ERRC-10](details/ERRC-10.md) | platform | todo | Implement zero-allocation `ErrorCode` value class and core metadata enums in `libs/errors` |
+| [ERRC-10](details/ERRC-10.md) | platform | done | Implement zero-allocation `ErrorCode` value class and core metadata enums in `libs/errors` |
 | [ERRC-11](details/ERRC-11.md) | platform | todo | Generate compile-time static error catalog objects for all domains (zero reflection) |
 | [ERRC-12](details/ERRC-12.md) | platform | todo | Implement governed `SquarewiseException`, bounded diagnostics, and fatal classifiers |
 | [ERRC-13](details/ERRC-13.md) | quality | todo | Add static analysis rules and CI gates prohibiting raw throws, reflection, and broad catches |

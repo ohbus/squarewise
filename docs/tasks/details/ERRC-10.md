@@ -111,3 +111,21 @@ git diff --check
 - Pure library addition in `libs/errors`.
 - Zero disruption to existing `ErrorCode` enum in `libs/errors` until Phase 4 migration.
 - Rollback: Revert library package if compilation conflicts arise.
+
+## Implementation Notes and Evidence
+
+- Added `ErrorCode` as a `@JvmInline` value class with direct ASCII character
+  validation, constant-time digit decomposition, and the `DM-L-C-EE` display
+  representation. The legacy `com.subhrodip.squarewise.errors.domain.ErrorCode`
+  remains untouched until the later migration tasks.
+- Added one-file-per-type metadata enums and immutable definition interfaces,
+  including REST and GraphQL specializations.
+- Added focused tests for canonical decomposition, malformed namespace and
+  sequence boundaries, display formatting, and every metadata mapping.
+- JaCoCo package evidence: `com/subhrodip/squarewise/errors/code` reports
+  `LINE missed=0 covered=58` and `BRANCH missed=0 covered=28`.
+- Validation passed on 2026-10-07:
+  `./gradlew.bat :libs:errors:test :libs:errors:jacocoTestReport --rerun-tasks --no-daemon --console=plain`,
+  `uv run python tools/contracts/validate.py`, and `git diff --check`.
+- The implementation uses no reflection, regular expressions, YAML parsing, or
+  classpath scanning on the value-object property path.

@@ -8224,7 +8224,7 @@
       "parent_id": "ERRC-01",
       "title": "Implement core value and metadata types",
       "phase": "platform",
-      "status": "todo",
+      "status": "done",
       "owner_role": "platform",
       "owner_agent": "/root",
       "depends_on": [
@@ -8249,7 +8249,13 @@
         "uv run python tools/contracts/validate.py",
         "git diff --check"
       ],
-      "evidence": [],
+      "evidence": [
+        "Implemented ErrorCode and dedicated metadata/definition types under libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/code/.",
+        "Focused tests cover canonical decomposition, malformed namespace/sequence boundaries, display formatting, and metadata mappings.",
+        "JaCoCo package coverage is 100% line (58/58) and 100% branch (28/28) for com/subhrodip/squarewise/errors/code.",
+        "./gradlew.bat :libs:errors:test :libs:errors:jacocoTestReport --rerun-tasks --no-daemon --console=plain passed on 2026-10-07.",
+        "uv run python tools/contracts/validate.py and git diff --check passed on 2026-10-07."
+      ],
       "reviewer": "/root",
       "blocker": null
     },
