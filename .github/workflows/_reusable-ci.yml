@@ -262,7 +262,7 @@ jobs:
 
   sonar:
     name: SonarQube quality analysis
-    if: needs.scope.outputs.run_sonar == 'true' && secrets.SONAR_TOKEN != ''
+    if: needs.scope.outputs.run_sonar == 'true'
     runs-on: ubuntu-latest
     needs: [preflight, scope]
     services:
@@ -306,7 +306,12 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./gradlew build jacocoTestReport sonar --info --no-daemon
+        run: |
+          if [ -z "${SONAR_TOKEN:-}" ]; then
+            echo "SONAR_TOKEN is not set (e.g. running from fork PR). Skipping SonarCloud analysis."
+            exit 0
+          fi
+          ./gradlew build jacocoTestReport sonar --info --no-daemon
 
   e2e-artifacts:
     name: Package application artifacts for selected E2E
