@@ -139,14 +139,7 @@ jobs:
         with:
           distribution: microsoft
           java-version: ${{ env.JAVA_VERSION }}
-          cache: gradle
       - uses: gradle/actions/setup-gradle@b9bee63ef481cc545e4517ec730544a4d8b1dfa0 # v6.4.0
-      - name: Cache Gradle wrapper distribution
-        uses: actions/cache@v6
-        with:
-          path: ~/.gradle/wrapper
-          key: gradle-wrapper-${{ runner.os }}-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties') }}
-          restore-keys: gradle-wrapper-${{ runner.os }}-
       - name: Check formatting and contracts
         run: |
           git diff --check
@@ -221,20 +214,7 @@ jobs:
         with:
           distribution: microsoft
           java-version: ${{ env.JAVA_VERSION }}
-          cache: gradle
       - uses: gradle/actions/setup-gradle@b9bee63ef481cc545e4517ec730544a4d8b1dfa0 # v6.4.0
-      - name: Cache Gradle wrapper distribution
-        uses: actions/cache@v6
-        with:
-          path: ~/.gradle/wrapper
-          key: gradle-wrapper-${{ runner.os }}-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties') }}
-          restore-keys: gradle-wrapper-${{ runner.os }}-
-      - name: Restore shared Gradle build cache
-        uses: actions/cache@v6
-        with:
-          path: ~/.gradle/caches/build-cache-*
-          key: squarewise-gradle-build-${{ runner.os }}-${{ hashFiles('**/*.gradle.kts', '**/gradle.properties', 'gradle/libs.versions.toml') }}
-          restore-keys: squarewise-gradle-build-${{ runner.os }}-
       - name: Build, test, check, and coverage
         run: ./gradlew ${{ matrix.path }}:test ${{ matrix.path }}:check ${{ matrix.path }}:jacocoTestReport --no-daemon
       - name: Build application artifact
@@ -315,7 +295,6 @@ jobs:
         with:
           distribution: microsoft
           java-version: ${{ env.JAVA_VERSION }}
-          cache: gradle
       - uses: gradle/actions/setup-gradle@b9bee63ef481cc545e4517ec730544a4d8b1dfa0 # v6.4.0
       - name: Cache SonarQube packages
         uses: actions/cache@v6
@@ -323,18 +302,6 @@ jobs:
           path: ~/.sonar/cache
           key: ${{ runner.os }}-sonar
           restore-keys: ${{ runner.os }}-sonar
-      - name: Cache Gradle wrapper distribution
-        uses: actions/cache@v6
-        with:
-          path: ~/.gradle/wrapper
-          key: gradle-wrapper-${{ runner.os }}-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties') }}
-          restore-keys: gradle-wrapper-${{ runner.os }}-
-      - name: Cache Gradle packages
-        uses: actions/cache@v6
-        with:
-          path: ~/.gradle/caches
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', 'gradle/libs.versions.toml') }}
-          restore-keys: ${{ runner.os }}-gradle-
       - name: Build, test, and analyze with Sonar
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -359,7 +326,6 @@ jobs:
         with:
           distribution: microsoft
           java-version: ${{ env.JAVA_VERSION }}
-          cache: gradle
       - uses: gradle/actions/setup-gradle@b9bee63ef481cc545e4517ec730544a4d8b1dfa0 # v6.4.0
       - name: Build all application boot JARs without rerunning tests
         run: ./gradlew :app:accounts:bootJar :app:expense-core:bootJar :app:notifications:bootJar :app:bff:bootJar --no-daemon

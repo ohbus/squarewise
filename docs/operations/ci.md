@@ -35,8 +35,9 @@ interpolation is evaluated at startup, so a restart without those variables
 would silently restore the default ten-per-minute policy and invalidate the
 suppression probe.
 
-The reusable workflow applies Gradle dependency and build caching with
-content-addressed keys and restore fallbacks. E2E uses the same policy, while
+The reusable workflow delegates Gradle dependency, wrapper, and build caching
+natively to `gradle/actions/setup-gradle`, providing content-addressed caching
+and automatic cache cleanup without conflicting user-home restoration steps.
 Docker BuildKit layers use the GitHub Actions cache backend. Cache misses only
 reduce speed and never change verification behavior.
 Workflows declare `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'` in their top-level
