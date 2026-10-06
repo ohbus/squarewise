@@ -36,6 +36,8 @@ The end-to-end test suites run against the live local environment (`infra/local/
    - Conflict resolution: stale client fetches latest state and reapplies cleanly.
    - When invoked with `--evidence-output`, emits retained QA-10 evidence only
      after all subscription and concurrency assertions pass.
+   - Removes an active member, verifies the existing subscription terminates,
+     and verifies the removed bearer cannot reconnect and subscribe again.
 
 4. **Message Broker Outage Chaos & Transactional Outbox Recovery (`test_chaos_recovery.py`)**:
    - Fault injection: pauses Expense Core and verifies GraphQL `groups` returns a

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import io
 import os
+import re
 import subprocess
 import sys
 import time
@@ -24,6 +25,8 @@ REDIS_PASSWORD: Final[str] = os.environ.get(
 ACCOUNTS_URL: Final[str] = os.environ.get(
     "ACCOUNTS_URL", os.environ.get("SQUAREWISE_ACCOUNTS_URL", "http://localhost:28081")
 )
+BEARER_TOKEN: Final[str] = os.environ.get("BEARER_TOKEN", "")
+PROMETHEUS_PATH: Final[str] = "/actuator/prometheus"
 BEARER_TOKEN: Final[str] = os.environ.get("BEARER_TOKEN", "")
 PROMETHEUS_PATH: Final[str] = "/actuator/prometheus"
 REFRESH_PATH: Final[str] = "/accounts/v1/auth/token/refresh"
@@ -102,6 +105,29 @@ def evict_rate_limit_keys() -> int:
     return len(keys)
 
 
+def rate_limit_store_error_counts() -> dict[str, int]:
+    """Read bounded login/refresh store-error counters when a probe token is available."""
+    if not BEARER_TOKEN:
+        return {}
+    request = Request(
+        f"{ACCOUNTS_URL}{PROMETHEUS_PATH}",
+        headers={"Authorization": f"Bearer {BEARER_TOKEN}"},
+    )
+    with urlopen(request, timeout=10) as response:
+        payload = response.read().decode("utf-8")
+    counts: dict[str, int] = {}
+    for line in payload.splitlines():
+        if "squarewise_rate_limit_decisions_total" not in line:
+            continue
+        if 'outcome="store_error"' not in line:
+            continue
+        policy_match = re.search(r'policy="([^"]+)"', line)
+        value_match = re.search(r"\s([0-9]+(?:\.[0-9]+)?)$", line)
+        if policy_match and value_match:
+            counts[policy_match.group(1)] = int(float(value_match.group(1)))
+    return counts
+
+
 def wait_for_redis() -> None:
     """Wait until Redis accepts authenticated commands after a restart."""
     deadline = time.monotonic() + 20.0
@@ -138,9 +164,17 @@ def main() -> int:
             raise AssertionError("rate-limit eviction removed no active cache key")
         expect("refresh after rate-limit cache eviction", refresh_status(), 401)
 
+        metric_before = rate_limit_store_error_counts()
         compose("stop", "redis")
         expect("refresh with Redis unavailable", refresh_status(), 429)
         expect("login start with Redis unavailable", login_start_status(probe_email), 429)
+        metric_after = rate_limit_store_error_counts()
+        if BEARER_TOKEN:
+            for policy in ("auth-refresh", "auth-login"):
+                if metric_after.get(policy, 0) <= metric_before.get(policy, 0):
+                    raise AssertionError(
+                        f"{policy} store_error metric did not increase during outage"
+                    )
 
         compose("start", "redis")
         wait_for_redis()

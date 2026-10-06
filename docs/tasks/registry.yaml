@@ -5068,6 +5068,7 @@
         "The shared rateLimitRedis health contributor is explicitly imported into Accounts, Notifications, and BFF and included in each readiness group; rebuilt local Compose showed Accounts and BFF 200/UP when Redis was healthy, 503/DOWN while Redis was stopped, and 200/UP after restart, with all three healthy after recovery. Hosted health, alert, and production failover evidence remain open.",
         "Prometheus now defines SquarewiseRateLimitStoreUnavailable for bounded store_error outcomes, and the shared Grafana dashboard exposes admission outcomes by service/policy/outcome only; deployment scrape, routing, and alert-firing evidence remains open.",
         "A disposable BFF replica overlay and typed probe now alternate GraphQL HTTP and WebSocket admission across two BFF containers sharing Redis; local runs pass the configured cap plus one as HTTP 429 for both policies. This is cross-process local evidence only; revoked-token reconnect, production topology, and capacity evidence remain open.",
+        "The authenticated subscription E2E removes an active member through Expense Core, requires the existing WebSocket stream to complete, and rejects a reconnect subscription using the removed bearer token; local live execution passed and hosted reconnect/fanout evidence remains open.",
         "Notifications hosted/production delivery, hosted GraphQL/WebSocket evidence, query-count breadth, multi-replica failure, capacity, and hosted E2E evidence remain open and must not be inferred from local increments."
       ],
       "reviewer": "/root",

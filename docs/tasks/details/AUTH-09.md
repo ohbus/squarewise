@@ -516,6 +516,12 @@ the configured cap plus one as HTTP 429 for both policies. This is cross-process
 local evidence only; revoked-token reconnect, production topology, and capacity
 evidence remain open.
 
+The authenticated subscription E2E keeps a valid Bob subscription open, removes
+Bob from the group through the public Expense Core endpoint, requires the
+active stream to complete, and reconnects with the same bearer token to verify
+the subscription is rejected. The local live run passed; hosted reconnect and
+production fanout evidence remain open.
+
 Rate-limit decisions now expose bounded Micrometer counters for `allowed`,
 `denied`, and `store_error`, tagged only by the centrally defined policy ID and
 outcome. No key, subject, IP, token, or request ID is used as a metric label.
