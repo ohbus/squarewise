@@ -70,3 +70,9 @@ The aggregate gate decision is implemented in the typed
 tests prove that unselected `skipped` streams are neutral and not reported as
 passed, while selected stream, shared preflight, and artifact-preparation
 failures remain fatal. Hosted matrix execution evidence is still required.
+
+Hosted API inspection also confirmed that master run `37355348264` and PR run
+`37348315292` completed successfully with all selected E2E jobs and retained
+E2E artifacts. A later feature-branch run (`37367449305`) was cancelled, so its
+skipped jobs are not treated as a passing matrix result. These runs predate the
+current branch HEAD and require a current-revision rerun for closure.

@@ -703,6 +703,14 @@ replay, WebSocket resync, rollback, concurrency, authorization, BFF fanout,
 and recovery scenarios. This is additional local acceptance evidence and does
 not substitute for hosted or managed-production evidence.
 
+Hosted evidence is now confirmed for earlier revisions: master run
+`37355348264` at SHA `948e12c4e10849fd8c7e355ec8946b8a86862554` and PR run
+`37348315292` at SHA `95c6513f34d5f8ce4f1c64e79704601b6361ea89` both passed
+preflight, all three selected E2E streams, the aggregate E2E gate, and retained
+their E2E artifacts. These SHAs predate the current AUTH-09 branch HEAD, so a
+hosted rerun on the current revision remains required; historical hosted green
+results are not treated as current-HEAD proof.
+
 This increment does not claim completion of AUTH-09. The task remains
 `in_progress` because hosted selected/skipped E2E evidence, managed Redis
 selection/failover/rotation/capacity, deployed alert routing, broader query and
