@@ -247,7 +247,11 @@ def main() -> int:
     recipient = f"qa-notification-limit-{int(time.time() * 1000)}@example.com"
     start_login(recipient)
     start_login(recipient)
-    assert wait_for_count(recipient, 1) == 1
+    first_window = wait_for_count(recipient, 1)
+    assert first_window == 1, (
+        f"delivery limiter admitted {first_window} emails in one window; "
+        "check Notifications SQUAREWISE_NOTIFICATIONS_DELIVERY_MAX_PERMITS=1 in the running container"
+    )
     assert recipient_count(recipient) == 1, "second same-recipient event bypassed delivery admission"
 
     time.sleep(5)
