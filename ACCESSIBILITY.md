@@ -46,11 +46,11 @@ sharing it, the browser, operating system, and assistive technology involved.
 You do not need to disclose a disability or diagnosis.
 
 For a private accessibility report, email
-[accessibility@subhrodip.com](mailto:accessibility+pennywise@subhrodip.com).
+[accessibility@subhrodip.com](mailto:accessibility+squarewise@subhrodip.com).
 
 If a barrier report contains a suspected vulnerability, personal data, or other
 sensitive security information, do not open a public issue. Email
-[security@subhrodip.com](mailto:security+pennywise@subhrodip.com) as required by the
+[security@subhrodip.com](mailto:security+squarewise@subhrodip.com) as required by the
 [Security Policy](SECURITY.md).
 
 Maintainers will triage reports as capacity permits, ask for clarification when

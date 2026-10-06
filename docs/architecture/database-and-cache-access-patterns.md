@@ -1,6 +1,6 @@
 # Database and Cache Access Patterns
 
-This document details the database (PostgreSQL) and cache (Redis) access patterns across all request types in the Pennywise / Squarewise architecture.
+This document details the database (PostgreSQL) and cache (Redis) access patterns across all request types in the Squarewise architecture.
 
 ## Architectural Principles
 

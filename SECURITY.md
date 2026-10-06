@@ -21,7 +21,7 @@ production ready.
 ## Report a vulnerability or ask a security question
 
 Send all security questions and suspected vulnerability reports privately to
-[security@subhrodip.com](mailto:security+pennywise@subhrodip.com).
+[security@subhrodip.com](mailto:security+squarewise@subhrodip.com).
 
 Do not open a public issue, discussion, or pull request for a suspected
 vulnerability. Do not include access tokens, credentials, personal data,

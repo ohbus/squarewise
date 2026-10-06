@@ -10,8 +10,8 @@ If you use VS Code, Cursor, or JetBrains Gateway, you can skip manual toolchain 
 
 1. Clone and open the repository in your IDE:
    ```sh
-   git clone https://github.com/subhrodip/pennywise-devcontainers.git
-   cd pennywise-devcontainers
+   git clone https://github.com/subhrodip/squarewise-devcontainers.git
+   cd squarewise-devcontainers
    code .   # or cursor .
    ```
 2. Click **Reopen in Container** when prompted.
@@ -134,4 +134,3 @@ developer and CI fixture convenience. In staging and production environments:
 - An external hardened PostgreSQL instance must back the Keycloak realm.
 - Strict TLS termination (`KC_HOSTNAME_STRICT_HTTPS=true`) and trusted CA certificates must be configured.
 - Embedded development features and dev caches must remain disabled.
-
