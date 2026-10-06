@@ -122,8 +122,8 @@ def login_verify_status(credential: str, timeout: float = 8.0) -> int:
         return error.code
 
 
-def rate_limit_store_error_counts() -> dict[str, int]:
-    """Read bounded login/refresh store-error counters when a probe token is available."""
+def rate_limit_outcome_counts(outcome: str) -> dict[str, int]:
+    """Read one bounded limiter outcome for each policy when metrics are authorized."""
     if not BEARER_TOKEN:
         return {}
     request = Request(
@@ -136,7 +136,7 @@ def rate_limit_store_error_counts() -> dict[str, int]:
     for line in payload.splitlines():
         if "squarewise_rate_limit_decisions_total" not in line:
             continue
-        if 'outcome="store_error"' not in line:
+        if f'outcome="{outcome}"' not in line:
             continue
         policy_match = re.search(r'policy="([^"]+)"', line)
         value_match = re.search(r"\s([0-9]+(?:\.[0-9]+)?)$", line)
@@ -181,7 +181,8 @@ def main() -> int:
             raise AssertionError("rate-limit eviction removed no active cache key")
         expect("refresh after rate-limit cache eviction", refresh_status(), 401)
 
-        metric_before = rate_limit_store_error_counts()
+        store_error_before = rate_limit_outcome_counts("store_error")
+        fail_closed_before = rate_limit_outcome_counts("fail_closed")
         compose("stop", "redis")
         expect("refresh with Redis unavailable", refresh_status(), 429)
         expect("login start with Redis unavailable", login_start_status(probe_email), 429)
@@ -190,16 +191,24 @@ def main() -> int:
             login_verify_status("auth-cache-resilience-invalid-credential"),
             429,
         )
-        metric_after = rate_limit_store_error_counts()
+        store_error_after = rate_limit_outcome_counts("store_error")
+        fail_closed_after = rate_limit_outcome_counts("fail_closed")
         if BEARER_TOKEN:
             for policy in ("auth-refresh", "auth-login", "auth-login-verify"):
-                if metric_after.get(policy, 0) <= metric_before.get(policy, 0):
+                if store_error_after.get(policy, 0) <= store_error_before.get(policy, 0):
                     raise AssertionError(
                         f"{policy} store_error metric did not increase during outage"
                     )
-            print("  rate-limit store_error metrics increased for login, verification, and refresh")
+                if fail_closed_after.get(policy, 0) <= fail_closed_before.get(policy, 0):
+                    raise AssertionError(
+                        f"{policy} fail_closed metric did not increase during Redis outage"
+                    )
+            print(
+                "  rate-limit store_error and fail_closed metrics increased for "
+                "login, verification, and refresh"
+            )
         else:
-            print("  rate-limit store_error metric assertion skipped (BEARER_TOKEN unset)")
+            print("  rate-limit metric assertions skipped (BEARER_TOKEN unset)")
 
         compose("start", "redis")
         wait_for_redis()
