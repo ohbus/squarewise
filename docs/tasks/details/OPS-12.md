@@ -1,4 +1,4 @@
-# OPS-12 — Isolate GHCR image publishing from reusable verification workflow
+# OPS-12: Isolate GHCR image publishing from reusable verification workflow
 
 ## Objective
 

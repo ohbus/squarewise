@@ -1,4 +1,4 @@
-# CORE-12 — Outbox background polling relay daemon
+# CORE-12: Outbox background polling relay daemon
 
 Schedule periodic execution of `OutboxPublisher.publishAvailable()` to pump leased
 transactional outbox events to RabbitMQ in the background.

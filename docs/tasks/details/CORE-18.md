@@ -1,4 +1,4 @@
-# CORE-18 — Add group rename and update REST endpoint in Expense Core
+# CORE-18: Add group rename and update REST endpoint in Expense Core
 
 ## Objective
 

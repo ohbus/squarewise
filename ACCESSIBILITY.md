@@ -41,8 +41,8 @@ artifact already conforms.
 Use the [accessibility issue
 form](https://github.com/ohbus/squarewise/issues/new?template=accessibility.yml)
 for barriers that can be discussed publicly. Include the affected page or
-workflow, what you expected, what happened, and—only if you are comfortable
-sharing it—the browser, operating system, and assistive technology involved.
+workflow, what you expected, what happened, and, only if you are comfortable
+sharing it, the browser, operating system, and assistive technology involved.
 You do not need to disclose a disability or diagnosis.
 
 If a barrier report contains a suspected vulnerability, personal data, or other

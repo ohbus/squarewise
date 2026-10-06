@@ -1,4 +1,4 @@
-# OPS-15 — Publish CI test results, pass down built application artifacts, and optimize caching
+# OPS-15: Publish CI test results, pass down built application artifacts, and optimize caching
 
 ## Objective
 

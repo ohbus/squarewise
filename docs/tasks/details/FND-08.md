@@ -1,4 +1,4 @@
-# FND-08 — Refactor domain ports, in-memory stores, and consumer services into dedicated files
+# FND-08: Refactor domain ports, in-memory stores, and consumer services into dedicated files
 
 ## Objective
 

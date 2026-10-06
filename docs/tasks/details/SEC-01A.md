@@ -1,4 +1,4 @@
-# SEC-01A — Establish operational token authority
+# SEC-01A: Establish operational token authority
 
 ## Status
 

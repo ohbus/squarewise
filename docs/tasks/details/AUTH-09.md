@@ -1,4 +1,4 @@
-# AUTH-09 — Distributed rate limiting and request-path security controls
+# AUTH-09: Distributed rate limiting and request-path security controls
 
 ## Objective
 

@@ -1,4 +1,4 @@
-# ACC-02 — Durable account deletion and export request persistence
+# ACC-02: Durable account deletion and export request persistence
 
 Persist account deletion and GDPR export request states through JPA/Flyway adapters in `app/accounts`.
 

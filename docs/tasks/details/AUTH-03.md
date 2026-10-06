@@ -1,4 +1,4 @@
-# AUTH-03 — Fail-closed provider-neutral OIDC resource-server validation
+# AUTH-03: Fail-closed provider-neutral OIDC resource-server validation
 
 ## Objective
 

@@ -1,4 +1,4 @@
-# OPS-26 — Decouple dev data seeder and prepare local stack for non-docker runtimes
+# OPS-26: Decouple dev data seeder and prepare local stack for non-docker runtimes
 
 ## Status
 
@@ -30,7 +30,7 @@ docs/tasks/progress.md
 
 ## Dependencies
 
-- `OPS-25` (done) — Python environment and `uv` package management are standardized.
+- `OPS-25` (done): Python environment and `uv` package management are standardized.
 - No application Kotlin/Java code changes were required.
 
 ## Design decisions

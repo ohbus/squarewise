@@ -94,7 +94,7 @@ class AuthControllerTest @Autowired constructor(
         loginVerificationRateLimitService = verificationRateLimitService
     )
 
-    // No trusted proxies in tests — raw socket address is always used.
+    // No trusted proxies in tests: raw socket address is always used.
     private val clientAddressResolver = ClientAddressResolver()
 
     private val controller = AuthController(

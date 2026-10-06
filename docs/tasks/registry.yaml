@@ -7108,7 +7108,7 @@
       "evidence": [
         "SEC-003: LiveUpdateFanout now maintains per-subscription Sinks.One<Void> revocation signals. revokeUser, revokeUserFromGroup, unsubscribe, and removeExpired all complete the signal, terminating the downstream Flux immediately.",
         "SEC-003: GroupGraphqlController.groupChanged uses takeUntilOther(liveFanout.revocationSignal(subscription.id)) so the stream auto-terminates when BffEventConsumer processes a member.removed event.",
-        "SEC-006: BrowserCsrfWebFilter extended to cover POST to /graphql when access cookie is present and no explicit Authorization header — cookie-authenticated GraphQL mutations now require X-CSRF-Token to match SW_CSRF cookie.",
+        "SEC-006: BrowserCsrfWebFilter extended to cover POST to /graphql when access cookie is present and no explicit Authorization header: cookie-authenticated GraphQL mutations now require X-CSRF-Token to match SW_CSRF cookie.",
         "SEC-006: Pure bearer-authenticated requests (no access cookie, or explicit Authorization header) bypass CSRF checks cleanly. GraphQL GET requests are unaffected.",
         "New BrowserCsrfWebFilterTest covers: valid CSRF pass-through, missing header 403, mismatch 403, bearer bypass, explicit-auth bypass, GET bypass, unrelated path passthrough.",
         "LiveUpdateFanoutTest: 5 new revocation signal tests covering per-sub revocation, user-wide revocation, unsubscribe, unknown ID, and group-scoped isolation.",

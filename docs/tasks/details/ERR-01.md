@@ -1,4 +1,4 @@
-# ERR-01 — Governed error taxonomy and catalog
+# ERR-01: Governed error taxonomy and catalog
 
 Define the authoritative catalog and rules for specific service/feature/scenario
 codes. Add schema validation for uniqueness, prefixes, status, ownership,

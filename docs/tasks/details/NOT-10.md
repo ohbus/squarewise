@@ -1,4 +1,4 @@
-# NOT-10 — Refactor Notifications persistence into separated SOLID files
+# NOT-10: Refactor Notifications persistence into separated SOLID files
 
 ## Objective
 

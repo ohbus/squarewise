@@ -1,4 +1,4 @@
-# NOT-07 — Connect notification consumer to email dispatch
+# NOT-07: Connect notification consumer to email dispatch
 
 ## Objective
 

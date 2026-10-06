@@ -1,4 +1,4 @@
-# CORE-09 — Durable groups and invitations
+# CORE-09: Durable groups and invitations
 
 Persist groups, memberships, and single-use invitations using service-local JPA
 and Flyway while retaining deterministic in-memory adapters for unit tests.

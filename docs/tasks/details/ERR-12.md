@@ -1,4 +1,4 @@
-# ERR-12 — Governance and release evidence
+# ERR-12: Governance and release evidence
 
 Reconcile catalog, contracts, implementation, tests, Bruno, dashboards, and
 runbooks. Confirm no empty-body REST or GraphQL failures remain, run the full

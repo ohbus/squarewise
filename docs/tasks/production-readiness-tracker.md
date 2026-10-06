@@ -1,14 +1,14 @@
 # Production Readiness Workstream Tracker
 
 > **Last updated**: 2026-09-20
-> **Status**: Proposed — pending coordinator registration in `docs/tasks/registry.yaml`
+> **Status**: Proposed: pending coordinator registration in `docs/tasks/registry.yaml`
 
 ## How to read this document
 
 This tracker converts audit findings and roadmap phases into **actionable
 workstreams** with clear ownership, dependencies, acceptance criteria, and
-evidence requirements. It is organized so that any team member — including
-someone with zero context — can understand:
+evidence requirements. It is organized so that any team member: including
+someone with zero context: can understand:
 
 1. **What** each workstream covers (scope)
 2. **Why** it matters (link to audit finding and scale impact)
@@ -37,7 +37,7 @@ someone with zero context — can understand:
 | `planned` | Registered in `registry.yaml` with assigned owner | Owner must update task detail before implementation |
 | `in_progress` | Implementation actively underway | Owner provides regular evidence updates |
 | `blocked` | Cannot proceed due to dependency or external factor | Blocker documented with resolution path |
-| `done` | All acceptance criteria met with evidence | Evidence reviewed by independent reviewer; `done` requires evidence, review, and documented limitations — code existing in the repository is not sufficient |
+| `done` | All acceptance criteria met with evidence | Evidence reviewed by independent reviewer; `done` requires evidence, review, and documented limitations: code existing in the repository is not sufficient |
 
 ---
 
@@ -67,23 +67,23 @@ task for genuinely absent scope.
 
 | Proposed workstream | Existing related task(s) | Reconciliation decision |
 |---|---|---|
-| PR-00 — Baseline inventory | QA-07, QA-08 | Use QA-08 for production evidence; inventory is its evidence artifact |
-| PR-01 — Contract reconciliation | DOC-16, DOC-18, QA-07 | Reopen or add children only for operation-level gaps not already covered |
-| PR-02 — Authorization matrix | AUTH-03 through AUTH-07, QA-07 | Preserve completed security evidence; add only missing matrix dimensions |
-| PR-03 — Configuration inventory | OPS-03, OPS-08, AUTH-03, AUTH-07 | Consolidate configuration ownership before adding new keys |
-| PR-04 — CI gate design | FND-03, OPS-04 through OPS-06, OPS-24 | Extend existing CI tasks rather than creating parallel workflows |
-| PR-05 — Domain reconciliation | DOC-15, DOC-15A, DOC-15B, FND-08 | Reopen inaccurate completion claims or register narrowly scoped corrections |
-| PR-06 — API failure compatibility | ERR-01 through ERR-12, BFF-06/BFF-07 | Use existing error and BFF tasks; register only uncovered behavior |
-| PR-07 — Auth operations | AUTH-07, QA-08 | Production provider and rotation evidence belongs in QA-08 unless code scope changes |
-| PR-08 — Negative/replay evidence | QA-07, QA-08, QA-05 | Separate local evidence from production-like evidence |
-| PR-09 — Design/duplication | FND-08, DOC-20, DOC-15B | Extend architecture and quality gates; do not duplicate FND-08 |
-| PR-10 — Production configuration | OPS-01, OPS-03, OPS-08, OPS-20 | Keep deployment-specific evidence under OPS-20/QA-08 |
-| PR-11 — CI supply chain | OPS-04, OPS-05, OPS-11, OPS-12, OPS-15 | Add missing scan/SBOM/signing children only after confirming no existing task owns them |
-| PR-12 — Resilience workflows | OPS-20 through OPS-23, QA-08 | QA-08 is the planned production-like execution task |
-| PR-13 — Financial concurrency | CORE-22, CORE-23, CORE-25, QA-07 | Preserve completed local concurrency evidence; add production-scale gaps |
-| PR-14 — Idempotency/migrations | CORE-24/25, OPS-01, QA-08 | Verify version skew and rollback explicitly |
-| PR-15 — Messaging HA | MSG-01, MSG-02, OPS-20, QA-08 | Existing local broker evidence does not close production HA evidence |
-| PR-16 — Final gate | OPS-20, QA-08 | Do not mark complete until target-environment evidence exists |
+| PR-00: Baseline inventory | QA-07, QA-08 | Use QA-08 for production evidence; inventory is its evidence artifact |
+| PR-01: Contract reconciliation | DOC-16, DOC-18, QA-07 | Reopen or add children only for operation-level gaps not already covered |
+| PR-02: Authorization matrix | AUTH-03 through AUTH-07, QA-07 | Preserve completed security evidence; add only missing matrix dimensions |
+| PR-03: Configuration inventory | OPS-03, OPS-08, AUTH-03, AUTH-07 | Consolidate configuration ownership before adding new keys |
+| PR-04: CI gate design | FND-03, OPS-04 through OPS-06, OPS-24 | Extend existing CI tasks rather than creating parallel workflows |
+| PR-05: Domain reconciliation | DOC-15, DOC-15A, DOC-15B, FND-08 | Reopen inaccurate completion claims or register narrowly scoped corrections |
+| PR-06: API failure compatibility | ERR-01 through ERR-12, BFF-06/BFF-07 | Use existing error and BFF tasks; register only uncovered behavior |
+| PR-07: Auth operations | AUTH-07, QA-08 | Production provider and rotation evidence belongs in QA-08 unless code scope changes |
+| PR-08: Negative/replay evidence | QA-07, QA-08, QA-05 | Separate local evidence from production-like evidence |
+| PR-09: Design/duplication | FND-08, DOC-20, DOC-15B | Extend architecture and quality gates; do not duplicate FND-08 |
+| PR-10: Production configuration | OPS-01, OPS-03, OPS-08, OPS-20 | Keep deployment-specific evidence under OPS-20/QA-08 |
+| PR-11: CI supply chain | OPS-04, OPS-05, OPS-11, OPS-12, OPS-15 | Add missing scan/SBOM/signing children only after confirming no existing task owns them |
+| PR-12: Resilience workflows | OPS-20 through OPS-23, QA-08 | QA-08 is the planned production-like execution task |
+| PR-13: Financial concurrency | CORE-22, CORE-23, CORE-25, QA-07 | Preserve completed local concurrency evidence; add production-scale gaps |
+| PR-14: Idempotency/migrations | CORE-24/25, OPS-01, QA-08 | Verify version skew and rollback explicitly |
+| PR-15: Messaging HA | MSG-01, MSG-02, OPS-20, QA-08 | Existing local broker evidence does not close production HA evidence |
+| PR-16: Final gate | OPS-20, QA-08 | Do not mark complete until target-environment evidence exists |
 
 ---
 
@@ -466,7 +466,7 @@ recorded date.
 
 ## Workstream records
 
-### PR-00 — Baseline inventory and evidence ledger
+### PR-00: Baseline inventory and evidence ledger
 
 | Field | Value |
 |---|---|
@@ -496,7 +496,7 @@ contradicted, incomplete, or unverified.
 
 ---
 
-### PR-01 — Contract and operation reconciliation
+### PR-01: Contract and operation reconciliation
 
 | Field | Value |
 |---|---|
@@ -528,7 +528,7 @@ Ensure every public operation has unambiguous semantics.
 
 ---
 
-### PR-02 — Authorization matrix
+### PR-02: Authorization matrix
 
 | Field | Value |
 |---|---|
@@ -565,7 +565,7 @@ Principle of Least Privilege.
 
 ---
 
-### PR-03 — Configuration and source-of-truth inventory
+### PR-03: Configuration and source-of-truth inventory
 
 | Field | Value |
 |---|---|
@@ -605,7 +605,7 @@ Architecture (adapter selection via DI profiles), Twelve-Factor App (Config).
 
 ---
 
-### PR-04 — CI gate architecture
+### PR-04: CI gate architecture
 
 | Field | Value |
 |---|---|
@@ -634,7 +634,7 @@ as Code.
 
 ---
 
-### PR-05 — Domain and API implementation reconciliation
+### PR-05: Domain and API implementation reconciliation
 
 | Field | Value |
 |---|---|
@@ -671,7 +671,7 @@ Pagination, DRY (single validation source).
 
 ---
 
-### PR-06 — REST/GraphQL failure and compatibility hardening
+### PR-06: REST/GraphQL failure and compatibility hardening
 
 | Field | Value |
 |---|---|
@@ -702,7 +702,7 @@ calls), Tolerant Reader Pattern, Defense in Depth.
 
 ---
 
-### PR-07 — Authentication and authorization operations
+### PR-07: Authentication and authorization operations
 
 | Field | Value |
 |---|---|
@@ -743,7 +743,7 @@ Pattern.
 
 ---
 
-### PR-08 — Negative-path, replay, and dependency evidence
+### PR-08: Negative-path, replay, and dependency evidence
 
 | Field | Value |
 |---|---|
@@ -771,7 +771,7 @@ timeout, retry, replay, conflict, and side-effect dimensions.
 
 ---
 
-### PR-09 — Clean design and duplication enforcement
+### PR-09: Clean design and duplication enforcement
 
 | Field | Value |
 |---|---|
@@ -811,7 +811,7 @@ Hexagonal Architecture boundary enforcement, Log Redaction.
 
 ---
 
-### PR-10 — Production configuration hardening
+### PR-10: Production configuration hardening
 
 | Field | Value |
 |---|---|
@@ -861,7 +861,7 @@ Principle of Least Privilege, Fail-Fast at Startup, Immutable Infrastructure.
 
 ---
 
-### PR-11 — CI supply chain and artifact controls
+### PR-11: CI supply chain and artifact controls
 
 | Field | Value |
 |---|---|
@@ -891,7 +891,7 @@ Shift-Left Security.
 
 ---
 
-### PR-12 — Integration, resilience, and scheduled capacity workflows
+### PR-12: Integration, resilience, and scheduled capacity workflows
 
 | Field | Value |
 |---|---|
@@ -920,7 +920,7 @@ Canary Deployment.
 
 ---
 
-### PR-13 — Financial correctness and concurrency
+### PR-13: Financial correctness and concurrency
 
 | Field | Value |
 |---|---|
@@ -959,7 +959,7 @@ Optimistic/Pessimistic Locking.
 
 ---
 
-### PR-14 — Idempotency and migration compatibility
+### PR-14: Idempotency and migration compatibility
 
 | Field | Value |
 |---|---|
@@ -987,7 +987,7 @@ Blue-Green Deployment compatibility, TTL-Based Cleanup.
 
 ---
 
-### PR-15 — Messaging HA and recovery
+### PR-15: Messaging HA and recovery
 
 | Field | Value |
 |---|---|
@@ -1033,7 +1033,7 @@ Queue, Quorum Queues, Fail-Closed Privacy, Circuit Breaker.
 
 ---
 
-### PR-16 — Final production-like readiness gate
+### PR-16: Final production-like readiness gate
 
 | Field | Value |
 |---|---|

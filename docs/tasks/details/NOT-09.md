@@ -1,4 +1,4 @@
-# NOT-09 — Add mark inbox notification as read endpoint in Notifications service
+# NOT-09: Add mark inbox notification as read endpoint in Notifications service
 
 ## Objective
 

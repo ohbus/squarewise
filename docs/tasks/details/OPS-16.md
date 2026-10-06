@@ -1,4 +1,4 @@
-# OPS-16 — Standardize top-level CI environment and Node 24 runtime enforcement
+# OPS-16: Standardize top-level CI environment and Node 24 runtime enforcement
 
 ## Objective
 

@@ -1,4 +1,4 @@
-# OPS-06 — Reusable CI caching
+# OPS-06: Reusable CI caching
 
 Centralize cache configuration in the reusable workflow. Gradle dependency and
 build outputs must use branch-safe keys with restore fallbacks; Docker jobs use

@@ -1,4 +1,4 @@
-# ERRC-01 — Design six-digit domain error-code migration
+# ERRC-01: Design six-digit domain error-code migration
 
 ## Objective
 

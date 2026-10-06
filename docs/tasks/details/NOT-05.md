@@ -1,4 +1,4 @@
-# NOT-05 — RabbitMQ transport adapter
+# NOT-05: RabbitMQ transport adapter
 
 Map validated broker envelopes into the transactional notification consumer and
 apply explicit acknowledgement, retry, and reject behavior without moving

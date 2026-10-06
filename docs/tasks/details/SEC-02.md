@@ -1,4 +1,4 @@
-# SEC-02 — Security audit remediation and hardening closure
+# SEC-02: Security audit remediation and hardening closure
 
 ## Status, objective, and evidence boundary
 

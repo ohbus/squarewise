@@ -1,4 +1,4 @@
-# ACC-03 — Expose GDPR export request REST endpoints in Accounts service
+# ACC-03: Expose GDPR export request REST endpoints in Accounts service
 
 Implement REST endpoints for GDPR account data export requests in `app/accounts`.
 

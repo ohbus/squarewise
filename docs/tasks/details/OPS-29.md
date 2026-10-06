@@ -1,4 +1,4 @@
-# OPS-29 — Implement zero-friction startup automation and background data seeding
+# OPS-29: Implement zero-friction startup automation and background data seeding
 
 ## Status
 `completed`
@@ -16,7 +16,7 @@ docs/tasks/details/OPS-29.md
 ```
 
 ## Dependencies
-- `OPS-28` — Devcontainer workspace scaffolding and Compose integration.
+- `OPS-28`: Devcontainer workspace scaffolding and Compose integration.
 
 ## Architecture and design decisions
 

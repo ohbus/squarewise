@@ -1,4 +1,4 @@
-# ERRC-01B — Audit error contracts and compatibility surface
+# ERRC-01B: Audit error contracts and compatibility surface
 
 Read the current error catalog and schema, all REST OpenAPI documents, GraphQL
 schema and mapping documentation, event contracts, API status, error operations

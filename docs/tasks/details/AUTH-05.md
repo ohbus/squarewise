@@ -1,4 +1,4 @@
-# AUTH-05 — Remove weaker local authentication modes
+# AUTH-05: Remove weaker local authentication modes
 
 ## Objective
 

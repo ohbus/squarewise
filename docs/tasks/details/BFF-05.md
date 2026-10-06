@@ -1,4 +1,4 @@
-# BFF-05 — Implement groupChanged GraphQL subscription with reactive live update sink
+# BFF-05: Implement groupChanged GraphQL subscription with reactive live update sink
 
 ## Objective
 

@@ -1,4 +1,4 @@
-# ACC-04 — Expose public profile lookup endpoint by account ID in Accounts service
+# ACC-04: Expose public profile lookup endpoint by account ID in Accounts service
 
 ## Objective
 

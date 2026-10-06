@@ -1,4 +1,4 @@
-# CORE-14 — Durable expense update, deletion, and posting reversal
+# CORE-14: Durable expense update, deletion, and posting reversal
 
 Implement persistent JPA entities, repositories, and REST endpoints for expense update (`PUT`)
 and deletion (`DELETE`) with double-entry balance posting reversals in `app/expense-core`.

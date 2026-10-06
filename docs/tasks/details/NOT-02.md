@@ -1,4 +1,4 @@
-# NOT-02 — Durable Notifications persistence
+# NOT-02: Durable Notifications persistence
 
 Move notification state behind a service-local JPA adapter and Flyway migration
 without changing existing REST behavior or introducing cross-service storage.

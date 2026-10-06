@@ -1,4 +1,4 @@
-# NOT-08 — Complete Notifications preferences contract schema and persistence validation
+# NOT-08: Complete Notifications preferences contract schema and persistence validation
 
 ## Objective
 

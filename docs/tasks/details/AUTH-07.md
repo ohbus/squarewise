@@ -1,4 +1,4 @@
-# AUTH-07 — Squarewise-owned passwordless authentication contract
+# AUTH-07: Squarewise-owned passwordless authentication contract
 
 ## Objective
 

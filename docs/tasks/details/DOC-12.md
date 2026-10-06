@@ -1,4 +1,4 @@
-# DOC-12 — Project-wide Kotlin lint and coding guidelines
+# DOC-12: Project-wide Kotlin lint and coding guidelines
 
 Establish a Kotlin quality baseline with a toolchain compatible with the
 repository's Kotlin 2.4.20 and expose it through Gradle and Makefile commands.

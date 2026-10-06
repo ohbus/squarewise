@@ -1,4 +1,4 @@
-# DOC-22 — Programming principles and current-state documentation reconciliation
+# DOC-22: Programming principles and current-state documentation reconciliation
 
 ## Objective
 

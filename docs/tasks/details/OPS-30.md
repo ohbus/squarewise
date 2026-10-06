@@ -1,4 +1,4 @@
-# OPS-30 — Validate devcontainer workflows across IDEs and document clone-and-run experience
+# OPS-30: Validate devcontainer workflows across IDEs and document clone-and-run experience
 
 ## Status
 `completed`
@@ -18,8 +18,8 @@ docs/tasks/details/OPS-30.md
 ```
 
 ## Dependencies
-- `OPS-28` — Devcontainer workspace scaffolding.
-- `OPS-29` — Post-start automation and seeding.
+- `OPS-28`: Devcontainer workspace scaffolding.
+- `OPS-29`: Post-start automation and seeding.
 
 ## Architecture and design decisions
 

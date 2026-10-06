@@ -1,4 +1,4 @@
-# OPS-23 — Fixture-backed mutation capacity scenarios
+# OPS-23: Fixture-backed mutation capacity scenarios
 
 Add safe k6 write scenarios for Expense Core expense creation/update and
 settlement operations. The harness must create isolated fixture groups, use

@@ -1,4 +1,4 @@
-# AUTH-01 — Provider-neutral authentication hardening baseline
+# AUTH-01: Provider-neutral authentication hardening baseline
 
 ## Objective
 

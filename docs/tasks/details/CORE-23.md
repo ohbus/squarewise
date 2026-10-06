@@ -1,4 +1,4 @@
-# CORE-23 — Verify group-rename atomic rollback and effect payloads
+# CORE-23: Verify group-rename atomic rollback and effect payloads
 
 ## Objective
 

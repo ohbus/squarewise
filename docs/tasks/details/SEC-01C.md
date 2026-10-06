@@ -1,4 +1,4 @@
-# SEC-01C — Enforce object authorization and workload trust
+# SEC-01C: Enforce object authorization and workload trust
 
 ## Status
 

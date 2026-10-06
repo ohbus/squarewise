@@ -1,4 +1,4 @@
-# OPS-27 — Register devcontainer version baseline and security hygiene rules
+# OPS-27: Register devcontainer version baseline and security hygiene rules
 
 ## Status
 `completed`
@@ -25,8 +25,8 @@ docs/tasks/progress.md
 ```
 
 ## Dependencies
-- `OPS-25` (done) — Standardized Python package management and tooling.
-- `OPS-26` (done) — Non-Docker local seeder execution.
+- `OPS-25` (done): Standardized Python package management and tooling.
+- `OPS-26` (done): Non-Docker local seeder execution.
 
 ## Design decisions
 

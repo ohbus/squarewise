@@ -1,4 +1,4 @@
-# BFF-07 — Complete bounded GraphQL group-member resolution
+# BFF-07: Complete bounded GraphQL group-member resolution
 
 Resolve members consistently for single and list group queries without masking
 authorization/upstream errors. Add bounded batching/fanout, gateway HTTP tests,

@@ -31,7 +31,7 @@ class ClientAddressResolverTest {
     private val noTrustResolver = ClientAddressResolver()
 
     // ---------------------------------------------------------------------------
-    // Direct connections — no trusted proxies configured
+    // Direct connections: no trusted proxies configured
     // ---------------------------------------------------------------------------
 
     @Test
@@ -45,7 +45,7 @@ class ClientAddressResolverTest {
     }
 
     // ---------------------------------------------------------------------------
-    // Trusted proxy — forwarded header resolution
+    // Trusted proxy: forwarded header resolution
     // ---------------------------------------------------------------------------
 
     @Test

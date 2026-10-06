@@ -11,7 +11,7 @@ The namespace names a stable capability, never a deployable, team, database,
 region, environment, transport, or current package. A capability may move between
 applications and libraries without changing its prefix.
 
-## Domain 1 — Accounts
+## Domain 1: Accounts
 
 Identity, profiles, preferences, authentication, and lifecycle.
 
@@ -23,7 +23,7 @@ Identity, profiles, preferences, authentication, and lifecycle.
 | **14** | Lifecycle | Deletion requests, export requests, GDPR | Accounts error catalog |
 | **15** | Identity | Account identity mapping by issuer and subject | Accounts error catalog |
 
-## Domain 2 — Expense Core
+## Domain 2: Expense Core
 
 Groups, membership, expenses, allocation, ledger, settlements, recurrence,
 synchronization, and outbox.
@@ -39,7 +39,7 @@ synchronization, and outbox.
 | **27** | Search | Filtering, export, CSV | Expense Core error catalog |
 | **28** | Outbox | Transactional outbox relay and event publication | Expense Core error catalog |
 
-## Domain 3 — Notifications
+## Domain 3: Notifications
 
 Notification inbox, delivery, preferences, and email dispatch.
 
@@ -50,7 +50,7 @@ Notification inbox, delivery, preferences, and email dispatch.
 | **33** | Preferences | Channel opt-in and delivery settings | Notifications error catalog |
 | **34** | Email | SMTP dispatch and template rendering | Notifications error catalog |
 
-## Domain 4 — BFF
+## Domain 4: BFF
 
 Client-facing GraphQL gateway, upstream REST transport, and live update fanout.
 
@@ -60,11 +60,11 @@ Client-facing GraphQL gateway, upstream REST transport, and live update fanout.
 | **42** | Transport | Upstream REST client and error preservation | BFF error catalog |
 | **43** | Live update | WebSocket fanout and subscriptions | BFF error catalog |
 
-## Domains 5–8 — Reserved
+## Domains 5–8: Reserved
 
 Available for future bounded contexts. Not yet allocated.
 
-## Domain 9 — Platform
+## Domain 9: Platform
 
 Cross-cutting infrastructure shared by all applications via `libs/`.
 

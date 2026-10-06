@@ -1,4 +1,4 @@
-# SEC-01E — Formalize rate-limit and bearer-revocation guarantees
+# SEC-01E: Formalize rate-limit and bearer-revocation guarantees
 
 ## Status
 
@@ -11,7 +11,7 @@ revocation residual window).
 
 ## Implementation Notes
 
-### SEC-007 — Abuse Control Client Address Resolution
+### SEC-007: Abuse Control Client Address Resolution
 
 **Problem**: `AuthController.deriveNetworkPartition()` used a raw `remoteAddr.split(".").take(2)` 
 truncation which:
@@ -28,14 +28,14 @@ truncation which:
   - If `trustedProxies` is empty (default), always uses raw socket `remoteAddr`.
   - If `remoteAddr` is in the trusted set, reads `X-Forwarded-For` (leftmost non-proxy IP)
     or `X-Real-IP` as the true client address.
-  - If `remoteAddr` is NOT in the trusted set, ignores forwarded headers entirely —
+  - If `remoteAddr` is NOT in the trusted set, ignores forwarded headers entirely,
     preventing header spoofing from untrusted downstreams.
   - Normalizes IPv4 to `/24` (three-octet prefix) and IPv6 to `/48` (three 16-bit groups).
   - Falls back to `"unknown"` for unresolvable addresses.
 - `AuthController` now takes `ClientAddressResolver` as a constructor argument, removing
   the inline heuristic. The Spring bean is wired in `AuthenticationCredentialConfiguration`.
 
-### SEC-008 — Access-Token Revocation Semantics
+### SEC-008: Access-Token Revocation Semantics
 
 **Current guarantees** (already implemented, formalized here):
 - Access token lifetime: `SessionPolicyProperties.accessTokenLifetime = Duration.ofMinutes(10)`
@@ -44,7 +44,7 @@ truncation which:
   `TokenSessionService.revokeSessionByRefreshToken()`. Any subsequent refresh attempt against
   a revoked family returns `UNAUTHENTICATED (ERR_03)`.
 - The access token residual window is bounded at 10 minutes. After revocation, any existing
-  access token remains valid until its `exp` claim — this is the documented residual risk.
+  access token remains valid until its `exp` claim: this is the documented residual risk.
   Reducing this window further requires shortening `accessTokenLifetime` (deployment choice).
 
 **No runtime code changes required for SEC-008** beyond the SEC-007 cleanup; the
@@ -85,7 +85,7 @@ revocation model is correctly implemented and the residual window is explicitly 
 
 ## Known Limitations
 
-- CIDR range matching in `TrustedProxyProperties` is not yet implemented — addresses must
+- CIDR range matching in `TrustedProxyProperties` is not yet implemented: addresses must
   be specified as exact IPs. Subnet-based matching (e.g., `10.0.0.0/8`) can be added in a
   follow-up if needed.
 - The 10-minute access token residual window is a deployment trade-off. Reducing it

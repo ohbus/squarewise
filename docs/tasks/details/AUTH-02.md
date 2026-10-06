@@ -1,4 +1,4 @@
-# AUTH-02 — Remove implicit authentication identities
+# AUTH-02: Remove implicit authentication identities
 
 ## Objective
 
@@ -90,9 +90,9 @@ Implemented in the current increment.
 
 ## Verification evidence
 
-- `./gradlew.bat :app:expense-core:test --tests '*ExpenseControllerTest' --rerun-tasks --no-daemon` — passed; 14 tests completed.
-- `git diff --check` — required before commit.
-- Contract/public-surface validation — required before commit.
+- `./gradlew.bat :app:expense-core:test --tests '*ExpenseControllerTest' --rerun-tasks --no-daemon`: passed; 14 tests completed.
+- `git diff --check`: required before commit.
+- Contract/public-surface validation: required before commit.
 
 The live REST-edge and Bruno commands require the local Docker stack; their
 results must be recorded separately and must not be inferred from the focused

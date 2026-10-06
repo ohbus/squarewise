@@ -1,4 +1,4 @@
-# CORE-21 — Complete authorized persistent search and CSV transport
+# CORE-21: Complete authorized persistent search and CSV transport
 
 Expose the implemented search/export domain through authenticated group-scoped
 REST endpoints backed by durable data, bounded pagination/export, and CSV formula

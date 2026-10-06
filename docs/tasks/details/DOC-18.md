@@ -1,4 +1,4 @@
-# DOC-18 — Reconcile current API operation and error contracts
+# DOC-18: Reconcile current API operation and error contracts
 
 ## Objective
 

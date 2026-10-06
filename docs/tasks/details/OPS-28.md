@@ -1,4 +1,4 @@
-# OPS-28 — Create devcontainer scaffolding and multi-service compose integration
+# OPS-28: Create devcontainer scaffolding and multi-service compose integration
 
 ## Status
 `completed`
@@ -18,8 +18,8 @@ docs/tasks/details/OPS-28.md
 ```
 
 ## Dependencies
-- `OPS-26` (done) — Decoupled database seeder and persistent postgres volume.
-- `OPS-27` (done) — Registered Devcontainer toolchain baseline and version pins.
+- `OPS-26` (done): Decoupled database seeder and persistent postgres volume.
+- `OPS-27` (done): Registered Devcontainer toolchain baseline and version pins.
 
 ## Architecture and design decisions
 

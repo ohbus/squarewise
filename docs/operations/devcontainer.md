@@ -94,15 +94,15 @@ All external ports are mapped to the collision-free `28xxx` family:
 On container startup, `tools/ops/seed_dev_data.py` executes automatically if the database is unseeded, populating:
 
 - **Personas**:
-  - **Alice** (`alice@squarewise.local`) — Group administrator (Keycloak client: `squarewise-ci`)
-  - **Bob** (`bob@squarewise.local`) — Active member (Keycloak client: `squarewise-ci-e2e-bob`)
-  - **Charlie** (`charlie@squarewise.local`) — Non-member / invitee (Keycloak client: `squarewise-ci-e2e-nonmember`)
+  - **Alice** (`alice@squarewise.local`): Group administrator (Keycloak client: `squarewise-ci`)
+  - **Bob** (`bob@squarewise.local`): Active member (Keycloak client: `squarewise-ci-e2e-bob`)
+  - **Charlie** (`charlie@squarewise.local`): Non-member / invitee (Keycloak client: `squarewise-ci-e2e-nonmember`)
   - **Dave** (`dave@squarewise.local`) & **Eve** (`eve@squarewise.local`)
 - **Realistic Groups**:
-  - *Apartment 4B* (EUR) — Recurring utilities & rent
-  - *Dolomites Ski Trip* (EUR) — Multi-user travel expenses
-  - *California Roadtrip* (USD) — Multi-currency expense allocations
-  - *Weekend Gaming* (GBP) — Minor exact splits and settlements
+  - *Apartment 4B* (EUR): Recurring utilities & rent
+  - *Dolomites Ski Trip* (EUR): Multi-user travel expenses
+  - *California Roadtrip* (USD): Multi-currency expense allocations
+  - *Weekend Gaming* (GBP): Minor exact splits and settlements
 - **Outbox & Sync Logs**: Transactional outbox records and sync changelog ready for GraphQL subscription replay.
 
 To re-seed or reset data at any time, run:

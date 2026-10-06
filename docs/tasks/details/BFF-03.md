@@ -1,4 +1,4 @@
-# BFF-03 — GraphQL BFF query and mutation resolvers
+# BFF-03: GraphQL BFF query and mutation resolvers
 
 Implement GraphQL resolvers in `app/bff` connecting GraphQL queries and mutations to the Accounts and Expense Core REST endpoints via reactive WebClient gateways.
 

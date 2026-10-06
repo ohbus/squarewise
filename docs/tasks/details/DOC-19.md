@@ -1,4 +1,4 @@
-# DOC-19 — Backfill legacy tracker ownership and evidence
+# DOC-19: Backfill legacy tracker ownership and evidence
 
 Backfill historical owners, validation, evidence, and individual task details
 where Git history supports them; record unavailable facts as limitations. Attribute

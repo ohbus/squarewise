@@ -1,4 +1,4 @@
-# ERR-05 — Groups and membership error migration
+# ERR-05: Groups and membership error migration
 
 Migrate group creation, lookup, rename, archive, invitation, placeholder, and
 membership authorization failures. Distinguish missing resource, conflict,

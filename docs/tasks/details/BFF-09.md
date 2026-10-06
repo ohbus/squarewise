@@ -1,4 +1,4 @@
-# BFF-09 — Verify GraphQL transport error mapping for group operations
+# BFF-09: Verify GraphQL transport error mapping for group operations
 
 Exercise GraphQL queries and mutations through the transport layer, not only
 controller unit calls. Verify upstream authorization, validation, timeout, and

@@ -1,4 +1,4 @@
-# DOC-15A — Audit architecture contracts and documentation drift
+# DOC-15A: Audit architecture contracts and documentation drift
 
 Child review task under `DOC-15` focusing on architecture, contract, and documentation consistency.
 

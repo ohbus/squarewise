@@ -1,4 +1,4 @@
-# OPS-09 — Local Compose topology and developer command guide
+# OPS-09: Local Compose topology and developer command guide
 
 ## Objective
 

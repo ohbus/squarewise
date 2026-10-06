@@ -114,7 +114,7 @@ options: `contract` (schema/path validity), `controller` (in-process transport),
 dependencies), and `e2e` (cross-service public journey). The strongest executed
 option is the claimed level; a green unit test must not be reported as live or
 production evidence. CI runs contract validation, formatting, all Gradle checks,
-acceptance tests, and—when the E2E input is enabled—the complete local-stack
+acceptance tests, and, when the E2E input is enabled, the complete local-stack
 integration suites.
 
 The prior local `make e2e-all` execution passed all four suites. This confirms

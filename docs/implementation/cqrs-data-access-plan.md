@@ -243,7 +243,7 @@ downstream budgets so fanout cannot exhaust writer or reader pools.
 
 ## Implementation phases and deliverables
 
-### Phase 0 — inventory and contract gate
+### Phase 0: inventory and contract gate
 
 Create a machine-readable operation catalog covering every repository/store
 method, SQL query, transaction boundary, lock/claim behavior, expected
@@ -252,7 +252,7 @@ that prohibit direct datasource access outside `libs/db` infrastructure and
 prohibit replica routing from command packages. Update API/architecture docs
 for any changed freshness semantics.
 
-### Phase 1 — shared kernel on one database
+### Phase 1: shared kernel on one database
 
 Implement `libs/db` configuration, route context, policy registry, pool
 metrics, transaction guard, health model, and test fixtures while pointing
@@ -260,7 +260,7 @@ both logical routes at the same local writer. Migrate one read-only query slice
 behind a query port. Prove zero command regressions and verify route labels in
 tests. This phase must be useful without replicas.
 
-### Phase 2 — explicit query slices
+### Phase 2: explicit query slices
 
 Split stores into command handlers and query handlers feature by feature.
 Remove repository exposure from application services, replace entity-returning
@@ -269,7 +269,7 @@ Use keyset pagination for deep/high-volume feeds and retain offset pagination
 only where the contract requires it. Add focused repository/adapter tests and
 contract tests for stale/strong behavior.
 
-### Phase 3 — replica pilot
+### Phase 3: replica pilot
 
 Deploy one PostgreSQL streaming replica for one non-financial historical query.
 Add replay-lag health, causal watermark checks, circuit breaking, writer
@@ -277,7 +277,7 @@ fallback only where declared, and pool-budget dashboards. Test replica pause,
 lag, disconnect, promotion simulation, and writer saturation. Keep the feature
 flag off by default until SLO and correctness evidence passes.
 
-### Phase 4 — measured expansion
+### Phase 4: measured expansion
 
 Promote additional query capabilities individually. Introduce read projections
 only when normalized query evidence shows replicas and indexing are
@@ -285,7 +285,7 @@ insufficient; define projection rebuild, lag, versioning, backfill, and
 authorization rules first. Do not create a CQRS event store merely to scale
 ordinary reads.
 
-### Phase 5 — operational hardening
+### Phase 5: operational hardening
 
 Add capacity tests, connection-budget validation, failover/runbook evidence,
 backup/restore and migration compatibility checks, alert routing, and a

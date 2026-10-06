@@ -182,7 +182,7 @@ Squarewise enforces a contract-first design. All schema definitions reside under
   - Accounts OpenAPI: [`contracts/rest/accounts.openapi.json`](contracts/rest/accounts.openapi.json)
   - Expense Core OpenAPI: [`contracts/rest/expense-core.openapi.json`](contracts/rest/expense-core.openapi.json)
   - Notifications OpenAPI: [`contracts/rest/notifications.openapi.json`](contracts/rest/notifications.openapi.json)
-- **GraphQL Schema**: [`contracts/graphql/`](contracts/graphql/) — split SDL files for scalars, roots, domain types, and inputs
+- **GraphQL Schema**: [`contracts/graphql/`](contracts/graphql/): split SDL files for scalars, roots, domain types, and inputs
 - **Event Mesh Envelopes**: [`contracts/events/envelope.schema.json`](contracts/events/envelope.schema.json)
 - **RFC 9457 Problem Details**: [`contracts/errors/problem.schema.json`](contracts/errors/problem.schema.json)
 - **Central Constants**: All endpoints and headers are centralized in `com.subhrodip.squarewise.ids.ApiEndpoints`.

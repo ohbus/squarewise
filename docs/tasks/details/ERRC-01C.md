@@ -1,4 +1,4 @@
-# ERRC-01C — Review exception architecture, performance, and operations policy
+# ERRC-01C: Review exception architecture, performance, and operations policy
 
 Review the proposed value-object/catalog/typed-exception design against the
 repository architecture, JVM/Spring/GraphQL/reactive/messaging behavior,

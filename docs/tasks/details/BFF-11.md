@@ -1,4 +1,4 @@
-# BFF-11 — Expose and verify the GraphQL HTTP transport route
+# BFF-11: Expose and verify the GraphQL HTTP transport route
 
 Make the BFF GraphQL HTTP endpoint available at the documented route in the
 actual WebFlux application context. Verify schema loading, HTTP POST queries,

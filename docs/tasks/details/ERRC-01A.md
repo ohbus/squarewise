@@ -1,4 +1,4 @@
-# ERRC-01A — Audit Kotlin error throw, catch, and boundary behavior
+# ERRC-01A: Audit Kotlin error throw, catch, and boundary behavior
 
 Read every relevant production Kotlin error declaration, throw site, catch
 block, REST advice, GraphQL resolver, message listener, scheduler, configuration
@@ -24,7 +24,7 @@ complete migration family list with file references.
   loss, English-message matching for subscription behavior, scheduled-boundary gaps,
   and concrete semantic mapping inconsistencies.
 - Delivered the bounded-context/platform family inventory and recommendation for one
-  minimal governed base plus useful leaf types or typed outcomes—not a class per code.
+  minimal governed base plus useful leaf types or typed outcomes, not a class per code.
 
 This was a read-only audit. The coordinator incorporated the findings into commit
 `33e5cea`; no production file was changed by this child task.

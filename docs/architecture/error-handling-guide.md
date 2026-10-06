@@ -3,7 +3,7 @@
 Status: accepted documentation baseline under `ERRC-01`; not implemented.
 
 This guide defines how Squarewise will represent, throw, translate, catch, expose,
-and observe failures. The objective is complete, predictable boundary handling—not
+and observe failures. The objective is complete, predictable boundary handling, not
 an attempt to recover from JVM corruption or to turn every failure into a unique
 class.
 
@@ -46,7 +46,7 @@ interface ErrorDefinition {
 }
 ```
 
-The catalog—not exception text—controls all public fields. `ErrorCode` construction,
+The catalog, not exception text, controls all public fields. `ErrorCode` construction,
 catalog loading, and formatting do not occur for every failure. Implementations use
 static generated definitions or explicit compiled manifests.
 
@@ -165,7 +165,7 @@ Security filter-chain failures use an authentication entry point and access-deni
 handler because controller advice does not reliably own pre-controller failures.
 
 Validation violations are sorted deterministically, deduplicated, capped in count,
-and length-bounded. They include field paths and catalog messages only—never rejected
+and length-bounded. They include field paths and catalog messages only, never rejected
 values or annotation/framework text without review. Oversized bodies, unsupported
 media types/methods, negotiation failures, response serialization, async timeouts,
 and disconnected clients have explicit policies.

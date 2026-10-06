@@ -1,4 +1,4 @@
-# AUTH-04 — Validate Keycloak OIDC JWT claims and signatures
+# AUTH-04: Validate Keycloak OIDC JWT claims and signatures
 
 ## Objective
 

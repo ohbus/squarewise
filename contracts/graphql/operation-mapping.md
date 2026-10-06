@@ -2,10 +2,10 @@
 
 The schema is split into focused SDL files under this directory:
 
-- `00-scalars.graphqls` — shared scalar declarations.
-- `10-roots.graphqls` — public `Query`, `Mutation`, and `Subscription` entry points.
-- `20-domain-types.graphqls` — returned objects and `GroupKind`.
-- `30-inputs.graphqls` — mutation and query input objects.
+- `00-scalars.graphqls`: shared scalar declarations.
+- `10-roots.graphqls`: public `Query`, `Mutation`, and `Subscription` entry points.
+- `20-domain-types.graphqls`: returned objects and `GroupKind`.
+- `30-inputs.graphqls`: mutation and query input objects.
 
 Spring GraphQL loads all `*.graphqls` files from `classpath:graphql/`. The BFF
 build copies this contract directory into that classpath location. The files

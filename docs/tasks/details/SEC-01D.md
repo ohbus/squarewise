@@ -1,4 +1,4 @@
-# SEC-01D — Close browser mutation and subscription time-of-check gaps
+# SEC-01D: Close browser mutation and subscription time-of-check gaps
 
 ## Status
 
@@ -11,7 +11,7 @@ mutation CSRF protection).
 
 ## Implementation Notes
 
-### SEC-006 — Browser Mutation CSRF Protection
+### SEC-006: Browser Mutation CSRF Protection
 
 **`BrowserCsrfWebFilter`** was extended to cover cookie-authenticated GraphQL mutations:
 
@@ -20,14 +20,14 @@ mutation CSRF protection).
   **and** no explicit `Authorization` header is set triggers the double-submit CSRF check
   (`X-CSRF-Token` must match `SW_CSRF` cookie).
 - Pure bearer-authenticated requests (explicit `Authorization: Bearer ...` header)
-  bypass CSRF cleanly — native/CLI clients are unaffected.
+  bypass CSRF cleanly: native/CLI clients are unaffected.
 - Non-POST requests (GraphQL queries via GET) are unaffected.
 - **Critical ordering note**: the CSRF filter runs at `HIGHEST_PRECEDENCE+1`, _before_
   `BrowserAccessCookieWebFilter` (`HIGHEST_PRECEDENCE+2`), so the `Authorization` header
   is not yet injected from the cookie at CSRF check time. `isCookieAuthenticated()` checks
   the raw access cookie directly, not the `Authorization` header.
 
-### SEC-003 — WebSocket Continuous Authorization
+### SEC-003: WebSocket Continuous Authorization
 
 **`LiveUpdateFanout`** now maintains per-subscription revocation signals:
 

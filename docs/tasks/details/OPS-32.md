@@ -1,4 +1,4 @@
-# OPS-32 — Changed-scope PR and branch CI with full master verification
+# OPS-32: Changed-scope PR and branch CI with full master verification
 
 ## Status
 

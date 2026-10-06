@@ -1,4 +1,4 @@
-# OPS-17 — Production error taxonomy and source attribution
+# OPS-17: Production error taxonomy and source attribution
 
 Define and implement a stable, client-safe error vocabulary. Every REST problem
 must identify the originating service and preserve the request correlation ID;

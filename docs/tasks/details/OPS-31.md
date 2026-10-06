@@ -1,4 +1,4 @@
-# OPS-31 — Centralize runtime and toolchain versions and unify Docker anti-drift build patterns
+# OPS-31: Centralize runtime and toolchain versions and unify Docker anti-drift build patterns
 
 ## Status
 `completed`
@@ -26,10 +26,10 @@ docs/implementation/technology-decisions.md
 ```
 
 ## Dependencies
-- `OPS-27` (done) — Devcontainer version baseline.
-- `OPS-28` (done) — Devcontainer scaffolding.
-- `OPS-29` (done) — Devcontainer automation and port forwarding.
-- `OPS-30` (done) — Devcontainer documentation.
+- `OPS-27` (done): Devcontainer version baseline.
+- `OPS-28` (done): Devcontainer scaffolding.
+- `OPS-29` (done): Devcontainer automation and port forwarding.
+- `OPS-30` (done): Devcontainer documentation.
 
 ## Architecture and design decisions
 

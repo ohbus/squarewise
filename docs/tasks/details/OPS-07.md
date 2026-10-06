@@ -1,4 +1,4 @@
-# OPS-07 — CI dependency service containers
+# OPS-07: CI dependency service containers
 
 Run isolated PostgreSQL and RabbitMQ containers for each verification and E2E
 job. GitHub performs health checks before steps start; credentials and

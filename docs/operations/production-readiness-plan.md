@@ -1,8 +1,8 @@
-# Production Readiness Plan — Pre-Launch Gate Checklist
+# Production Readiness Plan: Pre-Launch Gate Checklist
 
 > **Last updated**: 2026-09-20
 > **Target**: 1–10 million DAU backend deployment
-> **Status**: Release gate — must be completed against the release candidate
+> **Status**: Release gate: must be completed against the release candidate
 
 ## How to read this document
 
@@ -96,11 +96,11 @@ git rev-parse HEAD
 
 > [!NOTE]
 > This section verifies that the codebase follows enterprise engineering
-> standards. These are not style preferences — they prevent entire categories
+> standards. These are not style preferences: they prevent entire categories
 > of bugs at scale. Reference: [programming-principles.md](../quality/programming-principles.md),
 > [coding-guidelines.md](../quality/coding-guidelines.md).
 >
-> **Design principle**: **SOLID** — Single Responsibility, Open/Closed,
+> **Design principle**: **SOLID**: Single Responsibility, Open/Closed,
 > Liskov Substitution, Interface Segregation, Dependency Inversion.
 
 ### Checklist
