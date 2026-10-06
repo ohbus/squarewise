@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import socket
 import subprocess
+import time
 from typing import Final
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
@@ -94,6 +95,27 @@ def expect_replica_admission(label: str, statuses: list[int], limit: int) -> Non
     print(f"  {label}: {limit} alternating admissions, then HTTP 429")
 
 
+def wait_for_redis() -> None:
+    """Wait until the shared Redis container accepts authenticated commands."""
+    for _ in range(20):
+        try:
+            if compose(
+                "exec", "-T", "redis", "redis-cli", "-a", REDIS_PASSWORD,
+                "--no-auth-warning", "PING"
+            ) == "PONG":
+                return
+        except subprocess.CalledProcessError:
+            time.sleep(0.5)
+    raise AssertionError("Redis did not recover for the BFF replica probe")
+
+
+def expect_statuses(label: str, statuses: list[int], expected: int) -> None:
+    """Require every replica response in a failure/recovery matrix to match."""
+    if statuses != [expected] * len(statuses):
+        raise AssertionError(f"{label} expected {expected} from every replica, got {statuses}")
+    print(f"  {label}: all replicas returned HTTP {expected}")
+
+
 def main() -> int:
     """Verify HTTP and WebSocket admission across two BFF processes."""
     clear_rate_limit_namespace()
@@ -102,6 +124,27 @@ def main() -> int:
     clear_rate_limit_namespace()
     websocket_statuses = [websocket_handshake_status(*WEBSOCKET_REPLICAS[index % 2]) for index in range(GRAPHQL_WEBSOCKET_LIMIT + 1)]
     expect_replica_admission("GraphQL WebSocket replicas", websocket_statuses, GRAPHQL_WEBSOCKET_LIMIT)
+    try:
+        compose("stop", "redis")
+        expect_statuses(
+            "GraphQL HTTP replicas during Redis outage",
+            [graphql_http_status(url) for url in HTTP_REPLICAS],
+            429,
+        )
+        expect_statuses(
+            "GraphQL WebSocket replicas during Redis outage",
+            [websocket_handshake_status(*endpoint) for endpoint in WEBSOCKET_REPLICAS],
+            429,
+        )
+    finally:
+        compose("start", "redis")
+        wait_for_redis()
+    clear_rate_limit_namespace()
+    expect_statuses(
+        "GraphQL HTTP replicas after Redis recovery",
+        [graphql_http_status(url) for url in HTTP_REPLICAS],
+        200,
+    )
     return 0
 
 

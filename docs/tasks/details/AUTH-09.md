@@ -519,8 +519,10 @@ remain open.
 A disposable BFF replica overlay and typed probe now alternate GraphQL HTTP and
 WebSocket admission across two BFF containers sharing Redis. Local runs pass
 the configured cap plus one as HTTP 429 for both policies. This is cross-process
-local evidence only; revoked-token reconnect, production topology, and capacity
-evidence remain open.
+local evidence only. The probe now also stops Redis while both BFF processes
+remain running, requires HTTP and WebSocket admission to return 429 on each
+replica, and verifies HTTP recovery after Redis restart. Revoked-token reconnect,
+production topology, and capacity evidence remain open.
 
 The authenticated subscription E2E keeps a valid Bob subscription open, removes
 Bob from the group through the public Expense Core endpoint, requires the

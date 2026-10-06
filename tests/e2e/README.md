@@ -73,6 +73,9 @@ The end-to-end test suites run against the live local environment (`infra/local/
      containers sharing one Redis instance and verifies the shared cap plus one
      response is HTTP 429.
    - Repeats the same check for WebSocket handshakes across both containers.
+   - Stops the shared Redis instance while both replicas remain running and
+     requires HTTP and WebSocket admission to fail closed with 429 on each;
+     after restart, HTTP admission recovers on both replicas.
    - This proves local cross-process admission only; revoked-token reconnect,
      production topology, and capacity evidence remain separate.
 
