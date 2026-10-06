@@ -53,6 +53,8 @@ The end-to-end test suites run against the live local environment (`infra/local/
    - Redis outage fails closed with HTTP 429 for both refresh and passwordless
      login-start, and restart recovers with no PostgreSQL or process-local
      fallback.
+   - When `BEARER_TOKEN` is supplied, the probe also verifies bounded
+     `store_error` counters increase for both policies during the outage.
 
 6. **GraphQL Rate-Limit Surfaces (`test_auth_rate_limit_surfaces.py`)**:
    - Exercises the public `/graphql` HTTP boundary through the configured

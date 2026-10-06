@@ -24,6 +24,8 @@ REDIS_PASSWORD: Final[str] = os.environ.get(
 ACCOUNTS_URL: Final[str] = os.environ.get(
     "ACCOUNTS_URL", os.environ.get("SQUAREWISE_ACCOUNTS_URL", "http://localhost:28081")
 )
+BEARER_TOKEN: Final[str] = os.environ.get("BEARER_TOKEN", "")
+PROMETHEUS_PATH: Final[str] = "/actuator/prometheus"
 REFRESH_PATH: Final[str] = "/accounts/v1/auth/token/refresh"
 LOGIN_START_PATH: Final[str] = "/accounts/v1/auth/login/start"
 PROBE_TOKEN: Final[str] = "auth-cache-resilience-invalid-refresh"

@@ -477,6 +477,11 @@ repeats login-start after Redis recovery and observes HTTP 202. Refresh and
 login therefore have direct local outage/recovery evidence; hosted alerting and
 production failover evidence remain open.
 
+With `BEARER_TOKEN` supplied, the same probe reads Accounts Prometheus output
+and requires the bounded `store_error` counters for `auth-refresh` and
+`auth-login` to increase during the outage. Tokenless ad-hoc runs report the
+metric assertion as skipped; they do not claim observability evidence.
+
 An isolated k6 admission probe was added and executed at 35 iterations per
 second for 10 seconds with 351 completed requests, zero HTTP failures, and
 approximately 12.08 ms p95 latency. The local BFF HTTP limit was temporarily
