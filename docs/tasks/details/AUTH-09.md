@@ -528,6 +528,15 @@ active stream to complete, and reconnects with the same bearer token to verify
 the subscription is rejected. The local live run passed; hosted reconnect and
 production fanout evidence remain open.
 
+The login verification path now performs a distinct shared Redis admission
+decision before credential redemption. Its key is HMAC-derived from the submitted
+credential and trusted network partition, its bounded policy is configurable via
+`SQUAREWISE_AUTH_LOGIN_VERIFY_MAX_REQUESTS` and
+`SQUAREWISE_AUTH_LOGIN_VERIFY_WINDOW_SECONDS`, and store failures or denials map
+to the existing structured HTTP 429 boundary. The local Mailpit passwordless E2E
+passed the configured five generic invalid-credential responses followed by a
+429. Hosted verification-limit and production Redis evidence remain open.
+
 Rate-limit decisions now expose bounded Micrometer counters for `allowed`,
 `denied`, and `store_error`, tagged only by the centrally defined policy ID and
 outcome. No key, subject, IP, token, or request ID is used as a metric label.

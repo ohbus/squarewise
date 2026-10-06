@@ -118,9 +118,9 @@ The end-to-end test suites run against the live local environment (`infra/local/
    - Real Accounts outbox/RabbitMQ/Notifications/Mailpit CODE delivery.
    - One-time credential redemption and replay rejection.
    - Refresh-family revocation after logout and idempotent logout replay.
-   - Remaining acceptance work is explicit: LINK delivery, expiry, wrong-subject
-     redemption, rate-limit/error redaction, broker retry/DLQ, and log/output
-     secret absence.
+   - Exercises the verification admission cap with generic invalid-credential
+     responses followed by structured HTTP 429; log/output secret absence remains
+     a separate acceptance dimension.
    - When invoked with `--evidence-output`, emits success-only QA-10 evidence
      for `startLogin`, `verifyLogin`, `logout`, and `refreshToken`.
 
