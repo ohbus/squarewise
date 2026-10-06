@@ -94,7 +94,7 @@ hosted-runner broker startup contention without removing or changing any shard.
 Jobs use Microsoft Build of OpenJDK. Python dependencies
 and tooling are deterministically managed via `pyproject.toml` and `uv.lock`.
 CI workflows install dependencies via the immutable commit
-`astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e` (the `v6` tag)
+`astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7` (the `v10.2.0` tag)
 with `uv sync --frozen --no-build`, running tools and scripts via
 `uv run --frozen --no-build`. `--frozen` prevents lockfile resolution changes;
 `--no-build` prevents dependency/project build hooks from executing during the
