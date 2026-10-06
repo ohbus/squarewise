@@ -64,6 +64,9 @@ class AuthenticationCredentialConfigurationTest {
     @Test
     fun `rejects an unsafe login resend cooldown`() {
         assertThrows(IllegalArgumentException::class.java) {
+            configuration(loginResendCooldownSeconds = -1)
+        }
+        assertThrows(IllegalArgumentException::class.java) {
             configuration(loginResendCooldownSeconds = 901)
         }
     }

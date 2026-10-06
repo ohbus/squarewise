@@ -481,7 +481,7 @@ jobs:
           make e2e-auth-notification-outage 2>&1 | tee build/reports/e2e/auth-notification-outage.log
           BEARER_TOKEN="$fresh_token" make e2e-auth-surfaces 2>&1 | tee build/reports/e2e/auth-rate-limit-surfaces.log
           BEARER_TOKEN="$fresh_token" make e2e-auth-no-accounts 2>&1 | tee build/reports/e2e/auth-no-accounts.log
-          make e2e-auth-cache 2>&1 | tee build/reports/e2e/auth-cache-resilience.log
+          BEARER_TOKEN="$fresh_token" make e2e-auth-cache 2>&1 | tee build/reports/e2e/auth-cache-resilience.log
           BEARER_TOKEN="$fresh_token" \
             SQUAREWISE_E2E_TOKEN_B="$fresh_bob" \
             SQUAREWISE_E2E_TOKEN_NONMEMBER="$fresh_nonmember" \

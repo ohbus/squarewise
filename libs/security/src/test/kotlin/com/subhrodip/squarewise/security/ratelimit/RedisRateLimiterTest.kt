@@ -86,6 +86,23 @@ class RedisRateLimiterTest {
     }
 
     @Test
+    fun `detects timeout from name or cause and handles null simpleName and cycles`() {
+        class CustomTimeoutError : RuntimeException()
+        assertEquals(true, CustomTimeoutError().isRateLimitTimeout())
+
+        val anonymous = object : RuntimeException() {}
+        assertEquals(false, anonymous.isRateLimitTimeout())
+
+        class CyclicException : RuntimeException() {
+            var cyclicCause: Throwable? = null
+            override val cause: Throwable? get() = cyclicCause
+        }
+        val cyclic = CyclicException()
+        cyclic.cyclicCause = cyclic
+        assertEquals(false, cyclic.isRateLimitTimeout())
+    }
+
+    @Test
     fun `rejects empty or overlong caller keys before Redis access`() {
         val redis = redisReturning("1|4|60")
         val limiter = RedisRateLimiter(redis, deriver)

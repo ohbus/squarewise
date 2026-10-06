@@ -116,6 +116,77 @@ class GraphQlRateLimitWebFilterTest {
         assertEquals(true, reached.get())
     }
 
+    @Test
+    fun `reject includes client X-Request-Id header when present`() {
+        val filter = GraphQlRateLimitWebFilter(
+            limiter { RateLimitDecision(false, 0, Duration.ofSeconds(15), "graphql-http") },
+            GraphQlAbuseProperties()
+        )
+        val exchange = MockServerWebExchange.from(
+            MockServerHttpRequest.post("/graphql")
+                .header("X-Request-Id", "client-request-id-123")
+                .build()
+        )
+
+        filter.filter(exchange, chain(AtomicBoolean(false))).block()
+
+        assertEquals(HttpStatus.TOO_MANY_REQUESTS, exchange.response.statusCode)
+        val responseBody = exchange.response.bodyAsString.block()
+        assertEquals(true, responseBody?.contains("\"requestId\":\"client-request-id-123\""))
+    }
+
+    @Test
+    fun `admitted HTTP requests resolve remote host address partition`() {
+        val reached = AtomicBoolean(false)
+        var capturedKey: String? = null
+        val filter = GraphQlRateLimitWebFilter(
+            object : RateLimiter {
+                override fun consume(key: String, policy: RateLimitPolicy): RateLimitDecision {
+                    capturedKey = key
+                    return RateLimitDecision(true, 9, Duration.ZERO, policy.id)
+                }
+            },
+            GraphQlAbuseProperties(maxHttpRequests = 10, httpWindowSeconds = 60)
+        )
+
+        val exchange = MockServerWebExchange.from(
+            MockServerHttpRequest.post("/graphql")
+                .remoteAddress(java.net.InetSocketAddress(java.net.InetAddress.getByName("198.51.100.42"), 8080))
+                .build()
+        )
+
+        filter.filter(exchange, chain(reached)).block()
+
+        assertEquals("graphql|POST|198.51.100.42", capturedKey)
+        assertEquals(true, reached.get())
+    }
+
+    @Test
+    fun `upgrade header other than websocket is treated as regular HTTP`() {
+        val reached = AtomicBoolean(false)
+        var capturedPolicyId: String? = null
+        val filter = GraphQlRateLimitWebFilter(
+            object : RateLimiter {
+                override fun consume(key: String, policy: RateLimitPolicy): RateLimitDecision {
+                    capturedPolicyId = policy.id
+                    return RateLimitDecision(true, 9, Duration.ZERO, policy.id)
+                }
+            },
+            GraphQlAbuseProperties()
+        )
+
+        val exchange = MockServerWebExchange.from(
+            MockServerHttpRequest.post("/graphql")
+                .header(HttpHeaders.UPGRADE, "h2c")
+                .build()
+        )
+
+        filter.filter(exchange, chain(reached)).block()
+
+        assertEquals("graphql-http", capturedPolicyId)
+        assertEquals(true, reached.get())
+    }
+
     private fun limiter(decision: () -> RateLimitDecision): RateLimiter =
         object : RateLimiter {
             override fun consume(key: String, policy: RateLimitPolicy): RateLimitDecision = decision()

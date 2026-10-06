@@ -73,4 +73,31 @@ class LoginVerificationRateLimitServiceTest {
             service.tryAcquire("credential", "edge\nnode", Instant.EPOCH)
         }.exceptionOrNull()?.message)
     }
+
+    @Test
+    fun `rejects empty or oversized credential and oversized network partition`() {
+        val service = LoginVerificationRateLimitService(
+            digest,
+            object : RateLimiter {
+                override fun consume(key: String, policy: RateLimitPolicy): RateLimitDecision =
+                    error("not reached")
+            }
+        )
+
+        assertEquals("Credential length is invalid", runCatching {
+            service.tryAcquire("", "valid-partition", Instant.EPOCH)
+        }.exceptionOrNull()?.message)
+        assertEquals("Credential length is invalid", runCatching {
+            service.tryAcquire("a".repeat(4097), "valid-partition", Instant.EPOCH)
+        }.exceptionOrNull()?.message)
+        assertEquals("Network partition is invalid", runCatching {
+            service.tryAcquire("valid-credential", "a".repeat(129), Instant.EPOCH)
+        }.exceptionOrNull()?.message)
+        assertEquals("Network partition contains invalid characters", runCatching {
+            service.tryAcquire("valid-credential", "partition with space", Instant.EPOCH)
+        }.exceptionOrNull()?.message)
+        assertEquals("Network partition contains invalid characters", runCatching {
+            service.tryAcquire("valid-credential", "partition\u0000null", Instant.EPOCH)
+        }.exceptionOrNull()?.message)
+    }
 }
