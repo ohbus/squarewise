@@ -20,8 +20,8 @@ jobs:
   images:
     name: Publish container images
     needs: ci
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
+    runs-on: ubuntu-slim
+    timeout-minutes: 15
     permissions: { contents: read, packages: write, id-token: write, attestations: write }
     strategy:
       matrix: { service: [accounts, expense-core, notifications, bff] }
