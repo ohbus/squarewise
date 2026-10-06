@@ -22,7 +22,8 @@ truncation which:
 **Solution**: Introduced `ClientAddressResolver` (new class) and `TrustedProxyProperties` (new config):
 
 - `TrustedProxyProperties` (`squarewise.security.abuse.trusted-proxies.addresses`) holds the
-  deployment-configured set of trusted proxy IP addresses/CIDRs. Defaults to empty.
+  deployment-configured set of trusted proxy IP addresses. Defaults to empty; CIDR range
+  matching remains an explicitly tracked follow-up.
 - `ClientAddressResolver`:
   - If `trustedProxies` is empty (default), always uses raw socket `remoteAddr`.
   - If `remoteAddr` is in the trusted set, reads `X-Forwarded-For` (leftmost non-proxy IP)
