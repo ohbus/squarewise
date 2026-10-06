@@ -52,8 +52,8 @@ E2E artifact-preparation failure must fail the gate.
 ## Validation commands
 
 ```text
-uv run --frozen --no-build python -m unittest tests/tools/test_changed_scope.py
-uv run --frozen --no-build mypy tools/ci tests/tools/test_changed_scope.py
+uv run --frozen --no-build python -m unittest tests/tools/test_changed_scope.py tests/tools/test_e2e_gate.py
+uv run --frozen --no-build mypy tools/ci tests/tools/test_changed_scope.py tests/tools/test_e2e_gate.py
 uv run --frozen --no-build yamllint -d '{extends: relaxed, rules: {truthy: disable, line-length: disable}}' .github/workflows
 uv run --frozen --no-build python -c "import yaml; from pathlib import Path; [yaml.safe_load(path.read_text(encoding='utf-8')) for path in Path('.github/workflows').glob('*.yml')]"
 uv run --frozen --no-build python tools/contracts/validate.py
@@ -64,3 +64,9 @@ git diff --check
 Hosted evidence must confirm a documentation-only PR, a single-module PR, a
 shared-library PR, an E2E-only PR, a branch first push, and a master push. The
 hosted matrix and gate results must show selected/skipped scope explicitly.
+
+The aggregate gate decision is implemented in the typed
+`tools/ci/e2e_gate.py` helper and invoked by the reusable workflow. Its focused
+tests prove that unselected `skipped` streams are neutral and not reported as
+passed, while selected stream, shared preflight, and artifact-preparation
+failures remain fatal. Hosted matrix execution evidence is still required.

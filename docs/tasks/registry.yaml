@@ -7551,6 +7551,7 @@
       ],
       "evidence": [
         "Changed-scope resolver and focused tests implemented; current local revalidation passes all 5 scope tests, mypy for tools/ci and its tests, and workflow YAML parsing. Contract/public-surface checks pass separately; hosted PR, branch, and master scenario evidence remains required.",
+        "The reusable E2E gate now delegates its selected-result decision to typed tools/ci/e2e_gate.py. Three focused tests prove unselected skipped streams are neutral and not reported as passed, while selected-stream, shared preflight, and artifact-preparation failures remain fatal; mypy and all workflow YAML parsing pass.",
         "Hosted PR, branch, and master scenario evidence remains required before status can become done."
       ],
       "reviewer": "/root",

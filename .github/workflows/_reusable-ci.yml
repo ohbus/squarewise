@@ -707,31 +707,14 @@ jobs:
       - name: Aggregate parallel E2E results
         run: |
           set -euo pipefail
-          preflight_result="${{ needs.preflight.result }}"
-          artifacts_result="${{ needs.e2e-artifacts.result }}"
-          edge_result="${{ needs.e2e-edge-and-security.result }}"
-          product_result="${{ needs.e2e-product-and-offline.result }}"
-          chaos_result="${{ needs.e2e-concurrency-and-chaos.result }}"
-          edge_selected="${{ needs.scope.outputs.run_edge }}"
-          product_selected="${{ needs.scope.outputs.run_product }}"
-          chaos_selected="${{ needs.scope.outputs.run_chaos }}"
-          echo "preflight: ${preflight_result}"
-          echo "E2E artifacts: ${artifacts_result}"
-          echo "e2e-edge-and-security: ${edge_result}"
-          echo "e2e-product-and-offline: ${product_result}"
-          echo "e2e-concurrency-and-chaos: ${chaos_result}"
-          test "${preflight_result}" = success
-          test "${artifacts_result}" = success
-          if [ "${edge_selected}" = true ] && [ "${edge_result}" != success ]; then
-            echo 'Selected edge/security E2E did not pass.'
-            exit 1
-          fi
-          if [ "${product_selected}" = true ] && [ "${product_result}" != success ]; then
-            echo 'Selected product/offline E2E did not pass.'
-            exit 1
-          fi
-          if [ "${chaos_selected}" = true ] && [ "${chaos_result}" != success ]; then
-            echo 'Selected concurrency/chaos E2E did not pass.'
-            exit 1
-          fi
-          echo 'All selected E2E suites passed; intentionally unselected suites were not evaluated.'
+          args=(
+            --preflight "${{ needs.preflight.result }}"
+            --artifacts "${{ needs.e2e-artifacts.result }}"
+            --edge-result "${{ needs.e2e-edge-and-security.result }}"
+            --product-result "${{ needs.e2e-product-and-offline.result }}"
+            --chaos-result "${{ needs.e2e-concurrency-and-chaos.result }}"
+          )
+          if [ "${{ needs.scope.outputs.run_edge }}" = true ]; then args+=(--edge-selected); fi
+          if [ "${{ needs.scope.outputs.run_product }}" = true ]; then args+=(--product-selected); fi
+          if [ "${{ needs.scope.outputs.run_chaos }}" = true ]; then args+=(--chaos-selected); fi
+          uv run --frozen --no-build python tools/ci/e2e_gate.py "${args[@]}"
