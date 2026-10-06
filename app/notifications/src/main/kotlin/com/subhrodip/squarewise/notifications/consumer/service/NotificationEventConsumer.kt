@@ -56,19 +56,26 @@ class NotificationEventConsumer(
             val preferences = try {
                 preferenceStore.get(recipientId)
             } catch (e: Exception) {
-                log.warn("Failed to retrieve notification preferences for recipientId={}; suppressing delivery", recipientId, e)
+                log.warn(
+                    "Failed to retrieve notification preferences for recipientId={}; suppressing delivery",
+                    opaqueRecipientId(recipientId),
+                    e
+                )
                 return
             }
 
             val emailEnabled = preferences.emailEnabled
             if (!emailEnabled) {
-                log.info("Email notifications disabled for recipient='{}'; skipping dispatch", recipientId)
+                log.info("Email notifications disabled for recipientId={}; skipping dispatch", opaqueRecipientId(recipientId))
                 return
             }
 
             val recipientEmail = resolveRecipientEmail(event)
             if (!deliveryRateLimiter.allow(recipientId)) {
-                log.warn("Email delivery rate limit reached for recipientId={}; suppressing delivery", recipientId)
+                log.warn(
+                    "Email delivery rate limit reached for recipientId={}; suppressing delivery",
+                    opaqueRecipientId(recipientId)
+                )
                 return
             }
             val subject = "Notification: ${event.title}"

@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Assertions.assertNotEquals
 
 /** Verifies opaque, deployment-scoped rate-limit key derivation. */
 class HmacRateLimitKeyDeriverTest {
-    private val secret = "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8="
+    private val secret = "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=" // security-hygiene: test-fixture
 
     @Test
     fun `same canonical key is stable and different keys are separated`() {

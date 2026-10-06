@@ -490,6 +490,8 @@ The general notification consumer now rethrows the shared
 `RateLimitStoreUnavailableException` after an applied inbox event so broker
 retry/DLQ semantics are preserved during limiter outage. Provider and preference
 failures remain isolated as before; a focused unit test covers the distinction.
+Its preference, disabled-delivery, and limiter-denial diagnostics now use the
+existing opaque recipient representation rather than raw recipient identifiers.
 
 The Redis resilience probe now also calls the public Accounts login-start path
 while Redis is stopped and observes the structured fail-closed HTTP 429, then
