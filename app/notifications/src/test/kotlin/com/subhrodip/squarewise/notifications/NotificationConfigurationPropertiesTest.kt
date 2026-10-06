@@ -28,6 +28,13 @@ class NotificationConfigurationPropertiesTest {
         org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException::class.java) {
             NotificationMessagingProperties(deliveryWindowSeconds = 0)
         }
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException::class.java) {
+            NotificationMessagingProperties(deliveryMaxPermits = 1_000_001)
+        }
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException::class.java) {
+            NotificationMessagingProperties(deliveryWindowSeconds = 86_401)
+        }
+        NotificationMessagingProperties(deliveryMaxPermits = 1_000_000, deliveryWindowSeconds = 86_400)
     }
 
     @Test

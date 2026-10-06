@@ -135,4 +135,54 @@ class LoginVerificationServiceTest @Autowired constructor(
         assertEquals(subject, profileStore.findByEmail("existing@example.com")?.subject)
         assertEquals("Existing User", profileStore.get(subject)?.displayName)
     }
+
+    @Test
+    fun `maps verification limiter outage to a generic rate-limit error`() {
+        val failingLimiter = LoginVerificationRateLimitService(
+            digest,
+            object : RateLimiter {
+                override fun consume(key: String, policy: RateLimitPolicy): RateLimitDecision =
+                    throw com.subhrodip.squarewise.security.ratelimit.RateLimitStoreUnavailableException(
+                        IllegalStateException("redis unavailable")
+                    )
+            }
+        )
+        val failingService = LoginVerificationService(
+            credentialService,
+            profileStore,
+            tokenSessionService,
+            profileStore,
+            failingLimiter
+        )
+
+        val exception = assertThrows(ApplicationException::class.java) {
+            failingService.verify("credential", "NATIVE", null, Instant.now())
+        }
+
+        assertEquals(ErrorCode.ERR_11, exception.errorCode)
+    }
+
+    @Test
+    fun `maps verification limiter denial to a generic rate-limit error`() {
+        val deniedLimiter = LoginVerificationRateLimitService(
+            digest,
+            object : RateLimiter {
+                override fun consume(key: String, policy: RateLimitPolicy): RateLimitDecision =
+                    RateLimitDecision(false, 0, policy.window, policy.id)
+            }
+        )
+        val deniedService = LoginVerificationService(
+            credentialService,
+            profileStore,
+            tokenSessionService,
+            profileStore,
+            deniedLimiter
+        )
+
+        val exception = assertThrows(ApplicationException::class.java) {
+            deniedService.verify("credential", "NATIVE", null, Instant.now())
+        }
+
+        assertEquals(ErrorCode.ERR_11, exception.errorCode)
+    }
 }

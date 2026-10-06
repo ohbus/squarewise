@@ -73,6 +73,49 @@ class GraphQlRateLimitWebFilterTest {
         assertEquals(true, reached.get())
     }
 
+    @Test
+    fun `admitted HTTP requests use the unknown partition when the address is absent`() {
+        val reached = AtomicBoolean(false)
+        var capturedKey: String? = null
+        val filter = GraphQlRateLimitWebFilter(
+            object : RateLimiter {
+                override fun consume(key: String, policy: RateLimitPolicy): RateLimitDecision {
+                    capturedKey = key
+                    return RateLimitDecision(true, 9, Duration.ZERO, policy.id)
+                }
+            },
+            GraphQlAbuseProperties(maxHttpRequests = 10, httpWindowSeconds = 60)
+        )
+
+        filter.filter(
+            MockServerWebExchange.from(MockServerHttpRequest.post("/graphql").build()),
+            chain(reached)
+        ).block()
+
+        assertEquals("graphql|POST|unknown", capturedKey)
+        assertEquals(true, reached.get())
+    }
+
+    @Test
+    fun `non-GraphQL and disabled filters pass through without admission`() {
+        val reached = AtomicBoolean(false)
+        val limiter = object : RateLimiter {
+            override fun consume(key: String, policy: RateLimitPolicy): RateLimitDecision =
+                error("rate limiter should not be called")
+        }
+
+        GraphQlRateLimitWebFilter(limiter, GraphQlAbuseProperties()).filter(
+            MockServerWebExchange.from(MockServerHttpRequest.get("/health").build()),
+            chain(reached)
+        ).block()
+        GraphQlRateLimitWebFilter(limiter, GraphQlAbuseProperties(), enabled = false).filter(
+            MockServerWebExchange.from(MockServerHttpRequest.post("/graphql").build()),
+            chain(reached)
+        ).block()
+
+        assertEquals(true, reached.get())
+    }
+
     private fun limiter(decision: () -> RateLimitDecision): RateLimiter =
         object : RateLimiter {
             override fun consume(key: String, policy: RateLimitPolicy): RateLimitDecision = decision()

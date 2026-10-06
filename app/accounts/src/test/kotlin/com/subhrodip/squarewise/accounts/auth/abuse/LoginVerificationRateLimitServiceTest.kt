@@ -55,4 +55,22 @@ class LoginVerificationRateLimitServiceTest {
             )
         )
     }
+
+    @Test
+    fun `rejects whitespace and empty network partitions`() {
+        val service = LoginVerificationRateLimitService(
+            digest,
+            object : RateLimiter {
+                override fun consume(key: String, policy: RateLimitPolicy): RateLimitDecision =
+                    error("not reached")
+            }
+        )
+
+        assertEquals("Network partition is invalid", runCatching {
+            service.tryAcquire("credential", "", Instant.EPOCH)
+        }.exceptionOrNull()?.message)
+        assertEquals("Network partition contains invalid characters", runCatching {
+            service.tryAcquire("credential", "edge\nnode", Instant.EPOCH)
+        }.exceptionOrNull()?.message)
+    }
 }

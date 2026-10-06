@@ -107,7 +107,9 @@ class DbTelemetryTest {
         assertEquals(0, telemetry.snapshot().jdbcStatements)
         telemetry.route("groups", "writer")
         telemetry.lag("reader", 0)
+        telemetry.jdbcStatement("groups.list")
         assertEquals(0, telemetry.snapshot().queries)
+        assertEquals(1, telemetry.snapshot().jdbcStatements)
     }
 
     @Test

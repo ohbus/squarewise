@@ -39,5 +39,24 @@ class RateLimitPolicyTest {
     @Test
     fun `accepts bounded policy identifiers and values`() {
         RateLimitPolicy("auth-login", maximumPermits = 5, window = Duration.ofMinutes(1))
+        RateLimitPolicy("a".repeat(64), maximumPermits = 1_000_000, window = Duration.ofHours(24))
+    }
+
+    @Test
+    fun `rejects invalid identifiers and cooldown values`() {
+        listOf("", "a".repeat(65), "auth login", "auth.é").forEach { identifier ->
+            assertThrows(IllegalArgumentException::class.java) {
+                RateLimitPolicy(identifier, maximumPermits = 1, window = Duration.ofMinutes(1))
+            }
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            RateLimitPolicy("login", maximumPermits = 1_000_001, window = Duration.ofMinutes(1))
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            RateLimitPolicy("login", maximumPermits = 1, window = Duration.ofMillis(1_000), cooldown = Duration.ofMillis(-1))
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            RateLimitPolicy("login", maximumPermits = 1, window = Duration.ofNanos(1_000_000_001))
+        }
     }
 }
