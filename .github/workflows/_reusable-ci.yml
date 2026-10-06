@@ -341,7 +341,7 @@ jobs:
     name: Package application artifacts for selected E2E
     if: always() && inputs.run_e2e && needs.scope.outputs.has_e2e == 'true' && needs.preflight.result == 'success'
     needs: [preflight, scope]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     timeout-minutes: 15
     permissions:
       contents: read
