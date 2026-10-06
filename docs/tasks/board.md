@@ -182,7 +182,7 @@ This workstream manages the six-digit `DM-L-C-EE` domain/module error-code stand
 | [ERRC-15](details/ERRC-15.md) | platform | done | Implement Spring Web MVC Problem Details advice and static container fallbacks |
 | [ERRC-16](details/ERRC-16.md) | security | done | Implement structured 401/403/404 ProblemDetails for Servlet and Reactive security filters |
 | [ERRC-17](details/ERRC-17.md) | platform | in_progress | Implement BFF GraphQL exception resolver and upstream WebClient problem client |
-| [ERRC-18](details/ERRC-18.md) | platform | todo | Implement fatal-safe `AsyncExecutionTemplate` and dead-letter disposition strategies |
+| [ERRC-18](details/ERRC-18.md) | platform | done | Implement fatal-safe `AsyncExecutionTemplate` and dead-letter disposition strategies |
 
 ### Phase 4: Bounded-Context Migration
 

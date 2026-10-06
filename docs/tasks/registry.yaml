@@ -8539,7 +8539,7 @@
       "parent_id": "ERRC-01",
       "title": "Implement messaging/background boundary toolkit",
       "phase": "platform",
-      "status": "todo",
+      "status": "done",
       "owner_role": "platform",
       "owner_agent": "/root",
       "depends_on": [
@@ -8566,7 +8566,11 @@
         "uv run python tools/contracts/validate.py",
         "git diff --check"
       ],
-      "evidence": [],
+      "evidence": [
+        "Added the fatal-safe async execution template, bounded disposition strategy, typed metrics/disposition results, and structured dead-letter record builder under libs/errors.",
+        "AsyncExecutionTemplateTest covers success, transient requeue, poison dead-lettering, retry exhaustion, fatal and cancellation propagation, metadata validation, and malformed dead-letter inputs.",
+        "The async package reports 61/61 lines and 48/48 branches in JaCoCo; the declared Gradle gate, contract validator, and git diff --check passed on 2026-10-07."
+      ],
       "reviewer": "/root",
       "blocker": null
     },

@@ -86,3 +86,20 @@ git diff --check
 - Shared library utility in `libs/errors`.
 - Consumed by Notifications, Expense Core outbox, and recurring schedulers in Phase 4.
 - Rollback: Revert library additions if consumer integration issues arise.
+
+## Implementation Notes and Evidence
+
+- Added `AsyncContext`, `AsyncExecutionTemplate`, `MessageDispositionStrategy`,
+  `DeadLetterRecordBuilder`, and typed result/metrics/disposition models under
+  `libs/errors`.
+- The template binds the event identifier to request correlation, catches only
+  non-fatal `Exception` instances, rethrows fatal JVM/cancellation conditions,
+  bounds retries at three attempts, and emits a structured dead-letter record
+  using catalog-owned numeric code and safe detail.
+- `AsyncExecutionTemplateTest` covers successful completion, transient requeue,
+  poison isolation, retry exhaustion, fatal propagation, metadata validation,
+  malformed dead-letter inputs, and cancellation propagation.
+- The async package reports 100% line coverage (61/61) and 100% branch coverage
+  (48/48) in JaCoCo on 2026-10-07.
+- The declared Gradle test/JaCoCo command, contract validator, and
+  `git diff --check` passed on 2026-10-07.
