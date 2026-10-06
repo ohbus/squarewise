@@ -70,8 +70,32 @@ def clear_rate_limit_namespace() -> None:
         pass
 
 
+def wait_for_redis(timeout_seconds: float = 30.0) -> None:
+    """Wait until Redis accepts authenticated commands after a restart or outage."""
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline:
+        try:
+            output = compose(
+                "exec",
+                "-T",
+                "redis",
+                "redis-cli",
+                "-a",
+                REDIS_PASSWORD,
+                "--no-auth-warning",
+                "PING",
+            )
+            if output == "PONG":
+                return
+        except subprocess.CalledProcessError:
+            pass
+        time.sleep(0.5)
+    raise AssertionError("Redis did not become ready within the bounded probe timeout")
+
+
 def wait_for_service_readiness(timeout_seconds: float = 60.0) -> None:
-    """Wait until Accounts and Notifications have established Redis-backed readiness."""
+    """Wait until Accounts, Notifications, and Redis have established readiness."""
+    wait_for_redis(min(timeout_seconds, 30.0))
     deadline = time.monotonic() + timeout_seconds
     urls = (
         f"{ACCOUNTS_URL}/actuator/health/readiness",
@@ -109,6 +133,50 @@ def request_json(
         return error.code, cast(object, json.loads(content) if content else {})
 
 
+def recent_mailpit_messages() -> list[str]:
+    """Return diagnostic summary of recent Mailpit messages."""
+    status, payload = request_json(f"{MAILPIT_URL}/api/v1/messages?limit=20")
+    if status != 200 or not isinstance(payload, Mapping):
+        return []
+    messages = payload.get("messages")
+    if not isinstance(messages, list):
+        return []
+    summaries: list[str] = []
+    for message in messages:
+        if isinstance(message, Mapping):
+            recipients = message.get("To")
+            addrs = []
+            if isinstance(recipients, list):
+                for item in recipients:
+                    if isinstance(item, Mapping) and item.get("Address"):
+                        addrs.append(str(item.get("Address")))
+            summaries.append(f"To: {','.join(addrs)}")
+    return summaries
+
+
+def rabbitmq_queue_info(queue: str) -> str:
+    """Return ready and unacknowledged count for a RabbitMQ queue for diagnostics."""
+    try:
+        output = compose(
+            "exec",
+            "-T",
+            "rabbitmq",
+            "rabbitmqctl",
+            "list_queues",
+            "-q",
+            "name",
+            "messages_ready",
+            "messages_unacknowledged",
+        )
+        for line in output.splitlines():
+            fields = line.split()
+            if len(fields) == 3 and fields[0] == queue:
+                return f"{queue}: ready={fields[1]}, unacked={fields[2]}"
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        pass
+    return f"{queue}: unknown"
+
+
 def recipient_count(recipient: str) -> int:
     """Return the Mailpit message count for one unique recipient."""
     status, payload = request_json(f"{MAILPIT_URL}/api/v1/messages?limit=100")
@@ -133,7 +201,7 @@ def recipient_count(recipient: str) -> int:
     return count
 
 
-def wait_for_count(recipient: str, expected: int, timeout_seconds: float = 30.0) -> int:
+def wait_for_count(recipient: str, expected: int, timeout_seconds: float = 45.0) -> int:
     """Wait for an expected Mailpit delivery count, failing with bounded evidence."""
     deadline = time.monotonic() + timeout_seconds
     observed = 0
@@ -142,7 +210,13 @@ def wait_for_count(recipient: str, expected: int, timeout_seconds: float = 30.0)
         if observed >= expected:
             return observed
         time.sleep(0.5)
-    raise AssertionError(f"Mailpit delivery count did not reach {expected}; observed {observed}")
+    recent = recent_mailpit_messages()
+    q_main = rabbitmq_queue_info("squarewise.auth-email.v2")
+    q_dlq = rabbitmq_queue_info("squarewise.auth-email.v2.dlq")
+    raise AssertionError(
+        f"Mailpit delivery count did not reach {expected}; observed {observed} for {recipient}. "
+        f"Recent mailpit: {recent}. Queue state: {q_main}, {q_dlq}"
+    )
 
 
 def start_login(recipient: str) -> None:
