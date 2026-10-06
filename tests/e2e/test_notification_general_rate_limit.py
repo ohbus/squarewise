@@ -14,8 +14,8 @@ from urllib.request import Request, urlopen
 
 from tests.http_constants import CONTENT_TYPE
 
-MANAGEMENT_URL = os.environ.get("SQUAREWISE_RABBITMQ_MANAGEMENT_URL", "http://localhost:15672")
-MAILPIT_URL = os.environ.get("SQUAREWISE_MAILPIT_URL", "http://localhost:8025")
+MANAGEMENT_URL = os.environ.get("SQUAREWISE_RABBITMQ_MANAGEMENT_URL", "http://localhost:28673")
+MAILPIT_URL = os.environ.get("SQUAREWISE_MAILPIT_URL", "http://localhost:28025")
 RABBIT_USER = os.environ.get("RABBITMQ_DEFAULT_USER", "squarewise")
 RABBIT_PASSWORD = os.environ.get("RABBITMQ_DEFAULT_PASS", "squarewise-local-only")
 EVENT_EXCHANGE = os.environ.get("SQUAREWISE_EVENTS_EXCHANGE", "squarewise.events")

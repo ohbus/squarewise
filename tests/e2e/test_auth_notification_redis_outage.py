@@ -19,9 +19,9 @@ COMPOSE_FILE: Final[str] = os.environ.get(
 COMPOSE_ENV_FILE: Final[str] = os.environ.get("SQUAREWISE_COMPOSE_ENV_FILE", "")
 COMPOSE_PROJECT: Final[str] = os.environ.get("SQUAREWISE_COMPOSE_PROJECT", "")
 REDIS_PASSWORD: Final[str] = os.environ.get("REDIS_PASSWORD", "squarewise-redis-local-only")
-ACCOUNTS_URL: Final[str] = os.environ.get("SQUAREWISE_ACCOUNTS_URL", "http://localhost:8081")
-NOTIFICATIONS_URL: Final[str] = os.environ.get("SQUAREWISE_NOTIFICATIONS_URL", "http://localhost:8083")
-MAILPIT_URL: Final[str] = os.environ.get("SQUAREWISE_MAILPIT_URL", "http://localhost:8025")
+ACCOUNTS_URL: Final[str] = os.environ.get("SQUAREWISE_ACCOUNTS_URL", "http://localhost:28081")
+NOTIFICATIONS_URL: Final[str] = os.environ.get("SQUAREWISE_NOTIFICATIONS_URL", "http://localhost:28083")
+MAILPIT_URL: Final[str] = os.environ.get("SQUAREWISE_MAILPIT_URL", "http://localhost:28025")
 AUTH_EMAIL_QUEUE: Final[str] = "squarewise.auth-email.v2"
 
 

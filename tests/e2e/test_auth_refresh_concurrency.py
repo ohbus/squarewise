@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import time
 from concurrent.futures import Future, ThreadPoolExecutor
@@ -13,8 +14,8 @@ from urllib.request import Request, urlopen
 
 from tests.http_constants import CONTENT_TYPE
 
-ACCOUNTS_URL = "http://localhost:8081"
-MAILPIT_URL = "http://localhost:8025"
+ACCOUNTS_URL = os.environ.get("SQUAREWISE_ACCOUNTS_URL", "http://localhost:28081")
+MAILPIT_URL = os.environ.get("SQUAREWISE_MAILPIT_URL", "http://localhost:28025")
 
 
 def request_json(

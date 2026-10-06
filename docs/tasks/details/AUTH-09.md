@@ -716,6 +716,14 @@ After the current limiter timing and query/latency increments, the full Windows
 tasks, strict mypy for 54 files, JaCoCo reports, and all four application boot
 JARs. This closes the repository-owned local check evidence only.
 
+After rebasing onto `master`, every newly added auth E2E probe uses the current
+collision-resistant Compose host ports by default while retaining explicit URL
+overrides. The hosted workflow also reapplies the one-per-two-second
+Notifications delivery policy after its invalid-subject Compose restart. A
+fresh local stack reproduced the affected path and passed the exact admission
+journey: the first auth email was delivered, the second same-recipient event was
+suppressed, and delivery recovered after the Redis window expired.
+
 This increment does not claim completion of AUTH-09. The task remains
 `in_progress` because hosted selected/skipped E2E evidence, managed Redis
 selection/failover/rotation/capacity, deployed alert routing, broader query and

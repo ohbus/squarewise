@@ -13,9 +13,9 @@ from urllib.request import Request, urlopen
 
 
 BEARER_TOKEN: Final[str] = os.environ.get("BEARER_TOKEN", "")
-EXPENSE_CORE_URL: Final[str] = os.environ.get("EXPENSE_CORE_URL", "http://localhost:8082")
-BFF_URL: Final[str] = os.environ.get("BFF_URL", "http://localhost:8080")
-ACCOUNTS_URL: Final[str] = os.environ.get("ACCOUNTS_URL", "http://localhost:8081")
+EXPENSE_CORE_URL: Final[str] = os.environ.get("EXPENSE_CORE_URL", "http://localhost:28082")
+BFF_URL: Final[str] = os.environ.get("BFF_URL", "http://localhost:28080")
+ACCOUNTS_URL: Final[str] = os.environ.get("ACCOUNTS_URL", "http://localhost:28081")
 SAMPLE_COUNT: Final[int] = 5
 
 

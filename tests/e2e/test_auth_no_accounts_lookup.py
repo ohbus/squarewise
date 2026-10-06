@@ -20,8 +20,9 @@ REDIS_PASSWORD: Final[str] = os.environ.get(
     "REDIS_PASSWORD", "squarewise-redis-local-only"
 )
 BEARER_TOKEN: Final[str] = os.environ.get("BEARER_TOKEN", "")
-EXPENSE_CORE_URL: Final[str] = os.environ.get("EXPENSE_CORE_URL", "http://localhost:8082")
-BFF_URL: Final[str] = os.environ.get("BFF_URL", "http://localhost:8080")
+ACCOUNTS_URL: Final[str] = os.environ.get("ACCOUNTS_URL", "http://localhost:28081")
+EXPENSE_CORE_URL: Final[str] = os.environ.get("EXPENSE_CORE_URL", "http://localhost:28082")
+BFF_URL: Final[str] = os.environ.get("BFF_URL", "http://localhost:28080")
 
 
 def statement_count(base_url: str, operation: str) -> int:
@@ -70,7 +71,7 @@ def wait_for_accounts_readiness(timeout_seconds: float = 30.0) -> None:
     deadline = time.monotonic() + timeout_seconds
     while time.monotonic() < deadline:
         try:
-            with urlopen("http://localhost:8081/actuator/health/readiness", timeout=3) as response:
+            with urlopen(f"{ACCOUNTS_URL}/actuator/health/readiness", timeout=3) as response:
                 if response.status == 200:
                     return
         except (HTTPError, OSError, URLError):
@@ -101,7 +102,7 @@ def request_json(url: str, body: bytes | None = None) -> tuple[int, object]:
 def main() -> int:
     """Stop Accounts and verify resource authorization continues locally."""
     clear_rate_limit_namespace()
-    accounts_before = statement_count("http://localhost:8081", "groups.list")
+    accounts_before = statement_count(ACCOUNTS_URL, "groups.list")
     expense_before = statement_count(EXPENSE_CORE_URL, "groups.list")
     expense_status, expense_response = request_json(
         f"{EXPENSE_CORE_URL}/expense-core/v1/groups"
@@ -117,7 +118,7 @@ def main() -> int:
         raise AssertionError(
             f"BFF groups request failed before isolation check: HTTP {bff_status} ({bff_response})"
         )
-    accounts_after = statement_count("http://localhost:8081", "groups.list")
+    accounts_after = statement_count(ACCOUNTS_URL, "groups.list")
     expense_after = statement_count(EXPENSE_CORE_URL, "groups.list")
     if accounts_after != accounts_before:
         raise AssertionError(

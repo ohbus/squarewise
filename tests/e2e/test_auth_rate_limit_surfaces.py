@@ -17,7 +17,9 @@ COMPOSE_PROJECT: Final[str] = os.environ.get("SQUAREWISE_COMPOSE_PROJECT", "")
 REDIS_PASSWORD: Final[str] = os.environ.get(
     "REDIS_PASSWORD", "squarewise-redis-local-only"
 )
-BFF_URL: Final[str] = os.environ.get("BFF_URL", "http://localhost:8080")
+BFF_URL: Final[str] = os.environ.get("BFF_URL", "http://localhost:28080")
+BFF_WEBSOCKET_HOST: Final[str] = os.environ.get("BFF_WEBSOCKET_HOST", "localhost")
+BFF_WEBSOCKET_PORT: Final[int] = int(os.environ.get("BFF_WEBSOCKET_PORT", "28080"))
 BEARER_TOKEN: Final[str] = os.environ.get("BEARER_TOKEN", "")
 GRAPHQL_HTTP_LIMIT: Final[int] = 120
 GRAPHQL_WEBSOCKET_LIMIT: Final[int] = 20
@@ -71,10 +73,10 @@ def websocket_handshake_status() -> int:
     """Return the public GraphQL WebSocket handshake status, then close it."""
     if not BEARER_TOKEN:
         raise RuntimeError("BEARER_TOKEN is required for the WebSocket surface probe")
-    with socket.create_connection(("localhost", 8080), timeout=10) as connection:
+    with socket.create_connection((BFF_WEBSOCKET_HOST, BFF_WEBSOCKET_PORT), timeout=10) as connection:
         request = (
             "GET /graphql HTTP/1.1\r\n"
-            "Host: localhost:8080\r\n"
+            f"Host: {BFF_WEBSOCKET_HOST}:{BFF_WEBSOCKET_PORT}\r\n"
             "Upgrade: websocket\r\n"
             "Connection: Upgrade\r\n"
             f"Authorization: Bearer {BEARER_TOKEN}\r\n"
