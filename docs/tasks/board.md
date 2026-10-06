@@ -161,7 +161,7 @@ This workstream manages the six-digit `DM-L-C-EE` domain/module error-code stand
 | --- | --- | --- | --- |
 | [ERRC-05](details/ERRC-05.md) | contracts | done | Define additive RFC 9457 Problem Details contract with optional `numericCode`/`errorName` |
 | [ERRC-06](details/ERRC-06.md) | contracts | todo | Reconcile all REST OpenAPI contracts with complete non-2xx responses and headers |
-| [ERRC-07](details/ERRC-07.md) | contracts | todo | Define GraphQL error extensions and WebSocket custom close code contracts |
+| [ERRC-07](details/ERRC-07.md) | contracts | done | Define GraphQL error extensions and WebSocket custom close code contracts |
 | [ERRC-08](details/ERRC-08.md) | contracts | todo | Define messaging, outbox, and background execution failure contracts |
 | [ERRC-09](details/ERRC-09.md) | quality | todo | Upgrade Python contract validators and CI breaking-change detection gates |
 

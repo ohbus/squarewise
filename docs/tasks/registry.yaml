@@ -8099,7 +8099,7 @@
       "parent_id": "ERRC-01",
       "title": "Define GraphQL and WebSocket error contracts",
       "phase": "contracts",
-      "status": "todo",
+      "status": "done",
       "owner_role": "contracts",
       "owner_agent": "/root",
       "depends_on": [
@@ -8124,7 +8124,11 @@
         "uv run python tools/contracts/validate.py",
         "git diff --check"
       ],
-      "evidence": [],
+      "evidence": [
+        "Added contracts/graphql/errors.graphqls and contracts/graphql/README.md defining additive GraphQL extensions, validation violations, upstream identity preservation, and WebSocket close codes 4401, 4403, 4408, and 4429.",
+        "Synchronized docs/architecture/errors/bff.md and docs/architecture/error-flow.md with exact upstream-to-GraphQL and WebSocket mapping rules.",
+        "uv run --with graphql-core parsed the complete five-file SDL set; uv run python tools/contracts/validate.py passed (252 tasks, 15 JSON files, 5 GraphQL files); git diff --check passed."
+      ],
       "reviewer": "/root",
       "blocker": null
     },

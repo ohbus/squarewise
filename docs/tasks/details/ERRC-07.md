@@ -89,6 +89,19 @@ git diff --check
 - Clean GraphQL schema validation output across all `.graphqls` files.
 - Complete mapping table from upstream REST responses to GraphQL extensions.
 
+## Implementation Notes and Verification
+
+- Added `contracts/graphql/errors.graphqls` with the additive
+  `ErrorExtensions` and bounded `ValidationError` contract.
+- Added `contracts/graphql/README.md` documenting upstream identity preservation,
+  `graphql-transport-ws` lifecycle frames, and close codes 4401, 4403, 4408, and
+  4429.
+- Synchronized the BFF error guide and error-flow documentation with exact
+  upstream-to-GraphQL mappings and anti-leakage rules.
+- `uv run --with graphql-core` parsed the complete five-file SDL set with
+  `build_schema`; `uv run python tools/contracts/validate.py` passed (252 tasks,
+  15 JSON files, 5 GraphQL files); `git diff --check` passed.
+
 ## Rollout & Rollback Strategy
 
 - Schema and documentation specification milestone.

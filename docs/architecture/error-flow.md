@@ -50,3 +50,12 @@ other upstream 4xx responses retain their corresponding 4xx code.
 Request validation is mandatory on every command/query DTO. Domain invariants
 remain mandatory after transport validation; a valid JSON shape can still be an
 invalid expense or unauthorized operation.
+
+The complete GraphQL extension and WebSocket lifecycle contract is defined in
+[`contracts/graphql/errors.graphqls`](../../contracts/graphql/errors.graphqls)
+and [`contracts/graphql/README.md`](../../contracts/graphql/README.md). Valid
+upstream Problem Details preserve `code`, optional `numericCode` and
+`errorName`, `requestId`, `source`, `timestamp`, and bounded violations. An
+unparseable upstream response receives a BFF-owned protocol error rather than a
+status-derived or fabricated upstream identity. WebSocket lifecycle failures
+use close codes 4401, 4403, 4408, and 4429.
