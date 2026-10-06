@@ -37,6 +37,15 @@ groups:
           summary: Squarewise JVM heap pressure is high
           description: "{{ $labels.service }} heap usage is above 85%."
           runbook: docs/operations/production-hardening.md#jvm-pressure
+      - alert: SquarewiseRateLimitStoreUnavailable
+        expr: sum by (service, policy) (rate(squarewise_rate_limit_decisions_total{job="squarewise",outcome="store_error"}[5m])) > 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: Squarewise rate-limit store is unavailable
+          description: "{{ $labels.service }} is recording fail-closed rate-limit store errors for policy {{ $labels.policy }}."
+          runbook: docs/operations/production-hardening.md#rate-limit-store-unavailable
       - alert: SquarewiseReaderReplayLag
         expr: squarewise_db_reader_lag_ms{job="squarewise"} > 5000
         for: 2m

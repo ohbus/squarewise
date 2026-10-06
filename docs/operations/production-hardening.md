@@ -28,7 +28,19 @@ exception messages.
 Required dashboards cover request rate/error rate/latency (RED), JVM and process
 health, PostgreSQL pool saturation, RabbitMQ backlog and consumer failures,
 outbox age/retry counts, notification delivery outcomes, and BFF upstream
-latency/error rates.
+latency/error rates. The rate-limit dashboard also exposes bounded admission
+outcomes by service, policy, and outcome; it must not expose keys, subjects,
+addresses, tokens, or request IDs.
+
+### Rate-limit store unavailable
+
+`SquarewiseRateLimitStoreUnavailable` means protected admission is failing
+closed because Redis decisions cannot be made safely. Confirm the service
+readiness and Redis health indicators, inspect bounded `store_error` metrics by
+service and policy, and check the Redis endpoint, authentication, TLS, and
+connection saturation. Do not enable an in-memory or PostgreSQL fallback.
+After Redis recovery, verify readiness returns healthy and run the documented
+local/managed-environment admission recovery probe before clearing the alert.
 
 For host-native local verification, use
 `infra/observability/prometheus.local.yml`; it targets the four documented host
