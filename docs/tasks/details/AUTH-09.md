@@ -543,9 +543,10 @@ credential and trusted network partition, its bounded policy is configurable via
 to the existing structured HTTP 429 boundary. The local Mailpit passwordless E2E
 passed the configured five generic invalid-credential responses followed by a
 429. The Redis resilience probe also returned 429 for verification while Redis
-was stopped and generic 401 after restart; its tokenless run explicitly skipped
-the Prometheus assertion. Hosted verification-limit, alert, and production Redis
-evidence remain open.
+was stopped and generic 401 after restart; the rebuilt authenticated run
+required both `store_error` and `fail_closed` Prometheus outcomes for
+verification, login, and refresh. Hosted verification-limit, alert, and
+production Redis evidence remain open.
 
 The two-Accounts replica probe now also stops Redis while both replicas remain
 online, requires login-start to fail closed with HTTP 429 on both, and verifies
