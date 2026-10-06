@@ -102,6 +102,8 @@ The end-to-end test suites run against the live local environment (`infra/local/
      Accounts containers sharing PostgreSQL and Redis.
    - Alternates six login-start requests between the two published replica
      ports and requires five `202` responses followed by one shared `429`.
+   - Submits ten simultaneous login-start requests across both replicas and
+     requires exactly five `202` responses and five `429` responses.
    - This proves local distributed-window behavior only; it is not a production
      scale or multi-zone capacity result.
 

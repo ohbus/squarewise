@@ -432,6 +432,10 @@ observed `[202, 202, 202, 202, 202, 429]`, proving the login window is shared
 across processes. This is local distributed-behavior evidence, not production
 scale, multi-zone, or capacity evidence.
 
+The same probe also submits ten simultaneous requests for a fresh recipient
+across both replicas and requires exactly five `202` admissions and five `429`
+denials, exercising the atomic shared-window decision.
+
 The same suite also stops Redis after clearing its namespace and verifies both
 GraphQL HTTP admission and WebSocket handshake admission return fail-closed
 `429` responses, then restarts Redis. Refresh outage/recovery and these BFF
