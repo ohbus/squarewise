@@ -102,7 +102,15 @@ The end-to-end test suites run against the live local environment (`infra/local/
      it, and requires the event to reach the auth-email DLQ without Mailpit dispatch.
    - Restarts Redis and requires a subsequent real auth-email event to be delivered.
 
-10. **Cross-process login admission (`test_auth_login_replicas.py`)**:
+10. **General notification delivery admission (`test_notification_general_rate_limit.py`)**:
+   - Publishes valid `expense.created.v1` envelopes through the local RabbitMQ
+     management API and observes the real Notifications consumer and Mailpit.
+   - Requires one delivery, suppression of the second same-recipient event within
+     the two-second Redis window, and delivery after expiry.
+   - This target is local-only because hosted CI deliberately uses the RabbitMQ
+     protocol image without the management API; it is not production evidence.
+
+11. **Cross-process login admission (`test_auth_login_replicas.py`)**:
    - Starts the disposable `docker-compose.auth-replicas.yml` overlay with two
      Accounts containers sharing PostgreSQL and Redis.
    - Alternates six login-start requests between the two published replica
@@ -114,14 +122,14 @@ The end-to-end test suites run against the live local environment (`infra/local/
    - This proves local distributed-window behavior only; it is not a production
      scale or multi-zone capacity result.
 
-11. **Concurrent refresh rotation (`test_auth_refresh_concurrency.py`)**:
+12. **Concurrent refresh rotation (`test_auth_refresh_concurrency.py`)**:
     - Obtains one real passwordless session, submits two concurrent refresh
       requests with the same token, and requires exactly one `200` plus one
       reuse `401`.
     - Presents the winning child token again and requires `401`, proving the
       PostgreSQL-authoritative family revocation path after reuse detection.
 
-12. **Passwordless Auth-Email Delivery (`test_auth_email_delivery.py`):**
+13. **Passwordless Auth-Email Delivery (`test_auth_email_delivery.py`):**
    - Real Accounts outbox/RabbitMQ/Notifications/Mailpit CODE delivery.
    - One-time credential redemption and replay rejection.
    - Refresh-family revocation after logout and idempotent logout replay.
@@ -141,6 +149,7 @@ make e2e-live
 make e2e-auth-cache
 make e2e-auth-surfaces
 make e2e-auth-no-accounts
+make e2e-notification-general-limit
 make e2e-offline
 make e2e-concurrency
 make e2e-chaos
