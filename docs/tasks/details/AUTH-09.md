@@ -535,7 +535,10 @@ credential and trusted network partition, its bounded policy is configurable via
 `SQUAREWISE_AUTH_LOGIN_VERIFY_WINDOW_SECONDS`, and store failures or denials map
 to the existing structured HTTP 429 boundary. The local Mailpit passwordless E2E
 passed the configured five generic invalid-credential responses followed by a
-429. Hosted verification-limit and production Redis evidence remain open.
+429. The Redis resilience probe also returned 429 for verification while Redis
+was stopped and generic 401 after restart; its tokenless run explicitly skipped
+the Prometheus assertion. Hosted verification-limit, alert, and production Redis
+evidence remain open.
 
 Rate-limit decisions now expose bounded Micrometer counters for `allowed`,
 `denied`, and `store_error`, tagged only by the centrally defined policy ID and

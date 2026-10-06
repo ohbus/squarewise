@@ -121,6 +121,8 @@ The end-to-end test suites run against the live local environment (`infra/local/
    - Exercises the verification admission cap with generic invalid-credential
      responses followed by structured HTTP 429; log/output secret absence remains
      a separate acceptance dimension.
+   - The Redis resilience suite separately checks verification fail-closed 429
+     behavior during outage and generic 401 recovery after restart.
    - When invoked with `--evidence-output`, emits success-only QA-10 evidence
      for `startLogin`, `verifyLogin`, `logout`, and `refreshToken`.
 

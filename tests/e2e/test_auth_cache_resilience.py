@@ -31,6 +31,7 @@ BEARER_TOKEN: Final[str] = os.environ.get("BEARER_TOKEN", "")
 PROMETHEUS_PATH: Final[str] = "/actuator/prometheus"
 REFRESH_PATH: Final[str] = "/accounts/v1/auth/token/refresh"
 LOGIN_START_PATH: Final[str] = "/accounts/v1/auth/login/start"
+LOGIN_VERIFY_PATH: Final[str] = "/accounts/v1/auth/login/verify"
 PROBE_TOKEN: Final[str] = "auth-cache-resilience-invalid-refresh"
 RATE_LIMIT_KEY_PATTERN: Final[str] = "squarewise:rl:v1:*"
 
@@ -105,6 +106,22 @@ def evict_rate_limit_keys() -> int:
     return len(keys)
 
 
+def login_verify_status(credential: str, timeout: float = 8.0) -> int:
+    """Return the public verification response for a deliberately invalid credential."""
+    body = json.dumps({"credential": credential, "clientKind": "NATIVE"}).encode("utf-8")
+    request = Request(
+        f"{ACCOUNTS_URL}{LOGIN_VERIFY_PATH}",
+        data=body,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urlopen(request, timeout=timeout) as response:
+            return response.status
+    except HTTPError as error:
+        return error.code
+
+
 def rate_limit_store_error_counts() -> dict[str, int]:
     """Read bounded login/refresh store-error counters when a probe token is available."""
     if not BEARER_TOKEN:
@@ -168,18 +185,31 @@ def main() -> int:
         compose("stop", "redis")
         expect("refresh with Redis unavailable", refresh_status(), 429)
         expect("login start with Redis unavailable", login_start_status(probe_email), 429)
+        expect(
+            "login verification with Redis unavailable",
+            login_verify_status("auth-cache-resilience-invalid-credential"),
+            429,
+        )
         metric_after = rate_limit_store_error_counts()
         if BEARER_TOKEN:
-            for policy in ("auth-refresh", "auth-login"):
+            for policy in ("auth-refresh", "auth-login", "auth-login-verify"):
                 if metric_after.get(policy, 0) <= metric_before.get(policy, 0):
                     raise AssertionError(
                         f"{policy} store_error metric did not increase during outage"
                     )
+            print("  rate-limit store_error metrics increased for login, verification, and refresh")
+        else:
+            print("  rate-limit store_error metric assertion skipped (BEARER_TOKEN unset)")
 
         compose("start", "redis")
         wait_for_redis()
         expect("refresh after Redis restart", refresh_status(), 401)
         expect("login start after Redis restart", login_start_status(probe_email), 202)
+        expect(
+            "login verification after Redis restart",
+            login_verify_status("auth-cache-resilience-invalid-credential"),
+            401,
+        )
     finally:
         compose("start", "redis")
     return 0
