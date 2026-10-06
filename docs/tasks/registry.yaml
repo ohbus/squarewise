@@ -7673,6 +7673,54 @@
       ],
       "reviewer": "/root",
       "blocker": null
+    },
+    {
+      "id": "DOC-27",
+      "parent_id": "MILESTONE-DOCUMENTATION",
+      "title": "Establish OSS community health and reporting policies",
+      "phase": "documentation",
+      "status": "done",
+      "owner_role": "coordinator",
+      "owner_agent": "/root",
+      "depends_on": [
+        "DOC-08",
+        "DOC-24"
+      ],
+      "owned_paths": [
+        "README.md",
+        "CONTRIBUTING.md",
+        "LICENSE",
+        "SECURITY.md",
+        "CODE_OF_CONDUCT.md",
+        "ACCESSIBILITY.md",
+        ".github/ISSUE_TEMPLATE/",
+        ".github/pull_request_template.md",
+        "docs/README.md",
+        "docs/tasks/details/DOC-27.md",
+        "docs/tasks/registry.yaml",
+        "docs/tasks/board.md",
+        "docs/tasks/progress.md"
+      ],
+      "specification": "docs/tasks/details/DOC-27.md",
+      "acceptance_criteria": [
+        "GitHub-recognized conduct, MIT license, security, accessibility, issue-form, chooser, and pull-request template files exist in supported locations.",
+        "security@subhrodip.com is the only documented destination for security questions and vulnerability reports, and suspected vulnerabilities are excluded from public issues.",
+        "Policies and templates are repository-specific, cross-linked, candid about current support and accessibility limits, and collect actionable reports without unsupported promises.",
+        "Repository documentation, registry, YAML, links, and whitespace validation pass with exact evidence recorded."
+      ],
+      "validation_commands": [
+        "uv run --frozen --no-build python tools/contracts/validate.py",
+        "uv run --frozen --no-build yamllint -d '{extends: relaxed, rules: {truthy: disable, line-length: disable}}' .github/ISSUE_TEMPLATE",
+        "git diff --check"
+      ],
+      "evidence": [
+        "Added GitHub-recognized root community files, three structured issue forms, issue chooser routing, and a repository-specific pull-request template.",
+        "Repository-wide contributor-document search confirms security@subhrodip.com is the only security question and vulnerability reporting destination; fixture addresses remain unrelated test data.",
+        "Contract/task validation reports 220 valid tasks; YAML lint and explicit issue-form structure parsing pass for all four ISSUE_TEMPLATE YAML files.",
+        "Local links across the eight touched Markdown entry points and git diff --check pass."
+      ],
+      "reviewer": "/root",
+      "blocker": null
     }
   ]
 }

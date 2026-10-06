@@ -31,6 +31,7 @@ A permanently free, privacy-centric expense-sharing platform for households, cou
 - [Quality & Verification](#quality--verification)
 - [Production Readiness](#production-readiness)
 - [Project Structure](#project-structure)
+- [Community & Support](#community--support)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -248,10 +249,28 @@ squarewise/
 │   ├── security/               # Common security adapters
 │   └── test-support/           # Shared testing utilities
 ├── tools/                      # Validation scripts & CI tooling
+├── ACCESSIBILITY.md            # Accessibility goals, limitations & reporting
+├── CODE_OF_CONDUCT.md          # Community behavior & enforcement policy
 ├── CONTRIBUTING.md             # Developer workflow & contribution guide
+├── LICENSE                     # MIT license terms
 ├── Makefile                    # One-command developer CLI
-└── README.md                   # Project overview and entry point
+├── README.md                   # Project overview and entry point
+└── SECURITY.md                 # Private vulnerability reporting policy
 ```
+
+---
+
+## Community & Support
+
+- Follow the [Code of Conduct](CODE_OF_CONDUCT.md) in all project spaces.
+- Use the [issue templates](https://github.com/ohbus/squarewise/issues/new/choose)
+  for bugs, feature requests, and accessibility barriers.
+- Read the [Accessibility Statement](ACCESSIBILITY.md) for current priorities,
+  known limitations, and barrier reporting.
+- Send every security question or suspected vulnerability privately to
+  [security@subhrodip.com](mailto:security@subhrodip.com) under the [Security
+  Policy](SECURITY.md). Never disclose a suspected vulnerability in a public
+  issue, discussion, or pull request.
 
 ---
 
@@ -268,4 +287,4 @@ We welcome contributions! Please read our [**Contributing Guide (CONTRIBUTING.md
 
 ## License
 
-Squarewise is open-source software licensed under the [MIT License](https://opensource.org/license/mit).
+Squarewise is open-source software licensed under the [MIT License](LICENSE).

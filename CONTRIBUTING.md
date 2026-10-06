@@ -32,20 +32,36 @@ Squarewise is a documentation-first, tracker-driven, modular Kotlin/Spring appli
 
 ## Code of Conduct
 
-We are committed to providing a welcoming, inclusive, and harassment-free experience for everyone. Please be respectful, constructive, and considerate of fellow contributors and maintainers.
+Participation in Squarewise is governed by the [Contributor Covenant Code of
+Conduct](CODE_OF_CONDUCT.md). Read it before contributing. Report conduct
+incidents through its private enforcement channel rather than in a public issue.
 
 ---
 
 ## How to Contribute
 
 ### Reporting Bugs & Security Issues
-- **Bugs**: Open an issue on GitHub describing the unexpected behavior, steps to reproduce, expected outcome, and logs/environment details.
-- **Security Vulnerabilities**: Please do **not** file public issues for security vulnerabilities. Report them directly to repository maintainers or via GitHub's private vulnerability reporting.
+
+- **Bugs**: Use the [bug report
+  form](https://github.com/ohbus/squarewise/issues/new?template=bug_report.yml)
+  and include the unexpected behavior, minimal reproduction, expected outcome,
+  environment, and sanitized evidence.
+- **Accessibility barriers**: Use the [accessibility report
+  form](https://github.com/ohbus/squarewise/issues/new?template=accessibility.yml)
+  and follow the [Accessibility Statement](ACCESSIBILITY.md).
+- **Security questions and vulnerabilities**: Do **not** file a public issue,
+  discussion, or pull request. Send every security question and suspected
+  vulnerability privately to
+  [security@subhrodip.com](mailto:security@subhrodip.com) and follow the
+  [Security Policy](SECURITY.md).
 
 ### Suggesting Enhancements
 Before building a major new capability or changing service boundaries:
 1. Review [`docs/product/mvp.md`](docs/product/mvp.md) and [`docs/architecture/`](docs/architecture/).
-2. Open an issue or discussion proposing the change and outlining its motivation, design trade-offs, and boundary implications.
+2. Use the [feature request
+   form](https://github.com/ohbus/squarewise/issues/new?template=feature_request.yml)
+   to outline its motivation, desired outcome, design trade-offs, and boundary
+   implications.
 
 ### Working Agreement & Task Registry
 Squarewise operates under a strict documentation-first workflow:
@@ -168,12 +184,16 @@ git commit -m "feat(expense-core): implement recurring expense calculator"
    git push origin feat/my-new-feature
    ```
 2. Open a Pull Request targeting `master`.
-3. Fill out the PR template with:
+3. Complete the automatically loaded PR template with:
    - **Objective**: What problem does this PR solve?
    - **Changes**: Bulleted summary of changes made.
    - **Verification**: Exact test/validation commands executed and their output.
    - **Documentation**: Confirmation of updated docs/KDocs.
 4. Ensure all CI checks pass.
+
+Pull requests must not contain undisclosed vulnerability details. Send security
+questions and reports to [security@subhrodip.com](mailto:security@subhrodip.com)
+under the [Security Policy](SECURITY.md).
 
 ---
 

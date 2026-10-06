@@ -1,0 +1,56 @@
+name: Accessibility barrier
+description: Report an accessibility problem in documentation, tooling, or a user-facing workflow
+title: "[Accessibility]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting an accessibility barrier. You do not need to disclose a disability or diagnosis. Read the [Accessibility Statement](https://github.com/ohbus/squarewise/blob/master/ACCESSIBILITY.md) for current scope and known limitations.
+
+        If the report includes a vulnerability, personal data, or sensitive security information, do not continue here; email security@subhrodip.com.
+  - type: textarea
+    id: location
+    attributes:
+      label: Affected location or workflow
+      description: Link the page/file or identify the command, tool, or sequence where the barrier occurs.
+    validations:
+      required: true
+  - type: textarea
+    id: barrier
+    attributes:
+      label: Barrier and impact
+      description: Explain what prevents or makes access difficult and what you expected to happen.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to encounter the barrier
+      description: Provide a short reproducible sequence when possible.
+    validations:
+      required: false
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment (optional)
+      description: Share browser, OS, zoom level, input method, or assistive technology only if you are comfortable doing so.
+    validations:
+      required: false
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested improvement
+      description: If you know a change that would remove the barrier, describe it here.
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Submission checklist
+      options:
+        - label: I removed personal data, credentials, and sensitive security information.
+          required: true
+        - label: I searched for an existing report covering this barrier.
+          required: true
+        - label: I agree to follow the repository's Code of Conduct.
+          required: true

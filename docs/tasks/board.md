@@ -33,6 +33,12 @@ query classification, and evidence gates are complete.
 
 ## Current milestone: documentation and contracts
 
+## OSS community health
+
+| ID | Owner | Status | Deliverable |
+| --- | --- | --- | --- |
+| DOC-27 | coordinator | done | GitHub community standards, security reporting, issue/PR templates, MIT license, and accessibility statement |
+
 ## Exhaustive public-interface coverage
 
 | ID | Owner | Status | Deliverable |
