@@ -76,6 +76,17 @@ git diff --check
 - Schema validation pass report for all event and background error schemas.
 - Documented state transition diagram for event retry, failure, and dead-letter routing.
 
+## Implementation Notes and Verification
+
+- Added `error-envelope.schema.json` for separate, bounded failure metadata and
+  `dead-letter.schema.json` for terminal event diagnosis/replay records.
+- Added `docs/architecture/errors/messaging-background.md` defining immutable
+  event handling, poison-message isolation, maximum three retries with bounded
+  exponential backoff, scheduler outcomes, and fatal JVM propagation.
+- `uv run --with jsonschema` validated both new schemas and representative valid
+  records; `uv run python tools/contracts/validate.py` passed; `git diff --check`
+  passed.
+
 ## Rollout & Rollback Strategy
 
 - Contract specification milestone.

@@ -8137,7 +8137,7 @@
       "parent_id": "ERRC-01",
       "title": "Define messaging and background error records",
       "phase": "contracts",
-      "status": "todo",
+      "status": "done",
       "owner_role": "contracts",
       "owner_agent": "/root",
       "depends_on": [
@@ -8161,7 +8161,11 @@
         "uv run python tools/contracts/validate.py",
         "git diff --check"
       ],
-      "evidence": [],
+      "evidence": [
+        "Added contracts/events/error-envelope.schema.json and contracts/events/dead-letter.schema.json with bounded identities, attempts, diagnostics, immutable payload snapshots, and closed objects.",
+        "Added docs/architecture/errors/messaging-background.md defining immutable business events, poison-message isolation, maximum three retries with exponential backoff, scheduler outcomes, and fatal propagation.",
+        "Draft 2020-12 schema validation passed for both new schemas and representative valid records; contract validation and git diff checks passed."
+      ],
       "reviewer": "/root",
       "blocker": null
     },
