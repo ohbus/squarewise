@@ -1,6 +1,10 @@
 SHELL := /bin/sh
 
+ifeq ($(OS),Windows_NT)
+GRADLE ?= gradlew.bat
+else
 GRADLE ?= ./gradlew
+endif
 COMPOSE ?= docker compose
 UV_RUN := uv run --frozen --no-build
 LOCAL_COMPOSE := infra/local/docker-compose.yml
@@ -78,7 +82,7 @@ build: ## Compile all Kotlin and Java sources
 
 package: ## Build executable jars for every application
 	@$(GRADLE) bootJar
-	@find app -path '*/build/libs/*.jar' -type f -print
+	@$(UV_RUN) python -c "from pathlib import Path; [print(path) for path in Path('app').glob('*/build/libs/*.jar')]"
 
 check: validate python-typecheck coverage package ## Validate, type-check, test, report coverage, and package
 

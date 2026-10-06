@@ -641,6 +641,11 @@ selected Accounts, Notifications, BFF GraphQL HTTP/WebSocket, Redis outage and
 recovery, query-isolation, multi-replica admission, concurrent refresh, and
 capacity-probe paths. The repository-wide Gradle test gate also passes.
 
+The repository Makefile is now executable on Windows as well as Unix-like
+hosts: it selects `gradlew.bat` under `Windows_NT`, and its package artifact
+listing uses the isolated Python runtime instead of a Unix-only `find` command.
+The declared local `check` gate passes through `mingw32-make` on Windows.
+
 This increment does not claim completion of AUTH-09. The task remains
 `in_progress` because hosted selected/skipped E2E evidence, managed Redis
 selection/failover/rotation/capacity, deployed alert routing, broader query and
