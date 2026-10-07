@@ -6,4 +6,4 @@ import com.subhrodip.squarewise.errors.web.ProblemDetailsDto
 class UpstreamProblemException(
     val problem: ProblemDetailsDto,
     cause: Throwable? = null,
-) : RuntimeException("upstream problem ${problem.errorName ?: problem.code}", cause)
+) : RuntimeException("upstream problem ${problem.errorName}", cause)

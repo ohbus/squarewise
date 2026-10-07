@@ -55,7 +55,9 @@ class ErrorValidatorTest(unittest.TestCase):
 
     def test_problem_schema_is_json(self) -> None:
         """The canonical schema remains parseable as JSON after parity work."""
-        json.loads((ROOT / "contracts/errors/problem.schema.json").read_text(encoding="utf-8"))
+        schema = json.loads((ROOT / "contracts/errors/problem.schema.json").read_text(encoding="utf-8"))
+        self.assertIn("numericCode", schema["required"])
+        self.assertIn("errorName", schema["required"])
 
 
 if __name__ == "__main__":

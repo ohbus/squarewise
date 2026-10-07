@@ -9,6 +9,8 @@
     "title",
     "status",
     "code",
+    "numericCode",
+    "errorName",
     "source",
     "requestId",
     "detail",
@@ -47,12 +49,12 @@
     "numericCode": {
       "type": "string",
       "pattern": "^[1-9]{4}(0[1-9]|[1-9][0-9])$",
-      "description": "Optional canonical six-digit machine error code (DMLCEE)."
+      "description": "Canonical six-digit machine error code (DMLCEE)."
     },
     "errorName": {
       "type": "string",
       "pattern": "^[A-Z0-9_]{3,64}$",
-      "description": "Optional immutable SCREAMING_SNAKE_CASE error identity."
+      "description": "Immutable SCREAMING_SNAKE_CASE error identity."
     },
     "source": {
       "type": "string",

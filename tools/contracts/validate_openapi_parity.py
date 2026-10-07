@@ -45,6 +45,9 @@ def problem_schema(path: Path) -> dict[str, Any]:
 def validate_documents(documents: list[dict[str, Any]], expected: dict[str, Any]) -> list[str]:
     """Return parity, header, and operation response diagnostics."""
     errors: list[str] = []
+    required = expected.get("required", [])
+    if not isinstance(required, list) or not {"numericCode", "errorName"}.issubset(required):
+        errors.append("canonical ProblemDetails must require numericCode and errorName")
     for document in documents:
         source = str(document.get("info", {}).get("title", "OpenAPI"))
         schemas = document.get("components", {}).get("schemas", {})

@@ -14,7 +14,7 @@ data class ProblemDetailsDto(
     val requestId: String,
     val source: String,
     val timestamp: Instant = Instant.now(),
-    val numericCode: String? = null,
-    val errorName: String? = null,
+    val numericCode: String,
+    val errorName: String,
     val violations: List<ViolationDto> = emptyList(),
 )

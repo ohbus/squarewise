@@ -9016,7 +9016,7 @@
       "parent_id": "ERRC-01",
       "title": "Make additive fields required after compatibility window",
       "phase": "contracts",
-      "status": "todo",
+      "status": "in_progress",
       "owner_role": "contracts",
       "owner_agent": "/root",
       "depends_on": [
@@ -9028,7 +9028,13 @@
         "contracts/rest/accounts.openapi.json",
         "contracts/rest/expense-core.openapi.json",
         "contracts/rest/notifications.openapi.json",
-        "docs/api/migration-notices/v1-error-compatibility-window.md"
+        "docs/api/migration-notices/v1-error-compatibility-window.md",
+        "libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/web/ProblemDetailsDto.kt",
+        "libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/http/GlobalErrorHandler.kt",
+        "libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/graphql/GraphQLExtensionsFormatter.kt",
+        "app/bff/src/main/kotlin/com/subhrodip/squarewise/bff/errors/UpstreamProblemDecoder.kt",
+        "tools/contracts/validate_openapi_parity.py",
+        "tests/tools/test_error_validators.py"
       ],
       "specification": "docs/tasks/details/ERRC-29.md",
       "acceptance_criteria": [
@@ -9043,9 +9049,14 @@
         "make contracts",
         "git diff --check"
       ],
-      "evidence": [],
+      "evidence": [
+        "Local promotion rehearsal: problem.schema.json and all three REST OpenAPI ProblemDetails schemas require numericCode and errorName.",
+        "ProblemDetailsDto is non-null for numericCode and errorName; GlobalErrorHandler and GraphQL formatting preserve required identities.",
+        "uv run python tools/contracts/validate.py passed; uv run python tools/contracts/validate_openapi_parity.py passed; ./gradlew.bat :libs:errors:test :app:bff:test --no-daemon --console=plain passed.",
+        "Formal ERRC-28 staged rollout, client adoption certification, and product effective-date approval remain unverified."
+      ],
       "reviewer": "/root",
-      "blocker": null
+      "blocker": "Production-effective promotion still requires ERRC-28 staging evidence, client adoption certification, and product approval."
     },
     {
       "id": "ERRC-30",

@@ -5,9 +5,10 @@ GraphQL transports still place error objects in the protocol-level `errors` arra
 
 The BFF preserves `code`, `numericCode`, `errorName`, `requestId`, `source`,
 `timestamp`, and validation violations from a valid upstream Problem Details
-document. `numericCode` and `errorName` are optional during the v1 compatibility
-window. Malformed upstream responses receive a BFF-owned identity and never a
-fabricated upstream identity.
+document. `numericCode` and `errorName` are required after the local contract
+promotion rehearsal. Malformed or legacy-only upstream responses receive the
+BFF-owned `UPSTREAM_PROTOCOL_INVALID` identity and never a fabricated upstream
+identity.
 
 For `graphql-transport-ws`, lifecycle failures use the application close-code
 range `4400`-`4499`:

@@ -6,6 +6,15 @@ The compatibility window remains open. This document is the controlled
 migration notice and readiness checklist; it is not a declaration that
 `numericCode` or `errorName` are required yet.
 
+## Local promotion rehearsal
+
+The repository now contains the code and contract changes for the required-field
+promotion: the canonical schema and REST OpenAPI documents require both fields,
+and `ProblemDetailsDto` enforces non-null values. This is locally verified
+readiness evidence only. The externally effective contract remains pending until
+the closure gates below are approved; no staging or production rollout is
+implied by local validation.
+
 ## Current contract
 
 API v1 continues to require the legacy symbolic `code` field. Servers may emit
@@ -28,10 +37,11 @@ ledger and approved by the coordinator and product owner:
 
 ## Planned closure changes
 
-After approval, the schema and all REST OpenAPI `ProblemDetails` definitions
-will add `numericCode` and `errorName` to `required`, while retaining the v1
-symbolic `code`. The validator and omission tests will then reject legacy-only
-fixtures.
+The local promotion rehearsal has added `numericCode` and `errorName` to
+`required` in the schema and all REST OpenAPI `ProblemDetails` definitions,
+while retaining the v1 symbolic `code`. The validator and typed response model
+reject omission in current code; external effective-date approval remains
+pending.
 
 ## Integrator guidance during the open window
 

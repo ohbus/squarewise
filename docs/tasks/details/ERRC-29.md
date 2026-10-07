@@ -88,8 +88,8 @@ git diff --check
 - Non-breaking to v1 clients since legacy `code` remains present.
 - Rollback: Revert required constraint to optional in schema if edge-case clients report issues.
 
-## Readiness Notes
+## Local-readiness notes
 
-- Added [`v1-error-compatibility-window.md`](../../api/migration-notices/v1-error-compatibility-window.md) as a pending migration notice and closure checklist.
-- The schema and OpenAPI contracts remain additive/optional until ERRC-28 staging evidence and formal client adoption sign-off are recorded.
-- ERRC-29 remains todo; no required-field promotion has been performed.
+- Added [`v1-error-compatibility-window.md`](../../api/migration-notices/v1-error-compatibility-window.md) as the controlled migration notice and closure checklist.
+- Under the resumed local-readiness assumption, the schema and OpenAPI contracts now require both additive fields, and the Kotlin DTO is non-null by construction.
+- The local code promotion is not an external contract-effective-date declaration. ERRC-28 staging evidence, formal client adoption certification, and product approval remain pending.

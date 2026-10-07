@@ -79,4 +79,13 @@ class BffErrorResolverTest {
         assertEquals("213201", exception.problem.numericCode)
         assertEquals("expense-core", exception.problem.source)
     }
+
+    @Test
+    fun `decoder assigns BFF identity when legacy upstream omits promoted fields`() {
+        val decoder = UpstreamProblemDecoder(ObjectMapper())
+        val exception = decoder.decode(404, """{"code":"NOT_FOUND"}""", "fallback", "expense-core")
+
+        assertEquals("426701", exception.problem.numericCode)
+        assertEquals("UPSTREAM_PROTOCOL_INVALID", exception.problem.errorName)
+    }
 }

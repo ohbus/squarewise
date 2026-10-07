@@ -1,6 +1,7 @@
 package com.subhrodip.squarewise.bff.errors
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.subhrodip.squarewise.errors.catalog.BffErrors
 import com.subhrodip.squarewise.errors.web.ProblemDetailsDto
 import java.net.URI
 import java.time.Instant
@@ -20,8 +21,8 @@ class UpstreamProblemDecoder(private val objectMapper: ObjectMapper) {
             requestId = node.path("requestId").asText(requestId),
             source = node.path("source").asText(source),
             timestamp = node.path("timestamp").asText(null)?.let(Instant::parse) ?: Instant.EPOCH,
-            numericCode = node.path("numericCode").asText(null),
-            errorName = node.path("errorName").asText(null),
+            numericCode = node.path("numericCode").asText(BffErrors.UPSTREAM_PROTOCOL_INVALID.numericCode.value),
+            errorName = node.path("errorName").asText(BffErrors.UPSTREAM_PROTOCOL_INVALID.errorName),
         )
         return UpstreamProblemException(problem)
     }

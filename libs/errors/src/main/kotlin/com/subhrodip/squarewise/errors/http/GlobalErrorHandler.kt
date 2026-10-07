@@ -245,8 +245,8 @@ class GlobalErrorHandler(
         source: String,
         requestId: String,
         detail: String,
-        numericCode: String? = null,
-        errorName: String? = null,
+        numericCode: String,
+        errorName: String,
         violations: List<FieldViolation> = emptyList(),
     ): ProblemDetailsDto = ProblemDetailsDto(
         type = URI(type),

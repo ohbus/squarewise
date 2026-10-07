@@ -9,8 +9,8 @@ object GraphQLExtensionsFormatter {
     /** Preserve every available upstream Problem Details identity field. */
     fun fromProblem(problem: ProblemDetailsDto): Map<String, Any> = buildMap {
         put("code", problem.code)
-        problem.numericCode?.let { put("numericCode", it) }
-        problem.errorName?.let { put("errorName", it) }
+        put("numericCode", problem.numericCode)
+        put("errorName", problem.errorName)
         put("requestId", problem.requestId)
         put("source", problem.source)
         put("timestamp", problem.timestamp.toString())
