@@ -78,6 +78,13 @@ git diff --check
 - Added typed E2E problem-contract assertions to the invalid-allocation, archived-group, invalid-magic-link, replay-conflict, and rate-limit scenarios.
 - Live Bruno collection passed against the rebuilt Docker stack: 72 requests, 80 tests, 0 failures. The focused quality run also passed: 24 requests, 27 tests, 0 failures.
 - Live E2E suites passed: `uv run python tests/e2e/test_rest_edge_cases.py` and `uv run python tests/e2e/test_auth_email_delivery.py`.
+- A fresh signed local-OIDC run of `tests/acceptance/runner.py --require-services`
+  passed all ten QA-04 scenarios against the rebuilt Compose stack: contract
+  validation, health, group/expense/settlement, offline replay, GraphQL,
+  rollback, concurrency, authorization, BFF fanout, and recovery. The token was
+  acquired through `tests/e2e/acquire_local_tokens.sh`, preserving the internal
+  Compose issuer; the run is local acceptance evidence, not staging or
+  production evidence.
 - Acceptance exposed two runtime integration gaps and they were closed in the owning boundaries: production servlet/reactive security chains now use the structured 401/403 handlers, and the legacy error adapter now derives additive fields from governed definitions instead of emitting nulls.
 - `make contracts` is unavailable in this Windows environment because GNU Make is not installed; the equivalent `uv run python tools/contracts/validate.py` gate passed.
 
