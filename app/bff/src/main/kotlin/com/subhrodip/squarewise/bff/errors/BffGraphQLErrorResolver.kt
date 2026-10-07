@@ -26,7 +26,8 @@ class BffGraphQLErrorResolver {
             val extensions = GraphQLExtensionsFormatter.fromDefinition(definition, requestId).toMutableMap().apply {
                 if (definition.legacyCode == "ERR-11") put("retryAfterSeconds", 60)
             }
-            return error(environment, definition.safeDetail, definition.errorName, extensions, classification(definition))
+            val detail = if (definition.legacyCode == "ERR-11") "Rate limit exceeded" else definition.safeDetail
+            return error(environment, detail, definition.errorName, extensions, classification(definition))
     }
 
     private fun error(environment: DataFetchingEnvironment, detail: String, code: String, extensions: Map<String, Any>, type: ErrorType): GraphQLError =

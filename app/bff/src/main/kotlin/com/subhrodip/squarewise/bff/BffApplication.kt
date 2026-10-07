@@ -23,7 +23,7 @@ import org.springframework.data.redis.core.StringRedisTemplate
 import reactor.core.publisher.Mono
 
 /** Root Spring Boot composition for the GraphQL BFF application. */
-@SpringBootApplication
+@SpringBootApplication(excludeName = ["org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration"])
 @Import(OidcConfigurationGuard::class, RateLimitRedisHealthIndicator::class)
 class BffApplication {
     /** Creates the mandatory Redis-backed distributed limiter for BFF admission. */

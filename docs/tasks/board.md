@@ -181,7 +181,7 @@ This workstream manages the six-digit `DM-L-C-EE` domain/module error-code stand
 | --- | --- | --- | --- |
 | [ERRC-15](details/ERRC-15.md) | platform | done | Implement Spring Web MVC Problem Details advice and static container fallbacks |
 | [ERRC-16](details/ERRC-16.md) | security | done | Implement structured 401/403/404 ProblemDetails for Servlet and Reactive security filters |
-| [ERRC-17](details/ERRC-17.md) | platform | in_progress | Implement BFF GraphQL exception resolver and upstream WebClient problem client |
+| [ERRC-17](details/ERRC-17.md) | platform | done | Implement BFF GraphQL exception resolver and upstream WebClient problem client |
 | [ERRC-18](details/ERRC-18.md) | platform | done | Implement fatal-safe `AsyncExecutionTemplate` and dead-letter disposition strategies |
 
 ### Phase 4: Bounded-Context Migration
@@ -191,7 +191,7 @@ This workstream manages the six-digit `DM-L-C-EE` domain/module error-code stand
 | [ERRC-19](details/ERRC-19.md) | accounts | done | Migrate Accounts service definitions and throw sites to `AccountsErrors` |
 | [ERRC-20](details/ERRC-20.md) | core | done | Migrate Expense Core service definitions and throw sites while preserving ACID invariants |
 | [ERRC-21](details/ERRC-21.md) | notifications | done | Migrate Notifications service definitions, remove broad catches, and wrap consumers |
-| [ERRC-22](details/ERRC-22.md) | bff | in_progress | Migrate BFF resolvers, remove string matching, and preserve upstream error identities |
+| [ERRC-22](details/ERRC-22.md) | bff | done | Migrate BFF resolvers, remove string matching, and preserve upstream error identities |
 | [ERRC-23](details/ERRC-23.md) | platform | todo | Migrate shared platform libraries (`libs/`) to `PlatformErrors` and empty hygiene allowlist |
 
 ### Phase 5: Clients, Acceptance, Scale, Rollout

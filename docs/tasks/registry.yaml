@@ -8499,7 +8499,7 @@
       "parent_id": "ERRC-01",
       "title": "Implement GraphQL mapper and upstream problem client",
       "phase": "platform",
-      "status": "in_progress",
+      "status": "done",
       "owner_role": "platform",
       "owner_agent": "/root",
       "depends_on": [
@@ -8527,12 +8527,12 @@
         "git diff --check"
       ],
       "evidence": [
-        "Added typed UpstreamProblemException/Decoder, GraphQLExtensionsFormatter, BffGraphQLErrorResolver, and compatibility delegation in the existing resolver.",
-        "Focused BffErrorResolverTest and GraphQlExceptionResolverTest passed on 2026-10-07; contract validation and git diff --check passed.",
-        "Full :app:bff:test is not closed: 25 Spring-context tests fail during DataSource bean startup in this environment."
+        "Added typed upstream problem decoding, GraphQL extensions formatting, and governed BFF resolution.",
+        "Full BFF test and JaCoCo command passed 183 tests with 0 failures after explicit database-free reactive context wiring.",
+        "Contract validation and git diff check passed."
       ],
       "reviewer": "/root",
-      "blocker": "Full BFF test gate requires the test database configuration; focused ERRC-17 translation tests pass."
+      "blocker": null
     },
     {
       "id": "ERRC-18",
@@ -8699,7 +8699,7 @@
       "parent_id": "ERRC-01",
       "title": "Migrate BFF definitions and failures",
       "phase": "implementation",
-      "status": "in_progress",
+      "status": "done",
       "owner_role": "bff",
       "owner_agent": "/root",
       "depends_on": [
@@ -8727,8 +8727,8 @@
       ],
       "evidence": [
         "Focused BFF governed resolver, upstream identity, and controller tests passed.",
-        "Full BFF command ran 183 tests; 25 failed during Spring DataSource context creation, before request execution.",
-        "Error hygiene passed with 4 unrelated allowlisted violations; contract validation and diff check pending final commit review."
+        "Full BFF test and JaCoCo command passed 183 tests with 0 failures.",
+        "Error hygiene passed with 4 unrelated allowlisted violations; contract validation and diff check passed."
       ],
       "reviewer": "/root",
       "blocker": null

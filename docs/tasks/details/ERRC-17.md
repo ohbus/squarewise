@@ -96,11 +96,10 @@ git diff --check
   timestamp are preserved in GraphQL extensions; local catalog failures use
   compiled BFF definitions, and `TimeoutException` maps to the frozen catalog
   `UPSTREAM_TIMEOUT` (`426801`). No English message matching is used.
-- The existing resolver delegates governed/upstream typed failures to the new
-  boundary while retaining legacy `ApplicationException` compatibility.
-- Focused `BffErrorResolverTest` and the existing `GraphQlExceptionResolverTest`
-  passed on 2026-10-07. Contract validation and `git diff --check` passed.
-- The full `:app:bff:test` run remains open: 25 existing Spring-context tests
-  fail during DataSource bean startup in this environment. This task remains
-  `in_progress` until the declared full BFF gate is rerun with its required
-  test database configuration.
+- The existing resolver delegates governed and upstream typed failures to the
+  catalog boundary without English-message classification.
+- The database-free BFF explicitly excludes JDBC datasource auto-configuration,
+  and its dependency graph excludes the transitive servlet web starter so tests
+  and runtime select the intended reactive WebFlux stack.
+- The full `:app:bff:test :app:bff:jacocoTestReport` gate passed 183 tests with
+  zero failures on 2026-10-07. Contract validation and `git diff --check` passed.

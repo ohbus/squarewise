@@ -90,7 +90,5 @@ git diff --check
 - Removed all BFF entries from the error-hygiene allowlist; no legacy exception,
   error-code, or message-matching references remain in BFF production sources.
 - Focused resolver, upstream-identity, and GraphQL controller tests passed.
-  The declared full BFF command remains blocked by the pre-existing Spring test
-  context/DataSource bean-creation failure: 25 of 183 tests fail before request
-  execution. ERRC-17 owns closure of that environment gate, so this task remains
-  `in_progress` pending a clean full-suite/JaCoCo run.
+- The full BFF command passed 183 tests with zero failures and completed JaCoCo
+  after the database-free/reactive test-context fixes described above.

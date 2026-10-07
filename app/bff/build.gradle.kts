@@ -29,6 +29,9 @@ dependencies {
     testImplementation(libs.boot.test)
     testImplementation(kotlin("test"))
 }
+configurations.configureEach {
+    exclude(group = "org.springframework.boot", module = "spring-boot-starter-web")
+}
 tasks.withType<Test> { useJUnitPlatform() }
 sourceSets {
     main {
