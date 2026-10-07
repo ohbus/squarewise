@@ -99,3 +99,19 @@ git diff --check
   which is owned by the later ERRC-30 legacy-infrastructure retirement task;
   therefore the repository-wide zero-entry acceptance remains pending that
   dependency and this task stays `in_progress`.
+
+## Phase and Ownership Audit (2026-10-07)
+
+- Phase 0 is complete: ERRC-01 through ERRC-04 are registered as `done`, and
+  their audit, registry/schema, and catalog validation evidence is present in
+  the registry and progress ledger.
+- A fresh scan of all ERRC-23-owned production library paths found no legacy
+  `ApplicationException`, legacy `ErrorCode`, or generic `throw` references.
+- The remaining hygiene findings are the three direct `ApiProblem` construction
+  sites in `libs/errors/http/`. Those files are outside ERRC-23's owned paths
+  and inside ERRC-30's owned `libs/errors` tree. ERRC-30 depends on ERRC-29,
+  so taking those files in this increment would violate the sequential task
+  and ownership rules.
+- The tracker therefore records an explicit cross-task acceptance dependency;
+  no compatibility behavior or acceptance criterion is weakened to make the
+  hygiene count appear complete.

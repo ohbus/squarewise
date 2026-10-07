@@ -8776,10 +8776,12 @@
       "evidence": [
         "Migrated the owned HMAC rate-limit secret decoder to PlatformErrors-backed PlatformDomainException.",
         "Shared db, security, observability, and ids test suite passed.",
-        "Three remaining libs/errors allowlist entries are owned by ERRC-30; zero-entry acceptance remains pending."
+        "Fresh scan found no legacy ApplicationException, legacy ErrorCode, or generic throw references in ERRC-23-owned production library paths.",
+        "Phase 0 audit confirms ERRC-01 through ERRC-04 are done with recorded contract/catalog evidence.",
+        "Three remaining libs/errors allowlist entries are owned by ERRC-30; zero-entry acceptance remains pending that task's ERRC-29 dependency."
       ],
       "reviewer": "/root",
-      "blocker": "Three libs/errors web infrastructure allowlist entries remain owned by ERRC-30."
+      "blocker": "ERRC-23's zero-entry criterion reaches three libs/errors web infrastructure entries owned by ERRC-30; ERRC-30 cannot start until ERRC-29 is complete."
     },
     {
       "id": "ERRC-24",
