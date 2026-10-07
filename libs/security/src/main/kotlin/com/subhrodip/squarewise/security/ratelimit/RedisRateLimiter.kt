@@ -1,5 +1,7 @@
 package com.subhrodip.squarewise.security.ratelimit
 
+import com.subhrodip.squarewise.errors.catalog.PlatformErrors
+import com.subhrodip.squarewise.security.errors.PlatformDomainException
 import java.time.Duration
 import java.util.concurrent.TimeoutException
 import io.micrometer.core.instrument.MeterRegistry
@@ -26,7 +28,12 @@ class RedisRateLimiter(
     private val script = DefaultRedisScript<String>(SCRIPT, String::class.java)
 
     override fun consume(key: String, policy: RateLimitPolicy): RateLimitDecision {
-        require(key.length in 1..256) { "Rate-limit key material must be 1-256 characters" }
+        if (key.length !in 1..256) {
+            throw PlatformDomainException(
+                PlatformErrors.PLATFORM_CONFIGURATION_INVALID,
+                "Rate-limit key material must be 1-256 characters"
+            )
+        }
         val redisKey = "squarewise:rl:v1:${keyDeriver.derive(key)}"
         val timer = meterRegistry?.let(Timer::start)
         return try {

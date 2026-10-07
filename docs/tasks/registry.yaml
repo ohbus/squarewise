@@ -8778,7 +8778,7 @@
         "Shared db, security, observability, and ids test suite passed.",
         "Fresh scan found no legacy ApplicationException, legacy ErrorCode, or generic throw references in ERRC-23-owned production library paths.",
         "Phase 0 audit confirms ERRC-01 through ERRC-04 are done with recorded contract/catalog evidence.",
-        "OIDC servlet/reactive decoder validation, signing-algorithm policy, and production secret guard now use PlatformErrors-backed PlatformDomainException; security tests and JaCoCo passed.",
+        "OIDC servlet/reactive decoder validation, signing-algorithm policy, production secret guard, rate-limit policy/decision bounds, and key-material bounds now use PlatformErrors-backed PlatformDomainException; security tests passed.",
         "Three remaining libs/errors allowlist entries are owned by ERRC-30; zero-entry acceptance remains pending that task's ERRC-29 dependency."
       ],
       "reviewer": "/root",

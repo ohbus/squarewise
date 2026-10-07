@@ -1,5 +1,7 @@
 package com.subhrodip.squarewise.security.ratelimit
 
+import com.subhrodip.squarewise.errors.catalog.PlatformErrors
+import com.subhrodip.squarewise.security.errors.PlatformDomainException
 import java.time.Duration
 
 /**
@@ -22,22 +24,27 @@ data class RateLimitPolicy(
     val cooldown: Duration = Duration.ZERO
 ) {
     init {
-        require(id.length in 1..64 && id.all { it.isAsciiIdentifierCharacter() }) {
-            "Rate-limit policy id must be 1-64 ASCII identifier characters"
+        if (id.length !in 1..64 || id.any { !it.isAsciiIdentifierCharacter() }) {
+            invalid("Rate-limit policy id must be 1-64 ASCII identifier characters")
         }
-        require(maximumPermits in 1..1_000_000) {
-            "Rate-limit maximum permits must be between 1 and 1000000"
+        if (maximumPermits !in 1..1_000_000) {
+            invalid("Rate-limit maximum permits must be between 1 and 1000000")
         }
-        require(window.nano == 0 && cooldown.nano == 0) {
-            "Rate-limit window and cooldown must use whole seconds"
+        if (window.nano != 0 || cooldown.nano != 0) {
+            invalid("Rate-limit window and cooldown must use whole seconds")
         }
-        require(window.seconds >= 1 && window <= MAXIMUM_WINDOW) {
-            "Rate-limit window must be positive and no longer than 24 hours"
+        if (window.seconds < 1 || window > MAXIMUM_WINDOW) {
+            invalid("Rate-limit window must be positive and no longer than 24 hours")
         }
-        require(!cooldown.isNegative && cooldown <= window) {
-            "Rate-limit cooldown must be non-negative and no longer than the window"
+        if (cooldown.isNegative || cooldown > window) {
+            invalid("Rate-limit cooldown must be non-negative and no longer than the window")
         }
     }
+
+    private fun invalid(detail: String): Nothing = throw PlatformDomainException(
+        PlatformErrors.PLATFORM_CONFIGURATION_INVALID,
+        detail
+    )
 
     private companion object {
         val MAXIMUM_WINDOW: Duration = Duration.ofHours(24)

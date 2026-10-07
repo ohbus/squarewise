@@ -120,3 +120,6 @@ git diff --check
   `PlatformDomainException` configuration boundary. The validation is
   centralized for the servlet and reactive decoder factories, and tests now
   assert the catalog-governed failure type.
+- Migrated rate-limit policy, decision, and key-material bounds to the governed
+  configuration boundary as well; malformed Redis store responses remain
+  translated by the existing fail-closed store exception policy.

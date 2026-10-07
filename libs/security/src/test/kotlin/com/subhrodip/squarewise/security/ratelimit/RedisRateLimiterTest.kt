@@ -6,6 +6,7 @@ import java.util.Base64
 import java.util.concurrent.TimeoutException
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
+import com.subhrodip.squarewise.security.errors.PlatformDomainException
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchers.anyList
@@ -107,8 +108,8 @@ class RedisRateLimiterTest {
         val redis = redisReturning("1|4|60")
         val limiter = RedisRateLimiter(redis, deriver)
 
-        assertThrows(IllegalArgumentException::class.java) { limiter.consume("", policy) }
-        assertThrows(IllegalArgumentException::class.java) { limiter.consume("x".repeat(257), policy) }
+        assertThrows(PlatformDomainException::class.java) { limiter.consume("", policy) }
+        assertThrows(PlatformDomainException::class.java) { limiter.consume("x".repeat(257), policy) }
     }
 
     private fun redisReturning(result: String?): StringRedisTemplate {
