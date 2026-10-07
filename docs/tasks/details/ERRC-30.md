@@ -67,6 +67,35 @@ git diff --check
 - Global search output proving 0 occurrences of legacy `ERR_` enums in production source code.
 - Full test suite execution report confirming 100% pass across all services.
 
+## 2026-10-07 audit inventory
+
+Implementation remains deferred because the ERRC-29 compatibility-window gates are
+not complete. The current production inventory is:
+
+- `libs/errors/.../domain/ErrorCode.kt` still defines `ERR_01` through `ERR_12`.
+- `libs/errors/.../domain/ApplicationException.kt` still exposes the enum-backed
+  exception constructor and the legacy `toProblemDetails` extension.
+- `libs/errors/.../exceptions/SquarewiseException.kt` still adapts catalog
+  `legacyCode` values into the enum, so governed exceptions retain the old internal
+  dependency.
+- `libs/errors/.../http/GlobalErrorHandler.kt` still handles `ApplicationException`
+  and maps the enum to compatibility responses. This is the remaining runtime
+  compatibility adapter and must be replaced by catalog-derived mappings before
+  deleting the enum.
+- Application production sources no longer import the legacy enum or
+  `ApplicationException`; remaining application references are test fixtures and
+  compatibility tests. Catalog-generated `legacyCode = "ERR-XX"` metadata and
+  historical contract records are intentional public-v1 compatibility data, not
+  enum references.
+- `tools/errors/validate_six_digit_catalog.py` currently delegates shared record
+  validation to `validate_catalog.py`; the old validator cannot be deleted until
+  that shared implementation is extracted or its ownership is explicitly retained.
+
+The next implementation increment requires ERRC-29 sign-off, then replacement of
+the `GlobalErrorHandler` compatibility adapter and `SquarewiseException` base
+constructor before deleting `ErrorCode.kt` and `ApplicationException.kt`. Until
+then the registry status remains `todo` and no legacy infrastructure is removed.
+
 ## Rollout & Rollback Strategy
 
 - Code cleanup and technical debt elimination.
