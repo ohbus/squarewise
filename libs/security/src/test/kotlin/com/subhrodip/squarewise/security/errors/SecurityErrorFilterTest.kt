@@ -65,7 +65,7 @@ class SecurityErrorFilterTest {
 
         val body = SecurityProblemBody.render(definition, "request-1")
         assertTrue(body.contains("\"status\":500"))
-        assertTrue(body.contains("\"code\":\"INTERNAL_ERROR\""))
+        assertTrue(body.contains("\"code\":\"INTERNAL_TEST\""))
     }
 
     private class TestAuthenticationException : AuthenticationException("invalid")

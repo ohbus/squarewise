@@ -62,7 +62,7 @@ object AllocationCalculator {
             "EXACT" -> exact(totalMinor, items.associate { it.participantId to it.value.toLong() })
             "PERCENT_BASIS_POINTS" -> percentage(totalMinor, items.associate { it.participantId to it.value.toLong() })
             "WEIGHTED_SHARES" -> weightedShares(totalMinor, items.associate { it.participantId to it.value.toLong() })
-            else -> throw ExpenseDomainException(ExpenseErrors.ERR_02, "Unsupported allocation mode: $mode")
+            else -> throw ExpenseDomainException(ExpenseErrors.EXPENSE_REQUEST_INVALID, "Unsupported allocation mode: $mode")
         }
     }
 }

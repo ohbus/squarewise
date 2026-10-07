@@ -9063,7 +9063,7 @@
       "parent_id": "ERRC-01",
       "title": "Retire legacy infrastructure, not the v1 field",
       "phase": "implementation",
-      "status": "todo",
+      "status": "in_progress",
       "owner_role": "coordinator",
       "owner_agent": "/root",
       "depends_on": [
@@ -9072,6 +9072,13 @@
       "owned_paths": [
         "docs/tasks/details/ERRC-30.md",
         "libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/",
+        "libs/security/src/main/kotlin/com/subhrodip/squarewise/security/",
+        "app/accounts/src/",
+        "app/expense-core/src/",
+        "app/bff/src/",
+        "contracts/errors/error-catalog.yaml",
+        "contracts/errors/error-catalog.schema.json",
+        "tools/codegen/generate_error_catalogs.py",
         "tools/errors/validate_catalog.py",
         "docs/architecture/error-code-standard.md"
       ],
@@ -9088,9 +9095,13 @@
         "uv run python tools/contracts/validate.py",
         "git diff --check"
       ],
-      "evidence": [],
+      "evidence": [
+        "Local runtime cleanup removes the legacy ErrorCode enum, ApplicationException, transitional mappers, and generated ExpenseErrors.ERR_* aliases; production app/ and libs/ sources have zero ERR_* references.",
+        "./gradlew.bat test --no-daemon --console=plain passed after catalog-driven boundary and fixture migration.",
+        "ERRC-29 production-effective date, client adoption, ERRC-28 staging rollout, and ERRC-26 performance evidence remain unverified; this is local implementation evidence only."
+      ],
       "reviewer": "/root",
-      "blocker": null
+      "blocker": "Production-effective ERRC-29 approval and preceding ERRC-28/ERRC-26 evidence remain unavailable; local implementation and validation are complete."
     },
     {
       "id": "ERRC-31",

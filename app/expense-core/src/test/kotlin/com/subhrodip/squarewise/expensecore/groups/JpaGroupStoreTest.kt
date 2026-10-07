@@ -22,8 +22,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
 import tools.jackson.databind.ObjectMapper
 
 /**
@@ -151,10 +150,10 @@ class JpaGroupStoreTest @Autowired constructor(
         assertEquals(2, membersAfterClaim.size)
         assertEquals(setOf("member-alice", "member-bob"), membersAfterClaim.map { it.subject }.toSet())
 
-        val err = assertThrows<ApplicationException> {
+        val err = assertThrows<SquarewiseException> {
             store.listMembers(group.groupId, "intruder")
         }
-        assertEquals(ErrorCode.ERR_05, err.errorCode)
+        assertEquals("NOT_FOUND", err.definition.legacyCode)
     }
 
     /**
@@ -174,10 +173,10 @@ class JpaGroupStoreTest @Autowired constructor(
         assertEquals("After rename", fetched.name)
         assertEquals(1, fetched.revision)
 
-        val updateErr = assertThrows<ApplicationException> {
+        val updateErr = assertThrows<SquarewiseException> {
             store.update(group.groupId, "stranger", UpdateGroupRequest("Nope"))
         }
-        assertEquals(ErrorCode.ERR_05, updateErr.errorCode)
+        assertEquals("NOT_FOUND", updateErr.definition.legacyCode)
     }
 
     /**
@@ -269,17 +268,17 @@ class JpaGroupStoreTest @Autowired constructor(
         val initialOutboxCount = outboxRepository.count()
 
         // Non-member attempt
-        val nonMemberErr = assertThrows<ApplicationException> {
+        val nonMemberErr = assertThrows<SquarewiseException> {
             store.update(group.groupId, "unauthorized-subject", UpdateGroupRequest("Hacked Name"))
         }
-        assertEquals(ErrorCode.ERR_05, nonMemberErr.errorCode)
+        assertEquals("NOT_FOUND", nonMemberErr.definition.legacyCode)
 
         // Missing group attempt
         val nonExistentId = UUID.randomUUID()
-        val missingErr = assertThrows<ApplicationException> {
+        val missingErr = assertThrows<SquarewiseException> {
             store.update(nonExistentId, "owner-side-effects", UpdateGroupRequest("Missing Group Name"))
         }
-        assertEquals(ErrorCode.ERR_05, missingErr.errorCode)
+        assertEquals("NOT_FOUND", missingErr.definition.legacyCode)
 
         // Verify entity unchanged
         val refreshed = groupRepository.findById(group.groupId).orElseThrow()
@@ -312,16 +311,16 @@ class JpaGroupStoreTest @Autowired constructor(
         assertEquals("group.archived.v1", outbox.eventType)
 
         // Repeat archive fails with 409
-        val archiveErr = assertThrows<ApplicationException> {
+        val archiveErr = assertThrows<SquarewiseException> {
             store.archive(group.groupId, "archive-owner")
         }
-        assertEquals(ErrorCode.ERR_06, archiveErr.errorCode)
+        assertEquals("CONFLICT", archiveErr.definition.legacyCode)
 
         // Update name fails with 409 Conflict
-        val updateErr = assertThrows<ApplicationException> {
+        val updateErr = assertThrows<SquarewiseException> {
             store.update(group.groupId, "archive-owner", UpdateGroupRequest("New Name"))
         }
-        assertEquals(ErrorCode.ERR_06, updateErr.errorCode)
+        assertEquals("CONFLICT", updateErr.definition.legacyCode)
     }
 
     /**
@@ -371,16 +370,16 @@ class JpaGroupStoreTest @Autowired constructor(
         assertEquals("remove-owner", membersAfter[0].subject)
 
         // Removed member can no longer list group members
-        val listErr = assertThrows<ApplicationException> {
+        val listErr = assertThrows<SquarewiseException> {
             store.listMembers(group.groupId, "member-to-remove")
         }
-        assertEquals(ErrorCode.ERR_05, listErr.errorCode)
+        assertEquals("NOT_FOUND", listErr.definition.legacyCode)
 
         // Duplicate removal returns 409 Conflict
-        val dupErr = assertThrows<ApplicationException> {
+        val dupErr = assertThrows<SquarewiseException> {
             store.removeMember(group.groupId, "remove-owner", removeTarget.membershipId)
         }
-        assertEquals(ErrorCode.ERR_06, dupErr.errorCode)
+        assertEquals("CONFLICT", dupErr.definition.legacyCode)
     }
 
     /**
@@ -393,10 +392,10 @@ class JpaGroupStoreTest @Autowired constructor(
 
         store.revokeInvite(group.groupId, "revoke-owner", invite.token)
 
-        val claimErr = assertThrows<ApplicationException> {
+        val claimErr = assertThrows<SquarewiseException> {
             store.claim(invite.token, "intruder")
         }
-        assertEquals(ErrorCode.ERR_06, claimErr.errorCode)
+        assertEquals("CONFLICT", claimErr.definition.legacyCode)
 
         val audit = auditRepository.findAll().single { it.groupId == group.groupId && it.action == "invitation.revoked" }
         assertEquals("invitation.revoked", audit.action)
@@ -408,10 +407,10 @@ class JpaGroupStoreTest @Autowired constructor(
         val group = store.create("claim-owner", CreateGroupRequest("Claims", "TRIP", "EUR"))
         val expired = store.invite(group.groupId, "claim-owner", CreateInviteRequest(0))
 
-        val expiredError = assertThrows<ApplicationException> {
+        val expiredError = assertThrows<SquarewiseException> {
             store.claim(expired.token, "expired-member")
         }
-        assertEquals(ErrorCode.ERR_06, expiredError.errorCode)
+        assertEquals("CONFLICT", expiredError.definition.legacyCode)
         assertEquals(1, store.listMembers(group.groupId, "claim-owner").size)
 
         val invite = store.invite(group.groupId, "claim-owner", CreateInviteRequest(24))
@@ -423,10 +422,10 @@ class JpaGroupStoreTest @Autowired constructor(
         assertEquals(group.groupId, sameSubjectReplay.groupId)
         assertEquals(revisionAfterClaim, groupRepository.findById(group.groupId).orElseThrow().revision)
 
-        val competingSubjectError = assertThrows<ApplicationException> {
+        val competingSubjectError = assertThrows<SquarewiseException> {
             store.claim(invite.token, "competing-member")
         }
-        assertEquals(ErrorCode.ERR_06, competingSubjectError.errorCode)
+        assertEquals("CONFLICT", competingSubjectError.definition.legacyCode)
         assertEquals(2, store.listMembers(group.groupId, "claim-owner").size)
         assertTrue(store.list("competing-member").isEmpty())
     }
@@ -439,11 +438,11 @@ class JpaGroupStoreTest @Autowired constructor(
         store.archive(group.groupId, "archived-claim-owner")
         val revisionAfterArchive = groupRepository.findById(group.groupId).orElseThrow().revision
 
-        val error = assertThrows<ApplicationException> {
+        val error = assertThrows<SquarewiseException> {
             store.claim(invitation.token, "archived-invitee")
         }
 
-        assertEquals(ErrorCode.ERR_06, error.errorCode)
+        assertEquals("CONFLICT", error.definition.legacyCode)
         assertEquals(revisionAfterArchive, groupRepository.findById(group.groupId).orElseThrow().revision)
         assertTrue(store.list("archived-invitee").isEmpty())
     }
@@ -465,11 +464,11 @@ class JpaGroupStoreTest @Autowired constructor(
         store.removeMember(group.groupId, "removed-placeholder-owner", placeholder.membershipId)
         val revisionAfterRemoval = groupRepository.findById(group.groupId).orElseThrow().revision
 
-        val error = assertThrows<ApplicationException> {
+        val error = assertThrows<SquarewiseException> {
             store.claim(invitation.token, "replacement-subject")
         }
 
-        assertEquals(ErrorCode.ERR_06, error.errorCode)
+        assertEquals("CONFLICT", error.definition.legacyCode)
         assertEquals(revisionAfterRemoval, groupRepository.findById(group.groupId).orElseThrow().revision)
         assertTrue(store.list("replacement-subject").isEmpty())
     }
@@ -493,11 +492,11 @@ class JpaGroupStoreTest @Autowired constructor(
         membershipRepository.saveAndFlush(persistedPlaceholder)
         val revisionBeforeClaim = groupRepository.findById(group.groupId).orElseThrow().revision
 
-        val error = assertThrows<ApplicationException> {
+        val error = assertThrows<SquarewiseException> {
             store.claim(invitation.token, "new-subject")
         }
 
-        assertEquals(ErrorCode.ERR_06, error.errorCode)
+        assertEquals("CONFLICT", error.definition.legacyCode)
         assertEquals(revisionBeforeClaim, groupRepository.findById(group.groupId).orElseThrow().revision)
         assertTrue(store.list("new-subject").isEmpty())
     }
@@ -513,19 +512,19 @@ class JpaGroupStoreTest @Autowired constructor(
         val auditCount = auditRepository.count()
         val outboxCount = outboxRepository.count()
 
-        val listError = assertThrows<ApplicationException> {
+        val listError = assertThrows<SquarewiseException> {
             store.listMembers(group.groupId, "archived-members-owner")
         }
-        assertEquals(ErrorCode.ERR_05, listError.errorCode)
+        assertEquals("NOT_FOUND", listError.definition.legacyCode)
 
-        val placeholderError = assertThrows<ApplicationException> {
+        val placeholderError = assertThrows<SquarewiseException> {
             store.addPlaceholder(
                 group.groupId,
                 "archived-members-owner",
                 CreatePlaceholderRequest("No mutation")
             )
         }
-        assertEquals(ErrorCode.ERR_06, placeholderError.errorCode)
+        assertEquals("CONFLICT", placeholderError.definition.legacyCode)
         assertEquals("ARCHIVED", groupRepository.findById(group.groupId).orElseThrow().status)
         assertEquals(auditCount, auditRepository.count())
         assertEquals(outboxCount, outboxRepository.count())
@@ -538,30 +537,30 @@ class JpaGroupStoreTest @Autowired constructor(
         val auditCount = auditRepository.count()
         val outboxCount = outboxRepository.count()
 
-        val placeholderError = assertThrows<ApplicationException> {
+        val placeholderError = assertThrows<SquarewiseException> {
             store.invite(
                 group.groupId,
                 "invalid-invite-owner",
                 CreateInviteRequest(24, UUID.randomUUID())
             )
         }
-        assertEquals(ErrorCode.ERR_06, placeholderError.errorCode)
+        assertEquals("CONFLICT", placeholderError.definition.legacyCode)
 
         val unknownToken = "a".repeat(64)
-        val revokeError = assertThrows<ApplicationException> {
+        val revokeError = assertThrows<SquarewiseException> {
             store.revokeInvite(group.groupId, "invalid-invite-owner", unknownToken)
         }
-        assertEquals(ErrorCode.ERR_06, revokeError.errorCode)
+        assertEquals("CONFLICT", revokeError.definition.legacyCode)
 
-        val malformedClaimError = assertThrows<ApplicationException> {
+        val malformedClaimError = assertThrows<SquarewiseException> {
             store.claim("not-a-token", "invitee")
         }
-        assertEquals(ErrorCode.ERR_06, malformedClaimError.errorCode)
+        assertEquals("CONFLICT", malformedClaimError.definition.legacyCode)
 
-        val unknownClaimError = assertThrows<ApplicationException> {
+        val unknownClaimError = assertThrows<SquarewiseException> {
             store.claim(unknownToken, "invitee")
         }
-        assertEquals(ErrorCode.ERR_06, unknownClaimError.errorCode)
+        assertEquals("CONFLICT", unknownClaimError.definition.legacyCode)
         assertEquals(0L, groupRepository.findById(group.groupId).orElseThrow().revision)
         assertEquals(auditCount, auditRepository.count())
         assertEquals(outboxCount, outboxRepository.count())
@@ -573,7 +572,7 @@ class JpaGroupStoreTest @Autowired constructor(
         val group = store.create("ordinary-target-owner", CreateGroupRequest("Invite targets", "TRIP", "EUR"))
         val ordinaryMember = membershipRepository.findByGroupIdAndStatus(group.groupId, "ACTIVE").single()
 
-        val error = assertThrows<ApplicationException> {
+        val error = assertThrows<SquarewiseException> {
             store.invite(
                 group.groupId,
                 "ordinary-target-owner",
@@ -581,7 +580,7 @@ class JpaGroupStoreTest @Autowired constructor(
             )
         }
 
-        assertEquals(ErrorCode.ERR_06, error.errorCode)
+        assertEquals("CONFLICT", error.definition.legacyCode)
     }
 
     /** Verifies a placeholder already bound to a subject cannot receive a second targeted invite. */
@@ -597,7 +596,7 @@ class JpaGroupStoreTest @Autowired constructor(
         boundPlaceholder.subject = "existing-subject"
         membershipRepository.saveAndFlush(boundPlaceholder)
 
-        val error = assertThrows<ApplicationException> {
+        val error = assertThrows<SquarewiseException> {
             store.invite(
                 group.groupId,
                 "bound-target-owner",
@@ -605,7 +604,7 @@ class JpaGroupStoreTest @Autowired constructor(
             )
         }
 
-        assertEquals(ErrorCode.ERR_06, error.errorCode)
+        assertEquals("CONFLICT", error.definition.legacyCode)
     }
 
     /** Verifies an invitation cannot target a placeholder that was removed after creation. */
@@ -619,7 +618,7 @@ class JpaGroupStoreTest @Autowired constructor(
         )
         store.removeMember(group.groupId, "removed-target-owner", placeholder.membershipId)
 
-        val error = assertThrows<ApplicationException> {
+        val error = assertThrows<SquarewiseException> {
             store.invite(
                 group.groupId,
                 "removed-target-owner",
@@ -627,7 +626,7 @@ class JpaGroupStoreTest @Autowired constructor(
             )
         }
 
-        assertEquals(ErrorCode.ERR_06, error.errorCode)
+        assertEquals("CONFLICT", error.definition.legacyCode)
     }
 
     /** Verifies removing an unknown membership is rejected without changing the group revision or effects. */
@@ -637,11 +636,11 @@ class JpaGroupStoreTest @Autowired constructor(
         val auditCount = auditRepository.count()
         val outboxCount = outboxRepository.count()
 
-        val error = assertThrows<ApplicationException> {
+        val error = assertThrows<SquarewiseException> {
             store.removeMember(group.groupId, "missing-member-owner", UUID.randomUUID())
         }
 
-        assertEquals(ErrorCode.ERR_05, error.errorCode)
+        assertEquals("NOT_FOUND", error.definition.legacyCode)
         assertEquals(0L, groupRepository.findById(group.groupId).orElseThrow().revision)
         assertEquals(auditCount, auditRepository.count())
         assertEquals(outboxCount, outboxRepository.count())

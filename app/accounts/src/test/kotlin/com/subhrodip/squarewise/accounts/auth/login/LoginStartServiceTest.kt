@@ -8,8 +8,7 @@ import com.subhrodip.squarewise.accounts.auth.delivery.model.AuthEmailMessage
 import com.subhrodip.squarewise.accounts.auth.delivery.model.AuthEmailTemplate
 import com.subhrodip.squarewise.accounts.auth.delivery.model.AuthEmailDeliveryResult
 import com.subhrodip.squarewise.accounts.auth.delivery.service.AuthEmailSender
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
 import java.time.Instant
 import java.util.UUID
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -137,11 +136,11 @@ class LoginStartServiceTest {
     fun `rate-limit denial fails with the stable error code`() {
         `when`(rateLimitService.tryAcquire("user@example.com", "network", now)).thenReturn(false)
 
-        val exception = assertThrows(ApplicationException::class.java) {
+        val exception = assertThrows(SquarewiseException::class.java) {
             service.start("user@example.com", "network", LoginCredentialService.CredentialKind.LINK, now)
         }
 
-        assertEquals(ErrorCode.ERR_11, exception.errorCode)
+        assertEquals("RATE_LIMITED", exception.definition.legacyCode)
         verify(credentialService, never()).issue(
             "user@example.com",
             LoginCredentialService.CredentialKind.LINK,
@@ -155,11 +154,11 @@ class LoginStartServiceTest {
             RateLimitStoreUnavailableException(IllegalStateException("redis unavailable"))
         )
 
-        val exception = assertThrows(ApplicationException::class.java) {
+        val exception = assertThrows(SquarewiseException::class.java) {
             service.start("user@example.com", "network", LoginCredentialService.CredentialKind.LINK, now)
         }
 
-        assertEquals(ErrorCode.ERR_11, exception.errorCode)
+        assertEquals("RATE_LIMITED", exception.definition.legacyCode)
         verify(credentialService, never()).issue(
             "user@example.com",
             LoginCredentialService.CredentialKind.LINK,

@@ -1,4 +1,6 @@
 package com.subhrodip.squarewise.expensecore.recurring.api
+
+import com.subhrodip.squarewise.errors.catalog.PlatformErrors
 import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseAllocation
 import com.subhrodip.squarewise.expensecore.expenses.domain.ExpensePayer
 import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupMembershipRepository
@@ -90,9 +92,9 @@ class RecurringExpenseController(
     ): RecurringScheduleResponse {
         verifyGroupAndMembership(groupId, principal)
         val schedule = recurringService.getSchedule(scheduleId)
-            ?: throw ExpenseDomainException(ExpenseErrors.ERR_05, "Schedule $scheduleId not found")
+            ?: throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Schedule $scheduleId not found")
         if (schedule.groupId != groupId) {
-            throw ExpenseDomainException(ExpenseErrors.ERR_05, "Schedule $scheduleId not found in group $groupId")
+            throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Schedule $scheduleId not found in group $groupId")
         }
         return schedule.toResponse()
     }
@@ -143,9 +145,9 @@ class RecurringExpenseController(
     ): RecurringScheduleResponse {
         verifyGroupAndMembership(groupId, principal)
         val schedule = recurringService.getSchedule(scheduleId)
-            ?: throw ExpenseDomainException(ExpenseErrors.ERR_05, "Schedule $scheduleId not found")
+            ?: throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Schedule $scheduleId not found")
         if (schedule.groupId != groupId) {
-            throw ExpenseDomainException(ExpenseErrors.ERR_05, "Schedule $scheduleId not found in group $groupId")
+            throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Schedule $scheduleId not found in group $groupId")
         }
         return recurringService.pauseSchedule(scheduleId).toResponse()
     }
@@ -158,29 +160,29 @@ class RecurringExpenseController(
     ): RecurringScheduleResponse {
         verifyGroupAndMembership(groupId, principal)
         val schedule = recurringService.getSchedule(scheduleId)
-            ?: throw ExpenseDomainException(ExpenseErrors.ERR_05, "Schedule $scheduleId not found")
+            ?: throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Schedule $scheduleId not found")
         if (schedule.groupId != groupId) {
-            throw ExpenseDomainException(ExpenseErrors.ERR_05, "Schedule $scheduleId not found in group $groupId")
+            throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Schedule $scheduleId not found in group $groupId")
         }
         return recurringService.resumeSchedule(scheduleId).toResponse()
     }
 
     private fun verifyGroupAndMembership(groupId: UUID, principal: Principal?) {
         if (!groupRepository.existsById(groupId)) {
-            throw ExpenseDomainException(ExpenseErrors.ERR_05, "Group $groupId not found")
+            throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group $groupId not found")
         }
         val subject = principal?.name?.takeIf { it.isNotBlank() }
-            ?: throw ExpenseDomainException(ExpenseErrors.ERR_03, "Authenticated subject is required")
+            ?: throw ExpenseDomainException(PlatformErrors.AUTHENTICATION_REQUIRED, "Authenticated subject is required")
         if (!membershipRepository.existsByGroupIdAndSubject(groupId, subject)) {
-            throw ExpenseDomainException(ExpenseErrors.ERR_05, "Group $groupId not found")
+            throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group $groupId not found")
         }
     }
 
     private fun parseAmount(minorStr: String): Long {
         val minor = minorStr.toLongOrNull()
-            ?: throw ExpenseDomainException(ExpenseErrors.ERR_02, "amount.minor must be a valid integer")
+            ?: throw ExpenseDomainException(ExpenseErrors.EXPENSE_REQUEST_INVALID, "amount.minor must be a valid integer")
         if (minor <= 0) {
-            throw ExpenseDomainException(ExpenseErrors.ERR_02, "amount.minor must be positive")
+            throw ExpenseDomainException(ExpenseErrors.EXPENSE_REQUEST_INVALID, "amount.minor must be positive")
         }
         return minor
     }

@@ -1,4 +1,7 @@
 package com.subhrodip.squarewise.expensecore.groups.persistence.store
+
+import com.subhrodip.squarewise.errors.catalog.PlatformErrors
+import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
 import com.subhrodip.squarewise.expensecore.groups.api.CreateGroupRequest
 import com.subhrodip.squarewise.expensecore.groups.api.CreateInviteRequest
 import com.subhrodip.squarewise.expensecore.groups.api.CreatePlaceholderRequest
@@ -7,8 +10,8 @@ import com.subhrodip.squarewise.expensecore.groups.api.GroupResponse
 import com.subhrodip.squarewise.expensecore.groups.api.InviteResponse
 import com.subhrodip.squarewise.expensecore.groups.api.UpdateGroupRequest
 import com.subhrodip.squarewise.ids.generation.UuidGenerator
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
+
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
@@ -47,12 +50,12 @@ class InMemoryGroupStore : GroupStore {
 
     override fun update(groupId: UUID, subject: String, request: UpdateGroupRequest): GroupResponse {
         if (groupsByMember[subject]?.contains(groupId) != true) {
-            throw ApplicationException(ErrorCode.ERR_05, "Group not found")
+            throw ExpenseDomainException(PlatformErrors.RESOURCE_NOT_FOUND, "Group not found")
         }
         val existing = groups[groupId]
-            ?: throw ApplicationException(ErrorCode.ERR_05, "Group not found")
+            ?: throw ExpenseDomainException(PlatformErrors.RESOURCE_NOT_FOUND, "Group not found")
         if (existing.status == "ARCHIVED") {
-            throw ApplicationException(ErrorCode.ERR_06, "Group is archived")
+            throw ExpenseDomainException(PlatformErrors.RESOURCE_CONFLICT, "Group is archived")
         }
         val updated = existing.copy(name = request.name.trim(), revision = existing.revision + 1)
         groups[groupId] = updated
@@ -61,12 +64,12 @@ class InMemoryGroupStore : GroupStore {
 
     override fun archive(groupId: UUID, subject: String): GroupResponse {
         if (groupsByMember[subject]?.contains(groupId) != true) {
-            throw ApplicationException(ErrorCode.ERR_05, "Group not found")
+            throw ExpenseDomainException(PlatformErrors.RESOURCE_NOT_FOUND, "Group not found")
         }
         val existing = groups[groupId]
-            ?: throw ApplicationException(ErrorCode.ERR_05, "Group not found")
+            ?: throw ExpenseDomainException(PlatformErrors.RESOURCE_NOT_FOUND, "Group not found")
         if (existing.status == "ARCHIVED") {
-            throw ApplicationException(ErrorCode.ERR_06, "Group is already archived")
+            throw ExpenseDomainException(PlatformErrors.RESOURCE_CONFLICT, "Group is already archived")
         }
         val updated = existing.copy(status = "ARCHIVED", revision = existing.revision + 1)
         groups[groupId] = updated
@@ -75,12 +78,12 @@ class InMemoryGroupStore : GroupStore {
 
     override fun addPlaceholder(groupId: UUID, subject: String, request: CreatePlaceholderRequest): GroupMemberResponse {
         if (groupsByMember[subject]?.contains(groupId) != true) {
-            throw ApplicationException(ErrorCode.ERR_05, "Group not found")
+            throw ExpenseDomainException(PlatformErrors.RESOURCE_NOT_FOUND, "Group not found")
         }
         val group = groups[groupId]
-            ?: throw ApplicationException(ErrorCode.ERR_05, "Group not found")
+            ?: throw ExpenseDomainException(PlatformErrors.RESOURCE_NOT_FOUND, "Group not found")
         if (group.status == "ARCHIVED") {
-            throw ApplicationException(ErrorCode.ERR_04, "Group is archived")
+            throw ExpenseDomainException(PlatformErrors.ACCESS_DENIED, "Group is archived")
         }
         val member = GroupMemberResponse(
             membershipId = UuidGenerator.next(),
@@ -97,22 +100,22 @@ class InMemoryGroupStore : GroupStore {
 
     override fun removeMember(groupId: UUID, subject: String, membershipId: UUID) {
         if (groupsByMember[subject]?.contains(groupId) != true) {
-            throw ApplicationException(ErrorCode.ERR_05, "Group not found")
+            throw ExpenseDomainException(PlatformErrors.RESOURCE_NOT_FOUND, "Group not found")
         }
         val group = groups[groupId]
-            ?: throw ApplicationException(ErrorCode.ERR_05, "Group not found")
+            ?: throw ExpenseDomainException(PlatformErrors.RESOURCE_NOT_FOUND, "Group not found")
         if (group.status == "ARCHIVED") {
-            throw ApplicationException(ErrorCode.ERR_04, "Group is archived")
+            throw ExpenseDomainException(PlatformErrors.ACCESS_DENIED, "Group is archived")
         }
         val list = memberships[groupId]
-            ?: throw ApplicationException(ErrorCode.ERR_05, "Member not found")
+            ?: throw ExpenseDomainException(PlatformErrors.RESOURCE_NOT_FOUND, "Member not found")
         val index = list.indexOfFirst { it.membershipId == membershipId }
         if (index == -1) {
-            throw ApplicationException(ErrorCode.ERR_05, "Member not found")
+            throw ExpenseDomainException(PlatformErrors.RESOURCE_NOT_FOUND, "Member not found")
         }
         val existing = list[index]
         if (existing.status == "REMOVED") {
-            throw ApplicationException(ErrorCode.ERR_06, "Member is already removed")
+            throw ExpenseDomainException(PlatformErrors.RESOURCE_CONFLICT, "Member is already removed")
         }
         list[index] = existing.copy(status = "REMOVED")
         if (existing.subject != null) {
@@ -123,28 +126,28 @@ class InMemoryGroupStore : GroupStore {
 
     override fun listMembers(groupId: UUID, subject: String): List<GroupMemberResponse> {
         if (groupsByMember[subject]?.contains(groupId) != true) {
-            throw ApplicationException(ErrorCode.ERR_05, "Group not found")
+            throw ExpenseDomainException(PlatformErrors.RESOURCE_NOT_FOUND, "Group not found")
         }
         if (groups[groupId]?.status != "ACTIVE") {
-            throw ApplicationException(ErrorCode.ERR_05, "Group not found")
+            throw ExpenseDomainException(PlatformErrors.RESOURCE_NOT_FOUND, "Group not found")
         }
         return memberships[groupId].orEmpty().filter { it.status == "ACTIVE" }
     }
 
     override fun invite(groupId: UUID, subject: String, request: CreateInviteRequest): InviteResponse {
         if (groupsByMember[subject]?.contains(groupId) != true) {
-            throw ApplicationException(ErrorCode.ERR_05, "Group not found")
+            throw ExpenseDomainException(PlatformErrors.RESOURCE_NOT_FOUND, "Group not found")
         }
         val group = groups[groupId]
-            ?: throw ApplicationException(ErrorCode.ERR_05, "Group not found")
+            ?: throw ExpenseDomainException(PlatformErrors.RESOURCE_NOT_FOUND, "Group not found")
         if (group.status == "ARCHIVED") {
-            throw ApplicationException(ErrorCode.ERR_04, "Group is archived")
+            throw ExpenseDomainException(PlatformErrors.ACCESS_DENIED, "Group is archived")
         }
         if (request.placeholderId != null) {
             val list = memberships[groupId].orEmpty()
             val target = list.find { it.membershipId == request.placeholderId }
             if (target == null || !target.isPlaceholder || target.status != "ACTIVE" || target.subject != null) {
-                throw ApplicationException(ErrorCode.ERR_05, "Placeholder not found or already bound")
+                throw ExpenseDomainException(PlatformErrors.RESOURCE_NOT_FOUND, "Placeholder not found or already bound")
             }
         }
         val token = UuidGenerator.next().toString().replace("-", "") + UuidGenerator.next().toString().replace("-", "")
@@ -155,17 +158,17 @@ class InMemoryGroupStore : GroupStore {
 
     override fun revokeInvite(groupId: UUID, subject: String, token: String) {
         if (groupsByMember[subject]?.contains(groupId) != true) {
-            throw ApplicationException(ErrorCode.ERR_05, "Group not found")
+            throw ExpenseDomainException(PlatformErrors.RESOURCE_NOT_FOUND, "Group not found")
         }
         val group = groups[groupId]
-            ?: throw ApplicationException(ErrorCode.ERR_05, "Group not found")
+            ?: throw ExpenseDomainException(PlatformErrors.RESOURCE_NOT_FOUND, "Group not found")
         if (group.status == "ARCHIVED") {
-            throw ApplicationException(ErrorCode.ERR_04, "Group is archived")
+            throw ExpenseDomainException(PlatformErrors.ACCESS_DENIED, "Group is archived")
         }
         val data = invites[token]
-            ?: throw ApplicationException(ErrorCode.ERR_05, "Invite not found")
+            ?: throw ExpenseDomainException(PlatformErrors.RESOURCE_NOT_FOUND, "Invite not found")
         if (data.groupId != groupId || data.claimedAt != null || data.revokedAt != null) {
-            throw ApplicationException(ErrorCode.ERR_06, "Invite cannot be revoked")
+            throw ExpenseDomainException(PlatformErrors.RESOURCE_CONFLICT, "Invite cannot be revoked")
         }
         data.revokedAt = Instant.now()
         groups[groupId] = group.copy(revision = group.revision + 1)
@@ -173,29 +176,29 @@ class InMemoryGroupStore : GroupStore {
 
     override fun claim(token: String, subject: String): GroupResponse {
         if (!token.matches(Regex("^[a-f0-9]{64}$"))) {
-            throw ApplicationException(ErrorCode.ERR_06, "Invite is invalid or already claimed")
+            throw ExpenseDomainException(PlatformErrors.RESOURCE_CONFLICT, "Invite is invalid or already claimed")
         }
         val data = invites[token]
-            ?: throw ApplicationException(ErrorCode.ERR_06, "Invite is invalid or already claimed")
+            ?: throw ExpenseDomainException(PlatformErrors.RESOURCE_CONFLICT, "Invite is invalid or already claimed")
         synchronized(data) {
             if (data.claimedAt != null || data.revokedAt != null || !data.expiresAt.isAfter(Instant.now())) {
-                throw ApplicationException(ErrorCode.ERR_06, "Invite is invalid, expired, or already claimed/revoked")
+                throw ExpenseDomainException(PlatformErrors.RESOURCE_CONFLICT, "Invite is invalid, expired, or already claimed/revoked")
             }
             val group = groups[data.groupId]
-                ?: throw ApplicationException(ErrorCode.ERR_05, "Group not found")
+                ?: throw ExpenseDomainException(PlatformErrors.RESOURCE_NOT_FOUND, "Group not found")
             if (group.status == "ARCHIVED") {
-                throw ApplicationException(ErrorCode.ERR_04, "Group is archived")
+                throw ExpenseDomainException(PlatformErrors.ACCESS_DENIED, "Group is archived")
             }
 
             val memberList = memberships.computeIfAbsent(group.groupId) { CopyOnWriteArrayList() }
             if (data.placeholderId != null) {
                 val index = memberList.indexOfFirst { it.membershipId == data.placeholderId }
                 if (index == -1) {
-                    throw ApplicationException(ErrorCode.ERR_05, "Placeholder not found")
+                    throw ExpenseDomainException(PlatformErrors.RESOURCE_NOT_FOUND, "Placeholder not found")
                 }
                 val target = memberList[index]
                 if (target.status != "ACTIVE" || target.subject != null) {
-                    throw ApplicationException(ErrorCode.ERR_06, "Placeholder is no longer available")
+                    throw ExpenseDomainException(PlatformErrors.RESOURCE_CONFLICT, "Placeholder is no longer available")
                 }
                 data.claimedAt = Instant.now()
                 data.claimedBy = subject

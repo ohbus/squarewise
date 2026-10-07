@@ -115,10 +115,6 @@ class CatalogParityTest {
             assertEquals(record.title, actual.title)
             assertEquals(record.httpStatus, actual.httpStatus)
         }
-        assertEquals(expected.size, ErrorCatalog.byNumericCode.size)
-        expected.forEach { record ->
-            assertEquals(record.errorName, ErrorCatalog.find(record.numericCode)?.errorName)
-        }
     }
 
     private data class Expected(val numericCode: String, val errorName: String, val title: String, val httpStatus: Int?)

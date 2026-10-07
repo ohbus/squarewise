@@ -92,21 +92,6 @@ def render_catalog(owner: str, records: list[dict[str, Any]]) -> str:
     lines.extend(["    /** All definitions in authoritative catalog order. */", "    val all: List<ErrorDefinition> = listOf("])
     lines.extend(f"        {name}," for name in constant_names)
     lines.extend(["    )"])
-    if owner == "Expense Core":
-        lines.extend(
-            [
-                "",
-                "    /** Legacy symbolic aliases retained while Expense Core callers migrate. */",
-                "    val ERR_01: ErrorDefinition = OCCURRENCE_GENERATION_FAILED",
-                "    val ERR_02: ErrorDefinition = EXPENSE_REQUEST_INVALID",
-                "    val ERR_03: ErrorDefinition = PlatformErrors.AUTHENTICATION_REQUIRED",
-                "    val ERR_05: ErrorDefinition = GROUP_NOT_FOUND",
-                "    val ERR_06: ErrorDefinition = GROUP_NAME_CONFLICT",
-                "    val ERR_08: ErrorDefinition = BffErrors.UPSTREAM_PROTOCOL_INVALID",
-                "    val ERR_09: ErrorDefinition = SYNC_REVISION_CONFLICT",
-                "    val ERR_10: ErrorDefinition = INSUFFICIENT_BALANCE",
-            ]
-        )
     lines.extend(["}", ""])
     return "\n".join(lines)
 

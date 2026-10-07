@@ -69,7 +69,7 @@ class GlobalErrorAdvice(
             status = status,
             detail = definition.safeDetail,
             instance = "/errors/${definition.errorName.lowercase()}",
-            code = legacyCode(definition.legacyCode),
+            code = definition.legacyCode ?: definition.errorName,
             numericCode = definition.numericCode.value,
             errorName = definition.errorName,
             requestId = RequestIdContext.get(),
@@ -77,16 +77,6 @@ class GlobalErrorAdvice(
             violations = violations,
         )
         return ResponseEntity.status(status).headers(headers).body(body)
-    }
-
-    private fun legacyCode(legacyCode: String?): String = when (legacyCode) {
-        "ERR-02" -> "VALIDATION_FAILED"
-        "ERR-03" -> "UNAUTHENTICATED"
-        "ERR-04" -> "FORBIDDEN"
-        "ERR-05" -> "NOT_FOUND"
-        "ERR-06", "ERR-09" -> "CONFLICT"
-        "ERR-11" -> "RATE_LIMITED"
-        else -> "INTERNAL_ERROR"
     }
 
     private companion object {

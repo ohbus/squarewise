@@ -32,12 +32,10 @@ Clients branch on `code`, never free-text `detail`. The stable vocabulary is
 retain details only in correlated server logs. GraphQL maps the same code into
 `errors[].extensions.code` and preserves the request ID.
 
-During the planned compatibility migration, `code` remains this symbolic v1 value.
-Producers add optional `numericCode` and `errorName` only after schemas and consumers
-are tolerant. The current implementation has known message-containment, security
-boundary, BFF identity-preservation, and contract-parity gaps recorded in the
-migration plan; this document is not evidence that every existing path already meets
-the target invariants.
+The current local implementation emits `numericCode` and `errorName` with every
+governed Problem Details response, while `code` remains the symbolic v1 value.
+The production-effective date and client-adoption approval for this promotion remain
+external ERRC-29 evidence; local emission is not production rollout evidence.
 
 Rate-limit denials and fail-closed limiter-store decisions use HTTP 429 with the
 catalogued `RATE_LIMITED` code. The REST boundary includes a bounded
@@ -54,7 +52,7 @@ invalid expense or unauthorized operation.
 The complete GraphQL extension and WebSocket lifecycle contract is defined in
 [`contracts/graphql/errors.graphqls`](../../contracts/graphql/errors.graphqls)
 and [`contracts/graphql/README.md`](../../contracts/graphql/README.md). Valid
-upstream Problem Details preserve `code`, optional `numericCode` and
+upstream Problem Details preserve `code`, required `numericCode` and
 `errorName`, `requestId`, `source`, `timestamp`, and bounded violations. An
 unparseable upstream response receives a BFF-owned protocol error rather than a
 status-derived or fabricated upstream identity. WebSocket lifecycle failures

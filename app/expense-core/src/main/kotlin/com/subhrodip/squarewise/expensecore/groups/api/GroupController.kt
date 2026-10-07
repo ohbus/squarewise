@@ -1,4 +1,6 @@
 package com.subhrodip.squarewise.expensecore.groups.api
+
+import com.subhrodip.squarewise.errors.catalog.BffErrors
 import com.subhrodip.squarewise.expensecore.groups.persistence.store.GroupStore
 import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
 import jakarta.validation.Valid
@@ -32,7 +34,7 @@ class GroupController(private val groups: GroupStore) {
     @GetMapping("/{groupId}")
     fun get(@PathVariable groupId: UUID, principal: Principal): GroupResponse =
         groups.list(principal.name).find { it.groupId == groupId }
-            ?: throw ExpenseDomainException(ExpenseErrors.ERR_05, "Group $groupId not found")
+            ?: throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group $groupId not found")
 
     @PatchMapping("/{groupId}")
     fun update(
@@ -41,7 +43,7 @@ class GroupController(private val groups: GroupStore) {
         @RequestHeader(ApiEndpoints.Headers.ACCEPTANCE_FAULT, required = false) fault: String?,
         principal: Principal
     ): GroupResponse {
-        if (fault == ApiEndpoints.Headers.ACCEPTANCE_FAULT_ROLLBACK) throw ExpenseDomainException(ExpenseErrors.ERR_06, "Acceptance rollback fault")
+        if (fault == ApiEndpoints.Headers.ACCEPTANCE_FAULT_ROLLBACK) throw ExpenseDomainException(ExpenseErrors.GROUP_NAME_CONFLICT, "Acceptance rollback fault")
         return groups.update(groupId, principal.name, request)
     }
 
@@ -73,7 +75,7 @@ class GroupController(private val groups: GroupStore) {
         @RequestHeader(ApiEndpoints.Headers.ACCEPTANCE_FAULT, required = false) fault: String?,
         principal: Principal
     ): List<GroupMemberResponse> {
-        if (fault == ApiEndpoints.Bff.ACCEPTANCE_FAULT_FANOUT) throw ExpenseDomainException(ExpenseErrors.ERR_08, "Acceptance fanout fault")
+        if (fault == ApiEndpoints.Bff.ACCEPTANCE_FAULT_FANOUT) throw ExpenseDomainException(BffErrors.UPSTREAM_PROTOCOL_INVALID, "Acceptance fanout fault")
         return groups.listMembers(groupId, principal.name)
     }
 

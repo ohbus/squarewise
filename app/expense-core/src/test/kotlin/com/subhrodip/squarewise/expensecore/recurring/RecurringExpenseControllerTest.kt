@@ -1,6 +1,5 @@
 package com.subhrodip.squarewise.expensecore.recurring
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
 import org.junit.jupiter.api.assertThrows
 import com.subhrodip.squarewise.expensecore.expenses.api.request.MoneyDto
 import com.subhrodip.squarewise.expensecore.groups.api.CreateGroupRequest
@@ -167,15 +166,15 @@ class RecurringExpenseControllerTest @Autowired constructor(
             startDate = LocalDate.now()
         )
 
-        val createErr = assertThrows<ApplicationException> {
+        val createErr = assertThrows<SquarewiseException> {
             controller.createSchedule(randomGroup, createRequest, alice)
         }
-        assertEquals(ErrorCode.ERR_05, createErr.errorCode)
+        assertEquals("NOT_FOUND", createErr.definition.legacyCode)
 
-        val getErr = assertThrows<ApplicationException> {
+        val getErr = assertThrows<SquarewiseException> {
             controller.getSchedule(randomGroup, randomSchedule, alice)
         }
-        assertEquals(ErrorCode.ERR_05, getErr.errorCode)
+        assertEquals("NOT_FOUND", getErr.definition.legacyCode)
     }
 
     /** Verifies schedule lookup, pause, and resume reject missing and foreign schedules. */
@@ -203,8 +202,8 @@ class RecurringExpenseControllerTest @Autowired constructor(
             { controller.resumeSchedule(ownerGroup.groupId, missingScheduleId, alice) },
             { controller.resumeSchedule(otherGroup.groupId, schedule.scheduleId, alice) }
         ).forEach { operation ->
-            val error = assertThrows<ApplicationException> { operation() }
-            assertEquals(ErrorCode.ERR_05, error.errorCode)
+            val error = assertThrows<SquarewiseException> { operation() }
+            assertEquals("NOT_FOUND", error.definition.legacyCode)
         }
     }
 
@@ -220,21 +219,21 @@ class RecurringExpenseControllerTest @Autowired constructor(
         )
 
         listOf("not-an-integer", "0").forEach { amount ->
-            val error = assertThrows<ApplicationException> {
+            val error = assertThrows<SquarewiseException> {
                 controller.createSchedule(group.groupId, validRequest.copy(amount = MoneyDto("EUR", amount)), alice)
             }
-            assertEquals(ErrorCode.ERR_02, error.errorCode)
+            assertEquals("VALIDATION_FAILED", error.definition.legacyCode)
         }
 
-        val blankSubject = assertThrows<ApplicationException> {
+        val blankSubject = assertThrows<SquarewiseException> {
             controller.createSchedule(group.groupId, validRequest, Principal { "   " })
         }
-        assertEquals(ErrorCode.ERR_03, blankSubject.errorCode)
+        assertEquals("UNAUTHENTICATED", blankSubject.definition.legacyCode)
 
-        val nonMember = assertThrows<ApplicationException> {
+        val nonMember = assertThrows<SquarewiseException> {
             controller.createSchedule(group.groupId, validRequest, Principal { "bob" })
         }
-        assertEquals(ErrorCode.ERR_05, nonMember.errorCode)
+        assertEquals("NOT_FOUND", nonMember.definition.legacyCode)
     }
 
     @Test
@@ -247,9 +246,9 @@ class RecurringExpenseControllerTest @Autowired constructor(
             startDate = LocalDate.of(2026, 10, 1)
         )
 
-        val error = assertThrows<ApplicationException> {
+        val error = assertThrows<SquarewiseException> {
             controller.createSchedule(group.groupId, request, null)
         }
-        assertEquals(ErrorCode.ERR_03, error.errorCode)
+        assertEquals("UNAUTHENTICATED", error.definition.legacyCode)
     }
 }

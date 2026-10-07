@@ -13,8 +13,7 @@ import com.subhrodip.squarewise.accounts.auth.provider.InternalJwtTokenProvider
 import com.subhrodip.squarewise.accounts.auth.session.AuthSessionRepository
 import com.subhrodip.squarewise.accounts.auth.session.TokenSessionService
 import com.subhrodip.squarewise.accounts.profile.persistence.InMemoryProfileStore
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
 import java.time.Instant
 import java.util.UUID
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -103,10 +102,10 @@ class LoginVerificationServiceTest @Autowired constructor(
         service.verify(issued.plaintext, "NATIVE", null, now.plusSeconds(1))
 
         // Second redemption fails closed
-        val ex = assertThrows(ApplicationException::class.java) {
+        val ex = assertThrows(SquarewiseException::class.java) {
             service.verify(issued.plaintext, "NATIVE", null, now.plusSeconds(2))
         }
-        assertEquals(ErrorCode.ERR_03, ex.errorCode)
+        assertEquals("UNAUTHENTICATED", ex.definition.legacyCode)
     }
 
     @Test
@@ -155,11 +154,11 @@ class LoginVerificationServiceTest @Autowired constructor(
             failingLimiter
         )
 
-        val exception = assertThrows(ApplicationException::class.java) {
+        val exception = assertThrows(SquarewiseException::class.java) {
             failingService.verify("credential", "NATIVE", null, Instant.now())
         }
 
-        assertEquals(ErrorCode.ERR_11, exception.errorCode)
+        assertEquals("RATE_LIMITED", exception.definition.legacyCode)
     }
 
     @Test
@@ -179,10 +178,10 @@ class LoginVerificationServiceTest @Autowired constructor(
             deniedLimiter
         )
 
-        val exception = assertThrows(ApplicationException::class.java) {
+        val exception = assertThrows(SquarewiseException::class.java) {
             deniedService.verify("credential", "NATIVE", null, Instant.now())
         }
 
-        assertEquals(ErrorCode.ERR_11, exception.errorCode)
+        assertEquals("RATE_LIMITED", exception.definition.legacyCode)
     }
 }

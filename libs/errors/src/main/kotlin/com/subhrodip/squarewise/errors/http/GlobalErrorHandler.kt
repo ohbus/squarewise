@@ -2,8 +2,6 @@
 
 package com.subhrodip.squarewise.errors.http
 
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
 import com.subhrodip.squarewise.errors.catalog.PlatformErrors
 import com.subhrodip.squarewise.errors.code.ErrorDefinition
 import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
@@ -60,7 +58,7 @@ class GlobalErrorHandler(
         val summary = violations.joinToString("; ") { "${it.field}: ${it.message}" }
         log.warn("Request validation failed [requestId={}]: {}", RequestIdContext.get(), summary)
         return problem(
-            ErrorCode.ERR_02,
+            PlatformErrors.REQUEST_VALIDATION_FAILED,
             HttpStatus.BAD_REQUEST,
             "Request validation failed",
             "One or more fields are invalid",
@@ -79,7 +77,7 @@ class GlobalErrorHandler(
         }
         log.warn("Malformed HTTP request payload [requestId={}]: {}", RequestIdContext.get(), detail)
         return problem(
-            ErrorCode.ERR_02,
+            PlatformErrors.REQUEST_BODY_MALFORMED,
             HttpStatus.BAD_REQUEST,
             "Malformed request payload",
             detail
@@ -91,7 +89,7 @@ class GlobalErrorHandler(
         val detail = error.message?.takeIf { it.isNotBlank() } ?: "Invalid request binding"
         log.warn("Missing or invalid request parameter or header [requestId={}]: {}", RequestIdContext.get(), detail)
         return problem(
-            ErrorCode.ERR_02,
+            PlatformErrors.REQUEST_VALUE_INVALID,
             HttpStatus.BAD_REQUEST,
             "Missing or invalid request parameter or header",
             detail
@@ -107,7 +105,7 @@ class GlobalErrorHandler(
             error.requiredType?.simpleName
         )
         return problem(
-            ErrorCode.ERR_02,
+            PlatformErrors.REQUEST_VALUE_INVALID,
             HttpStatus.BAD_REQUEST,
             "Type mismatch for parameter ${error.name}",
             error.message
@@ -122,7 +120,7 @@ class GlobalErrorHandler(
             error.message
         )
         return problem(
-            ErrorCode.ERR_06,
+            PlatformErrors.RESOURCE_CONFLICT,
             HttpStatus.CONFLICT,
             "Conflict",
             error.message ?: "Resource was updated by another transaction"
@@ -135,7 +133,7 @@ class GlobalErrorHandler(
         val detail = error.message ?: "Invalid request"
         log.warn("Invalid request argument [requestId={}]: {}", RequestIdContext.get(), detail)
         return problem(
-            ErrorCode.ERR_02,
+            PlatformErrors.REQUEST_VALUE_INVALID,
             HttpStatus.BAD_REQUEST,
             "Request validation failed",
             detail
@@ -144,79 +142,47 @@ class GlobalErrorHandler(
 
 
 
-    @ExceptionHandler(ApplicationException::class)
-    fun applicationException(ex: ApplicationException): ResponseEntity<ProblemDetailsDto> {
-        val status = HttpStatus.resolve(ex.errorCode.httpStatus) ?: HttpStatus.INTERNAL_SERVER_ERROR
-        return problem(
-            ex.errorCode,
-            status,
-            title = ex.message ?: ex.errorCode.safeDetail,
-            detail = ex.message ?: ex.errorCode.safeDetail,
-            retryAfterSeconds = if (ex.errorCode == ErrorCode.ERR_11) RATE_LIMIT_RETRY_AFTER_SECONDS else null
-        )
-    }
-
     /** Map catalog-governed failures while preserving the established v1 response shape. */
     @ExceptionHandler(SquarewiseException::class)
     fun governedException(ex: SquarewiseException): ResponseEntity<ProblemDetailsDto> {
         val definition = ex.definition
         val status = HttpStatus.resolve(definition.httpStatus ?: 500) ?: HttpStatus.INTERNAL_SERVER_ERROR
-        return ResponseEntity.status(status)
-            .headers(HttpHeaders().apply {
-                if (definition.legacyCode == "ERR-11") set(HttpHeaders.RETRY_AFTER, RATE_LIMIT_RETRY_AFTER_SECONDS.toString())
-            })
-            .contentType(MediaType.APPLICATION_PROBLEM_JSON)
-            .body(problemDetails(
-                type = "https://squarewise.example/problems/${definition.errorName.lowercase()}",
-                title = definition.title,
-                status = status.value(),
-                code = legacyCode(definition.legacyCode),
-                source = serviceName,
-                requestId = RequestIdContext.get(),
-                detail = definition.safeDetail,
-                numericCode = definition.numericCode.value,
-                errorName = definition.errorName,
-            ))
-    }
-
-    private fun legacyCode(value: String?): String = when (value) {
-        "ERR-02" -> "VALIDATION_FAILED"
-        "ERR-03" -> "UNAUTHENTICATED"
-        "ERR-04" -> "FORBIDDEN"
-        "ERR-05" -> "NOT_FOUND"
-        "ERR-06" -> "CONFLICT"
-        "ERR-11" -> "RATE_LIMITED"
-        else -> "INTERNAL_ERROR"
+        return problem(
+            definition,
+            status,
+            title = definition.title,
+            detail = definition.safeDetail,
+            retryAfterSeconds = if (definition.legacyCode == "RATE_LIMITED") RATE_LIMIT_RETRY_AFTER_SECONDS else null,
+        )
     }
 
     @ExceptionHandler(Exception::class)
     fun unexpected(error: Exception): ResponseEntity<ProblemDetailsDto> {
         log.error("Unhandled unexpected exception [requestId={}]: {}", RequestIdContext.get(), error.message, error)
         return problem(
-            ErrorCode.ERR_01,
+            PlatformErrors.UNEXPECTED_INTERNAL_ERROR,
             HttpStatus.INTERNAL_SERVER_ERROR
         )
     }
 
     private fun problem(
-        code: ErrorCode,
+        definition: ErrorDefinition,
         status: HttpStatusCode,
         title: String = "Internal server error",
         detail: String = "An unexpected error occurred",
         violations: List<FieldViolation> = emptyList(),
         retryAfterSeconds: Long? = null
     ): ResponseEntity<ProblemDetailsDto> =
-        definitionFor(code).let { definition ->
         ResponseEntity.status(status)
             .headers(HttpHeaders().apply {
                 retryAfterSeconds?.let { set(HttpHeaders.RETRY_AFTER, it.toString()) }
             })
             .contentType(MediaType.APPLICATION_PROBLEM_JSON)
             .body(problemDetails(
-                type = "https://squarewise.example/problems/${code.name.lowercase()}",
+                type = "https://squarewise.example/problems/${definition.errorName.lowercase()}",
                 title = title,
                 status = status.value(),
-                code = mapErrorCode(code),
+                code = definition.legacyCode ?: definition.errorName,
                 source = serviceName,
                 requestId = RequestIdContext.get(),
                 detail = detail,
@@ -224,18 +190,6 @@ class GlobalErrorHandler(
                 errorName = definition.errorName,
                 violations = violations,
             ))
-        }
-
-    private fun definitionFor(code: ErrorCode): ErrorDefinition = when (code) {
-        ErrorCode.ERR_02 -> PlatformErrors.REQUEST_VALIDATION_FAILED
-        ErrorCode.ERR_03 -> PlatformErrors.AUTHENTICATION_REQUIRED
-        ErrorCode.ERR_04 -> PlatformErrors.ACCESS_DENIED
-        ErrorCode.ERR_05 -> PlatformErrors.RESOURCE_NOT_FOUND
-        ErrorCode.ERR_06, ErrorCode.ERR_09 -> PlatformErrors.RESOURCE_CONFLICT
-        ErrorCode.ERR_08 -> PlatformErrors.BROKER_UNAVAILABLE
-        ErrorCode.ERR_11 -> PlatformErrors.SECURITY_RATE_LIMITED
-        else -> PlatformErrors.UNEXPECTED_INTERNAL_ERROR
-    }
 
     private fun problemDetails(
         type: String,
@@ -262,22 +216,6 @@ class GlobalErrorHandler(
         errorName = errorName,
         violations = violations.map { ViolationDto(it.field, it.message) },
     )
-
-    private fun mapErrorCode(errorCode: ErrorCode): String =
-        when (errorCode) {
-            ErrorCode.ERR_01 -> "INTERNAL_ERROR"
-            ErrorCode.ERR_02 -> "VALIDATION_FAILED"
-            ErrorCode.ERR_03 -> "UNAUTHENTICATED"
-            ErrorCode.ERR_04 -> "FORBIDDEN"
-            ErrorCode.ERR_05 -> "NOT_FOUND"
-            ErrorCode.ERR_06 -> "CONFLICT"
-            ErrorCode.ERR_07 -> "INTERNAL_ERROR"
-            ErrorCode.ERR_08 -> "INTERNAL_ERROR"
-            ErrorCode.ERR_09 -> "CONFLICT"
-            ErrorCode.ERR_10 -> "VALIDATION_FAILED"
-            ErrorCode.ERR_11 -> "RATE_LIMITED"
-            ErrorCode.ERR_12 -> "INTERNAL_ERROR"
-        }
 
     companion object {
         private const val RATE_LIMIT_RETRY_AFTER_SECONDS = 60L

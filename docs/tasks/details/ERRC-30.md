@@ -8,7 +8,7 @@
 
 ## Objective
 
-Decommission and delete internal legacy error enum structures (`com.subhrodip.squarewise.errors.ErrorCode` with `ERR-01` through `ERR-12`), deprecated exception constructors, and transitional mapping shims across `libs/errors` and applications. Retain the public API v1 symbolic `code` string in responses by deriving it directly from `ErrorDefinition.legacyCode`. Preserve immutable historical catalog records.
+Decommission and delete internal legacy error enum structures (`com.subhrodip.squarewise.errors.domain.ErrorCode` with `ERR-01` through `ERR-12`), deprecated exception constructors, and transitional mapping shims across `libs/errors` and applications. Retain the public API v1 symbolic `code` string in responses by deriving it directly from `ErrorDefinition.legacyCode`. Preserve immutable historical catalog records.
 
 ## Dependencies
 
@@ -18,6 +18,13 @@ Decommission and delete internal legacy error enum structures (`com.subhrodip.sq
 
 - `docs/tasks/details/ERRC-30.md`
 - `libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/`
+- `libs/security/src/main/kotlin/com/subhrodip/squarewise/security/`
+- `app/accounts/src/`
+- `app/expense-core/src/`
+- `app/bff/src/`
+- `contracts/errors/error-catalog.yaml`
+- `contracts/errors/error-catalog.schema.json`
+- `tools/codegen/generate_error_catalogs.py`
 - `tools/errors/validate_catalog.py`
 - `docs/architecture/error-code-standard.md`
 
@@ -67,34 +74,26 @@ git diff --check
 - Global search output proving 0 occurrences of legacy `ERR_` enums in production source code.
 - Full test suite execution report confirming 100% pass across all services.
 
-## 2026-10-07 audit inventory
+## 2026-10-07 local implementation inventory
 
-Implementation remains deferred because the ERRC-29 compatibility-window gates are
-not complete. The current production inventory is:
+The local implementation increment is complete and is deliberately separated from
+the still-unverified production-effective ERRC-29 gate. The runtime now:
 
-- `libs/errors/.../domain/ErrorCode.kt` still defines `ERR_01` through `ERR_12`.
-- `libs/errors/.../domain/ApplicationException.kt` still exposes the enum-backed
-  exception constructor and the legacy `toProblemDetails` extension.
-- `libs/errors/.../exceptions/SquarewiseException.kt` still adapts catalog
-  `legacyCode` values into the enum, so governed exceptions retain the old internal
-  dependency.
-- `libs/errors/.../http/GlobalErrorHandler.kt` still handles `ApplicationException`
-  and maps the enum to compatibility responses. This is the remaining runtime
-  compatibility adapter and must be replaced by catalog-derived mappings before
-  deleting the enum.
-- Application production sources no longer import the legacy enum or
-  `ApplicationException`; remaining application references are test fixtures and
-  compatibility tests. Catalog-generated `legacyCode = "ERR-XX"` metadata and
-  historical contract records are intentional public-v1 compatibility data, not
-  enum references.
-- `tools/errors/validate_six_digit_catalog.py` currently delegates shared record
-  validation to `validate_catalog.py`; the old validator cannot be deleted until
-  that shared implementation is extracted or its ownership is explicitly retained.
+- deletes `domain/ErrorCode.kt` and `domain/ApplicationException.kt`;
+- derives v1 `code` directly from `ErrorDefinition.legacyCode ?: errorName` in REST,
+  GraphQL, and security boundaries;
+- removes generated `ExpenseErrors.ERR_*` aliases and migrates application callers
+  to catalog definitions and bounded-context exceptions;
+- stores current symbolic v1 aliases in the catalog while preserving retired `ERR-*`
+  records in lifecycle history; and
+- validates non-null public aliases against the symbolic-code pattern while retaining
+  the separate legacy-record validator for historical fixtures.
 
-The next implementation increment requires ERRC-29 sign-off, then replacement of
-the `GlobalErrorHandler` compatibility adapter and `SquarewiseException` base
-constructor before deleting `ErrorCode.kt` and `ApplicationException.kt`. Until
-then the registry status remains `todo` and no legacy infrastructure is removed.
+Local evidence is `./gradlew.bat test --no-daemon --console=plain` (successful),
+zero `ERR_*` references in production `app/` and `libs/` sources, and passing
+catalog/codegen/contract validation. External effective-date approval,
+client adoption, staging rollout, and ERRC-26 performance evidence remain outside
+local proof and continue to block production closure of ERRC-29/ERRC-28.
 
 ## Rollout & Rollback Strategy
 

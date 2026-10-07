@@ -30,8 +30,7 @@ import com.subhrodip.squarewise.bff.transport.model.input.PayerInput
 import com.subhrodip.squarewise.bff.transport.model.input.RepaymentInput
 
 import com.subhrodip.squarewise.bff.transport.UpstreamServiceException
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -62,20 +61,20 @@ class GroupGraphqlControllerTest {
 
     @Test
     fun `groupChanged rejects blank group identifiers before admission`() {
-        val error = assertThrows(ApplicationException::class.java) {
+        val error = assertThrows(SquarewiseException::class.java) {
             controller.groupChanged(" ", principal).blockFirst()
         }
 
-        assertEquals(ErrorCode.ERR_02, error.errorCode)
+        assertEquals("VALIDATION_FAILED", error.definition.legacyCode)
     }
 
     @Test
     fun `groupChanged rejects missing authenticated subjects before admission`() {
-        val error = assertThrows(ApplicationException::class.java) {
+        val error = assertThrows(SquarewiseException::class.java) {
             controller.groupChanged("group-1", null).blockFirst()
         }
 
-        assertEquals(ErrorCode.ERR_03, error.errorCode)
+        assertEquals("UNAUTHENTICATED", error.definition.legacyCode)
     }
 
     @Test
@@ -261,7 +260,7 @@ class GroupGraphqlControllerTest {
         )
 
         val mono = controller.recordRepayment(input, principal)
-        assertThrows(ApplicationException::class.java) {
+        assertThrows(SquarewiseException::class.java) {
             mono.block()
         }
     }
@@ -349,10 +348,10 @@ class GroupGraphqlControllerTest {
 
         val first = boundedController.groupChanged(groupId, principal).subscribe()
         try {
-            val error = assertThrows(ApplicationException::class.java) {
+            val error = assertThrows(SquarewiseException::class.java) {
                 boundedController.groupChanged(groupId, principal).blockFirst(Duration.ofMillis(100))
             }
-            assertEquals(ErrorCode.ERR_11, error.errorCode)
+            assertEquals("RATE_LIMITED", error.definition.legacyCode)
         } finally {
             first.dispose()
         }

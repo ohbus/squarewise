@@ -6,8 +6,7 @@ import java.io.OutputStream
 import java.io.OutputStreamWriter
 import java.io.PrintWriter
 
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
 import com.subhrodip.squarewise.notifications.email.config.EmailProperties
 import java.net.ServerSocket
 import java.util.concurrent.atomic.AtomicReference
@@ -91,11 +90,11 @@ class SmtpJavaMailSenderTest {
     fun `rejects messages without recipients before opening a socket`() {
         val properties = EmailProperties("127.0.0.1", 1, "sender@example.com", true, 1, 0)
 
-        val error = assertThrows(ApplicationException::class.java) {
+        val error = assertThrows(SquarewiseException::class.java) {
             SmtpJavaMailSender(properties).send(SimpleMailMessage(subject = "subject"))
         }
 
-        assertEquals(ErrorCode.ERR_02, error.errorCode)
+        assertEquals("VALIDATION_FAILED", error.definition.legacyCode)
     }
 
     /** Verifies non-SMTP socket failures are normalized as delivery failures. */

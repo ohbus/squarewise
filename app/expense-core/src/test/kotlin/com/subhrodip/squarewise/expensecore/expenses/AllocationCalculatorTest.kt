@@ -1,5 +1,5 @@
 package com.subhrodip.squarewise.expensecore.expenses
-import com.subhrodip.squarewise.errors.domain.ApplicationException
+import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
 import com.subhrodip.squarewise.expensecore.expenses.domain.AllocationCalculator
 import com.subhrodip.squarewise.expensecore.expenses.domain.FinancialArithmetic
 import com.subhrodip.squarewise.expensecore.expenses.api.request.AllocationItemDto
@@ -144,7 +144,7 @@ class AllocationCalculatorTest {
         assertEquals(mapOf("a" to 4L, "b" to 6L), AllocationCalculator.calculate("EXACT", 10, exactItems))
         assertEquals(mapOf("a" to 5L, "b" to 5L), AllocationCalculator.calculate("percent_basis_points", 10, listOf(AllocationItemDto("a", "5000"), AllocationItemDto("b", "5000"))))
         assertEquals(mapOf("a" to 3L, "b" to 7L), AllocationCalculator.calculate("weighted_shares", 10, listOf(AllocationItemDto("a", "3"), AllocationItemDto("b", "7"))))
-        assertThrows(ApplicationException::class.java) {
+        assertThrows(SquarewiseException::class.java) {
             AllocationCalculator.calculate("unknown", 10, exactItems)
         }
     }

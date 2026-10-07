@@ -11,7 +11,7 @@ import com.subhrodip.squarewise.accounts.profile.persistence.JpaProfileStore
 import com.subhrodip.squarewise.accounts.profile.persistence.ProfileRepository
 import com.subhrodip.squarewise.accounts.auth.session.AuthSessionEntity
 import com.subhrodip.squarewise.accounts.auth.session.AuthSessionRepository
-import com.subhrodip.squarewise.errors.domain.ApplicationException
+import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
 
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -161,7 +161,7 @@ class JpaRequestStoresTest @Autowired constructor(
         assertNotNull(found)
         assertEquals(profile.accountId, found?.accountId)
         assertNull(profileStore.get("oidc|missing-${UUID.randomUUID()}"))
-        assertThrows(ApplicationException::class.java) { profileStore.get(" ") }
+        assertThrows(SquarewiseException::class.java) { profileStore.get(" ") }
         assertEquals(1, profileRepository.findAll().count { it.subject == subject })
     }
 
@@ -188,13 +188,13 @@ class JpaRequestStoresTest @Autowired constructor(
         assertEquals("UTC", displayNameOnly.timezone)
         assertEquals("USD", displayNameOnly.defaultCurrency)
 
-        assertThrows(ApplicationException::class.java) {
+        assertThrows(SquarewiseException::class.java) {
             profileStore.update(subject, ProfilePatchRequest(timezone = "Not/AZone"))
         }
-        assertThrows(ApplicationException::class.java) {
+        assertThrows(SquarewiseException::class.java) {
             profileStore.update(" ", ProfilePatchRequest(displayName = "Ignored"))
         }
-        assertThrows(ApplicationException::class.java) {
+        assertThrows(SquarewiseException::class.java) {
             profileStore.update("oidc|missing-${UUID.randomUUID()}", ProfilePatchRequest(displayName = "Missing"))
         }
         assertEquals(profile.accountId, profileStore.get(subject)?.accountId)
@@ -208,8 +208,8 @@ class JpaRequestStoresTest @Autowired constructor(
         profileStore.requestDeletion(subject)
         assertTrue(profileRepository.findById(profile.accountId).orElseThrow().deletionRequested)
 
-        assertThrows(ApplicationException::class.java) { profileStore.requestDeletion(" ") }
-        assertThrows(ApplicationException::class.java) {
+        assertThrows(SquarewiseException::class.java) { profileStore.requestDeletion(" ") }
+        assertThrows(SquarewiseException::class.java) {
             profileStore.requestDeletion("oidc|missing-${UUID.randomUUID()}")
         }
     }
@@ -221,8 +221,8 @@ class JpaRequestStoresTest @Autowired constructor(
         assertNull(deletionStore.get(missingSubject))
         assertNull(deletionStore.cancel(missingSubject))
         assertNull(deletionStore.complete(missingSubject))
-        assertThrows(ApplicationException::class.java) { deletionStore.get(" ") }
-        assertThrows(ApplicationException::class.java) { deletionStore.cancel(" ") }
-        assertThrows(ApplicationException::class.java) { deletionStore.complete(" ") }
+        assertThrows(SquarewiseException::class.java) { deletionStore.get(" ") }
+        assertThrows(SquarewiseException::class.java) { deletionStore.cancel(" ") }
+        assertThrows(SquarewiseException::class.java) { deletionStore.complete(" ") }
     }
 }

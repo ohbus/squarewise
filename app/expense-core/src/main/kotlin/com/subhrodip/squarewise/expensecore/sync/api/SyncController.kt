@@ -1,4 +1,6 @@
 package com.subhrodip.squarewise.expensecore.sync.api
+
+import com.subhrodip.squarewise.errors.catalog.PlatformErrors
 import com.subhrodip.squarewise.expensecore.sync.domain.InvalidSyncCursorException
 import com.subhrodip.squarewise.expensecore.sync.persistence.SynchronizationStore
 import com.subhrodip.squarewise.expensecore.sync.api.toResponse
@@ -28,15 +30,15 @@ class SyncController(
         @RequestParam(defaultValue = "50") limit: Int,
         principal: Principal
     ): SyncPageResponse {
-        if (principal.name.isBlank()) throw ExpenseDomainException(ExpenseErrors.ERR_03, "Authenticated subject is required")
+        if (principal.name.isBlank()) throw ExpenseDomainException(PlatformErrors.AUTHENTICATION_REQUIRED, "Authenticated subject is required")
         if (!memberships.existsByGroupIdAndSubjectAndStatus(groupId, principal.name, "ACTIVE")) {
-            throw ExpenseDomainException(ExpenseErrors.ERR_05, "Group $groupId not found")
+            throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group $groupId not found")
         }
-        if (limit !in 1..100) throw ExpenseDomainException(ExpenseErrors.ERR_02, "limit must be between 1 and 100")
+        if (limit !in 1..100) throw ExpenseDomainException(ExpenseErrors.EXPENSE_REQUEST_INVALID, "limit must be between 1 and 100")
         return try {
             store.snapshot(groupId.toString(), cursor, limit).toResponse()
         } catch (exception: InvalidSyncCursorException) {
-            throw ExpenseDomainException(ExpenseErrors.ERR_02, exception.message ?: "Invalid sync cursor", exception)
+            throw ExpenseDomainException(ExpenseErrors.EXPENSE_REQUEST_INVALID, exception.message ?: "Invalid sync cursor", exception)
         }
     }
 }

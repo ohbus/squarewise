@@ -12,7 +12,7 @@ object AccountsErrors {
     val PROFILE_REQUEST_INVALID: ErrorDefinition = SimpleErrorDefinition(
     numericCode = ErrorCode("111101"),
     errorName = "PROFILE_REQUEST_INVALID",
-    legacyCode = "ERR-02",
+    legacyCode = "VALIDATION_FAILED",
     title = "Invalid profile request",
     safeDetail = "The provided profile parameters are invalid.",
     messageKey = "error.profile.request_invalid",
@@ -27,7 +27,7 @@ object AccountsErrors {
     val TIMEZONE_INVALID: ErrorDefinition = SimpleErrorDefinition(
     numericCode = ErrorCode("111102"),
     errorName = "TIMEZONE_INVALID",
-    legacyCode = "ERR-02",
+    legacyCode = "VALIDATION_FAILED",
     title = "Invalid timezone",
     safeDetail = "The specified timezone identifier is not recognized.",
     messageKey = "error.profile.timezone_invalid",
@@ -42,7 +42,7 @@ object AccountsErrors {
     val PROFILE_SUBJECT_INVALID: ErrorDefinition = SimpleErrorDefinition(
     numericCode = ErrorCode("117101"),
     errorName = "PROFILE_SUBJECT_INVALID",
-    legacyCode = "ERR-03",
+    legacyCode = "UNAUTHENTICATED",
     title = "Invalid authenticated subject",
     safeDetail = "The authenticated subject is missing or malformed.",
     messageKey = "error.profile.subject_invalid",
@@ -57,7 +57,7 @@ object AccountsErrors {
     val AUTHENTICATED_PROFILE_NOT_FOUND: ErrorDefinition = SimpleErrorDefinition(
     numericCode = ErrorCode("117201"),
     errorName = "AUTHENTICATED_PROFILE_NOT_FOUND",
-    legacyCode = "ERR-05",
+    legacyCode = "NOT_FOUND",
     title = "Profile not found",
     safeDetail = "The profile associated with the authenticated subject was not found.",
     messageKey = "error.profile.not_found",
@@ -72,7 +72,7 @@ object AccountsErrors {
     val FOREIGN_PROFILE_ACCESS_DENIED: ErrorDefinition = SimpleErrorDefinition(
     numericCode = ErrorCode("117202"),
     errorName = "FOREIGN_PROFILE_ACCESS_DENIED",
-    legacyCode = "ERR-04",
+    legacyCode = "FORBIDDEN",
     title = "Access denied",
     safeDetail = "Access denied to foreign profile",
     messageKey = "error.profile.access_denied",
@@ -87,7 +87,7 @@ object AccountsErrors {
     val BATCH_LOOKUP_UNAUTHORIZED: ErrorDefinition = SimpleErrorDefinition(
     numericCode = ErrorCode("117203"),
     errorName = "BATCH_LOOKUP_UNAUTHORIZED",
-    legacyCode = "ERR-04",
+    legacyCode = "FORBIDDEN",
     title = "Unauthorized batch lookup",
     safeDetail = "Batch profile lookup requires internal workload authority",
     messageKey = "error.profile.batch_unauthorized",
@@ -102,7 +102,7 @@ object AccountsErrors {
     val LOGIN_CODE_INVALID: ErrorDefinition = SimpleErrorDefinition(
     numericCode = ErrorCode("127101"),
     errorName = "LOGIN_CODE_INVALID",
-    legacyCode = "ERR-03",
+    legacyCode = "UNAUTHENTICATED",
     title = "Invalid login code",
     safeDetail = "The provided authentication code is invalid or has expired.",
     messageKey = "error.auth.login_code_invalid",
@@ -117,7 +117,7 @@ object AccountsErrors {
     val LOGIN_RATE_LIMITED: ErrorDefinition = SimpleErrorDefinition(
     numericCode = ErrorCode("127801"),
     errorName = "LOGIN_RATE_LIMITED",
-    legacyCode = "ERR-11",
+    legacyCode = "RATE_LIMITED",
     title = "Login rate limit exceeded",
     safeDetail = "Too many login attempts. Please retry after the indicated window.",
     messageKey = "error.auth.login_rate_limited",
@@ -132,7 +132,7 @@ object AccountsErrors {
     val LOGIN_LIMITER_UNAVAILABLE: ErrorDefinition = SimpleErrorDefinition(
     numericCode = ErrorCode("127802"),
     errorName = "LOGIN_LIMITER_UNAVAILABLE",
-    legacyCode = "ERR-11",
+    legacyCode = "RATE_LIMITED",
     title = "Rate limiter unavailable",
     safeDetail = "Authentication rate limiter is temporarily unavailable.",
     messageKey = "error.auth.limiter_unavailable",
@@ -147,7 +147,7 @@ object AccountsErrors {
     val REFRESH_TOKEN_INVALID: ErrorDefinition = SimpleErrorDefinition(
     numericCode = ErrorCode("137101"),
     errorName = "REFRESH_TOKEN_INVALID",
-    legacyCode = "ERR-03",
+    legacyCode = "UNAUTHENTICATED",
     title = "Invalid refresh token",
     safeDetail = "The provided refresh token is malformed or invalid.",
     messageKey = "error.session.refresh_token_invalid",
@@ -162,7 +162,7 @@ object AccountsErrors {
     val SESSION_EXPIRED: ErrorDefinition = SimpleErrorDefinition(
     numericCode = ErrorCode("137401"),
     errorName = "SESSION_EXPIRED",
-    legacyCode = "ERR-03",
+    legacyCode = "UNAUTHENTICATED",
     title = "Session expired",
     safeDetail = "The current session has expired. Please reauthenticate.",
     messageKey = "error.session.expired",
@@ -177,7 +177,7 @@ object AccountsErrors {
     val SESSION_REVOKED: ErrorDefinition = SimpleErrorDefinition(
     numericCode = ErrorCode("137402"),
     errorName = "SESSION_REVOKED",
-    legacyCode = "ERR-03",
+    legacyCode = "UNAUTHENTICATED",
     title = "Session revoked",
     safeDetail = "The session has been revoked.",
     messageKey = "error.session.revoked",
@@ -192,7 +192,7 @@ object AccountsErrors {
     val REFRESH_REPLAY_DETECTED: ErrorDefinition = SimpleErrorDefinition(
     numericCode = ErrorCode("137403"),
     errorName = "REFRESH_REPLAY_DETECTED",
-    legacyCode = "ERR-03",
+    legacyCode = "UNAUTHENTICATED",
     title = "Token replay detected",
     safeDetail = "Refresh token replay detected. Session family revoked for security.",
     messageKey = "error.session.replay_detected",
@@ -207,7 +207,7 @@ object AccountsErrors {
     val SESSION_SUBJECT_MISMATCH: ErrorDefinition = SimpleErrorDefinition(
     numericCode = ErrorCode("137404"),
     errorName = "SESSION_SUBJECT_MISMATCH",
-    legacyCode = "ERR-03",
+    legacyCode = "UNAUTHENTICATED",
     title = "Session subject mismatch",
     safeDetail = "The session token subject does not match the requested profile.",
     messageKey = "error.session.subject_mismatch",
@@ -222,7 +222,7 @@ object AccountsErrors {
     val REFRESH_RATE_LIMITED: ErrorDefinition = SimpleErrorDefinition(
     numericCode = ErrorCode("137801"),
     errorName = "REFRESH_RATE_LIMITED",
-    legacyCode = "ERR-11",
+    legacyCode = "RATE_LIMITED",
     title = "Refresh rate limit exceeded",
     safeDetail = "Too many token refresh attempts. Please retry later.",
     messageKey = "error.session.refresh_rate_limited",
@@ -237,7 +237,7 @@ object AccountsErrors {
     val ACCOUNT_DELETION_ALREADY_REQUESTED: ErrorDefinition = SimpleErrorDefinition(
     numericCode = ErrorCode("147401"),
     errorName = "ACCOUNT_DELETION_ALREADY_REQUESTED",
-    legacyCode = "ERR-06",
+    legacyCode = "CONFLICT",
     title = "Account deletion in progress",
     safeDetail = "A deletion request for this account is already pending.",
     messageKey = "error.lifecycle.deletion_pending",
@@ -252,7 +252,7 @@ object AccountsErrors {
     val ACCOUNT_EXPORT_ALREADY_PENDING: ErrorDefinition = SimpleErrorDefinition(
     numericCode = ErrorCode("147402"),
     errorName = "ACCOUNT_EXPORT_ALREADY_PENDING",
-    legacyCode = "ERR-06",
+    legacyCode = "CONFLICT",
     title = "Account export in progress",
     safeDetail = "A data export request for this account is already processing.",
     messageKey = "error.lifecycle.export_pending",
@@ -267,7 +267,7 @@ object AccountsErrors {
     val IDENTITY_ALREADY_LINKED: ErrorDefinition = SimpleErrorDefinition(
     numericCode = ErrorCode("157301"),
     errorName = "IDENTITY_ALREADY_LINKED",
-    legacyCode = "ERR-06",
+    legacyCode = "CONFLICT",
     title = "Identity already linked",
     safeDetail = "This external identity is already linked to another account.",
     messageKey = "error.identity.already_linked",

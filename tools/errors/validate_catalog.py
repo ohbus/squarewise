@@ -23,6 +23,7 @@ import yaml  # type: ignore[import-untyped]  # PyYAML ships without inline type 
 CODE_PATTERN = re.compile(r"^[1-9]{4}(0[1-9]|[1-9][0-9])$")
 LEGACY_CODE_PATTERN = re.compile(r"^ERR-[0-9]{2}$")
 ERROR_NAME_PATTERN = re.compile(r"^[A-Z][A-Z0-9_]*$")
+PUBLIC_CODE_PATTERN = re.compile(r"^[A-Z][A-Z0-9_]*$")
 MESSAGE_KEY_PATTERN = re.compile(r"^[a-z][a-z0-9_.-]*$")
 
 ALLOWED_TRANSPORTS: Set[str] = {
@@ -138,6 +139,14 @@ def validate_six_digit_record(
 
     if errors:
         return errors
+
+    legacy_code = record.get("legacyCode")
+    if legacy_code is not None and (
+        not isinstance(legacy_code, str) or not PUBLIC_CODE_PATTERN.match(legacy_code)
+    ):
+        errors.append(
+            f"legacyCode '{legacy_code}' does not match public symbolic code pattern '^[A-Z][A-Z0-9_]*$'"
+        )
 
     numeric_code = str(record["numericCode"])
     if not CODE_PATTERN.match(numeric_code):
@@ -331,7 +340,7 @@ def run_mock_catalog_validation() -> None:
     valid_mock = {
         "numericCode": "213201",
         "errorName": "GROUP_NOT_FOUND",
-        "legacyCode": "ERR-05",
+        "legacyCode": "NOT_FOUND",
         "domain": 2,
         "module": 1,
         "layer": 3,

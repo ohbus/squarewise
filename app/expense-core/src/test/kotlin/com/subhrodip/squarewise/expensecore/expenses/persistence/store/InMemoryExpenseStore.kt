@@ -1,5 +1,7 @@
 package com.subhrodip.squarewise.expensecore.expenses.persistence.store
 
+import com.subhrodip.squarewise.errors.catalog.PlatformErrors
+import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
 import com.subhrodip.squarewise.expensecore.expenses.persistence.entity.BalancePostingEntity
 import com.subhrodip.squarewise.expensecore.expenses.api.response.GroupBalanceItem
 import com.subhrodip.squarewise.expensecore.expenses.api.request.MoneyDto
@@ -8,8 +10,8 @@ import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseRecord
 import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
+
 import com.subhrodip.squarewise.ids.generation.UuidGenerator
 
 /**
@@ -36,7 +38,7 @@ class InMemoryExpenseStore : ExpenseStore {
             ) {
                 return existing
             }
-            throw ApplicationException(ErrorCode.ERR_06, "Expense already exists with different payload")
+            throw ExpenseDomainException(PlatformErrors.RESOURCE_CONFLICT, "Expense already exists with different payload")
         }
         expenses[expense.expenseId] = expense
         val groupPostings = postings.computeIfAbsent(groupId) { mutableListOf() }
@@ -72,12 +74,12 @@ class InMemoryExpenseStore : ExpenseStore {
     @Synchronized
     override fun update(groupId: UUID, expenseId: UUID, update: ExpenseRecord, actorSubject: String?): ExpenseRecord {
         val existing = expenses[expenseId]
-            ?: throw ApplicationException(ErrorCode.ERR_05, "Expense $expenseId not found")
+            ?: throw ExpenseDomainException(PlatformErrors.RESOURCE_NOT_FOUND, "Expense $expenseId not found")
         if (existing.groupId != groupId || existing.deleted) {
-            throw ApplicationException(ErrorCode.ERR_05, "Expense $expenseId not found in group $groupId")
+            throw ExpenseDomainException(PlatformErrors.RESOURCE_NOT_FOUND, "Expense $expenseId not found in group $groupId")
         }
         if (existing.version != update.version) {
-            throw ApplicationException(ErrorCode.ERR_06, "Stale version: expected ${existing.version}, but got ${update.version}")
+            throw ExpenseDomainException(PlatformErrors.RESOURCE_CONFLICT, "Stale version: expected ${existing.version}, but got ${update.version}")
         }
         val groupPostings = postings.computeIfAbsent(groupId) { mutableListOf() }
         val now = Instant.now()
@@ -146,12 +148,12 @@ class InMemoryExpenseStore : ExpenseStore {
     @Synchronized
     override fun delete(groupId: UUID, expenseId: UUID, version: Long?, actorSubject: String?) {
         val existing = expenses[expenseId]
-            ?: throw ApplicationException(ErrorCode.ERR_05, "Expense $expenseId not found")
+            ?: throw ExpenseDomainException(PlatformErrors.RESOURCE_NOT_FOUND, "Expense $expenseId not found")
         if (existing.groupId != groupId || existing.deleted) {
-            throw ApplicationException(ErrorCode.ERR_05, "Expense $expenseId not found in group $groupId")
+            throw ExpenseDomainException(PlatformErrors.RESOURCE_NOT_FOUND, "Expense $expenseId not found in group $groupId")
         }
         if (version != null && existing.version != version) {
-            throw ApplicationException(ErrorCode.ERR_06, "Stale version: expected ${existing.version}, but got $version")
+            throw ExpenseDomainException(PlatformErrors.RESOURCE_CONFLICT, "Stale version: expected ${existing.version}, but got $version")
         }
         val groupPostings = postings.computeIfAbsent(groupId) { mutableListOf() }
         val now = Instant.now()

@@ -2,8 +2,7 @@ package com.subhrodip.squarewise.expensecore.expenses
 import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseAllocation
 import com.subhrodip.squarewise.expensecore.expenses.domain.ExpensePayer
 
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
 import com.subhrodip.squarewise.expensecore.expenses.api.request.MoneyDto
 import com.subhrodip.squarewise.expensecore.expenses.api.request.PayerDto
 import com.subhrodip.squarewise.expensecore.expenses.service.ExpenseValidator
@@ -55,10 +54,10 @@ class ExpenseValidatorTest {
             negative to "positive",
             wrongCurrency to "match expense currency"
         ).forEach { (payer, expectedMessage) ->
-            val error = assertThrows(ApplicationException::class.java) {
+            val error = assertThrows(SquarewiseException::class.java) {
                 ExpenseValidator.validatePayers(listOf(payer), "EUR", "contributors")
             }
-            assertEquals(ErrorCode.ERR_02, error.errorCode)
+            assertEquals("VALIDATION_FAILED", error.definition.legacyCode)
             assertEquals(true, error.message?.contains("contributors"))
             assertEquals(true, error.message?.contains(expectedMessage))
         }
@@ -94,10 +93,10 @@ class ExpenseValidatorTest {
     }
 
     private fun assertApplicationError(value: String, field: String, expectedMessage: String) {
-        val error = assertThrows(ApplicationException::class.java) {
+        val error = assertThrows(SquarewiseException::class.java) {
             ExpenseValidator.parseAndValidateAmount(value, field)
         }
-        assertEquals(ErrorCode.ERR_02, error.errorCode)
+        assertEquals("VALIDATION_FAILED", error.definition.legacyCode)
         assertEquals(true, error.message?.contains(field))
         assertEquals(true, error.message?.contains(expectedMessage))
     }

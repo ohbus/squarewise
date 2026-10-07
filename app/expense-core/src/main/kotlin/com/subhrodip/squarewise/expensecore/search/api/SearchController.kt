@@ -85,7 +85,7 @@ class SearchController(
                 limit = limit
             )
         } catch (ex: IllegalArgumentException) {
-            throw ExpenseDomainException(ExpenseErrors.ERR_02, ex.message, ex)
+            throw ExpenseDomainException(ExpenseErrors.EXPENSE_REQUEST_INVALID, ex.message, ex)
         }
     }
 
@@ -134,7 +134,7 @@ class SearchController(
                 maxRows = maxRows
             )
         } catch (ex: IllegalArgumentException) {
-            throw ExpenseDomainException(ExpenseErrors.ERR_02, ex.message, ex)
+            throw ExpenseDomainException(ExpenseErrors.EXPENSE_REQUEST_INVALID, ex.message, ex)
         }
 
         val filename = "expenses-$groupId.csv"
@@ -147,7 +147,7 @@ class SearchController(
     private fun ensureMembership(groupId: UUID, subject: String) {
         val groups = groupStore.list(subject)
         if (groups.none { it.groupId == groupId }) {
-            throw ExpenseDomainException(ExpenseErrors.ERR_05, "Group $groupId not found")
+            throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group $groupId not found")
         }
     }
 }

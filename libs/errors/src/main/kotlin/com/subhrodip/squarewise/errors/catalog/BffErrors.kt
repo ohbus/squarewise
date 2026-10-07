@@ -12,7 +12,7 @@ object BffErrors {
     val GRAPHQL_INPUT_INVALID: ErrorDefinition = SimpleErrorDefinition(
     numericCode = ErrorCode("411101"),
     errorName = "GRAPHQL_INPUT_INVALID",
-    legacyCode = "ERR-02",
+    legacyCode = "VALIDATION_FAILED",
     title = "Invalid GraphQL input",
     safeDetail = "The provided GraphQL query arguments are invalid.",
     messageKey = "error.graphql.input_invalid",
@@ -27,7 +27,7 @@ object BffErrors {
     val GRAPHQL_OPERATION_INVALID: ErrorDefinition = SimpleErrorDefinition(
     numericCode = ErrorCode("411102"),
     errorName = "GRAPHQL_OPERATION_INVALID",
-    legacyCode = "ERR-02",
+    legacyCode = "VALIDATION_FAILED",
     title = "Invalid GraphQL operation",
     safeDetail = "The requested GraphQL operation is not supported.",
     messageKey = "error.graphql.operation_invalid",
@@ -42,7 +42,7 @@ object BffErrors {
     val GRAPHQL_AGGREGATION_FAILED: ErrorDefinition = SimpleErrorDefinition(
     numericCode = ErrorCode("412901"),
     errorName = "GRAPHQL_AGGREGATION_FAILED",
-    legacyCode = "ERR-08",
+    legacyCode = "INTERNAL_ERROR",
     title = "GraphQL aggregation failed",
     safeDetail = "Failed to assemble response from upstream services.",
     messageKey = "error.graphql.aggregation_failed",
@@ -57,7 +57,7 @@ object BffErrors {
     val UPSTREAM_PROTOCOL_INVALID: ErrorDefinition = SimpleErrorDefinition(
     numericCode = ErrorCode("426701"),
     errorName = "UPSTREAM_PROTOCOL_INVALID",
-    legacyCode = "ERR-08",
+    legacyCode = "INTERNAL_ERROR",
     title = "Invalid upstream response",
     safeDetail = "The upstream service returned an unparseable response.",
     messageKey = "error.upstream.protocol_invalid",
@@ -72,7 +72,7 @@ object BffErrors {
     val UPSTREAM_RESPONSE_DECODE_FAILED: ErrorDefinition = SimpleErrorDefinition(
     numericCode = ErrorCode("426702"),
     errorName = "UPSTREAM_RESPONSE_DECODE_FAILED",
-    legacyCode = "ERR-08",
+    legacyCode = "INTERNAL_ERROR",
     title = "Failed to decode upstream response",
     safeDetail = "Could not decode data payload from upstream service.",
     messageKey = "error.upstream.decode_failed",
@@ -87,7 +87,7 @@ object BffErrors {
     val UPSTREAM_TIMEOUT: ErrorDefinition = SimpleErrorDefinition(
     numericCode = ErrorCode("426801"),
     errorName = "UPSTREAM_TIMEOUT",
-    legacyCode = "ERR-08",
+    legacyCode = "INTERNAL_ERROR",
     title = "Upstream service timeout",
     safeDetail = "The upstream service did not respond within the configured timeout.",
     messageKey = "error.upstream.timeout",
@@ -102,7 +102,7 @@ object BffErrors {
     val UPSTREAM_UNAVAILABLE: ErrorDefinition = SimpleErrorDefinition(
     numericCode = ErrorCode("426802"),
     errorName = "UPSTREAM_UNAVAILABLE",
-    legacyCode = "ERR-08",
+    legacyCode = "INTERNAL_ERROR",
     title = "Upstream service unavailable",
     safeDetail = "The upstream service is currently unreachable or circuit is open.",
     messageKey = "error.upstream.unavailable",
@@ -117,7 +117,7 @@ object BffErrors {
     val UPSTREAM_TLS_FAILED: ErrorDefinition = SimpleErrorDefinition(
     numericCode = ErrorCode("426803"),
     errorName = "UPSTREAM_TLS_FAILED",
-    legacyCode = "ERR-08",
+    legacyCode = "INTERNAL_ERROR",
     title = "Upstream TLS handshake failed",
     safeDetail = "Secure TLS connection to the upstream service could not be established.",
     messageKey = "error.upstream.tls_failed",
@@ -132,7 +132,7 @@ object BffErrors {
     val SUBSCRIPTION_LIMIT_EXCEEDED: ErrorDefinition = SimpleErrorDefinition(
     numericCode = ErrorCode("437801"),
     errorName = "SUBSCRIPTION_LIMIT_EXCEEDED",
-    legacyCode = "ERR-11",
+    legacyCode = "RATE_LIMITED",
     title = "Subscription limit exceeded",
     safeDetail = "Maximum concurrent WebSocket subscriptions exceeded for this connection.",
     messageKey = "error.live_update.limit_exceeded",
@@ -147,7 +147,7 @@ object BffErrors {
     val LIVE_UPDATE_UPSTREAM_UNAVAILABLE: ErrorDefinition = SimpleErrorDefinition(
     numericCode = ErrorCode("437802"),
     errorName = "LIVE_UPDATE_UPSTREAM_UNAVAILABLE",
-    legacyCode = "ERR-08",
+    legacyCode = "INTERNAL_ERROR",
     title = "Live update service unavailable",
     safeDetail = "Subscription event stream is temporarily disconnected from upstream.",
     messageKey = "error.live_update.unavailable",
@@ -162,7 +162,7 @@ object BffErrors {
     val LIVE_UPDATE_EVENT_INVALID: ErrorDefinition = SimpleErrorDefinition(
     numericCode = ErrorCode("435701"),
     errorName = "LIVE_UPDATE_EVENT_INVALID",
-    legacyCode = "ERR-08",
+    legacyCode = "INTERNAL_ERROR",
     title = "Invalid live update event",
     safeDetail = "The received live update event could not be processed for subscribers.",
     messageKey = "error.live_update.event_invalid",

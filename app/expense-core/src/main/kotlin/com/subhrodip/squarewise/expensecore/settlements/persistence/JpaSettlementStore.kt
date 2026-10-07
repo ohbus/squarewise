@@ -45,7 +45,7 @@ class JpaSettlementStore(
                 existing.toParticipantId != settlement.toParticipantId ||
                 existing.amountMinor != settlement.amountMinor
             ) {
-                throw ExpenseDomainException(ExpenseErrors.ERR_06, "Idempotency key was already used with a different settlement")
+                throw ExpenseDomainException(ExpenseErrors.GROUP_NAME_CONFLICT, "Idempotency key was already used with a different settlement")
             }
             return existing.toDomain(group.currency)
         }
@@ -80,13 +80,13 @@ class JpaSettlementStore(
      * @param settlementId the UUID of the settlement to reverse
      * @param reason explanation for the reversal
      * @return the updated domain settlement with REVERSED status
-     * @throws ExpenseDomainException with [ExpenseErrors.ERR_05] if the settlement cannot be found
+     * @throws ExpenseDomainException with [ExpenseErrors.GROUP_NOT_FOUND] if the settlement cannot be found
      */
     @Transactional
     override fun reverse(groupId: UUID, settlementId: UUID, reason: String): Settlement {
         checkActiveGroup(groupId)
         val entity = repository.findForUpdate(settlementId, groupId)
-            ?: throw ExpenseDomainException(ExpenseErrors.ERR_05, "Settlement not found")
+            ?: throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Settlement not found")
         if (entity.status == SettlementStatus.REVERSED) return entity.toDomain(checkActiveGroup(groupId).currency)
         entity.status = SettlementStatus.REVERSED
         entity.reversalReason = reason
@@ -108,9 +108,9 @@ class JpaSettlementStore(
 
     private fun checkActiveGroup(groupId: UUID) = groupRepository.findById(groupId).orElse(null)?.also { group ->
         if (group.status == "ARCHIVED") {
-            throw ExpenseDomainException(ExpenseErrors.ERR_06, "Group is archived")
+            throw ExpenseDomainException(ExpenseErrors.GROUP_NAME_CONFLICT, "Group is archived")
         }
-    } ?: throw ExpenseDomainException(ExpenseErrors.ERR_05, "Group $groupId not found")
+    } ?: throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group $groupId not found")
 }
 
 private fun Settlement.toEntity(groupId: UUID) = SettlementEntity(

@@ -203,8 +203,8 @@ This workstream manages the six-digit `DM-L-C-EE` domain/module error-code stand
 | [ERRC-26](details/ERRC-26.md) | quality | in_progress | Gather JMH (<50ns lookup) and k6 error storm evidence supporting 10M+-DAU scale |
 | [ERRC-27](details/ERRC-27.md) | operations | done | Create Grafana dashboards, Prometheus alert rules, and operational runbooks |
 | [ERRC-28](details/ERRC-28.md) | operations | in_progress | Execute canary-driven staged production rollout across microservices |
-| [ERRC-29](details/ERRC-29.md) | contracts | todo | Promote `numericCode` and `errorName` to required fields after compatibility window |
-| [ERRC-30](details/ERRC-30.md) | coordinator | todo | Safely decommission legacy `ERR_XX` enums while retaining v1 response compatibility |
+| [ERRC-29](details/ERRC-29.md) | contracts | in_progress | Promote `numericCode` and `errorName` to required fields after compatibility window |
+| [ERRC-30](details/ERRC-30.md) | coordinator | in_progress | Safely decommission legacy `ERR_XX` enums while retaining v1 response compatibility |
 | [ERRC-31](details/ERRC-31.md) | architecture | todo | Author architectural decision and prototype specifications for future API v2 |
 
 | ID | Owner | Status | Deliverable |

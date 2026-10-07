@@ -68,8 +68,8 @@
         },
         "legacyCode": {
           "type": ["string", "null"],
-          "pattern": "^(ERR-[0-9]{2}|[A-Z0-9_]+)$",
-          "description": "Explicit current v1 symbolic alias when one exists; null otherwise."
+          "pattern": "^[A-Z0-9_]+$",
+          "description": "Explicit current v1 symbolic code when one exists; null otherwise."
         },
         "domain": {
           "type": "integer",

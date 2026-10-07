@@ -90,12 +90,8 @@ class GraphQlExceptionResolverTest {
         assertEquals(BffErrors.GRAPHQL_AGGREGATION_FAILED.safeDetail, unknownError.message)
     }
 
-    private fun expectedGraphQlCode(definition: ErrorDefinition): String = when (definition.legacyCode) {
-        "ERR-02" -> "VALIDATION_FAILED"
-        "ERR-03" -> "UNAUTHENTICATED"
-        "ERR-11" -> "RATE_LIMITED"
-        else -> "INTERNAL_ERROR"
-    }
+    private fun expectedGraphQlCode(definition: ErrorDefinition): String =
+        definition.legacyCode ?: definition.errorName
 
     private fun expectedClassification(definition: ErrorDefinition): ErrorType = when (definition.httpStatus) {
         401 -> ErrorType.UNAUTHORIZED

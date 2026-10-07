@@ -1,4 +1,6 @@
 package com.subhrodip.squarewise.expensecore.settlements.api
+
+import com.subhrodip.squarewise.errors.catalog.PlatformErrors
 import com.subhrodip.squarewise.expensecore.settlements.domain.Settlement
 import com.subhrodip.squarewise.expensecore.settlements.domain.SuggestedSettlement
 import com.subhrodip.squarewise.expensecore.settlements.service.SettlementService
@@ -50,9 +52,9 @@ class SettlementController(
 
     private fun ensureMembership(groupId: UUID, principal: Principal?) {
         val subject = principal?.name?.takeIf { it.isNotBlank() }
-            ?: throw ExpenseDomainException(ExpenseErrors.ERR_03, "Authenticated subject is required")
+            ?: throw ExpenseDomainException(PlatformErrors.AUTHENTICATION_REQUIRED, "Authenticated subject is required")
         if (!membershipRepository.existsByGroupIdAndSubject(groupId, subject)) {
-            throw ExpenseDomainException(ExpenseErrors.ERR_05, "Group $groupId not found")
+            throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group $groupId not found")
         }
     }
 }

@@ -57,7 +57,7 @@ class ValidateCatalogTest(unittest.TestCase):
         valid_record = {
             "numericCode": "113101",
             "errorName": "PROFILE_NOT_FOUND",
-            "legacyCode": "ERR-05",
+            "legacyCode": "NOT_FOUND",
             "domain": 1,
             "module": 1,
             "layer": 3,
@@ -77,6 +77,9 @@ class ValidateCatalogTest(unittest.TestCase):
             "introducedIn": "1.0.0",
         }
         self.assertEqual(validate_six_digit_record(valid_record), [])
+
+        invalid_public_code = dict(valid_record, legacyCode="ERR-05")
+        self.assertTrue(any("public symbolic code pattern" in e for e in validate_six_digit_record(invalid_public_code)))
 
         # Sequence 00 is forbidden
         bad_seq = dict(valid_record, sequence="00", numericCode="113100")

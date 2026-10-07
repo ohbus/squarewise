@@ -8,8 +8,7 @@ import com.subhrodip.squarewise.accounts.auth.login.LoginStartService
 import com.subhrodip.squarewise.accounts.auth.login.LoginVerificationService
 import com.subhrodip.squarewise.accounts.auth.session.RefreshTokenRequest
 import com.subhrodip.squarewise.accounts.auth.session.TokenSessionService
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
 import jakarta.servlet.http.HttpServletRequest
 import java.time.Instant
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -22,7 +21,7 @@ import com.subhrodip.squarewise.security.ratelimit.RateLimiter
 /** Verifies refresh admission fails closed when the rate-limit store is unavailable. */
 class AuthControllerRateLimitFailureTest {
     @Test
-    fun `refresh token maps rate limit store outage to ERR-11`() {
+    fun `refresh token maps rate limit store outage to RATE_LIMITED`() {
         val digest = HmacCredentialDigest(ByteArray(32) { it.toByte() })
         val unavailableLimiter = object : RefreshRateLimitService(
             digest,
@@ -43,11 +42,11 @@ class AuthControllerRateLimitFailureTest {
             remoteAddr = "127.0.0.1"
         }
 
-        val error = assertThrows(ApplicationException::class.java) {
+        val error = assertThrows(SquarewiseException::class.java) {
             controller.refreshToken(RefreshTokenRequest("opaque-refresh-token"), request)
         }
 
-        assertEquals(ErrorCode.ERR_11, error.errorCode)
+        assertEquals("RATE_LIMITED", error.definition.legacyCode)
         assertEquals("LOGIN_LIMITER_UNAVAILABLE", error.message)
     }
 }

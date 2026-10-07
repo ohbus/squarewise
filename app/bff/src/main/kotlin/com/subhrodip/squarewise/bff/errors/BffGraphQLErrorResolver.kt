@@ -24,9 +24,9 @@ class BffGraphQLErrorResolver {
             else -> BffErrors.GRAPHQL_AGGREGATION_FAILED
         }
             val extensions = GraphQLExtensionsFormatter.fromDefinition(definition, requestId).toMutableMap().apply {
-                if (definition.legacyCode == "ERR-11") put("retryAfterSeconds", 60)
+                if (definition.legacyCode == "RATE_LIMITED") put("retryAfterSeconds", 60)
             }
-            val detail = if (definition.legacyCode == "ERR-11") "Rate limit exceeded" else definition.safeDetail
+            val detail = if (definition.legacyCode == "RATE_LIMITED") "Rate limit exceeded" else definition.safeDetail
             return error(environment, detail, definition.errorName, extensions, classification(definition))
     }
 

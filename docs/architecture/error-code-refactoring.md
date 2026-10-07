@@ -104,7 +104,9 @@ not a failure, and is retired without replacement.
 
 ### Public compatibility
 
-- Keep API v1 `code` symbolic and add optional `numericCode` and `errorName` first.
+- Keep API v1 `code` symbolic; the local promoted contract now requires `numericCode`
+  and `errorName` alongside it. Production-effective promotion remains gated by
+  ERRC-28 rollout and ERRC-29 client/product evidence.
 - Do not add `legacyCode` while `code` already carries that value.
 - Preserve `type`, `title`, `status`, `source`, `requestId`, `detail`, `timestamp`,
   and existing violation behavior until a reviewed change says otherwise.
@@ -634,8 +636,9 @@ an explicit handoff.
 4. Verify upstream identity preservation and mixed-version GraphQL behavior.
 5. Expand by region while monitoring unknown-code, schema rejection, status/header,
    latency/allocation, log volume, and metric cardinality.
-6. Keep fields optional through the announced compatibility window.
-7. Require fields only through `ERRC-29` approval.
+6. The historical compatibility window kept fields optional; current local contracts
+   require them through the ERRC-29 promotion rehearsal.
+7. Do not treat local promotion as evidence of a production effective date.
 
 ### Rollback rules
 

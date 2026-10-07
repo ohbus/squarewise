@@ -22,12 +22,12 @@ class AllocationPreviewController {
     @ResponseStatus(HttpStatus.OK)
     fun preview(@Valid @RequestBody request: AllocationPreviewRequest): AllocationPreviewResponse {
         val total = request.totalMinor.toLongOrNull()
-            ?: throw ExpenseDomainException(ExpenseErrors.ERR_02, "totalMinor must be a non-negative integer")
-        if (total < 0) throw ExpenseDomainException(ExpenseErrors.ERR_02, "totalMinor must be non-negative")
+            ?: throw ExpenseDomainException(ExpenseErrors.EXPENSE_REQUEST_INVALID, "totalMinor must be a non-negative integer")
+        if (total < 0) throw ExpenseDomainException(ExpenseErrors.EXPENSE_REQUEST_INVALID, "totalMinor must be non-negative")
         val allocations = try {
             AllocationCalculator.equal(total, request.participantIds)
         } catch (error: IllegalArgumentException) {
-            throw ExpenseDomainException(ExpenseErrors.ERR_02, error.message, error)
+            throw ExpenseDomainException(ExpenseErrors.EXPENSE_REQUEST_INVALID, error.message, error)
         }
             .mapValues { (_, value) -> value.toString() }
         return AllocationPreviewResponse(request.totalMinor, allocations)

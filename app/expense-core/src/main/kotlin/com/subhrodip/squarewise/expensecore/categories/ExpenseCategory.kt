@@ -13,6 +13,6 @@ enum class ExpenseCategory(val key: String, val label: String) {
 
     companion object {
         fun fromKey(key: String): ExpenseCategory = entries.firstOrNull { it.key == key.trim().lowercase() }
-            ?: throw ExpenseDomainException(ExpenseErrors.ERR_02, "Unknown expense category")
+            ?: throw ExpenseDomainException(ExpenseErrors.EXPENSE_REQUEST_INVALID, "Unknown expense category")
     }
 }

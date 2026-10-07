@@ -1,6 +1,5 @@
 package com.subhrodip.squarewise.expensecore.search
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
 
 import com.subhrodip.squarewise.expensecore.search.model.ExpenseSearch
 import com.subhrodip.squarewise.expensecore.search.model.SearchExpense
@@ -60,10 +59,10 @@ class ExpenseSearchTest {
     @Test
     fun `rejects malformed cursors instead of silently changing the page`() {
         val search = ExpenseSearch()
-        val error = assertThrows(ApplicationException::class.java) {
+        val error = assertThrows(SquarewiseException::class.java) {
             search.page(listOf(SearchExpense("1", "Dinner", "EUR", "100")), cursor = "%%%invalid%%%")
         }
-        assertEquals(ErrorCode.ERR_02, error.errorCode)
+        assertEquals("VALIDATION_FAILED", error.definition.legacyCode)
     }
 
     /** Verifies a syntactically valid cursor cannot decode to a blank continuation key. */
@@ -72,11 +71,11 @@ class ExpenseSearchTest {
         val blankCursor = Base64.getUrlEncoder().withoutPadding()
             .encodeToString(" ".toByteArray())
 
-        val error = assertThrows(ApplicationException::class.java) {
+        val error = assertThrows(SquarewiseException::class.java) {
             ExpenseSearch().page(listOf(SearchExpense("1", "Dinner", "EUR", "100")), cursor = blankCursor)
         }
 
-        assertEquals(ErrorCode.ERR_02, error.errorCode)
+        assertEquals("VALIDATION_FAILED", error.definition.legacyCode)
     }
 
     @Test
@@ -129,8 +128,8 @@ class ExpenseSearchTest {
 
     @Test
     fun `rejects unknown category`() {
-        val err = assertThrows(ApplicationException::class.java) { ExpenseCategory.fromKey("travel") }
-        assertEquals(ErrorCode.ERR_02, err.errorCode)
+        val err = assertThrows(SquarewiseException::class.java) { ExpenseCategory.fromKey("travel") }
+        assertEquals("VALIDATION_FAILED", err.definition.legacyCode)
     }
 
     @Test
@@ -153,10 +152,10 @@ class ExpenseSearchTest {
         assertEquals("expense-42", decodeSearchCursor(cursor))
 
         listOf("%%%invalid%%%", Base64.getUrlEncoder().withoutPadding().encodeToString(" ".toByteArray())).forEach { value ->
-            val error = assertThrows(ApplicationException::class.java) {
+            val error = assertThrows(SquarewiseException::class.java) {
                 decodeSearchCursor(value)
             }
-            assertEquals(ErrorCode.ERR_02, error.errorCode)
+            assertEquals("VALIDATION_FAILED", error.definition.legacyCode)
         }
     }
 }

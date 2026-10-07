@@ -1,7 +1,6 @@
 package com.subhrodip.squarewise.expensecore.groups.persistence.store
 
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
 import com.subhrodip.squarewise.expensecore.groups.domain.GroupEntity
 import com.subhrodip.squarewise.expensecore.groups.domain.GroupInvitationEntity
 import com.subhrodip.squarewise.expensecore.groups.domain.GroupMembershipEntity
@@ -42,11 +41,11 @@ class JpaGroupStoreClaimTest {
         `when`(invitations.findById(token)).thenReturn(Optional.of(invitation))
         `when`(groups.findForMembershipUpdate(groupId)).thenReturn(null)
 
-        val error = assertThrows<ApplicationException> {
+        val error = assertThrows<SquarewiseException> {
             store.claim(token, "invitee")
         }
 
-        assertEquals(ErrorCode.ERR_05, error.errorCode)
+        assertEquals("NOT_FOUND", error.definition.legacyCode)
     }
 
     @Test
@@ -59,11 +58,11 @@ class JpaGroupStoreClaimTest {
         `when`(groups.findForMembershipUpdate(groupId)).thenReturn(GroupEntity(groupId, "Trip", "TRIP", "EUR"))
         `when`(memberships.findByMembershipIdAndGroupId(placeholderId, groupId)).thenReturn(null)
 
-        val error = assertThrows<ApplicationException> {
+        val error = assertThrows<SquarewiseException> {
             store.claim(token, "invitee")
         }
 
-        assertEquals(ErrorCode.ERR_06, error.errorCode)
+        assertEquals("CONFLICT", error.definition.legacyCode)
     }
 
     /** Verifies a normal invitation race fails before creating a membership or side effects. */
@@ -77,11 +76,11 @@ class JpaGroupStoreClaimTest {
         `when`(memberships.existsByGroupIdAndSubjectAndStatus(groupId, "invitee", "ACTIVE"))
             .thenReturn(false)
 
-        val error = assertThrows<ApplicationException> {
+        val error = assertThrows<SquarewiseException> {
             store.claim(token, "invitee")
         }
 
-        assertEquals(ErrorCode.ERR_06, error.errorCode)
+        assertEquals("CONFLICT", error.definition.legacyCode)
     }
 
     /** Verifies a targeted placeholder race fails before binding the placeholder. */
@@ -103,11 +102,11 @@ class JpaGroupStoreClaimTest {
             )
         )
 
-        val error = assertThrows<ApplicationException> {
+        val error = assertThrows<SquarewiseException> {
             store.claim(token, "invitee")
         }
 
-        assertEquals(ErrorCode.ERR_06, error.errorCode)
+        assertEquals("CONFLICT", error.definition.legacyCode)
     }
 
     @Test
@@ -121,11 +120,11 @@ class JpaGroupStoreClaimTest {
         `when`(invitations.revokeIfAvailable(token, groupId, Instant.now()))
             .thenReturn(0)
 
-        val error = assertThrows<ApplicationException> {
+        val error = assertThrows<SquarewiseException> {
             store.revokeInvite(groupId, "owner", token)
         }
 
-        assertEquals(ErrorCode.ERR_06, error.errorCode)
+        assertEquals("CONFLICT", error.definition.legacyCode)
     }
 
     @Test
@@ -135,11 +134,11 @@ class JpaGroupStoreClaimTest {
         val invitation = invitation(token, groupId).apply { revokedAt = Instant.now() }
         `when`(invitations.findById(token)).thenReturn(Optional.of(invitation))
 
-        val error = assertThrows<ApplicationException> {
+        val error = assertThrows<SquarewiseException> {
             store.claim(token, "invitee")
         }
 
-        assertEquals(ErrorCode.ERR_06, error.errorCode)
+        assertEquals("CONFLICT", error.definition.legacyCode)
     }
 
     @Test
@@ -159,11 +158,11 @@ class JpaGroupStoreClaimTest {
             )
         )
 
-        val error = assertThrows<ApplicationException> {
+        val error = assertThrows<SquarewiseException> {
             store.claim(token, "invitee")
         }
 
-        assertEquals(ErrorCode.ERR_06, error.errorCode)
+        assertEquals("CONFLICT", error.definition.legacyCode)
     }
 
     @Test
@@ -172,11 +171,11 @@ class JpaGroupStoreClaimTest {
         `when`(memberships.existsByGroupIdAndSubjectAndStatus(groupId, "outsider", "ACTIVE"))
             .thenReturn(false)
 
-        val error = assertThrows<ApplicationException> {
+        val error = assertThrows<SquarewiseException> {
             store.update(groupId, "outsider", UpdateGroupRequest("Renamed"))
         }
 
-        assertEquals(ErrorCode.ERR_05, error.errorCode)
+        assertEquals("NOT_FOUND", error.definition.legacyCode)
     }
 
     private fun invitation(token: String, groupId: UUID, placeholderId: UUID? = null): GroupInvitationEntity =

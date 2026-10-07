@@ -123,5 +123,5 @@ class ExpenseSearch {
 
     private fun decodeCursor(cursor: String): String = runCatching {
         String(Base64.getUrlDecoder().decode(cursor), StandardCharsets.UTF_8).also { require(it.isNotBlank()) }
-    }.getOrElse { throw ExpenseDomainException(ExpenseErrors.ERR_02, "Invalid search cursor") }
+    }.getOrElse { throw ExpenseDomainException(ExpenseErrors.EXPENSE_REQUEST_INVALID, "Invalid search cursor") }
 }

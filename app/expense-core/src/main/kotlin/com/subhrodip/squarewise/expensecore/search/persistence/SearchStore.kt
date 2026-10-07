@@ -25,5 +25,5 @@ interface SearchStore {
 fun decodeSearchCursor(cursor: String?): String? = cursor?.let {
     runCatching {
         String(Base64.getUrlDecoder().decode(it), StandardCharsets.UTF_8).also { value -> require(value.isNotBlank()) }
-    }.getOrElse { throw ExpenseDomainException(ExpenseErrors.ERR_02, "Invalid search cursor", it) }
+    }.getOrElse { throw ExpenseDomainException(ExpenseErrors.EXPENSE_REQUEST_INVALID, "Invalid search cursor", it) }
 }
