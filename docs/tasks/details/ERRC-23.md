@@ -84,3 +84,18 @@ git diff --check
 - Shared library update affecting all services.
 - Internal error refactoring; public APIs remain additive.
 - Rollback: Revert library commits if startup regressions are observed.
+
+## Implementation Notes and Evidence
+
+- Migrated the owned security rate-limit secret decoder to a typed
+  `PlatformDomainException` backed by `PlatformErrors.PLATFORM_CONFIGURATION_INVALID`;
+  malformed or undersized deployment secrets now fail closed without a raw
+  `IllegalArgumentException` boundary.
+- Removed the ERRC-23-owned `libs/security` hygiene waiver and updated its
+  focused tests to assert the governed startup/configuration exception.
+- The declared shared-library suite passed: `libs/db`, `libs/security`,
+  `libs/observability`, and `libs/ids` tests completed successfully.
+- Three remaining allowlist entries belong to `libs/errors` web infrastructure,
+  which is owned by the later ERRC-30 legacy-infrastructure retirement task;
+  therefore the repository-wide zero-entry acceptance remains pending that
+  dependency and this task stays `in_progress`.

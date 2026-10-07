@@ -4,4 +4,3 @@ entries:
   - {file: libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/http/ApiProblem.kt, line: 6, violation_type: direct_problem_constructor, owner_task: ERRC-19, expires_by_task: ERRC-19}
   - {file: libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/http/GlobalErrorHandler.kt, line: 165, violation_type: direct_problem_constructor, owner_task: ERRC-19, expires_by_task: ERRC-19}
   - {file: libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/http/GlobalErrorHandler.kt, line: 211, violation_type: direct_problem_constructor, owner_task: ERRC-19, expires_by_task: ERRC-19}
-  - {file: libs/security/src/main/kotlin/com/subhrodip/squarewise/security/ratelimit/HmacRateLimitKeyDeriver.kt, line: 27, violation_type: generic_throw, owner_task: ERRC-19, expires_by_task: ERRC-19}

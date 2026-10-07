@@ -8738,7 +8738,7 @@
       "parent_id": "ERRC-01",
       "title": "Migrate shared libraries and startup failures",
       "phase": "implementation",
-      "status": "todo",
+      "status": "in_progress",
       "owner_role": "platform",
       "owner_agent": "/root",
       "depends_on": [
@@ -8773,9 +8773,13 @@
         "uv run python tools/contracts/validate.py",
         "git diff --check"
       ],
-      "evidence": [],
+      "evidence": [
+        "Migrated the owned HMAC rate-limit secret decoder to PlatformErrors-backed PlatformDomainException.",
+        "Shared db, security, observability, and ids test suite passed.",
+        "Three remaining libs/errors allowlist entries are owned by ERRC-30; zero-entry acceptance remains pending."
+      ],
       "reviewer": "/root",
-      "blocker": null
+      "blocker": "Three libs/errors web infrastructure allowlist entries remain owned by ERRC-30."
     },
     {
       "id": "ERRC-24",
