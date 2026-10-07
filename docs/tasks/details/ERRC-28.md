@@ -87,6 +87,8 @@ git diff --check
   standard repository validation path cannot omit the rollout regression suite.
 - Added the same validator and regression suite to the reusable hosted CI lint
   job, preserving local/hosted gate parity.
+- Added the rollout gate to the local `ci` target as well, so both standard and
+  CI-equivalent local paths execute the same configuration checks.
 - The rollout validator now requires each stage name to match its service and
   rejects smoke paths that are absolute, traverse outside the repository, or
   resolve through a symlink outside the repository. Regression coverage protects
