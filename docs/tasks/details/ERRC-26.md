@@ -108,6 +108,10 @@ git diff --check
   zero observed GC events, and allocation below the profiler resolution (`about
   10^-6 B/op`). This is consistent with the 0 B/op budget but is not an exact
   zero-allocation proof because JMH reports a rounded lower bound.
+- `mingw32-make load-k6-validate` passed with eight valid scripts, and `k6 inspect`
+  confirmed the ten-minute baseline/storm scenario definitions, 2,500 error and
+  valid-operation rates, p99 thresholds, telemetry sampling, dropped-iteration
+  gate, and p95/p99 summary statistics. This validates harness configuration only.
 - ERRC-26 remains in progress until a production-like k6/GC/heap run produces the
   required p99, valid-operation degradation, and stability evidence.
 
