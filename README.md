@@ -103,13 +103,13 @@ Ensure you have the following installed on your workstation:
    make doctor
    ```
 
-### Option 0: 1-Click Devcontainer (Zero Toolchain Setup)
+### Fast Track: 1-Click Devcontainer (No Host Toolchain Setup)
 
 Open in VS Code, Cursor, or JetBrains Gateway with zero local toolchain installation:
 ```sh
 code .   # or cursor .
 ```
-Click **"Reopen in Container"** when prompted. The workspace container automatically configures Java 25, Python 3.12 (`uv`), Node 22, starts all backing services, and seeds realistic development personas. See the [Devcontainer Guide](docs/operations/devcontainer.md).
+Click **"Reopen in Container"** when prompted. The workspace container supplies Java 25, Python 3.12 (`uv`), Node.js 24 LTS, starts all backing services, and seeds realistic development personas. The host still needs Docker and a compatible IDE. See the [Devcontainer Guide](docs/operations/devcontainer.md).
 
 ### Option A: Running with Docker
 

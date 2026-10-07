@@ -21,4 +21,8 @@ jmh {
 }
 
 // Keep the repository validation command stable across JMH Gradle plugin versions.
-tasks.register("run") { dependsOn("jmh") }
+tasks.register("run") {
+    group = "verification"
+    description = "Runs the JMH benchmark suite."
+    dependsOn("jmh")
+}

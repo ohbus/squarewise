@@ -178,44 +178,19 @@ class GlobalErrorHandler(
                 retryAfterSeconds?.let { set(HttpHeaders.RETRY_AFTER, it.toString()) }
             })
             .contentType(MediaType.APPLICATION_PROBLEM_JSON)
-            .body(problemDetails(
-                type = "https://squarewise.example/problems/${definition.errorName.lowercase()}",
+            .body(ProblemDetailsDto(
+                type = URI("https://squarewise.example/problems/${definition.errorName.lowercase()}"),
                 title = title,
                 status = status.value(),
-                code = definition.legacyCode ?: definition.errorName,
-                source = serviceName,
-                requestId = RequestIdContext.get(),
                 detail = detail,
+                instance = "/errors/${definition.errorName.lowercase()}".take(256),
+                code = definition.legacyCode ?: definition.errorName,
+                requestId = RequestIdContext.get(),
+                source = serviceName,
                 numericCode = definition.numericCode.value,
                 errorName = definition.errorName,
-                violations = violations,
+                violations = violations.map { ViolationDto(it.field, it.message) },
             ))
-
-    private fun problemDetails(
-        type: String,
-        title: String,
-        status: Int,
-        code: String,
-        source: String,
-        requestId: String,
-        detail: String,
-        numericCode: String,
-        errorName: String,
-        violations: List<FieldViolation> = emptyList(),
-    ): ProblemDetailsDto = ProblemDetailsDto(
-        type = URI(type),
-        title = title,
-        status = status,
-        detail = detail,
-        instance = "/errors/${type.substringAfterLast('/')}"
-            .take(256),
-        code = code,
-        requestId = requestId,
-        source = source,
-        numericCode = numericCode,
-        errorName = errorName,
-        violations = violations.map { ViolationDto(it.field, it.message) },
-    )
 
     companion object {
         private const val RATE_LIMIT_RETRY_AFTER_SECONDS = 60L

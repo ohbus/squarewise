@@ -93,7 +93,7 @@ and Keycloak via TCP and HTTP.
 The Devcontainer workspace image is pinned to Ubuntu 24.04
 (`mcr.microsoft.com/devcontainers/base:ubuntu-24.04`), Microsoft OpenJDK 25
 (matching CI reusable workflows and the Gradle toolchain baseline), Python 3.12+
-managed exclusively by `uv`, and Node.js 22 LTS for executing `@usebruno/cli@4.1.0`
+managed exclusively by `uv`, and Node.js 24 LTS for executing `@usebruno/cli@4.1.0`
 via `npx` during local verification. Direct database interaction uses
 `postgresql-client` over standard TCP wire protocol. All central version
 definitions are maintained in `infra/versions.env.example` without ad-hoc duplication.
@@ -124,8 +124,8 @@ CI workflows, and developer workstations, the repository applies strict enterpri
 
 1. **Single Authoritative Source of Truth**: All non-secret container image tags (`postgres:17`, `rabbitmq:4.3-management`,
    `redis:8.2-alpine`, `mailpit:v1.27`, `keycloak:26.7.4`), base images (`gradle:9.7.1-jdk25`, `eclipse-temurin:25-jre`,
-   `node:22.14.0-bookworm-slim`, `python:3.12-slim`), and toolchain runtimes (`PYTHON_VERSION=3.12`, `UV_VERSION=0.6.5`,
-   `DEVCONTAINER_JDK_VERSION=25`, `DEVCONTAINER_NODE_VERSION=22`, `MERMAID_CLI_VERSION=11.12.0`) are declared once in
+   `node:24.18.0-bookworm-slim`, `python:3.12-slim`), and toolchain runtimes (`PYTHON_VERSION=3.12`, `UV_VERSION=0.6.5`,
+   `DEVCONTAINER_JDK_VERSION=25`, `DEVCONTAINER_NODE_VERSION=24`, `MERMAID_CLI_VERSION=11.12.0`) are declared once in
    `infra/versions.env.example`. Local `.env.example` mirrors these exact values, while JVM library dependencies
    remain exclusively in `gradle/libs.versions.toml`.
 2. **Parameterized Multi-Stage Dockerfile Pattern**: No Dockerfile in the repository contains un-parameterized,

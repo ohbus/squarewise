@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-ARG NODE_IMAGE=node:22.14.0-bookworm-slim
+ARG NODE_IMAGE=node:24.18.0-bookworm-slim
 FROM ${NODE_IMAGE}
 
 ARG MERMAID_CLI_VERSION=11.12.0

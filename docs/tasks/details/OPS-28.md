@@ -7,7 +7,7 @@
 Implement an unprivileged, multi-service OCI Devcontainer workspace conforming to the Devcontainer specification, utilizing a native Docker Compose override (`dockerComposeFile`) attached to the `squarewise-local-net` bridge network, without Docker-outside-of-Docker (DooD) socket mounts, and configuring optimized persistent caching for Gradle and uv.
 
 ## Background and motivation
-The repository currently supports local development via Docker Compose and host Gradle runs. However, onboarding a new developer requires manual installation of Java 25, Python 3.12+, uv, Node.js 22, and PostgreSQL client binaries. Providing a pre-configured Devcontainer removes local toolchain friction while preserving host isolation and clean dependency boundaries.
+The repository currently supports local development via Docker Compose and host Gradle runs. However, onboarding a new developer requires manual installation of Java 25, Python 3.12+, uv, Node.js 24 LTS, and PostgreSQL client binaries. Providing a pre-configured Devcontainer removes host toolchain friction while preserving host isolation and clean dependency boundaries.
 
 ## Owned paths
 ```
@@ -43,7 +43,7 @@ services:
 The workspace image (`.devcontainer/Dockerfile`) is derived from `mcr.microsoft.com/devcontainers/base:ubuntu-24.04` and installs:
 - Microsoft OpenJDK 25 (matching CI workflow and Gradle toolchain).
 - Python 3.12+ and `uv` package manager.
-- Node.js 22 LTS for executing `@usebruno/cli@4.1.0`.
+- Node.js 24 LTS for executing `@usebruno/cli@4.1.0`.
 - `postgresql-client` for direct TCP CLI operations (`psql`).
 - `curl`, `jq`, and standard developer utilities.
 
@@ -60,7 +60,7 @@ To mitigate Windows 9P / Hyper-V filesystem sluggishness:
 
 ## Acceptance criteria
 - [x] `.devcontainer/devcontainer.json` uses `dockerComposeFile` referencing `infra/local/docker-compose.yml` and `docker-compose.devcontainer.yml` without host socket mounting.
-- [x] `.devcontainer/Dockerfile` builds an unprivileged workspace environment containing Java 25, Python 3.12, uv, Node.js 22, and postgresql-client.
+- [x] `.devcontainer/Dockerfile` builds an unprivileged workspace environment containing Java 25, Python 3.12, uv, Node.js 24 LTS, and postgresql-client.
 - [x] Named persistent volumes for Gradle (`~/.gradle`) and uv cache (`~/.cache/uv`) are declared with `:cached` workspace mount.
 - [x] Gradle VFS watching, parallel execution, and calibrated daemon memory limits are configured.
 - [x] Devcontainer `forwardPorts` maps all application and dependency ports with semantic labels.
@@ -74,7 +74,7 @@ git diff --check
 ```
 
 ## Evidence
-- `.devcontainer/Dockerfile` created with Ubuntu 24.04, Java 25 (Adoptium / Microsoft), Node.js 22, Astral uv, and `postgresql-client`.
+- `.devcontainer/Dockerfile` created with Ubuntu 24.04, Java 25 (Adoptium / Microsoft), Node.js 24 LTS, Astral uv, and `postgresql-client`.
 - `.devcontainer/docker-compose.devcontainer.yml` connects to `squarewise-local-net` with named volumes for `gradle-cache` and `uv-cache`.
 - `.devcontainer/devcontainer.json` maps collision-free `28xxx` ports with semantic labels and wires `vscode` and `jetbrains` IDE customizations.
 - `make compose-config` validates the configuration cleanly.

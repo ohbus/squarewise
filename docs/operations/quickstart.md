@@ -4,9 +4,9 @@
   <img src="../visuals/squarewise-logo.svg" alt="Squarewise Logo" width="300">
 </p>
 
-## Fast Track: Devcontainer (Zero Toolchain Setup)
+## Fast Track: Devcontainer (No Host Toolchain Setup)
 
-If you use VS Code, Cursor, or JetBrains Gateway, you can skip manual toolchain installations entirely:
+If you use VS Code, Cursor, or JetBrains Gateway, the Devcontainer supplies the project toolchain so you can skip manual host installation of Java, Python, uv, Node.js, and PostgreSQL client binaries:
 
 1. Clone and open the repository in your IDE:
    ```sh

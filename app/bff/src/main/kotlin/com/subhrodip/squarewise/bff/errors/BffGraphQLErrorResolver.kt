@@ -16,21 +16,22 @@ class BffGraphQLErrorResolver {
     fun resolve(exception: Throwable, environment: DataFetchingEnvironment, requestId: String): GraphQLError {
         val problem = exception as? UpstreamProblemException
         if (problem != null) {
-            return error(environment, problem.problem.detail, problem.problem.code, GraphQLExtensionsFormatter.fromProblem(problem.problem), classification(problem.problem.status))
+            return error(environment, problem.problem.detail, GraphQLExtensionsFormatter.fromProblem(problem.problem), classification(problem.problem.status))
         }
         val definition = when {
             exception is SquarewiseException -> exception.definition
             exception is TimeoutException -> BffErrors.UPSTREAM_TIMEOUT
             else -> BffErrors.GRAPHQL_AGGREGATION_FAILED
         }
-            val extensions = GraphQLExtensionsFormatter.fromDefinition(definition, requestId).toMutableMap().apply {
+            val extensions = buildMap<String, Any> {
+                putAll(GraphQLExtensionsFormatter.fromDefinition(definition, requestId))
                 if (definition.legacyCode == "RATE_LIMITED") put("retryAfterSeconds", 60)
             }
             val detail = if (definition.legacyCode == "RATE_LIMITED") "Rate limit exceeded" else definition.safeDetail
-            return error(environment, detail, definition.errorName, extensions, classification(definition))
+            return error(environment, detail, extensions, classification(definition))
     }
 
-    private fun error(environment: DataFetchingEnvironment, detail: String, code: String, extensions: Map<String, Any>, type: ErrorType): GraphQLError =
+    private fun error(environment: DataFetchingEnvironment, detail: String, extensions: Map<String, Any>, type: ErrorType): GraphQLError =
         GraphqlErrorBuilder.newError(environment).message(detail).errorType(type).extensions(extensions).build()
 
     private fun classification(status: Int): ErrorType = when {
