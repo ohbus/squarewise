@@ -12,8 +12,9 @@ versus ordinary exception creation:
 
 The k6 workload in `tests/performance/k6/error_storm_test.js` models 2,500
 contained error responses per second alongside 2,500 authenticated successful
-operations per second. It defaults to ten minutes and requires an explicit
-signed `BEARER_TOKEN`.
+operations per second, while sampling JVM heap usage and process CPU through
+the Prometheus actuator endpoint once per second. It defaults to ten minutes
+and requires an explicit signed `BEARER_TOKEN`.
 
 ## Budgets
 
