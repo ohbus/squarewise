@@ -8759,6 +8759,8 @@
         "libs/errors/build.gradle.kts",
         "libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/request/",
         "libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/exceptions/PlatformDomainException.kt",
+        "libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/http/GlobalErrorHandler.kt",
+        "libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/http/ApiProblem.kt",
         "libs/ids/build.gradle.kts",
         "libs/ids/src/main/kotlin/com/subhrodip/squarewise/ids/generation/",
         "tools/qa/error_hygiene_allowlist.yaml"
@@ -8790,11 +8792,11 @@
         "Inverted request-ID generation ownership: libs/errors now owns the governed UUIDv7 generator and libs/ids delegates to it; the former Gradle cycle is removed.",
         "Redis no-result and malformed-result validation now use PlatformErrors.DATABASE_DATA_INCONSISTENT before fail-closed store translation.",
         "Database route-guard and routed-reader acquisition failures now use PlatformErrors-backed DbPlatformException; the DB test suite passed.",
-        "Fresh shared-library gate including libs:errors passed after the IDs dependency inversion; hygiene retains only the three ERRC-30-owned entries.",
-        "Three remaining libs/errors allowlist entries are owned by ERRC-30; zero-entry acceptance remains pending that task's ERRC-29 dependency."
+        "Fresh shared-library gate including libs:errors passed after the IDs dependency inversion; the error-hygiene allowlist is empty after the web-adapter migration.",
+        "Legacy ApplicationException, ErrorCode, and compatibility mapping infrastructure remains in libs/errors under ERRC-30 ownership; ERRC-30 cannot start until ERRC-29 is complete."
       ],
       "reviewer": "/root",
-      "blocker": "ERRC-23 still has three ERRC-30-owned libs/errors hygiene entries; ERRC-30 cannot start until ERRC-29 is complete."
+      "blocker": "ERRC-23's shared-library and hygiene criteria are complete, but legacy ApplicationException, ErrorCode, and compatibility mapping infrastructure remains in libs/errors under ERRC-30 ownership; ERRC-30 cannot start until ERRC-29 is complete."
     },
     {
       "id": "ERRC-24",

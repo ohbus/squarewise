@@ -1,6 +1,3 @@
 # Legacy error-path debt quarantined for the bounded-context migration.
 # Every entry must be removed by its owner task; this is not a permanent waiver.
-entries:
-  - {file: libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/http/ApiProblem.kt, line: 6, violation_type: direct_problem_constructor, owner_task: ERRC-19, expires_by_task: ERRC-19}
-  - {file: libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/http/GlobalErrorHandler.kt, line: 165, violation_type: direct_problem_constructor, owner_task: ERRC-19, expires_by_task: ERRC-19}
-  - {file: libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/http/GlobalErrorHandler.kt, line: 211, violation_type: direct_problem_constructor, owner_task: ERRC-19, expires_by_task: ERRC-19}
+entries: []

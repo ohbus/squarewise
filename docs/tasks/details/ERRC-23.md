@@ -29,6 +29,8 @@ Coordinator-authorized dependency-inversion handoff for the IDs boundary:
 - `libs/errors/build.gradle.kts`
 - `libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/request/`
 - `libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/exceptions/PlatformDomainException.kt`
+- `libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/http/GlobalErrorHandler.kt`
+- `libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/http/ApiProblem.kt`
 - `libs/ids/build.gradle.kts`
 - `libs/ids/src/main/kotlin/com/subhrodip/squarewise/ids/generation/`
 
@@ -102,11 +104,13 @@ git diff --check
 - Removed the ERRC-23-owned `libs/security` hygiene waiver and updated its
   focused tests to assert the governed startup/configuration exception.
 - The declared shared-library suite passed: `libs/db`, `libs/security`,
-  `libs/observability`, and `libs/ids` tests completed successfully.
-- Three remaining allowlist entries belong to `libs/errors` web infrastructure,
-  which is owned by the later ERRC-30 legacy-infrastructure retirement task;
-  therefore the repository-wide zero-entry acceptance remains pending that
-  dependency and this task stays `in_progress`.
+  `libs/observability`, `libs/ids`, and `libs/errors` tests completed
+  successfully.
+- The shared-library implementation and repository-wide hygiene allowlist are
+  now complete. Legacy `ApplicationException`, `ErrorCode`, and compatibility
+  mapping infrastructure remains in `libs/errors`, but that runtime retirement
+  is explicitly owned by ERRC-30; this task stays `in_progress` until the
+  sequential ERRC-29 dependency permits that follow-on task.
 
 ## Phase and Ownership Audit (2026-10-07)
 
@@ -115,11 +119,10 @@ git diff --check
   the registry and progress ledger.
 - A fresh scan of all ERRC-23-owned production library paths found no legacy
   `ApplicationException`, legacy `ErrorCode`, or generic `throw` references.
-- The remaining hygiene findings are the three direct `ApiProblem` construction
-  sites in `libs/errors/http/`. Those files are outside ERRC-23's owned paths
-  and inside ERRC-30's owned `libs/errors` tree. ERRC-30 depends on ERRC-29,
-  so taking those files in this increment would violate the sequential task
-  and ownership rules.
+- The former direct `ApiProblem` construction sites in `libs/errors/http/`
+  were migrated under the coordinator-authorized handoff to the reviewed
+  `ProblemDetailsDto` model. The remaining legacy exception and enum mapping
+  is still outside the ERRC-23 acceptance boundary and remains ERRC-30-owned.
 - The tracker therefore records an explicit cross-task acceptance dependency;
   no compatibility behavior or acceptance criterion is weakened to make the
   hygiene count appear complete.
@@ -153,6 +156,14 @@ git diff --check
   governed configuration/database-availability definitions; JDBC causes remain
   attached internally while the public exception identity is static.
 - The complete declared shared-library suite passed after these increments:
-  `libs:db`, `libs:security`, `libs:observability`, and `libs:ids` all completed
-  successfully. The task remains `in_progress` because the ERRC-30 ownership
-  and IDs dependency-boundary gaps are still open.
+  `libs:db`, `libs:security`, `libs:observability`, `libs:ids`, and `libs:errors`
+  all completed successfully. The IDs dependency boundary is resolved; the
+  task remains `in_progress` only because legacy `libs/errors` runtime
+  infrastructure remains ERRC-30-owned and ERRC-30 depends on ERRC-29.
+- Coordinator-authorized adapter handoff: the legacy `GlobalErrorHandler` now
+  emits the reviewed additive `ProblemDetailsDto` model, preserving its
+  existing v1 status/code/detail behavior while removing direct `ApiProblem`
+  construction. The obsolete `ApiProblem` model is removed; ERRC-30 still
+  owns the remaining legacy enum and compatibility mapping retirement.
+- The repository-wide error-hygiene allowlist is now empty: all three former
+  direct-problem-constructor waivers were removed after the adapter migration.

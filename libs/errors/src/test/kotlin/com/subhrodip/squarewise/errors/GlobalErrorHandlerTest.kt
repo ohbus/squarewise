@@ -35,7 +35,7 @@ class GlobalErrorHandlerTest {
     }
 
     @Test
-    fun `applicationException maps correctly to ApiProblem`() {
+    fun `applicationException maps correctly to problem details`() {
         val ex = ApplicationException(ErrorCode.ERR_05, "Group 123 not found")
         val response = handler.applicationException(ex)
 

@@ -6,6 +6,9 @@ import com.subhrodip.squarewise.errors.domain.ApplicationException
 import com.subhrodip.squarewise.errors.domain.ErrorCode
 import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
 import com.subhrodip.squarewise.errors.request.RequestIdContext
+import com.subhrodip.squarewise.errors.web.ProblemDetailsDto
+import com.subhrodip.squarewise.errors.web.ViolationDto
+import java.net.URI
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.dao.OptimisticLockingFailureException
@@ -48,7 +51,7 @@ class GlobalErrorHandler(
         ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).build()
 
     @ExceptionHandler(MethodArgumentNotValidException::class)
-    fun validation(error: MethodArgumentNotValidException): ResponseEntity<ApiProblem> {
+    fun validation(error: MethodArgumentNotValidException): ResponseEntity<ProblemDetailsDto> {
         val violations = error.bindingResult.fieldErrors.map {
             FieldViolation(it.field, it.defaultMessage ?: "invalid value")
         }
@@ -64,7 +67,7 @@ class GlobalErrorHandler(
     }
 
     @ExceptionHandler(HttpMessageNotReadableException::class)
-    fun messageNotReadable(error: HttpMessageNotReadableException): ResponseEntity<ApiProblem> {
+    fun messageNotReadable(error: HttpMessageNotReadableException): ResponseEntity<ProblemDetailsDto> {
         val rootCauseMessage = error.rootCause?.message
         val exceptionMessage = error.message
         val detail = when {
@@ -82,7 +85,7 @@ class GlobalErrorHandler(
     }
 
     @ExceptionHandler(ServletRequestBindingException::class)
-    fun requestBinding(error: ServletRequestBindingException): ResponseEntity<ApiProblem> {
+    fun requestBinding(error: ServletRequestBindingException): ResponseEntity<ProblemDetailsDto> {
         val detail = error.message?.takeIf { it.isNotBlank() } ?: "Invalid request binding"
         log.warn("Missing or invalid request parameter or header [requestId={}]: {}", RequestIdContext.get(), detail)
         return problem(
@@ -94,7 +97,7 @@ class GlobalErrorHandler(
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException::class)
-    fun argumentTypeMismatch(error: MethodArgumentTypeMismatchException): ResponseEntity<ApiProblem> {
+    fun argumentTypeMismatch(error: MethodArgumentTypeMismatchException): ResponseEntity<ProblemDetailsDto> {
         log.warn(
             "Type mismatch for parameter '{}' [requestId={}]: expected type '{}'",
             error.name,
@@ -110,7 +113,7 @@ class GlobalErrorHandler(
     }
 
     @ExceptionHandler(OptimisticLockingFailureException::class)
-    fun optimisticLock(error: OptimisticLockingFailureException): ResponseEntity<ApiProblem> {
+    fun optimisticLock(error: OptimisticLockingFailureException): ResponseEntity<ProblemDetailsDto> {
         log.warn(
             "Optimistic locking conflict detected [requestId={}]: {}",
             RequestIdContext.get(),
@@ -126,7 +129,7 @@ class GlobalErrorHandler(
 
 
     @ExceptionHandler(IllegalArgumentException::class)
-    fun illegalArgument(error: IllegalArgumentException): ResponseEntity<ApiProblem> {
+    fun illegalArgument(error: IllegalArgumentException): ResponseEntity<ProblemDetailsDto> {
         val detail = error.message ?: "Invalid request"
         log.warn("Invalid request argument [requestId={}]: {}", RequestIdContext.get(), detail)
         return problem(
@@ -140,7 +143,7 @@ class GlobalErrorHandler(
 
 
     @ExceptionHandler(ApplicationException::class)
-    fun applicationException(ex: ApplicationException): ResponseEntity<ApiProblem> {
+    fun applicationException(ex: ApplicationException): ResponseEntity<ProblemDetailsDto> {
         val status = HttpStatus.resolve(ex.errorCode.httpStatus) ?: HttpStatus.INTERNAL_SERVER_ERROR
         return problem(
             ex.errorCode,
@@ -151,9 +154,9 @@ class GlobalErrorHandler(
         )
     }
 
-    /** Map catalog-governed failures while preserving the legacy ApiProblem shape. */
+    /** Map catalog-governed failures while preserving the established v1 response shape. */
     @ExceptionHandler(SquarewiseException::class)
-    fun governedException(ex: SquarewiseException): ResponseEntity<ApiProblem> {
+    fun governedException(ex: SquarewiseException): ResponseEntity<ProblemDetailsDto> {
         val definition = ex.definition
         val status = HttpStatus.resolve(definition.httpStatus ?: 500) ?: HttpStatus.INTERNAL_SERVER_ERROR
         return ResponseEntity.status(status)
@@ -161,18 +164,17 @@ class GlobalErrorHandler(
                 if (definition.legacyCode == "ERR-11") set(HttpHeaders.RETRY_AFTER, RATE_LIMIT_RETRY_AFTER_SECONDS.toString())
             })
             .contentType(MediaType.APPLICATION_PROBLEM_JSON)
-            .body(
-                ApiProblem(
-                    type = "https://squarewise.example/problems/${definition.errorName.lowercase()}",
-                    title = definition.title,
-                    status = status.value(),
-                    code = legacyCode(definition.legacyCode),
-                    source = "accounts",
-                    requestId = RequestIdContext.get(),
-                    detail = definition.safeDetail,
-                    violations = emptyList()
-                )
-            )
+            .body(problemDetails(
+                type = "https://squarewise.example/problems/${definition.errorName.lowercase()}",
+                title = definition.title,
+                status = status.value(),
+                code = legacyCode(definition.legacyCode),
+                source = serviceName,
+                requestId = RequestIdContext.get(),
+                detail = definition.safeDetail,
+                numericCode = definition.numericCode.value,
+                errorName = definition.errorName,
+            ))
     }
 
     private fun legacyCode(value: String?): String = when (value) {
@@ -186,7 +188,7 @@ class GlobalErrorHandler(
     }
 
     @ExceptionHandler(Exception::class)
-    fun unexpected(error: Exception): ResponseEntity<ApiProblem> {
+    fun unexpected(error: Exception): ResponseEntity<ProblemDetailsDto> {
         log.error("Unhandled unexpected exception [requestId={}]: {}", RequestIdContext.get(), error.message, error)
         return problem(
             ErrorCode.ERR_01,
@@ -201,24 +203,48 @@ class GlobalErrorHandler(
         detail: String = "An unexpected error occurred",
         violations: List<FieldViolation> = emptyList(),
         retryAfterSeconds: Long? = null
-    ): ResponseEntity<ApiProblem> =
+    ): ResponseEntity<ProblemDetailsDto> =
         ResponseEntity.status(status)
             .headers(HttpHeaders().apply {
                 retryAfterSeconds?.let { set(HttpHeaders.RETRY_AFTER, it.toString()) }
             })
             .contentType(MediaType.APPLICATION_PROBLEM_JSON)
-            .body(
-                ApiProblem(
-                    type = "https://squarewise.example/problems/${code.name.lowercase()}",
-                    title = title,
-                    status = status.value(),
-                    code = mapErrorCode(code),
-                    source = serviceName,
-                    requestId = RequestIdContext.get(),
-                    detail = detail,
-                    violations = violations
-                )
-            )
+            .body(problemDetails(
+                type = "https://squarewise.example/problems/${code.name.lowercase()}",
+                title = title,
+                status = status.value(),
+                code = mapErrorCode(code),
+                source = serviceName,
+                requestId = RequestIdContext.get(),
+                detail = detail,
+                violations = violations,
+            ))
+
+    private fun problemDetails(
+        type: String,
+        title: String,
+        status: Int,
+        code: String,
+        source: String,
+        requestId: String,
+        detail: String,
+        numericCode: String? = null,
+        errorName: String? = null,
+        violations: List<FieldViolation> = emptyList(),
+    ): ProblemDetailsDto = ProblemDetailsDto(
+        type = URI(type),
+        title = title,
+        status = status,
+        detail = detail,
+        instance = "/errors/${type.substringAfterLast('/')}"
+            .take(256),
+        code = code,
+        requestId = requestId,
+        source = source,
+        numericCode = numericCode,
+        errorName = errorName,
+        violations = violations.map { ViolationDto(it.field, it.message) },
+    )
 
     private fun mapErrorCode(errorCode: ErrorCode): String =
         when (errorCode) {
