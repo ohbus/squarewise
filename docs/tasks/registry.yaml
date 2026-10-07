@@ -8918,7 +8918,7 @@
         "git diff --check"
       ],
       "evidence": [
-        "JMH ran on JDK 25.0.4.1: decomposition 7.639 ns/op, indexed catalog lookup 2.427 ns/op, governed exception creation 1207.547 ns/op, standard exception creation 1041.401 ns/op; targeted serialization measured 0.843 us/op.",
+        "Fresh full JMH run on JDK 25.0.4.1 completed in 4m26s: indexed catalog lookup 2.438 +/- 1.805 ns/op, decomposition 7.517 +/- 2.548 ns/op, governed exception creation 1217.069 +/- 94.126 ns/op, standard exception creation 1042.700 +/- 333.352 ns/op, and serialization 0.846 +/- 0.429 us/op.",
         "A focused JMH -prof gc run measured indexed lookup at 2.389 +/- 0.588 ns/op, zero observed GC events, and approximately 10^-6 B/op (below profiler resolution); this is consistent with but does not mathematically prove the 0 B/op target.",
         "One-second k6 wiring smoke crossed thresholds with 864 dropped iterations and connection refusals under the local 2500 errors/s plus 2500 valid-operations/s schedule.",
         "After authenticating actuator telemetry and marking intended 4xx responses as expected, a one-second local baseline/storm wiring smoke at one error and one valid operation per second passed all four checks with zero dropped iterations and zero unexpected HTTP failures; this is harness evidence only, not production-like capacity evidence.",

@@ -44,18 +44,20 @@ required percentile evidence is not dependent on k6's default summary set.
 
 ## 2026-10-07 local measurement
 
-The JMH module compiled and ran on JDK 25.0.4.1. The full configured run
-reported decomposition at 7.639 ns/op, while the optimized indexed catalog
-lookup measured 2.427 ns/op in a focused two-iteration follow-up. Governed
-exception creation measured 1,207.547 ns/op, and standard exception creation
-at 1,041.401 ns/op. The indexed lookup meets the <50 ns budget, while the
-governed exception is not cheaper than ordinary stack capture. A focused
+The JMH module compiled and ran on JDK 25.0.4.1. The fresh full configured run
+reported indexed catalog lookup at 2.438 +/- 1.805 ns/op, decomposition at
+7.517 +/- 2.548 ns/op, governed exception creation at 1,217.069 +/- 94.126
+ns/op, standard exception creation at 1,042.700 +/- 333.352 ns/op, and
+serialization at 0.846 +/- 0.429 us/op. The indexed lookup meets the <50 ns
+budget, while the governed exception is not cheaper than ordinary stack
+capture. A focused
 `-prof gc` run measured indexed lookup at 2.389 +/- 0.588 ns/op, with zero
 observed GC events and allocation below the profiler resolution (`about
 10^-6 B/op`); this is consistent with, but does not mathematically prove, the
 0 B/op budget. After adding
 the Java-time Jackson module, a standalone two-iteration serialization run
-reported 0.843 us/op, below its 5 us technical target.
+reported 0.843 us/op, below its 5 us technical target; the fresh full run
+reproduced that result at 0.846 us/op.
 
 A one-second-per-scenario k6 target-rate smoke attempted the 2,500 error/s plus
 2,500 valid-operations/s schedule after the harness fixes. The single-host
