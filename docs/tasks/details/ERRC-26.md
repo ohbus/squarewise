@@ -89,6 +89,7 @@ git diff --check
   using the same setup token as the valid-operation scenario.
   Injected 4xx responses are marked as expected k6 statuses so the error-rate
   threshold detects unexpected failures rather than the intended error workload.
+  Both modes reject malformed or negative baseline inputs before execution.
   The exported k6 summary explicitly includes p95 and p99 statistics for the
   required latency evidence.
 - Wired `K6_SUMMARY_EXPORT` into `load-k6-error-storm` as an optional

@@ -80,6 +80,9 @@ export function setup() {
   if (!Number.isFinite(errorRate) || errorRate <= 0 || !Number.isFinite(validRate) || validRate <= 0) {
     throw new Error('ERROR_RATE and VALID_RATE must be positive finite numbers');
   }
+  if (!Number.isFinite(baselineValidP99Ms) || baselineValidP99Ms < 0) {
+    throw new Error('BASELINE_VALID_P99_MS must be zero or a positive finite baseline');
+  }
   if (loadMode === 'storm' && (!Number.isFinite(baselineValidP99Ms) || baselineValidP99Ms <= 0)) {
     throw new Error('BASELINE_VALID_P99_MS must be a positive finite baseline for storm mode');
   }
