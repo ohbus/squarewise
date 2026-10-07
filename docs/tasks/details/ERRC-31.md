@@ -74,6 +74,16 @@ git diff --check
 - Formal ADR signed off by architecture and API governance.
 - Validated prototype v2 contracts in `contracts/rest/v2/`.
 
+## 2026-10-07 readiness audit
+
+ERRC-31 remains intentionally unstarted. The prerequisite ERRC-30 task is still
+in progress because the ERRC-29 production-effective promotion and preceding
+ERRC-28/ERRC-26 evidence are not available. Independently, this task requires an
+explicit future API-major charter and product approval before a breaking `code`
+change is designed. No ADR, `/v2/` contract, or client migration guide is therefore
+authorized or present. The current v1 contract remains the implementation-backed
+boundary and must not be changed by this task.
+
 ## Rollout & Rollback Strategy
 
 - Future major version planning milestone.

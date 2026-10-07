@@ -9132,9 +9132,12 @@
         "uv run python tools/contracts/validate.py",
         "git diff --check"
       ],
-      "evidence": [],
+      "evidence": [
+        "Readiness audit confirms ERRC-31 is not dependency-eligible: ERRC-30 remains in progress and no explicit future API-major charter or product approval is registered.",
+        "No v2 ADR, contract, or client migration guide was created; the current v1 contract remains unchanged."
+      ],
       "reviewer": "/root",
-      "blocker": null
+      "blocker": "Requires ERRC-30 completion plus an explicit future API-major charter and product approval before any breaking v2 design is authorized."
     }
   ]
 }
