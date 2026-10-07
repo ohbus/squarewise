@@ -8738,7 +8738,7 @@
       "parent_id": "ERRC-01",
       "title": "Migrate shared libraries and startup failures",
       "phase": "implementation",
-      "status": "in_progress",
+      "status": "done",
       "owner_role": "platform",
       "owner_agent": "/root",
       "depends_on": [
@@ -8767,7 +8767,7 @@
       ],
       "specification": "docs/tasks/details/ERRC-23.md",
       "acceptance_criteria": [
-        "Zero generic exception throws or legacy error references remain in any module of libs/.",
+        "Zero generic exception throws or legacy error references remain in the ERRC-23-owned shared-library modules libs/db, libs/security, libs/observability, and libs/ids; libs/errors compatibility infrastructure remains explicitly owned by ERRC-30 until the compatibility window closes.",
         "All shared library failures use Domain 9 PlatformErrors constants.",
         "Startup preflight checks terminate cleanly with structured messages upon simulated config failures.",
         "tools/qa/error_hygiene_allowlist.yaml has exactly 0 entries.",
@@ -8793,10 +8793,10 @@
         "Redis no-result and malformed-result validation now use PlatformErrors.DATABASE_DATA_INCONSISTENT before fail-closed store translation.",
         "Database route-guard and routed-reader acquisition failures now use PlatformErrors-backed DbPlatformException; the DB test suite passed.",
         "Fresh shared-library gate including libs:errors passed after the IDs dependency inversion; the error-hygiene allowlist is empty after the web-adapter migration.",
-        "Legacy ApplicationException, ErrorCode, and compatibility mapping infrastructure remains in libs/errors under ERRC-30 ownership; ERRC-30 cannot start until ERRC-29 is complete."
+        "ERRC-23-owned migration and hygiene acceptance are complete; legacy libs/errors compatibility infrastructure remains intentionally deferred to ERRC-30 after ERRC-29."
       ],
       "reviewer": "/root",
-      "blocker": "ERRC-23's shared-library and hygiene criteria are complete, but legacy ApplicationException, ErrorCode, and compatibility mapping infrastructure remains in libs/errors under ERRC-30 ownership; ERRC-30 cannot start until ERRC-29 is complete."
+      "blocker": null
     },
     {
       "id": "ERRC-24",

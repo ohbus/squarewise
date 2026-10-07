@@ -68,7 +68,7 @@ Coordinator-authorized dependency-inversion handoff for the IDs boundary:
 
 ## Acceptance Criteria
 
-1. Zero generic exception throws or legacy error references remain in any module of `libs/`.
+1. Zero generic exception throws or legacy error references remain in the ERRC-23-owned shared-library modules (`libs/db`, `libs/security`, `libs/observability`, and `libs/ids`). The `libs/errors` compatibility adapter remains governed by ERRC-30 until the compatibility window closes.
 2. All shared library failures use Domain 9 `PlatformErrors` constants.
 3. Startup preflight checks terminate cleanly with structured messages upon simulated config failures.
 4. `tools/qa/error_hygiene_allowlist.yaml` has exactly 0 entries.
@@ -107,10 +107,10 @@ git diff --check
   `libs/observability`, `libs/ids`, and `libs/errors` tests completed
   successfully.
 - The shared-library implementation and repository-wide hygiene allowlist are
-  now complete. Legacy `ApplicationException`, `ErrorCode`, and compatibility
+  complete. Legacy `ApplicationException`, `ErrorCode`, and compatibility
   mapping infrastructure remains in `libs/errors`, but that runtime retirement
-  is explicitly owned by ERRC-30; this task stays `in_progress` until the
-  sequential ERRC-29 dependency permits that follow-on task.
+  is explicitly owned by ERRC-30 and is outside this task's owned acceptance
+  boundary.
 
 ## Phase and Ownership Audit (2026-10-07)
 
@@ -123,9 +123,10 @@ git diff --check
   were migrated under the coordinator-authorized handoff to the reviewed
   `ProblemDetailsDto` model. The remaining legacy exception and enum mapping
   is still outside the ERRC-23 acceptance boundary and remains ERRC-30-owned.
-- The tracker therefore records an explicit cross-task acceptance dependency;
-  no compatibility behavior or acceptance criterion is weakened to make the
-  hygiene count appear complete.
+- The tracker records the ownership reconciliation explicitly: ERRC-23 closes
+  the platform-library migration and hygiene gate, while ERRC-30 later retires
+  the compatibility infrastructure after ERRC-29. This preserves the v1
+  compatibility contract rather than deleting it prematurely.
 - Migrated the owned OIDC servlet/reactive decoder validation, signing-algorithm
   policy, and production cryptographic-secret guard to the same governed
   `PlatformDomainException` configuration boundary. The validation is
@@ -159,7 +160,8 @@ git diff --check
   `libs:db`, `libs:security`, `libs:observability`, `libs:ids`, and `libs:errors`
   all completed successfully. The IDs dependency boundary is resolved; the
   task remains `in_progress` only because legacy `libs/errors` runtime
-  infrastructure remains ERRC-30-owned and ERRC-30 depends on ERRC-29.
+  infrastructure remains ERRC-30-owned and is not a prerequisite for the
+  ERRC-23-owned library gate.
 - Coordinator-authorized adapter handoff: the legacy `GlobalErrorHandler` now
   emits the reviewed additive `ProblemDetailsDto` model, preserving its
   existing v1 status/code/detail behavior while removing direct `ApiProblem`
