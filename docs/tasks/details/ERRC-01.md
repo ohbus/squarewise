@@ -58,7 +58,7 @@ The architecture leverages Squarewise's shared technical libraries under `libs/`
 `ERRC-01` serves as the opening gateway to five structured execution phases:
 
 ### Phase 0: Governance & Frozen Evidence
-- [`ERRC-02: Freeze audit and baseline behavior`](ERRC-02.md) — Characterization snapshots of all 128 throw sites and baseline responses.
+- [`ERRC-02: Freeze audit and baseline behavior`](ERRC-02.md) — Characterization snapshots of all 131 indexed `ApplicationException` sites: 128 application constructions plus the legacy base declaration, with baseline responses.
 - [`ERRC-03: Freeze registries and catalog schema`](ERRC-03.md) — Lock `domains.yaml` and create `error-catalog.schema.json`.
 - [`ERRC-04: Allocate and review the complete error catalog`](ERRC-04.md) — Complete authoritative allocations in `error-catalog.yaml` and retire `ERR-12`.
 
