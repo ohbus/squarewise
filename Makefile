@@ -150,7 +150,8 @@ load-k6: load-k6-validate ## Run one k6 script in Docker; set SCRIPT=tests/load/
 
 load-k6-error-storm: load-k6-validate ## Run the ERRC-26 baseline or storm scenario; set LOAD_MODE and BASELINE_VALID_P99_MS for storm mode
 	@test -n "$(BEARER_TOKEN)" || (echo "Set BEARER_TOKEN to a signed test persona token"; exit 2)
-	@test -z "$(filter /%,$(K6_SUMMARY_EXPORT))" || (echo "K6_SUMMARY_EXPORT must be relative to the repository"; exit 2)
+	@test -z "$(K6_SUMMARY_EXPORT)" || case "$(K6_SUMMARY_EXPORT)" in /*|[A-Za-z]:*|\\*|..|../*|*/..|*/../*|*\\..\\*|*\\..) echo "K6_SUMMARY_EXPORT must be a repository-relative path without parent traversal"; exit 2;; esac
+	@if [ -n "$(K6_SUMMARY_EXPORT)" ]; then mkdir -p "$$(dirname "$(K6_SUMMARY_EXPORT)")"; fi
 	@docker run --rm -i --network squarewise-local-net -v "$(CURDIR):/work$(if $(K6_SUMMARY_EXPORT),,:ro)" -e BASE_URL -e BEARER_TOKEN -e DURATION -e LOAD_MODE -e ERROR_RATE -e VALID_RATE -e BASELINE_VALID_P99_MS grafana/k6 run $(if $(K6_SUMMARY_EXPORT),--summary-export "/work/$(K6_SUMMARY_EXPORT)",) "/work/tests/performance/k6/error_storm_test.js"
 
 load-k6-rate-limit: load-k6-validate ## Run the isolated GraphQL admission k6 scenario

@@ -94,7 +94,9 @@ git diff --check
 - Wired `K6_SUMMARY_EXPORT` into `load-k6-error-storm` as an optional
   repository-relative artifact path. The default Docker workspace remains
   read-only; supplying the path enables retention of baseline/storm JSON
-  summaries for later review in an approved environment.
+  summaries for later review in an approved environment. The wrapper now
+  creates the export parent directory and rejects absolute or parent-traversal
+  paths before invoking Docker.
 - Added an immutable startup-built `ErrorCatalog.byNumericCode` index and parity coverage. The current-head full JMH run on JDK 25.0.4.1 measured indexed lookup at 2.432 +/- 2.025 ns/op, decomposition at 7.499 +/- 1.370 ns/op, serialization at 0.878 +/- 0.275 us/op, governed exception creation at 1,187.047 +/- 163.300 ns/op, and standard exception creation at 1,044.582 +/- 116.176 ns/op.
 - The one-second k6 wiring smoke crossed thresholds with 864 dropped iterations and connection refusals from the single-host local stack. No 10-minute, production-like regional capacity evidence exists yet.
 - After authenticating actuator telemetry and classifying intended 4xx responses as
