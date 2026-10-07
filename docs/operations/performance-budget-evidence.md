@@ -57,11 +57,13 @@ observed GC events and allocation below the profiler resolution (`about
 the Java-time Jackson module, a standalone two-iteration serialization run
 reported 0.843 us/op, below its 5 us technical target.
 
-A one-second-per-scenario k6 wiring smoke attempted the 2,500 error/s plus
-2,500 valid-operations/s schedule, but the single-host local stack refused
-connections under the burst: 864 iterations were dropped and all k6 thresholds
-were crossed. This is evidence of the local environment ceiling, not a valid
-10-minute capacity result.
+A one-second-per-scenario k6 target-rate smoke attempted the 2,500 error/s plus
+2,500 valid-operations/s schedule after the harness fixes. The single-host
+local stack dropped 3,078 iterations, recorded 5.57% unexpected HTTP failures,
+and measured p99 values of 4.50 s for error responses and 4.56 s for valid
+operations; the telemetry samples included about 24 GC collections and 0.494 s
+cumulative GC pause time. This is evidence of the local environment ceiling,
+not a valid 10-minute capacity result.
 
 ## Evidence boundary
 

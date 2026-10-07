@@ -98,6 +98,12 @@ git diff --check
   valid operation per second passed all four checks with zero dropped iterations
   and zero unexpected HTTP failures. This validates harness wiring only; it is
   not production-like capacity evidence.
+- A fresh one-second target-rate smoke at 2,500 errors/s plus 2,500 valid
+  operations/s dropped 3,078 iterations, crossed all performance thresholds,
+  and recorded 5.57% unexpected HTTP failures. The observed p99 values were
+  4.50 s for error responses and 4.56 s for valid operations; telemetry recorded
+  about 24 GC collections and 0.494 s cumulative pause time. This confirms the
+  local single-host ceiling and is not production-like acceptance evidence.
 - A focused JMH run with `-prof gc` measured indexed lookup at 2.389 +/- 0.588 ns/op,
   zero observed GC events, and allocation below the profiler resolution (`about
   10^-6 B/op`). This is consistent with the 0 B/op budget but is not an exact

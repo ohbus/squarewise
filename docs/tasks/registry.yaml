@@ -8922,6 +8922,7 @@
         "A focused JMH -prof gc run measured indexed lookup at 2.389 +/- 0.588 ns/op, zero observed GC events, and approximately 10^-6 B/op (below profiler resolution); this is consistent with but does not mathematically prove the 0 B/op target.",
         "One-second k6 wiring smoke crossed thresholds with 864 dropped iterations and connection refusals under the local 2500 errors/s plus 2500 valid-operations/s schedule.",
         "After authenticating actuator telemetry and marking intended 4xx responses as expected, a one-second local baseline/storm wiring smoke at one error and one valid operation per second passed all four checks with zero dropped iterations and zero unexpected HTTP failures; this is harness evidence only, not production-like capacity evidence.",
+        "A fresh one-second 2500 errors/s plus 2500 valid-operations/s local smoke dropped 3078 iterations, recorded 5.57% unexpected HTTP failures, error p99 4.50 s, valid-operation p99 4.56 s, approximately 24 GC collections, and 0.494 s cumulative pause time; all performance thresholds crossed, confirming the single-host ceiling rather than production-like acceptance.",
         "The k6 harness now supports separate baseline/storm modes, requires a positive baseline for storm degradation gating, and samples JVM heap, process CPU, aggregate GC pause seconds, and collection count through the Prometheus actuator endpoint; production-like 10-minute p99, degradation, heap, and GC evidence remains unavailable."
       ],
       "reviewer": "/root",
