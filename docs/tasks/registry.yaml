@@ -7737,7 +7737,7 @@
       "evidence": [
         "docs/operations/devcontainer.md written with complete Mermaid topology diagram, deterministic port reference, preloaded personas, IDE setup, and caching details.",
         "docs/operations/quickstart.md updated with Fast Track 1-click Devcontainer onboarding.",
-        "README.md updated with Option 0: 1-Click Devcontainer.",
+        "README.md updated with Fast Track: 1-Click Devcontainer (No Host Toolchain Setup).",
         "make contracts, make python-typecheck, and make compose-config pass with zero warnings."
       ],
       "reviewer": "/root",
