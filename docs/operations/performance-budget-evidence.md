@@ -20,6 +20,8 @@ absolute threshold cannot be mistaken for degradation evidence. Both modes
 sample JVM heap usage, process CPU, aggregate GC pause seconds, and GC
 collection count through the Prometheus actuator endpoint once per second,
 default to ten minutes, and require an explicit signed `BEARER_TOKEN`.
+The harness also configures p95 and p99 in the exported k6 summary so the
+required percentile evidence is not dependent on k6's default summary set.
 
 ## Budgets
 

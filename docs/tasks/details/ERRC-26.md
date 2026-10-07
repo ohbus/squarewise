@@ -85,6 +85,8 @@ git diff --check
   misreported as degradation evidence. Both modes require a bearer token and
   sample JVM heap, process CPU, aggregate GC pause seconds, and GC collection
   count from the Prometheus actuator endpoint once per second.
+  The exported k6 summary explicitly includes p95 and p99 statistics for the
+  required latency evidence.
 - Added an immutable startup-built `ErrorCatalog.byNumericCode` index and parity coverage; the real indexed lookup measured 2.427 ns/op in a focused JMH follow-up on JDK 25.0.4.1. Decomposition measured 7.639 ns/op, serialization 0.843 us/op, and governed exception creation 1,207.547 ns/op.
 - The one-second k6 wiring smoke crossed thresholds with 864 dropped iterations and connection refusals from the single-host local stack. No 10-minute, production-like regional capacity evidence exists yet.
 - A focused JMH run with `-prof gc` measured indexed lookup at 2.389 +/- 0.588 ns/op,

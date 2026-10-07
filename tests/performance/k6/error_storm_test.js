@@ -63,7 +63,11 @@ if (loadMode !== 'baseline') {
   thresholds['http_req_failed{workload:error-storm}'] = ['rate<0.01'];
 }
 
-export const options = { scenarios, thresholds };
+export const options = {
+  scenarios,
+  thresholds,
+  summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(90)', 'p(95)', 'p(99)'],
+};
 
 export function setup() {
   if (!token) {
