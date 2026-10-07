@@ -13,6 +13,8 @@ const baselineValidP99Ms = Number(__ENV.BASELINE_VALID_P99_MS || '0');
 const validP99Threshold = baselineValidP99Ms > 0 ? baselineValidP99Ms * 1.05 : 500;
 const heapUsedBytes = new Gauge('jvm_heap_used_bytes');
 const cpuUsageRatio = new Trend('jvm_process_cpu_usage_ratio');
+const gcPauseSecondsTotal = new Trend('jvm_gc_pause_seconds_total');
+const gcCollectionsTotal = new Trend('jvm_gc_collections_total');
 
 const commonValidScenario = {
   executor: 'constant-arrival-rate',
@@ -105,8 +107,12 @@ export function sampleTelemetry() {
   if (response.status !== 200) return;
   const heap = metricValue(response.body, 'jvm_memory_used_bytes', '{area="heap"}');
   const cpu = metricValue(response.body, 'process_cpu_usage', '');
+  const gcPauseSeconds = metricSum(response.body, 'jvm_gc_pause_seconds_sum');
+  const gcCollections = metricSum(response.body, 'jvm_gc_pause_seconds_count');
   if (heap !== null) heapUsedBytes.add(heap);
   if (cpu !== null) cpuUsageRatio.add(cpu);
+  if (gcPauseSeconds !== null) gcPauseSecondsTotal.add(gcPauseSeconds);
+  if (gcCollections !== null) gcCollectionsTotal.add(gcCollections);
 }
 
 function metricValue(payload, metricName, labelFragment) {
@@ -114,4 +120,12 @@ function metricValue(payload, metricName, labelFragment) {
   if (!line) return null;
   const value = Number(line.substring(line.lastIndexOf(' ') + 1));
   return Number.isFinite(value) ? value : null;
+}
+
+function metricSum(payload, metricName) {
+  const values = payload.split('\n')
+    .filter((candidate) => candidate.startsWith(metricName + '{') || candidate === metricName)
+    .map((candidate) => Number(candidate.substring(candidate.lastIndexOf(' ') + 1)))
+    .filter((value) => Number.isFinite(value));
+  return values.length === 0 ? null : values.reduce((sum, value) => sum + value, 0);
 }

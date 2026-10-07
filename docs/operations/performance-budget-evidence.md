@@ -17,9 +17,9 @@ alongside 2,500 authenticated successful operations per second. The storm run
 requires `BASELINE_VALID_P99_MS` and sets the valid-operation threshold to 105%
 of that baseline. Storm mode fails setup without a positive baseline, so an
 absolute threshold cannot be mistaken for degradation evidence. Both modes
-sample JVM heap usage and process CPU through the Prometheus actuator endpoint
-once per second, default to ten minutes, and require an explicit signed
-`BEARER_TOKEN`.
+sample JVM heap usage, process CPU, aggregate GC pause seconds, and GC
+collection count through the Prometheus actuator endpoint once per second,
+default to ten minutes, and require an explicit signed `BEARER_TOKEN`.
 
 ## Budgets
 
@@ -28,7 +28,7 @@ once per second, default to ten minutes, and require an explicit signed
 | Static lookup | <50 ns/op, 0 B/op | Must be populated from JMH output on the named JVM/host |
 | Error response p99 | <25 ms at 2,500 req/s | Must be populated from k6 output on a production-like stack |
 | Valid-operation p99 degradation | <5% during storm | Requires baseline and storm k6 runs on the same environment |
-| Heap/GC stability | No continuous growth | Requires JVM GC profiler and service telemetry during the soak |
+| Heap/GC stability | No continuous growth | Requires JVM GC profiler plus k6 heap, GC pause, and collection telemetry during the soak |
 
 ## 2026-10-07 local measurement
 
