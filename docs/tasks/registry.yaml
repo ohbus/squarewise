@@ -8788,7 +8788,7 @@
         "Three remaining libs/errors allowlist entries are owned by ERRC-30; zero-entry acceptance remains pending that task's ERRC-29 dependency."
       ],
       "reviewer": "/root",
-      "blocker": "ERRC-23's zero-entry criterion reaches three libs/errors web infrastructure entries owned by ERRC-30; ERRC-30 cannot start until ERRC-29 is complete."
+      "blocker": "ERRC-23 still has three ERRC-30-owned libs/errors hygiene entries, and the IDs generator cannot import PlatformErrors until the libs/errors-to-libs/ids dependency cycle is inverted; ERRC-30 cannot start until ERRC-29 is complete."
     },
     {
       "id": "ERRC-24",

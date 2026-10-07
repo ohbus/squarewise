@@ -145,3 +145,7 @@ git diff --check
 - Migrated the database route guard and routed-reader acquisition failures to
   governed configuration/database-availability definitions; JDBC causes remain
   attached internally while the public exception identity is static.
+- The complete declared shared-library suite passed after these increments:
+  `libs:db`, `libs:security`, `libs:observability`, and `libs:ids` all completed
+  successfully. The task remains `in_progress` because the ERRC-30 ownership
+  and IDs dependency-boundary gaps are still open.
