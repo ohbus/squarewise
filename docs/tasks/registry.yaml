@@ -8917,9 +8917,9 @@
         "git diff --check"
       ],
       "evidence": [
-        "JMH ran on JDK 25.0.4.1: decomposition 7.639 ns/op, catalog list lookup 65.752 ns/op, governed exception creation 1207.547 ns/op, standard exception creation 1041.401 ns/op; targeted serialization measured 0.843 us/op.",
+        "JMH ran on JDK 25.0.4.1: decomposition 7.639 ns/op, indexed catalog lookup 2.427 ns/op, governed exception creation 1207.547 ns/op, standard exception creation 1041.401 ns/op; targeted serialization measured 0.843 us/op.",
         "One-second k6 wiring smoke crossed thresholds with 864 dropped iterations and connection refusals under the local 2500 errors/s plus 2500 valid-operations/s schedule.",
-        "Open acceptance gaps: catalog lookup remains above 50 ns and production-like 10-minute k6 p99, degradation, heap, and GC evidence is not available."
+        "The k6 harness now samples JVM heap and process CPU through the Prometheus actuator endpoint; production-like 10-minute p99, degradation, heap, and GC evidence remains unavailable."
       ],
       "reviewer": "/root",
       "blocker": "Performance acceptance is not proven: the local k6 burst crossed thresholds; production-like 10-minute p99, valid-operation degradation, and GC/heap evidence remain required."
@@ -9000,7 +9000,7 @@
       "evidence": [
         "Added canary rollout manifest with 5/25/100 percent service stages, additive compatibility rules, halt thresholds, and 60-second rollback budget.",
         "Added rollout verification ledger with explicit NOT EXECUTED rows for all four services and rollback rehearsal.",
-        "Local compatibility evidence is not staging or production rollout evidence; ERRC-26 and ERRC-27 remain open."
+        "Local compatibility evidence is not staging or production rollout evidence; ERRC-26 performance acceptance remains open while ERRC-27 is complete."
       ],
       "reviewer": "/root",
       "blocker": "Staging traffic, canary metrics, rollback rehearsal, and preceding ERRC-26 performance acceptance are unavailable."
