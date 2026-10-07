@@ -39,7 +39,7 @@ sync: ## Install and update the Python virtual environment from uv.lock
 bootstrap: doctor ## Resolve the Gradle wrapper and verify the scaffold
 	@$(GRADLE) help
 
-validate: contracts compose-config ## Run dependency-light repository checks
+validate: contracts compose-config rollout-validate ## Run dependency-light repository checks
 	@$(GRADLE) test
 
 contracts: ## Validate contract JSON, GraphQL declarations, and task links
