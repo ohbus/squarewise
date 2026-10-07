@@ -82,6 +82,10 @@ git diff --check
 - Added `infra/deploy/canary/error-rollout-config.yaml` defining tolerant-reader compatibility, 5%/25%/100% service stages, bounded canary halt thresholds, and a 60-second rollback budget.
 - Added `docs/operations/rollout-verification-ledger.md` with one explicit `NOT EXECUTED` row per service and a rollback rehearsal record.
 - Added `tools/ops/validate_error_rollout.py` and the `rollout-validate` target to enforce manifest safety bounds and ledger evidence shape before staging execution.
+- The rollout validator now requires each stage name to match its service and
+  rejects smoke paths that are absolute, traverse outside the repository, or
+  resolve through a symlink outside the repository. Regression coverage protects
+  both invariants.
 - Local Bruno/E2E compatibility evidence supports the additive contract, but no staging or production-like traffic controller is available in this session.
 - ERRC-26 remains incomplete while production-like performance evidence is open;
   ERRC-27 is complete. ERRC-28 remains in progress until staged deployment

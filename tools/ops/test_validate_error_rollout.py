@@ -9,6 +9,7 @@ from typing import Any
 from tools.ops.validate_error_rollout import (
     MANIFEST_PATH,
     LEDGER_PATH,
+    ROOT,
     load_mapping,
     validate_ledger,
     validate_manifest,
@@ -40,6 +41,28 @@ class ErrorRolloutValidationTest(unittest.TestCase):
         spec["stages"] = spec["stages"][:-1]
         errors = validate_manifest(document)
         self.assertTrue(any(error.startswith("stages must cover") for error in errors))
+
+    def test_manifest_rejects_stage_name_drift(self) -> None:
+        """Stage labels must remain aligned with the service rollout identity."""
+        document: dict[str, Any] = copy.deepcopy(load_mapping(MANIFEST_PATH))
+        spec = document["spec"]
+        self.assertIsInstance(spec, dict)
+        spec["stages"][0]["name"] = "wrong-service"
+        errors = validate_manifest(document)
+        self.assertIn("stages[0].name must match service accounts", errors)
+
+    def test_manifest_rejects_smoke_path_outside_repository(self) -> None:
+        """Smoke commands must not make validation read outside the repository."""
+        document: dict[str, Any] = copy.deepcopy(load_mapping(MANIFEST_PATH))
+        spec = document["spec"]
+        self.assertIsInstance(spec, dict)
+        spec["stages"][0]["smoke"] = str(ROOT.parent / "outside-smoke-path")
+        errors = validate_manifest(document)
+        self.assertIn(
+            "stages[0] smoke path must be an existing repository path: "
+            f"{ROOT.parent / 'outside-smoke-path'}",
+            errors,
+        )
 
     def test_ledger_rejects_unattested_passed_row(self) -> None:
         """A passed row must carry immutable SHA, metrics, and operator sign-off."""

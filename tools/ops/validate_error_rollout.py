@@ -83,11 +83,17 @@ def validate_manifest(document: dict[str, Any]) -> list[str]:
                 errors.append(f"stages[{index}].service must be a string")
                 continue
             actual_services.append(service)
+            if stage.get("name") != service:
+                errors.append(f"stages[{index}].name must match service {service}")
             if stage.get("percentages") != EXPECTED_PERCENTAGES:
                 errors.append(f"stages[{index}] must use 5/25/100 percentages")
             smoke = stage.get("smoke")
-            if not isinstance(smoke, str) or not (ROOT / smoke).exists():
+            if not isinstance(smoke, str):
                 errors.append(f"stages[{index}] smoke path must exist: {smoke}")
+            else:
+                smoke_path = (ROOT / smoke).resolve()
+                if not smoke_path.is_relative_to(ROOT) or not smoke_path.exists():
+                    errors.append(f"stages[{index}] smoke path must be an existing repository path: {smoke}")
         if tuple(actual_services) != EXPECTED_SERVICES:
             errors.append(f"stages must cover {', '.join(EXPECTED_SERVICES)} in order")
 
