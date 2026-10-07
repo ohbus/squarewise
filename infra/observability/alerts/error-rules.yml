@@ -28,7 +28,7 @@ groups:
         annotations:
           summary: "{{ $labels.service }} outbox relay failures exceed five events"
           description: "Inspect broker reachability and the transactional outbox before replaying messages."
-          runbook: docs/operations/runbooks/errors/email-dispatch-failed.md
+          runbook: docs/operations/runbooks/errors/outbox-relay-failed.md
       - alert: SquarewiseDeadLetterIngestion
         expr: sum(increase(rabbitmq_queue_messages_published_total{queue=~".*dead.*|.*dlq.*"}[1m])) > 10
         for: 1m

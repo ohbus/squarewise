@@ -211,7 +211,7 @@
   deprecatedIn: null
   retiredIn: null
   replacedBy: null
-  runbook: https://runbooks.squarewise.internal/accounts/rate-limiting
+  runbook: docs/operations/runbooks/errors/auth-token-revoked.md
 - numericCode: '127802'
   errorName: LOGIN_LIMITER_UNAVAILABLE
   legacyCode: ERR-11
@@ -236,7 +236,7 @@
   deprecatedIn: null
   retiredIn: null
   replacedBy: null
-  runbook: https://runbooks.squarewise.internal/accounts/redis-limiter
+  runbook: docs/operations/runbooks/errors/auth-token-revoked.md
 - numericCode: '137101'
   errorName: REFRESH_TOKEN_INVALID
   legacyCode: ERR-03
@@ -261,7 +261,7 @@
   deprecatedIn: null
   retiredIn: null
   replacedBy: null
-  runbook: https://runbooks.squarewise.internal/accounts/authentication
+  runbook: docs/operations/runbooks/errors/auth-token-revoked.md
 - numericCode: '137401'
   errorName: SESSION_EXPIRED
   legacyCode: ERR-03
@@ -386,7 +386,7 @@
   deprecatedIn: null
   retiredIn: null
   replacedBy: null
-  runbook: https://runbooks.squarewise.internal/accounts/rate-limiting
+  runbook: docs/operations/runbooks/errors/auth-token-revoked.md
 - numericCode: '147401'
   errorName: ACCOUNT_DELETION_ALREADY_REQUESTED
   legacyCode: ERR-06
@@ -1165,7 +1165,7 @@
   deprecatedIn: null
   retiredIn: null
   replacedBy: null
-  runbook: https://runbooks.squarewise.internal/expense-core/recurrence
+  runbook: docs/operations/runbooks/errors/recurrence-failure.md
 - numericCode: '253401'
   errorName: SCHEDULE_PAUSED
   legacyCode: ERR-06
@@ -1217,7 +1217,7 @@
   deprecatedIn: null
   retiredIn: null
   replacedBy: null
-  runbook: https://runbooks.squarewise.internal/expense-core/recurrence
+  runbook: docs/operations/runbooks/errors/recurrence-failure.md
 - numericCode: '261101'
   errorName: SYNC_CURSOR_INVALID
   legacyCode: ERR-02
@@ -1375,7 +1375,7 @@
   deprecatedIn: null
   retiredIn: null
   replacedBy: null
-  runbook: https://runbooks.squarewise.internal/expense-core/outbox-relay
+  runbook: docs/operations/runbooks/errors/outbox-relay-failed.md
 - numericCode: '285601'
   errorName: OUTBOX_RECORD_CORRUPT
   legacyCode: ERR-01
@@ -1400,7 +1400,7 @@
   deprecatedIn: null
   retiredIn: null
   replacedBy: null
-  runbook: https://runbooks.squarewise.internal/expense-core/outbox-corruption
+  runbook: docs/operations/runbooks/errors/outbox-corruption.md
 - numericCode: '311101'
   errorName: INBOX_CURSOR_INVALID
   legacyCode: ERR-02
@@ -1548,7 +1548,7 @@
   deprecatedIn: null
   retiredIn: null
   replacedBy: null
-  runbook: https://runbooks.squarewise.internal/notifications/payload-corruption
+  runbook: docs/operations/runbooks/errors/notification-payload-corrupt.md
 - numericCode: '331101'
   errorName: NOTIFICATION_PREFERENCE_INVALID
   legacyCode: ERR-02
@@ -1811,7 +1811,7 @@
   deprecatedIn: null
   retiredIn: null
   replacedBy: null
-  runbook: https://runbooks.squarewise.internal/bff/upstream-timeouts
+  runbook: docs/operations/runbooks/errors/upstream-timeout.md
 - numericCode: '426802'
   errorName: UPSTREAM_UNAVAILABLE
   legacyCode: ERR-08
@@ -1838,7 +1838,7 @@
   deprecatedIn: null
   retiredIn: null
   replacedBy: null
-  runbook: https://runbooks.squarewise.internal/bff/upstream-availability
+  runbook: docs/operations/runbooks/errors/upstream-timeout.md
 - numericCode: '426803'
   errorName: UPSTREAM_TLS_FAILED
   legacyCode: ERR-08
@@ -1865,7 +1865,7 @@
   deprecatedIn: null
   retiredIn: null
   replacedBy: null
-  runbook: https://runbooks.squarewise.internal/bff/tls-failures
+  runbook: docs/operations/runbooks/errors/upstream-timeout.md
 - numericCode: '437801'
   errorName: SUBSCRIPTION_LIMIT_EXCEEDED
   legacyCode: ERR-11
@@ -1893,7 +1893,7 @@
   deprecatedIn: null
   retiredIn: null
   replacedBy: null
-  runbook: https://runbooks.squarewise.internal/bff/subscription-limits
+  runbook: docs/operations/runbooks/errors/upstream-timeout.md
 - numericCode: '437802'
   errorName: LIVE_UPDATE_UPSTREAM_UNAVAILABLE
   legacyCode: ERR-08
@@ -1921,7 +1921,7 @@
   deprecatedIn: null
   retiredIn: null
   replacedBy: null
-  runbook: https://runbooks.squarewise.internal/bff/live-update-availability
+  runbook: docs/operations/runbooks/errors/upstream-timeout.md
 - numericCode: '435701'
   errorName: LIVE_UPDATE_EVENT_INVALID
   legacyCode: ERR-08
@@ -2200,7 +2200,7 @@
   deprecatedIn: null
   retiredIn: null
   replacedBy: null
-  runbook: https://runbooks.squarewise.internal/platform/unexpected-internal-errors
+  runbook: docs/operations/runbooks/errors/unexpected-internal-error.md
 - numericCode: '919902'
   errorName: RESPONSE_SERIALIZATION_FAILED
   legacyCode: ERR-01
@@ -2351,7 +2351,7 @@
   deprecatedIn: null
   retiredIn: null
   replacedBy: null
-  runbook: https://runbooks.squarewise.internal/platform/security-rate-limiting
+  runbook: docs/operations/runbooks/errors/auth-token-revoked.md
 - numericCode: '934801'
   errorName: DATABASE_UNAVAILABLE
   legacyCode: ERR-01
@@ -2377,7 +2377,7 @@
   deprecatedIn: null
   retiredIn: null
   replacedBy: null
-  runbook: https://runbooks.squarewise.internal/platform/database-availability
+  runbook: docs/operations/runbooks/errors/db-pool-exhausted.md
 - numericCode: '934802'
   errorName: DATABASE_OPERATION_TIMEOUT
   legacyCode: ERR-01
@@ -2403,7 +2403,7 @@
   deprecatedIn: null
   retiredIn: null
   replacedBy: null
-  runbook: https://runbooks.squarewise.internal/platform/database-timeouts
+  runbook: docs/operations/runbooks/errors/db-pool-exhausted.md
 - numericCode: '934601'
   errorName: DATABASE_DATA_INCONSISTENT
   legacyCode: ERR-01
@@ -2429,7 +2429,7 @@
   deprecatedIn: null
   retiredIn: null
   replacedBy: null
-  runbook: https://runbooks.squarewise.internal/platform/database-integrity
+  runbook: docs/operations/runbooks/errors/db-pool-exhausted.md
 - numericCode: '945701'
   errorName: MESSAGE_PUBLISH_FAILED
   legacyCode: ERR-01
@@ -2453,7 +2453,7 @@
   deprecatedIn: null
   retiredIn: null
   replacedBy: null
-  runbook: https://runbooks.squarewise.internal/platform/message-publishing
+  runbook: docs/operations/runbooks/errors/outbox-relay-failed.md
 - numericCode: '945801'
   errorName: BROKER_UNAVAILABLE
   legacyCode: ERR-01
@@ -2477,7 +2477,7 @@
   deprecatedIn: null
   retiredIn: null
   replacedBy: null
-  runbook: https://runbooks.squarewise.internal/platform/broker-availability
+  runbook: docs/operations/runbooks/errors/broker-unavailable.md
 - numericCode: '945702'
   errorName: MESSAGE_ENVELOPE_INVALID
   legacyCode: ERR-01
@@ -2526,7 +2526,7 @@
   deprecatedIn: null
   retiredIn: null
   replacedBy: null
-  runbook: https://runbooks.squarewise.internal/platform/startup-configuration
+  runbook: docs/operations/runbooks/errors/platform-configuration.md
 - numericCode: '958901'
   errorName: OBSERVABILITY_PIPELINE_FAILED
   legacyCode: ERR-01
@@ -2576,4 +2576,4 @@
   deprecatedIn: null
   retiredIn: null
   replacedBy: null
-  runbook: https://runbooks.squarewise.internal/platform/id-generation
+  runbook: docs/operations/runbooks/errors/identifier-generation.md

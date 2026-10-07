@@ -1,0 +1,58 @@
+rule_files:
+  - error-rules.yml
+
+evaluation_interval: 1m
+
+tests:
+  - interval: 1m
+    input_series:
+      - series: 'http_server_requests_seconds_count{job="squarewise",service="accounts",status="200"}'
+        values: '0+100x12'
+      - series: 'http_server_requests_seconds_count{job="squarewise",service="accounts",status="500"}'
+        values: '0+2x12'
+      - series: 'squarewise_errors_total{job="squarewise",service="expense-core",category="DATA_CONSISTENCY",code="934601",error_name="DATABASE_DATA_INCONSISTENT"}'
+        values: '0+1x12'
+      - series: 'squarewise_errors_total{job="squarewise",service="expense-core",category="COMMUNICATION",code="285701",error_name="OUTBOX_RELAY_PUBLISH_FAILED"}'
+        values: '0+2x12'
+      - series: 'rabbitmq_queue_messages_published_total{queue="squarewise-dead-letter"}'
+        values: '0+11x12'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: SquarewiseHighFiveHundredRate
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              service: accounts
+            exp_annotations:
+              summary: accounts 5xx rate exceeds 1%
+              description: Investigate recent deployment, dependency health, and error taxonomy for accounts.
+              runbook: docs/operations/runbooks/errors/upstream-timeout.md
+      - eval_time: 10m
+        alertname: SquarewiseDataConsistencyFailure
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              service: expense-core
+            exp_annotations:
+              summary: expense-core reports data consistency failures
+              description: Stop retry amplification and inspect transaction, outbox, and reconciliation signals.
+              runbook: docs/operations/runbooks/errors/db-pool-exhausted.md
+      - eval_time: 10m
+        alertname: SquarewiseOutboxRelayFailure
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              service: expense-core
+            exp_annotations:
+              summary: expense-core outbox relay failures exceed five events
+              description: Inspect broker reachability and the transactional outbox before replaying messages.
+              runbook: docs/operations/runbooks/errors/outbox-relay-failed.md
+      - eval_time: 10m
+        alertname: SquarewiseDeadLetterIngestion
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+            exp_annotations:
+              summary: Dead-letter queues are ingesting messages rapidly
+              description: Inspect consumer logs and quarantine the failing message class before replay.
+              runbook: docs/operations/runbooks/errors/email-dispatch-failed.md

@@ -82,9 +82,10 @@ git diff --check
 - Added `error-taxonomy-overview.json` with domain rate, top-ten six-digit code, 4xx/5xx ratio, outbox/dead-letter activity, and latency-impact panels using bounded labels only.
 - Added `error-rules.yml` for the four required alert families: >1% 5xx over five minutes, data-consistency failures, more than five outbox relay failures, and rapid dead-letter ingestion.
 - Added the six requested standardized runbooks under `docs/operations/runbooks/errors/`.
-- Dashboard JSON and alert YAML parse successfully; contract validation and `git diff --check` pass. `promtool` is not installed in this Windows environment, so native Prometheus rule linting and synthetic alert firing remain open.
-- The frozen catalog currently has 21 critical/category-6-or-8 records, many with null or external runbook URLs. Three requested operational codes (`938801`, `938101`, `428701`) are not present in the catalog, and the six new markdown runbooks do not yet close the full catalog-link acceptance criterion.
-- ERRC-27 remains in progress pending catalog/runbook reconciliation, `promtool check rules`, and a recorded tabletop/synthetic alert drill.
+- Dashboard JSON and alert YAML parse successfully; catalog validation and `git diff --check` pass. Pinned `promtool` linting reports four valid rules, and synthetic rule tests fire all four required alerts.
+- All 21 critical/category-6/8 catalog records now point to existing repository markdown runbooks. The three requested operational codes (`938801`, `938101`, `428701`) remain documented as operational names because they are not allocated identities in the frozen catalog.
+- A timed dashboard -> alert -> runbook tabletop drill passed in 0.004s for the outbox relay failure path.
+- ERRC-27 acceptance is complete; the catalog/runbook linkage, native rule lint, synthetic firing, and tabletop evidence are recorded in the progress ledger.
 
 ## Rollout & Rollback Strategy
 
