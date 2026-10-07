@@ -7608,7 +7608,7 @@
       "specification": "docs/tasks/details/OPS-27.md",
       "acceptance_criteria": [
         "infra/versions.env.example registers DEVCONTAINER_BASE_IMAGE, DEVCONTAINER_JDK_VERSION, and DEVCONTAINER_NODE_VERSION.",
-        "docs/implementation/technology-decisions.md records the toolchain resolution evidence for Java 25, uv, and Node 22.",
+        "docs/implementation/technology-decisions.md records the toolchain resolution evidence for Java 25, uv, and Node 24 LTS.",
         ".dockerignore excludes .devcontainer from application container build contexts.",
         "tools/ops/validate_sbom_baseline.py and check_security_hygiene.py pass without warnings."
       ],
@@ -7618,7 +7618,7 @@
         "git diff --check"
       ],
       "evidence": [
-        "infra/versions.env.example now declares DEVCONTAINER_BASE_IMAGE (Ubuntu 24.04), DEVCONTAINER_JDK_VERSION (25), and DEVCONTAINER_NODE_VERSION (22).",
+        "infra/versions.env.example now declares DEVCONTAINER_BASE_IMAGE (Ubuntu 24.04), DEVCONTAINER_JDK_VERSION (25), and DEVCONTAINER_NODE_VERSION (24).",
         "docs/implementation/technology-decisions.md documents Devcontainer architecture adopting the native Compose topology over Docker-outside-of-Docker.",
         ".dockerignore excludes .devcontainer from application builds.",
         "make sbom-validate and make security-hygiene passed cleanly."
@@ -7647,7 +7647,7 @@
       "specification": "docs/tasks/details/OPS-28.md",
       "acceptance_criteria": [
         ".devcontainer/devcontainer.json uses dockerComposeFile referencing infra/local/docker-compose.yml and docker-compose.devcontainer.yml without host socket mounting.",
-        ".devcontainer/Dockerfile builds an unprivileged workspace environment containing Java 25 (Microsoft OpenJDK / Temurin), Python 3.12, uv, Node.js 22, and postgresql-client.",
+        ".devcontainer/Dockerfile builds an unprivileged workspace environment containing Java 25 (Microsoft OpenJDK / Temurin), Python 3.12, uv, Node.js 24 LTS, and postgresql-client.",
         "Named persistent volumes for Gradle (~/.gradle) and uv cache (~/.cache/uv) are declared with :cached workspace mount to eliminate Windows 9P I/O bottlenecks.",
         "Gradle VFS watching, parallel execution, and calibrated daemon memory limits (-Xmx1536m) are configured for fast incremental builds.",
         "Devcontainer forwardPorts maps all application and dependency ports (28080, 28081, 28082, 28083, 28090, 28025, 28673, 25432) with semantic labels and collision resilience.",
@@ -7659,7 +7659,7 @@
         "git diff --check"
       ],
       "evidence": [
-        ".devcontainer/Dockerfile created with Ubuntu 24.04, Java 25 (Adoptium / Microsoft), Node.js 22, Astral uv, and postgresql-client.",
+        ".devcontainer/Dockerfile created with Ubuntu 24.04, Java 25 (Adoptium / Microsoft), Node.js 24 LTS, Astral uv, and postgresql-client.",
         ".devcontainer/docker-compose.devcontainer.yml connects to squarewise-local-net with named volumes for gradle-cache and uv-cache.",
         ".devcontainer/devcontainer.json maps collision-free 28xxx ports with semantic labels and wires vscode and jetbrains IDE customizations.",
         "make compose-config validates the configuration cleanly."
