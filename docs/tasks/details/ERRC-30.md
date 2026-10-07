@@ -48,8 +48,11 @@ Decommission and delete internal legacy error enum structures (`com.subhrodip.sq
    - Remove legacy translation mappers.
 2. **Derive v1 Public `code` from Catalog**:
    - Ensure `ProblemDetailsDto.code` is populated directly via `definition.legacyCode ?: definition.errorName`.
-3. **Retire Old Validator Script**:
-   - Upgrade or decommission `tools/errors/validate_catalog.py` in favor of `tools/errors/validate_six_digit_catalog.py`.
+3. **Retire Old Validator Gate**:
+   - `tools/errors/validate_six_digit_catalog.py` is the authoritative current
+     catalog gate wired into `make contracts`.
+   - Retain `tools/errors/validate_catalog.py` only for immutable legacy/lifecycle
+     fixtures and shared schema assertions; it is not an active six-digit gate.
 4. **Repository-Wide Clean Sweep**:
    - Verify zero occurrences of `ERR_01` through `ERR_12` in production code.
 
@@ -87,7 +90,9 @@ the still-unverified production-effective ERRC-29 gate. The runtime now:
 - stores current symbolic v1 aliases in the catalog while preserving retired `ERR-*`
   records in lifecycle history; and
 - validates non-null public aliases against the symbolic-code pattern while retaining
-  the separate legacy-record validator for historical fixtures.
+  the separate legacy-record validator for historical fixtures. The six-digit
+  validator is the active current-catalog gate; the compatibility validator is
+  retained only for historical records and shared schema assertions.
 - classifies `java.lang.ThreadDeath` by stable runtime type name so the fatal-error
   boundary does not compile against a deprecated Java constructor or type reference.
 

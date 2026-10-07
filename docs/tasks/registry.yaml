@@ -9104,7 +9104,7 @@
         "git diff --check"
       ],
       "evidence": [
-        "Local runtime cleanup removes the legacy ErrorCode enum, ApplicationException, transitional mappers, and generated ExpenseErrors.ERR_* aliases; production app/ and libs/ sources have zero ERR_* references.",
+        "Local runtime cleanup removes the legacy ErrorCode enum, ApplicationException, transitional mappers, and generated ExpenseErrors.ERR_* aliases; production app/ and libs/ sources have zero ERR_* references. The six-digit validator is the active catalog gate; validate_catalog.py is retained only for legacy/lifecycle compatibility fixtures and shared schema assertions.",
         "./gradlew.bat test --no-daemon --console=plain passed after catalog-driven boundary and fixture migration.",
         "./gradlew.bat test jacocoTestReport --rerun-tasks --no-daemon --console=plain passed 68 actionable tasks at current HEAD; the focused libs/errors JaCoCo gate also passes without its prior ThreadDeath deprecation warning.",
         "ERRC-29 production-effective date, client adoption, ERRC-28 staging rollout, and ERRC-26 performance evidence remain unverified; this is local implementation evidence only."
