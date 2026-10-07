@@ -8780,6 +8780,7 @@
         "Phase 0 audit confirms ERRC-01 through ERRC-04 are done with recorded contract/catalog evidence.",
         "OIDC servlet/reactive decoder validation, signing-algorithm policy, production secret guard, rate-limit policy/decision bounds, and key-material bounds now use PlatformErrors-backed PlatformDomainException; security tests passed.",
         "Database pool, reader-health, scheduler, and auto-configuration bounds now use a PlatformErrors-backed DbPlatformException; the full libs:db test suite passed.",
+        "Database route-policy, execution-context, and causal-watermark validation now use DbPlatformException, including malformed LSN translation; the libs:db test suite passed.",
         "Three remaining libs/errors allowlist entries are owned by ERRC-30; zero-entry acceptance remains pending that task's ERRC-29 dependency."
       ],
       "reviewer": "/root",

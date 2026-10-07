@@ -128,3 +128,6 @@ git diff --check
   validation, and database auto-configuration bounds to
   `PlatformErrors.PLATFORM_CONFIGURATION_INVALID`. The remaining database
   route-policy and watermark input invariants are tracked for the next slice.
+- Migrated database route-policy, execution-context, and causal-watermark
+  validation to `DbPlatformException`, including safe translation of malformed
+  hexadecimal LSN input without leaking the parser exception.

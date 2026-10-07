@@ -1,5 +1,7 @@
 package com.subhrodip.squarewise.db.routing
 
+import com.subhrodip.squarewise.db.errors.DbPlatformException
+import com.subhrodip.squarewise.errors.catalog.PlatformErrors
 /** Request-scoped database execution metadata used by adapters and telemetry. */
 data class DbExecutionContext(
     /** Stable operation identity. */
@@ -14,8 +16,11 @@ data class DbExecutionContext(
     val requiredWatermark: String? = null
 ) {
     init {
-        require(operationName.matches(OPERATION_NAME)) {
-            "operationName must be a stable lowercase dot-delimited identifier"
+        if (!operationName.matches(OPERATION_NAME)) {
+            throw DbPlatformException(
+                PlatformErrors.PLATFORM_CONFIGURATION_INVALID,
+                "operationName must be a stable lowercase dot-delimited identifier"
+            )
         }
     }
 

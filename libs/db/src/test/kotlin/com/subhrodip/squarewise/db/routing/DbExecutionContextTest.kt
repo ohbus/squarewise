@@ -1,5 +1,6 @@
 package com.subhrodip.squarewise.db.routing
 
+import com.subhrodip.squarewise.db.errors.DbPlatformException
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -44,7 +45,7 @@ class DbExecutionContextTest {
     fun `operation names must be lowercase dot-delimited identifiers`() {
         listOf("", "Expense.Search", "expense search", ".expense", "expense.", "expense..search")
             .forEach { name ->
-                assertFailsWith<IllegalArgumentException> {
+                assertFailsWith<DbPlatformException> {
                     DbExecutionContext(name, DbOperationKind.QUERY)
                 }
             }

@@ -1,8 +1,9 @@
 package com.subhrodip.squarewise.db.routing
 
+import com.subhrodip.squarewise.db.errors.DbPlatformException
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFails
+import kotlin.test.assertFailsWith
 
 class DbWatermarkTest {
     @Test
@@ -14,12 +15,12 @@ class DbWatermarkTest {
 
     @Test
     fun `rejects malformed lsn`() {
-        assertFails { DbWatermark.parse("not-an-lsn") }
+        assertFailsWith<DbPlatformException> { DbWatermark.parse("not-an-lsn") }
     }
 
     @Test
     fun `rejects negative watermark positions`() {
-        assertFails { DbWatermark.fromPosition(-1) }
+        assertFailsWith<DbPlatformException> { DbWatermark.fromPosition(-1) }
     }
 
     @Test
@@ -32,8 +33,8 @@ class DbWatermarkTest {
 
     @Test
     fun `rejects missing and oversized lsn components`() {
-        assertFails { DbWatermark.parse("0/") }
-        assertFails { DbWatermark.parse("100000000/1") }
-        assertFails { DbWatermark.parse("1/100000000") }
+        assertFailsWith<DbPlatformException> { DbWatermark.parse("0/") }
+        assertFailsWith<DbPlatformException> { DbWatermark.parse("100000000/1") }
+        assertFailsWith<DbPlatformException> { DbWatermark.parse("1/100000000") }
     }
 }

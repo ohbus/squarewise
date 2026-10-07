@@ -1,9 +1,16 @@
 package com.subhrodip.squarewise.db.routing
 
+import com.subhrodip.squarewise.db.errors.DbPlatformException
+import com.subhrodip.squarewise.errors.catalog.PlatformErrors
+
 /** Opaque causal position returned by PostgreSQL, represented as a monotonic LSN value. */
 @JvmInline
 value class DbWatermark private constructor(val position: Long) : Comparable<DbWatermark> {
-    init { require(position >= 0) { "watermark position must not be negative" } }
+    init {
+        if (position < 0) {
+            throw DbPlatformException(PlatformErrors.PLATFORM_CONFIGURATION_INVALID, "watermark position must not be negative")
+        }
+    }
 
     override fun compareTo(other: DbWatermark): Int = position.compareTo(other.position)
 
@@ -14,13 +21,19 @@ value class DbWatermark private constructor(val position: Long) : Comparable<DbW
         /** Parses a PostgreSQL LSN without using wall-clock time. */
         fun parse(value: String): DbWatermark {
             val parts = value.trim().split('/')
-            require(parts.size == 2) { "watermark must be a PostgreSQL LSN" }
-            val high = parts[0].toULong(16)
-            val low = parts[1].toULong(16)
-            require(high <= UInt.MAX_VALUE.toULong() && low <= UInt.MAX_VALUE.toULong()) {
-                "watermark LSN component is out of range"
+            if (parts.size != 2) {
+                throw DbPlatformException(PlatformErrors.PLATFORM_CONFIGURATION_INVALID, "watermark must be a PostgreSQL LSN")
             }
-            return DbWatermark((high.toLong() shl 32) or low.toLong())
+            return try {
+                val high = parts[0].toULong(16)
+                val low = parts[1].toULong(16)
+                if (high > UInt.MAX_VALUE.toULong() || low > UInt.MAX_VALUE.toULong()) {
+                    throw DbPlatformException(PlatformErrors.PLATFORM_CONFIGURATION_INVALID, "watermark LSN component is out of range")
+                }
+                DbWatermark((high.toLong() shl 32) or low.toLong())
+            } catch (exception: NumberFormatException) {
+                throw DbPlatformException(PlatformErrors.PLATFORM_CONFIGURATION_INVALID, "watermark must be a PostgreSQL LSN", exception)
+            }
         }
 
         fun fromPosition(position: Long): DbWatermark = DbWatermark(position)
