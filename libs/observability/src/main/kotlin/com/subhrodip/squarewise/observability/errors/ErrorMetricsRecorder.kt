@@ -3,6 +3,7 @@ package com.subhrodip.squarewise.observability.errors
 import com.subhrodip.squarewise.errors.code.ErrorCategory
 import com.subhrodip.squarewise.errors.code.ErrorDefinition
 import com.subhrodip.squarewise.errors.code.ErrorDomain
+import com.subhrodip.squarewise.errors.catalog.PlatformErrors
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Tags
 import java.util.concurrent.ConcurrentHashMap
@@ -29,8 +30,11 @@ class ErrorMetricsRecorder(private val registry: MeterRegistry) {
             definition.httpStatus?.toString() ?: "none",
             definition.errorName,
         ).joinToString("|")
-        check(observedDimensions.size < MAX_DIMENSIONS || observedDimensions.contains(dimensionKey)) {
-            "error metric dimension budget exceeded"
+        if (observedDimensions.size >= MAX_DIMENSIONS && !observedDimensions.contains(dimensionKey)) {
+            throw ObservabilityPlatformException(
+                PlatformErrors.OBSERVABILITY_PIPELINE_FAILED,
+                "error metric dimension budget exceeded"
+            )
         }
         observedDimensions.add(dimensionKey)
         registry.counter(METRIC_NAME, tags).increment()

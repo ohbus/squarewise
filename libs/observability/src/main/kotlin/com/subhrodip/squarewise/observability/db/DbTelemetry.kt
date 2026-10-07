@@ -1,5 +1,7 @@
 package com.subhrodip.squarewise.observability.db
 
+import com.subhrodip.squarewise.errors.catalog.PlatformErrors
+import com.subhrodip.squarewise.observability.errors.ObservabilityPlatformException
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Tags
 import java.util.concurrent.atomic.AtomicLong
@@ -10,7 +12,14 @@ class DbTelemetry(
     private val registry: MeterRegistry? = null,
     private val slowQueryThresholdMs: Long = 500
 ) {
-    init { require(slowQueryThresholdMs >= 1) { "slowQueryThresholdMs must be positive" } }
+    init {
+        if (slowQueryThresholdMs < 1) {
+            throw ObservabilityPlatformException(
+                PlatformErrors.PLATFORM_CONFIGURATION_INVALID,
+                "slowQueryThresholdMs must be positive"
+            )
+        }
+    }
     private val failureCount = AtomicLong()
     private val acquisitionCount = AtomicLong()
     private val acquisitionTotalMs = AtomicLong()

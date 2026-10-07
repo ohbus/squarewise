@@ -1,5 +1,6 @@
 package com.subhrodip.squarewise.observability.db
 
+import com.subhrodip.squarewise.observability.errors.ObservabilityPlatformException
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -93,7 +94,7 @@ class DbTelemetryTest {
 
     @Test
     fun `rejects a non-positive slow query threshold`() {
-        assertThrows(IllegalArgumentException::class.java) {
+        assertThrows(ObservabilityPlatformException::class.java) {
             DbTelemetry(slowQueryThresholdMs = 0)
         }
     }

@@ -131,3 +131,7 @@ git diff --check
 - Migrated database route-policy, execution-context, and causal-watermark
   validation to `DbPlatformException`, including safe translation of malformed
   hexadecimal LSN input without leaking the parser exception.
+- Added an observability-library platform exception and migrated telemetry
+  threshold validation and the bounded metric-cardinality overflow path to
+  catalog-governed Platform errors; the latter now fails with the static
+  observability degradation definition rather than `check`.
