@@ -10,6 +10,13 @@ versus ordinary exception creation:
 ./gradlew.bat :tools:benchmarks:jmh:run --no-daemon
 ```
 
+Run the k6 scenarios through the repository Docker wrapper:
+
+```powershell
+make load-k6-error-storm LOAD_MODE=baseline DURATION=10m
+make load-k6-error-storm LOAD_MODE=storm BASELINE_VALID_P99_MS=<baseline-p99-ms> DURATION=10m
+```
+
 The k6 workload in `tests/performance/k6/error_storm_test.js` supports a
 `LOAD_MODE=baseline` run for valid-operation p99 measurement and a
 `LOAD_MODE=storm` run that models 2,500 contained error responses per second

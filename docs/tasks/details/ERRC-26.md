@@ -65,6 +65,7 @@ Conduct rigorous micro-benchmarks (JMH) and regional load testing (k6) to measur
 
 ```powershell
 ./gradlew.bat :tools:benchmarks:jmh:run --no-daemon
+make load-k6-validate
 uv run python tools/contracts/validate.py
 git diff --check
 ```
