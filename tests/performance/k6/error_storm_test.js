@@ -83,7 +83,9 @@ export function setup() {
   if (loadMode === 'storm' && (!Number.isFinite(baselineValidP99Ms) || baselineValidP99Ms <= 0)) {
     throw new Error('BASELINE_VALID_P99_MS must be a positive finite baseline for storm mode');
   }
-  return { token };
+  // Keep the credential in process-scoped environment state. Returning it from
+  // setup would persist the bearer token in --summary-export JSON.
+  return {};
 }
 
 export function errorStorm() {
@@ -95,18 +97,18 @@ export function errorStorm() {
   check(response, { 'error response is contained': (value) => value.status >= 400 && value.status < 500 });
 }
 
-export function validOperation(data) {
+export function validOperation() {
   const response = http.get(`${baseUrl}/accounts/v1/me`, {
-    headers: { Accept: 'application/json', Authorization: `Bearer ${data.token}` },
+    headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
     tags: { endpoint: 'accounts-me' },
   });
   check(response, { 'valid operation succeeds': (value) => value.status === 200 });
   sleep(0.001);
 }
 
-export function sampleTelemetry(data) {
+export function sampleTelemetry() {
   const response = http.get(`${baseUrl}/actuator/prometheus`, {
-    headers: { Accept: 'text/plain', Authorization: `Bearer ${data.token}` },
+    headers: { Accept: 'text/plain', Authorization: `Bearer ${token}` },
     tags: { endpoint: 'actuator-prometheus' },
   });
   check(response, { 'telemetry endpoint is available': (value) => value.status === 200 });

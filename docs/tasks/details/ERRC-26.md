@@ -91,6 +91,10 @@ git diff --check
   threshold detects unexpected failures rather than the intended error workload.
   The exported k6 summary explicitly includes p95 and p99 statistics for the
   required latency evidence.
+- Wired `K6_SUMMARY_EXPORT` into `load-k6-error-storm` as an optional
+  repository-relative artifact path. The default Docker workspace remains
+  read-only; supplying the path enables retention of baseline/storm JSON
+  summaries for later review in an approved environment.
 - Added an immutable startup-built `ErrorCatalog.byNumericCode` index and parity coverage. The current-head full JMH run on JDK 25.0.4.1 measured indexed lookup at 2.432 +/- 2.025 ns/op, decomposition at 7.499 +/- 1.370 ns/op, serialization at 0.878 +/- 0.275 us/op, governed exception creation at 1,187.047 +/- 163.300 ns/op, and standard exception creation at 1,044.582 +/- 116.176 ns/op.
 - The one-second k6 wiring smoke crossed thresholds with 864 dropped iterations and connection refusals from the single-host local stack. No 10-minute, production-like regional capacity evidence exists yet.
 - After authenticating actuator telemetry and classifying intended 4xx responses as
@@ -125,6 +129,10 @@ git diff --check
   cumulative pause at the scrape point. The valid-operation degradation gate used
   the preceding baseline p99 of 14.3 ms. This is low-rate local smoke evidence,
   not production-like capacity or soak evidence.
+- A one-second authenticated baseline export smoke passed with p95/p99 summary
+  fields and zero `setup_data` keys. The bearer token is retained only in
+  process-scoped environment state, so `--summary-export` cannot persist it in
+  the JSON artifact. The generated local artifact was inspected and removed.
 - ERRC-26 remains in progress until a production-like k6/GC/heap run produces the
   required p99, valid-operation degradation, and stability evidence.
 

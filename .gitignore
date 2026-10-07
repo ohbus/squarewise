@@ -15,3 +15,4 @@ GEMINI.md
 .kotlin/
 qodana-cache/
 qodana-results/
+artifacts/performance/

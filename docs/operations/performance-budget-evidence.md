@@ -14,8 +14,13 @@ Run the k6 scenarios through the repository Docker wrapper:
 
 ```powershell
 make load-k6-error-storm LOAD_MODE=baseline DURATION=10m
-make load-k6-error-storm LOAD_MODE=storm BASELINE_VALID_P99_MS=<baseline-p99-ms> DURATION=10m
+make load-k6-error-storm LOAD_MODE=storm BASELINE_VALID_P99_MS=<baseline-p99-ms> DURATION=10m K6_SUMMARY_EXPORT=artifacts/performance/error-storm.json
 ```
+
+`K6_SUMMARY_EXPORT` is optional and must be a repository-relative path. When it
+is omitted, the Docker workspace remains read-only. When it is supplied, the
+target writes the k6 JSON summary to the requested path so the baseline and
+storm artifacts can be retained together with the environment metadata.
 
 The k6 workload in `tests/performance/k6/error_storm_test.js` supports a
 `LOAD_MODE=baseline` run for valid-operation p99 measurement and a
