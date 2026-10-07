@@ -9060,7 +9060,7 @@
         "Local promotion rehearsal: problem.schema.json and all three REST OpenAPI ProblemDetails schemas require numericCode and errorName.",
         "ProblemDetailsDto is non-null for numericCode and errorName; GlobalErrorHandler and GraphQL formatting preserve required identities.",
         "uv run python tools/contracts/validate.py passed; uv run python tools/contracts/validate_openapi_parity.py passed; ./gradlew.bat :libs:errors:test :app:bff:test --no-daemon --console=plain passed.",
-        "Formal ERRC-28 staged rollout, client adoption certification, and product effective-date approval remain unverified."
+        "The full local `mingw32-make test contracts python-typecheck error-hygiene` run passed: both JVM test targets completed successfully, 252 task records and all contract/public-surface validators passed, the six-digit catalog and OpenAPI parity checks passed, breaking-change detection found no master drift, mypy passed for 68 files, and error hygiene found zero violations. Formal ERRC-28 staged rollout, client adoption certification, and product effective-date approval remain unverified."
       ],
       "reviewer": "/root",
       "blocker": "Production-effective promotion still requires ERRC-28 staging evidence, client adoption certification, and product approval."
