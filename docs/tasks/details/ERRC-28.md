@@ -68,6 +68,7 @@ Execute the staged, canary-driven production rollout of the additive six-digit e
 
 ```powershell
 uv run python tools/ops/validate_error_rollout.py
+uv run python -m unittest tools.ops.test_validate_error_rollout
 uv run python tools/contracts/validate.py
 git diff --check
 ```

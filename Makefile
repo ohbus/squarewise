@@ -136,6 +136,7 @@ sbom-validate: ## Validate centralized dependency-version baseline for SBOM gene
 
 rollout-validate: ## Validate the additive error-contract canary manifest and evidence ledger shape
 	@$(UV_RUN) python tools/ops/validate_error_rollout.py
+	@$(UV_RUN) python -m unittest tools.ops.test_validate_error_rollout
 
 load-probe: ## Run an HTTP load probe; set URL, CONCURRENCY, and DURATION
 	@test -n "$(URL)" || (echo "Set URL, e.g. make load-probe URL=http://localhost:28080/actuator/health"; exit 2)
