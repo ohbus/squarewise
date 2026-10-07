@@ -8845,7 +8845,7 @@
       "parent_id": "ERRC-01",
       "title": "Security and privacy leakage campaign",
       "phase": "security",
-      "status": "todo",
+      "status": "done",
       "owner_role": "security",
       "owner_agent": "/root",
       "depends_on": [
@@ -8871,7 +8871,11 @@
         "uv run python tools/contracts/validate.py",
         "git diff --check"
       ],
-      "evidence": [],
+      "evidence": [
+        "uv run python tests/security/leakage_campaign.py passed with 567 HTTP vectors across 45 REST probes and 9 GraphQL operations and 0 prohibited leakage findings against local Compose.",
+        "Container logs and Prometheus output were scanned; the RFC 6750 WWW-Authenticate bearer challenge is intentionally excluded from header scanning.",
+        "mypy, contract validation, and git diff --check passed; local evidence does not claim hosted or production closure."
+      ],
       "reviewer": "/root",
       "blocker": null
     },

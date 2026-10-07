@@ -76,6 +76,13 @@ git diff --check
 - Leakage scanner test log verifying 0 matches on prohibited leakage regexes across all tests.
 - Formally signed-off assessment document in `docs/security/error-leakage-assessment.md`.
 
+## Implementation Notes and Evidence
+
+- Added a typed black-box campaign covering 45 REST route probes and all nine GraphQL operations with SQL-injection-shaped values, malformed JSON, oversized/deep input, path traversal, XSS, null bytes, invalid identifiers, and credential-shaped inputs.
+- The live campaign executed 567 HTTP vectors and scanned response bodies, non-challenge headers, container logs, and Prometheus output.
+- The 2026-10-07 local Compose run completed with `prohibited leakage findings: 0`. The RFC 6750 `WWW-Authenticate: Bearer` challenge is intentionally excluded from header scanning; all other response and telemetry surfaces remain strict.
+- The assessment is recorded in [`docs/security/error-leakage-assessment.md`](../../security/error-leakage-assessment.md), with the local-versus-hosted evidence boundary documented.
+
 ## Rollout & Rollback Strategy
 
 - Security evaluation milestone.
