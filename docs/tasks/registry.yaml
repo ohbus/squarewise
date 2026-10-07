@@ -8922,7 +8922,7 @@
         "Open acceptance gaps: catalog lookup remains above 50 ns and production-like 10-minute k6 p99, degradation, heap, and GC evidence is not available."
       ],
       "reviewer": "/root",
-      "blocker": "Performance acceptance is not proven: catalog lookup measured 65.752 ns/op and local k6 burst crossed thresholds; production-like load and GC/heap evidence remain required."
+      "blocker": "Performance acceptance is not proven: the local k6 burst crossed thresholds; production-like 10-minute p99, valid-operation degradation, and GC/heap evidence remain required."
     },
     {
       "id": "ERRC-27",
@@ -9003,7 +9003,7 @@
         "Local compatibility evidence is not staging or production rollout evidence; ERRC-26 and ERRC-27 remain open."
       ],
       "reviewer": "/root",
-      "blocker": "Staging traffic, canary metrics, rollback rehearsal, and preceding ERRC-26/ERRC-27 acceptance are unavailable."
+      "blocker": "Staging traffic, canary metrics, rollback rehearsal, and preceding ERRC-26 performance acceptance are unavailable."
     },
     {
       "id": "ERRC-29",
