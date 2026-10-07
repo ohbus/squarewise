@@ -85,6 +85,7 @@ git diff --check
 - Dashboard JSON and alert YAML parse successfully; catalog validation and `git diff --check` pass. Pinned `promtool` linting reports four valid rules, and synthetic rule tests fire all four required alerts.
 - All 21 critical/category-6/8 catalog records now point to existing repository markdown runbooks. The three requested operational codes (`938801`, `938101`, `428701`) remain documented as operational names because they are not allocated identities in the frozen catalog.
 - A timed dashboard -> alert -> runbook tabletop drill passed in 0.004s for the outbox relay failure path.
+- Prometheus production/local configurations and staging Compose now mount and load the new alert directory alongside the existing platform rules.
 - ERRC-27 acceptance is complete; the catalog/runbook linkage, native rule lint, synthetic firing, and tabletop evidence are recorded in the progress ledger.
 
 ## Rollout & Rollback Strategy
