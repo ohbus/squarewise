@@ -9013,7 +9013,8 @@
         "Added canary rollout manifest with 5/25/100 percent service stages, additive compatibility rules, halt thresholds, and 60-second rollback budget.",
         "Added rollout verification ledger with explicit NOT EXECUTED rows for all four services and rollback rehearsal.",
         "Typed manifest/ledger audit passed for four services, five/25/100 stages, zero serialization-failure tolerance, and 60-second rollback budget; stage identity must match its service and smoke paths must resolve inside the repository. The rollout gate is included in the standard dependency-light validate target. Local compatibility evidence is not staging or production rollout evidence, and ERRC-26 performance acceptance remains open while ERRC-27 is complete.",
-        "The rollout validator regression suite passed 4 tests, strict mypy passed for both rollout tooling files, and OpenAPI error parity passed for 3 documents and 45 operations; staging execution and rollback rehearsal remain NOT EXECUTED.",
+        "The rollout validator regression suite passed 6 tests, strict mypy passed for both rollout tooling files, and OpenAPI error parity passed for 3 documents and 45 operations; staging execution and rollback rehearsal remain NOT EXECUTED.",
+        "Rollout validation is wired into the standard validate target, local ci, release-gate, and reusable hosted CI lint job; the aligned mingw32-make ci path passed 79 actionable Gradle tasks after those prerequisites.",
         "Production and staging Compose interpolation passed with explicit non-secret placeholder inputs, including immutable image references, service URLs, required credentials, health checks, replica/resource defaults, and Prometheus/Grafana mounts; this validates configuration shape only, not deployment."
       ],
       "reviewer": "/root",
