@@ -67,6 +67,15 @@ operations; the telemetry samples included about 24 GC collections and 0.494 s
 cumulative GC pause time. This is evidence of the local environment ceiling,
 not a valid 10-minute capacity result.
 
+A fresh authenticated one-second baseline followed by a one-second storm at one
+error/s and one valid-operation/s passed the harness checks with zero dropped
+iterations and zero unexpected HTTP failures. Baseline valid-operation p99 was
+14.3 ms; storm error p99 was 2.23 ms and valid-operation p99 was 13.52 ms. The
+storm telemetry sample reported 45 JVM collections and 0.663 seconds cumulative
+pause at the scrape point. The run required the documented internal-issuer
+Keycloak connection and local profile enrollment. This is wiring and low-rate
+local smoke evidence only, not production-like capacity or soak evidence.
+
 ## Evidence boundary
 
 The repository now contains runnable benchmark and load-test definitions, but

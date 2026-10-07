@@ -112,6 +112,19 @@ git diff --check
   confirmed the ten-minute baseline/storm scenario definitions, 2,500 error and
   valid-operation rates, p99 thresholds, telemetry sampling, dropped-iteration
   gate, and p95/p99 summary statistics. This validates harness configuration only.
+- A fresh local authenticated one-second baseline at one error and one
+  valid-operation per second passed all three checks with zero dropped
+  iterations and zero unexpected HTTP failures. The documented hostname-preserving
+  Keycloak token path was required; a token minted against `localhost` was
+  rejected by the services' configured internal issuer. This is local fixture and
+  wiring evidence only.
+- A fresh local authenticated one-second storm at one error and one
+  valid-operation per second passed all five checks with zero dropped iterations,
+  zero unexpected HTTP failures, error p99 2.23 ms, valid-operation p99 13.52 ms,
+  and telemetry showing 45 cumulative JVM collections with 0.663 seconds of
+  cumulative pause at the scrape point. The valid-operation degradation gate used
+  the preceding baseline p99 of 14.3 ms. This is low-rate local smoke evidence,
+  not production-like capacity or soak evidence.
 - ERRC-26 remains in progress until a production-like k6/GC/heap run produces the
   required p99, valid-operation degradation, and stability evidence.
 
