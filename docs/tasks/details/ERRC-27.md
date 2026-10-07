@@ -77,6 +77,15 @@ git diff --check
 - Clean validation output for alert rules and dashboard definitions.
 - Tabletop drill verification notes recorded in task progress update.
 
+## Implementation Notes and Evidence
+
+- Added `error-taxonomy-overview.json` with domain rate, top-ten six-digit code, 4xx/5xx ratio, outbox/dead-letter activity, and latency-impact panels using bounded labels only.
+- Added `error-rules.yml` for the four required alert families: >1% 5xx over five minutes, data-consistency failures, more than five outbox relay failures, and rapid dead-letter ingestion.
+- Added the six requested standardized runbooks under `docs/operations/runbooks/errors/`.
+- Dashboard JSON and alert YAML parse successfully; contract validation and `git diff --check` pass. `promtool` is not installed in this Windows environment, so native Prometheus rule linting and synthetic alert firing remain open.
+- The frozen catalog currently has 21 critical/category-6-or-8 records, many with null or external runbook URLs. Three requested operational codes (`938801`, `938101`, `428701`) are not present in the catalog, and the six new markdown runbooks do not yet close the full catalog-link acceptance criterion.
+- ERRC-27 remains in progress pending catalog/runbook reconciliation, `promtool check rules`, and a recorded tabletop/synthetic alert drill.
+
 ## Rollout & Rollback Strategy
 
 - Operations and monitoring infrastructure rollout.

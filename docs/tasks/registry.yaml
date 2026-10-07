@@ -8929,7 +8929,7 @@
       "parent_id": "ERRC-01",
       "title": "Observability, alerts, and runbooks",
       "phase": "operations",
-      "status": "todo",
+      "status": "in_progress",
       "owner_role": "operations",
       "owner_agent": "/root",
       "depends_on": [
@@ -8958,9 +8958,13 @@
         "uv run python tools/contracts/validate.py",
         "git diff --check"
       ],
-      "evidence": [],
+      "evidence": [
+        "Dashboard JSON and alert YAML parse successfully; contract validation and git diff --check pass.",
+        "Added five-panel taxonomy dashboard, four bounded-label alert rules, and six requested operational runbooks.",
+        "Open gaps: promtool is unavailable, synthetic/tabletop verification is not recorded, and 21 critical/category-6/8 catalog records do not all link to local markdown runbooks; requested codes 938801, 938101, and 428701 are absent from the frozen catalog."
+      ],
       "reviewer": "/root",
-      "blocker": null
+      "blocker": "Catalog/runbook reconciliation and native Prometheus rule/synthetic alert verification remain open."
     },
     {
       "id": "ERRC-28",

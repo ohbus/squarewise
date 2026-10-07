@@ -1,0 +1,40 @@
+groups:
+  - name: squarewise-error-taxonomy
+    interval: 30s
+    rules:
+      - alert: SquarewiseHighFiveHundredRate
+        expr: sum by (service) (rate(http_server_requests_seconds_count{job="squarewise",status=~"5.."}[5m])) / clamp_min(sum by (service) (rate(http_server_requests_seconds_count{job="squarewise"}[5m])), 0.001) > 0.01
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.service }} 5xx rate exceeds 1%"
+          description: "Investigate recent deployment, dependency health, and error taxonomy for {{ $labels.service }}."
+          runbook: docs/operations/runbooks/errors/upstream-timeout.md
+      - alert: SquarewiseDataConsistencyFailure
+        expr: sum by (service) (rate(squarewise_errors_total{job="squarewise",category="DATA_CONSISTENCY"}[5m])) > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.service }} reports data consistency failures"
+          description: "Stop retry amplification and inspect transaction, outbox, and reconciliation signals."
+          runbook: docs/operations/runbooks/errors/db-pool-exhausted.md
+      - alert: SquarewiseOutboxRelayFailure
+        expr: sum by (service) (increase(squarewise_errors_total{job="squarewise",code="285701"}[5m])) > 5
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.service }} outbox relay failures exceed five events"
+          description: "Inspect broker reachability and the transactional outbox before replaying messages."
+          runbook: docs/operations/runbooks/errors/email-dispatch-failed.md
+      - alert: SquarewiseDeadLetterIngestion
+        expr: sum(increase(rabbitmq_queue_messages_published_total{queue=~".*dead.*|.*dlq.*"}[1m])) > 10
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Dead-letter queues are ingesting messages rapidly"
+          description: "Inspect consumer logs and quarantine the failing message class before replay."
+          runbook: docs/operations/runbooks/errors/email-dispatch-failed.md
