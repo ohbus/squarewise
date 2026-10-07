@@ -135,3 +135,8 @@ git diff --check
   threshold validation and the bounded metric-cardinality overflow path to
   catalog-governed Platform errors; the latter now fails with the static
   observability degradation definition rather than `check`.
+- The IDs generation path remains unchanged after a dependency audit found a
+  circular Gradle edge: `libs/errors` publicly depends on `libs/ids` for request
+  ID generation, so importing `PlatformErrors` from `libs/ids` would make the
+  build cyclic. A dependency-inversion task is required before that path can
+  adopt a governed Platform exception safely.
