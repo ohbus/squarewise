@@ -97,7 +97,7 @@ package: ## Build executable jars for every application
 
 check: validate python-typecheck error-hygiene coverage package ## Validate, type-check, test, report coverage, and package
 
-ci: contracts compose-config rollout-validate ## Run the hosted CI verification stages locally with parallel Gradle workers
+ci: contracts compose-config release-gate ## Run the hosted CI verification stages locally with parallel Gradle workers
 	@$(GRADLE) test check jacocoTestReport bootJar --parallel --no-daemon
 
 ci-e2e: ci e2e ## Run local CI verification plus the contract/deployment E2E smoke suite

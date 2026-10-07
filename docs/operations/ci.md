@@ -143,8 +143,9 @@ Run the complete hosted verification equivalent locally with:
 make ci
 ```
 
-The local CI target includes the ERRC-28 rollout manifest and regression gate,
-matching the hosted lint job before Gradle verification begins.
+The local CI target includes the repository `release-gate`, including the ERRC-28
+rollout manifest/regression gate and observability/release prerequisites, before
+Gradle verification begins.
 
 This runs the same contract and Compose preflight, then asks Gradle to execute
 tests, checks, JaCoCo reporting, and application packaging with `--parallel`.
