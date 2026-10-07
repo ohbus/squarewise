@@ -1,6 +1,8 @@
 package com.subhrodip.squarewise.db.config
 
 import com.zaxxer.hikari.HikariDataSource
+import com.subhrodip.squarewise.db.errors.DbPlatformException
+import com.subhrodip.squarewise.errors.catalog.PlatformErrors
 import org.springframework.beans.factory.annotation.Qualifier
 import com.subhrodip.squarewise.db.health.DbReaderHealth
 import com.subhrodip.squarewise.db.health.DbReaderHealthScheduler
@@ -38,8 +40,12 @@ class DbAutoConfiguration {
     /** Exposes the bounded scheduler interval to the scheduled probe expression. */
     @Bean(name = ["squarewiseDbHealthProbeIntervalMs"])
     fun squarewiseDbHealthProbeIntervalMs(properties: DbProperties): Long {
-        require(properties.readerLagBudgetMs > 0) { "squarewise.db.reader-lag-budget-ms must be positive" }
-        require(properties.healthProbeIntervalMs in 250..120_000) { "squarewise.db.health-probe-interval-ms is invalid" }
+        if (properties.readerLagBudgetMs <= 0) {
+            throw DbPlatformException(PlatformErrors.PLATFORM_CONFIGURATION_INVALID, "squarewise.db.reader-lag-budget-ms must be positive")
+        }
+        if (properties.healthProbeIntervalMs !in 250..120_000) {
+            throw DbPlatformException(PlatformErrors.PLATFORM_CONFIGURATION_INVALID, "squarewise.db.health-probe-interval-ms is invalid")
+        }
         return properties.healthProbeIntervalMs
     }
     /** Supplies the shared reader circuit state used by the routed datasource. */

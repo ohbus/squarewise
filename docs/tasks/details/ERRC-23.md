@@ -123,3 +123,8 @@ git diff --check
 - Migrated rate-limit policy, decision, and key-material bounds to the governed
   configuration boundary as well; malformed Redis store responses remain
   translated by the existing fail-closed store exception policy.
+- Added a database-library `DbPlatformException` and migrated pool endpoint/
+  timing validation, reader-health constructor bounds, scheduler lag-budget
+  validation, and database auto-configuration bounds to
+  `PlatformErrors.PLATFORM_CONFIGURATION_INVALID`. The remaining database
+  route-policy and watermark input invariants are tracked for the next slice.

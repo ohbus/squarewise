@@ -1,5 +1,7 @@
 package com.subhrodip.squarewise.db.health
 
+import com.subhrodip.squarewise.db.errors.DbPlatformException
+import com.subhrodip.squarewise.errors.catalog.PlatformErrors
 import com.subhrodip.squarewise.observability.db.DbTelemetry
 import javax.sql.DataSource
 import org.springframework.scheduling.annotation.Scheduled
@@ -12,7 +14,11 @@ class DbReaderHealthScheduler(
     private val probe: DbReaderLagProbe = DbReaderLagProbe(),
     private val telemetry: DbTelemetry = DbTelemetry()
 ) {
-    init { require(lagBudgetMs > 0) { "lagBudgetMs must be positive" } }
+    init {
+        if (lagBudgetMs <= 0) {
+            throw DbPlatformException(PlatformErrors.PLATFORM_CONFIGURATION_INVALID, "lagBudgetMs must be positive")
+        }
+    }
 
     /** Probes each named reader once; a failed probe never touches the writer. */
     @Scheduled(fixedDelayString = "#{@squarewiseDbHealthProbeIntervalMs}")

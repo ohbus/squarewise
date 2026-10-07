@@ -1,5 +1,7 @@
 package com.subhrodip.squarewise.db.health
 
+import com.subhrodip.squarewise.db.errors.DbPlatformException
+import com.subhrodip.squarewise.errors.catalog.PlatformErrors
 import com.subhrodip.squarewise.db.routing.DbExecutionContext
 import com.subhrodip.squarewise.db.routing.ReadConsistency
 import com.subhrodip.squarewise.db.routing.DbWatermark
@@ -25,8 +27,12 @@ class DbReaderHealth(
     private val readers = ConcurrentHashMap<String, Entry>()
 
     init {
-        require(failureThreshold > 0) { "failureThreshold must be positive" }
-        require(!openDuration.isNegative && !openDuration.isZero) { "openDuration must be positive" }
+        if (failureThreshold <= 0) {
+            throw DbPlatformException(PlatformErrors.PLATFORM_CONFIGURATION_INVALID, "failureThreshold must be positive")
+        }
+        if (openDuration.isNegative || openDuration.isZero) {
+            throw DbPlatformException(PlatformErrors.PLATFORM_CONFIGURATION_INVALID, "openDuration must be positive")
+        }
     }
 
     /** Registers a reader as healthy and makes it eligible for eventual reads. */
