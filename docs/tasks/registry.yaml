@@ -9098,6 +9098,7 @@
       "evidence": [
         "Local runtime cleanup removes the legacy ErrorCode enum, ApplicationException, transitional mappers, and generated ExpenseErrors.ERR_* aliases; production app/ and libs/ sources have zero ERR_* references.",
         "./gradlew.bat test --no-daemon --console=plain passed after catalog-driven boundary and fixture migration.",
+        "./gradlew.bat test jacocoTestReport --rerun-tasks --no-daemon --console=plain passed 68 actionable tasks; the focused libs/errors JaCoCo gate also passes without its prior ThreadDeath deprecation warning.",
         "ERRC-29 production-effective date, client adoption, ERRC-28 staging rollout, and ERRC-26 performance evidence remain unverified; this is local implementation evidence only."
       ],
       "reviewer": "/root",

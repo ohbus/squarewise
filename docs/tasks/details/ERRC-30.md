@@ -88,6 +88,8 @@ the still-unverified production-effective ERRC-29 gate. The runtime now:
   records in lifecycle history; and
 - validates non-null public aliases against the symbolic-code pattern while retaining
   the separate legacy-record validator for historical fixtures.
+- classifies `java.lang.ThreadDeath` by stable runtime type name so the fatal-error
+  boundary does not compile against a deprecated Java constructor or type reference.
 
 Local evidence is `./gradlew.bat test --no-daemon --console=plain` (successful),
 zero `ERR_*` references in production `app/` and `libs/` sources, and passing

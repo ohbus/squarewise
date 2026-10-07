@@ -9,10 +9,13 @@ class FatalClassifierTest {
     @Test
     fun `classifies fatal JVM and cancellation throwables`() {
         assertTrue(FatalErrorClassifier.isFatal(OutOfMemoryError()))
-        assertTrue(FatalErrorClassifier.isFatal(ThreadDeath()))
+        assertTrue(FatalErrorClassifier.isFatal(newThreadDeath()))
         assertTrue(FatalErrorClassifier.isFatal(LinkageError()))
         assertTrue(FatalErrorClassifier.isFatal(InterruptedException()))
         assertTrue(FatalErrorClassifier.isFatal(java.util.concurrent.CancellationException()))
         assertFalse(FatalErrorClassifier.isFatal(IllegalStateException()))
     }
+
+    private fun newThreadDeath(): Throwable =
+        Class.forName("java.lang.ThreadDeath").getDeclaredConstructor().newInstance() as Throwable
 }
