@@ -87,3 +87,9 @@ git diff --check
 - Contract governance promotion milestone.
 - Non-breaking to v1 clients since legacy `code` remains present.
 - Rollback: Revert required constraint to optional in schema if edge-case clients report issues.
+
+## Readiness Notes
+
+- Added [`v1-error-compatibility-window.md`](../../api/migration-notices/v1-error-compatibility-window.md) as a pending migration notice and closure checklist.
+- The schema and OpenAPI contracts remain additive/optional until ERRC-28 staging evidence and formal client adoption sign-off are recorded.
+- ERRC-29 remains todo; no required-field promotion has been performed.
