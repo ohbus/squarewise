@@ -8918,6 +8918,7 @@
       ],
       "evidence": [
         "JMH ran on JDK 25.0.4.1: decomposition 7.639 ns/op, indexed catalog lookup 2.427 ns/op, governed exception creation 1207.547 ns/op, standard exception creation 1041.401 ns/op; targeted serialization measured 0.843 us/op.",
+        "A focused JMH -prof gc run measured indexed lookup at 2.389 +/- 0.588 ns/op, zero observed GC events, and approximately 10^-6 B/op (below profiler resolution); this is consistent with but does not mathematically prove the 0 B/op target.",
         "One-second k6 wiring smoke crossed thresholds with 864 dropped iterations and connection refusals under the local 2500 errors/s plus 2500 valid-operations/s schedule.",
         "The k6 harness now samples JVM heap and process CPU through the Prometheus actuator endpoint; production-like 10-minute p99, degradation, heap, and GC evidence remains unavailable."
       ],

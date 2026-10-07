@@ -32,7 +32,11 @@ reported decomposition at 7.639 ns/op, while the optimized indexed catalog
 lookup measured 2.427 ns/op in a focused two-iteration follow-up. Governed
 exception creation measured 1,207.547 ns/op, and standard exception creation
 at 1,041.401 ns/op. The indexed lookup meets the <50 ns budget, while the
-the governed exception is not cheaper than ordinary stack capture. After adding
+governed exception is not cheaper than ordinary stack capture. A focused
+`-prof gc` run measured indexed lookup at 2.389 +/- 0.588 ns/op, with zero
+observed GC events and allocation below the profiler resolution (`about
+10^-6 B/op`); this is consistent with, but does not mathematically prove, the
+0 B/op budget. After adding
 the Java-time Jackson module, a standalone two-iteration serialization run
 reported 0.843 us/op, below its 5 us technical target.
 

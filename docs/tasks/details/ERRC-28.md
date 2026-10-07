@@ -80,7 +80,9 @@ git diff --check
 - Added `infra/deploy/canary/error-rollout-config.yaml` defining tolerant-reader compatibility, 5%/25%/100% service stages, bounded canary halt thresholds, and a 60-second rollback budget.
 - Added `docs/operations/rollout-verification-ledger.md` with one explicit `NOT EXECUTED` row per service and a rollback rehearsal record.
 - Local Bruno/E2E compatibility evidence supports the additive contract, but no staging or production-like traffic controller is available in this session.
-- ERRC-26 and ERRC-27 remain incomplete, and ERRC-28 remains in progress until staged deployment metrics and rollback rehearsal evidence are supplied.
+- ERRC-26 remains incomplete while production-like performance evidence is open;
+  ERRC-27 is complete. ERRC-28 remains in progress until staged deployment
+  metrics and rollback rehearsal evidence are supplied.
 
 ## Rollout & Rollback Strategy
 
