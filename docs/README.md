@@ -1,4 +1,4 @@
-# Documentation index
+# Documentation Index
 
 <p align="left">
   <img src="visuals/squarewise-logo.svg" alt="Squarewise Logo" width="300">
