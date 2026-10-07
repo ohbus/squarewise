@@ -9000,7 +9000,7 @@
       "evidence": [
         "Added canary rollout manifest with 5/25/100 percent service stages, additive compatibility rules, halt thresholds, and 60-second rollback budget.",
         "Added rollout verification ledger with explicit NOT EXECUTED rows for all four services and rollback rehearsal.",
-        "Local compatibility evidence is not staging or production rollout evidence; ERRC-26 performance acceptance remains open while ERRC-27 is complete."
+        "Typed manifest/ledger audit passed for four services, five/25/100 stages, zero serialization-failure tolerance, and 60-second rollback budget; local compatibility evidence is not staging or production rollout evidence, and ERRC-26 performance acceptance remains open while ERRC-27 is complete."
       ],
       "reviewer": "/root",
       "blocker": "Staging traffic, canary metrics, rollback rehearsal, and preceding ERRC-26 performance acceptance are unavailable."
