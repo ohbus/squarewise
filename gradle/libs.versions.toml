@@ -11,6 +11,8 @@ spotless = "8.1.0"
 cyclonedx = "3.4.1"
 kotlinxCoroutines = "1.7.3"
 sonarqube = "7.5.0.8588"
+jmh = "0.7.3"
+jackson = "2.20.1"
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-spring = { id = "org.jetbrains.kotlin.plugin.spring", version.ref = "kotlin" }
@@ -20,6 +22,7 @@ spring-dependency-management = { id = "io.spring.dependency-management", version
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 cyclonedx = { id = "org.cyclonedx.bom", version.ref = "cyclonedx" }
 sonarqube = { id = "org.sonarqube", version.ref = "sonarqube" }
+jmh = { id = "me.champeau.jmh", version.ref = "jmh" }
 
 [libraries]
 boot-actuator = { module = "org.springframework.boot:spring-boot-starter-actuator", version.ref = "springBoot" }
@@ -43,6 +46,9 @@ h2 = { module = "com.h2database:h2", version.ref = "h2" }
 uuid-creator = { module = "com.github.f4b6a3:uuid-creator", version.ref = "uuidCreator" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junitPlatform" }
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
-jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind" }
+jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
+jmh-core = { module = "org.openjdk.jmh:jmh-core", version = "1.37" }
+jmh-generator-annprocess = { module = "org.openjdk.jmh:jmh-generator-annprocess", version = "1.37" }
+jackson-datatype-jsr310 = { module = "com.fasterxml.jackson.datatype:jackson-datatype-jsr310", version.ref = "jackson" }
 
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }

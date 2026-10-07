@@ -74,6 +74,14 @@ git diff --check
 - JMH benchmark execution output recording operations/sec and GC allocations.
 - k6 performance summary report confirming p95/p99 latency thresholds under error storms.
 
+## Implementation Notes and Evidence
+
+- Added the `tools:benchmarks:jmh` module with three JMH benchmark classes and a `run` compatibility task matching the declared validation command.
+- Added `tests/performance/k6/error_storm_test.js` with separate 2,500 errors/s and 2,500 valid-operations/s scenarios, explicit bearer-token enforcement, and p99/dropped-iteration thresholds.
+- The full JMH run on JDK 25.0.4.1 measured decomposition at 7.639 ns/op and serialization at 0.843 us/op in a targeted follow-up, but catalog list lookup was 65.752 ns/op and governed exception creation was 1,207.547 ns/op; the <50 ns lookup budget is not met.
+- The one-second k6 wiring smoke crossed thresholds with 864 dropped iterations and connection refusals from the single-host local stack. No 10-minute, production-like regional capacity evidence exists yet.
+- ERRC-26 remains in progress until the catalog lookup target is addressed and a production-like k6/GC/heap run produces the required p99, degradation, and stability evidence.
+
 ## Rollout & Rollback Strategy
 
 - Performance verification milestone.
