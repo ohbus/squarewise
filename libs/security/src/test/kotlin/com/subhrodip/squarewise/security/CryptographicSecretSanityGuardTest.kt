@@ -3,6 +3,7 @@ package com.subhrodip.squarewise.security
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
+import com.subhrodip.squarewise.security.errors.PlatformDomainException
 
 /** Verifies fail-closed startup validation for cryptographic secrets in production/staging. */
 class CryptographicSecretSanityGuardTest {
@@ -21,7 +22,7 @@ class CryptographicSecretSanityGuardTest {
 
     @Test
     fun `rejects known predictable CI fixture key for credential digest`() {
-        val ex = assertThrows(IllegalArgumentException::class.java) {
+        val ex = assertThrows(PlatformDomainException::class.java) {
             CryptographicSecretSanityGuard(
                 credentialDigestSecret = fixture("AAECAwQFBgcICQoLDA0", "ODxAREhMUFRYXGBkaGxwdHh8="),
                 authEmailEnvelopeKey = fixture("c29tZS1yYW5kb20", "tc2VjdXJlLWtleS0zMi1ieXRlcw==")
@@ -32,7 +33,7 @@ class CryptographicSecretSanityGuardTest {
 
     @Test
     fun `rejects known predictable CI fixture key for auth email envelope`() {
-        val ex = assertThrows(IllegalArgumentException::class.java) {
+        val ex = assertThrows(PlatformDomainException::class.java) {
             CryptographicSecretSanityGuard(
                 credentialDigestSecret = fixture("c29tZS1yYW5kb20", "tc2VjdXJlLWtleS0zMi1ieXRlcw=="),
                 authEmailEnvelopeKey = fixture("ICEiIyQlJicoKSorLC0u", "LzAxMjM0NTY3ODk6Ozw9Pj8=")

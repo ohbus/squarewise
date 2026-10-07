@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.springframework.security.oauth2.jwt.BadJwtException
 import com.nimbusds.jose.proc.SecurityContext
+import com.subhrodip.squarewise.security.errors.PlatformDomainException
 
 /** Verifies the key-based and JWK-source based OidcJwtDecoderFactory methods. */
 class OidcJwtDecoderFactoryTest {
@@ -103,23 +104,23 @@ class OidcJwtDecoderFactoryTest {
     /** Every direct decoder factory rejects incomplete trust-boundary configuration. */
     @Test
     fun `decoder factories reject blank issuer or audience`() {
-        assertThrows(IllegalArgumentException::class.java) {
+        assertThrows(PlatformDomainException::class.java) {
             OidcJwtDecoderFactory.create("", audience)
         }
-        assertThrows(IllegalArgumentException::class.java) {
+        assertThrows(PlatformDomainException::class.java) {
             OidcJwtDecoderFactory.create(issuerUri, "")
         }
-        assertThrows(IllegalArgumentException::class.java) {
+        assertThrows(PlatformDomainException::class.java) {
             OidcJwtDecoderFactory.createWithPublicKey(publicKey, "", audience)
         }
-        assertThrows(IllegalArgumentException::class.java) {
+        assertThrows(PlatformDomainException::class.java) {
             OidcJwtDecoderFactory.createWithPublicKey(publicKey, issuerUri, "")
         }
         val jwkSource = ImmutableJWKSet<SecurityContext>(JWKSet(rsaJwk))
-        assertThrows(IllegalArgumentException::class.java) {
+        assertThrows(PlatformDomainException::class.java) {
             OidcJwtDecoderFactory.createWithJwkSource(jwkSource, "", audience)
         }
-        assertThrows(IllegalArgumentException::class.java) {
+        assertThrows(PlatformDomainException::class.java) {
             OidcJwtDecoderFactory.createWithJwkSource(jwkSource, issuerUri, "")
         }
     }

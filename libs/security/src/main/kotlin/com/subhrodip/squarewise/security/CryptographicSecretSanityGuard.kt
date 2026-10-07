@@ -3,6 +3,8 @@ package com.subhrodip.squarewise.security
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Component
+import com.subhrodip.squarewise.errors.catalog.PlatformErrors
+import com.subhrodip.squarewise.security.errors.PlatformDomainException
 
 /**
  * Fails application startup in production and staging environments if well-known,
@@ -27,8 +29,11 @@ class CryptographicSecretSanityGuard(
             return
         }
         val normalized = secretValue.trim()
-        require(!PREDICTABLE_SECRETS_BLACKLIST.contains(normalized)) {
-            "CRITICAL SECURITY CONFIGURATION ERROR: Predictable or well-known CI fixture key detected for '$secretName' in production/staging profile. Halting immediately."
+        if (PREDICTABLE_SECRETS_BLACKLIST.contains(normalized)) {
+            throw PlatformDomainException(
+                PlatformErrors.PLATFORM_CONFIGURATION_INVALID,
+                "Predictable deployment secret detected for $secretName"
+            )
         }
     }
 

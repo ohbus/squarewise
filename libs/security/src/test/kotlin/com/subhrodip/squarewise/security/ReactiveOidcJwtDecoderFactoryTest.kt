@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.springframework.security.oauth2.jwt.JwtValidationException
+import com.subhrodip.squarewise.security.errors.PlatformDomainException
 
 /** Verifies reactive decoder construction fails before network discovery on incomplete config. */
 class ReactiveOidcJwtDecoderFactoryTest {
@@ -27,14 +28,14 @@ class ReactiveOidcJwtDecoderFactoryTest {
 
     @Test
     fun `reactive decoder rejects blank issuer`() {
-        assertThrows(IllegalArgumentException::class.java) {
+        assertThrows(PlatformDomainException::class.java) {
             ReactiveOidcJwtDecoderFactory.create("", "squarewise-api")
         }
     }
 
     @Test
     fun `reactive decoder rejects blank audience`() {
-        assertThrows(IllegalArgumentException::class.java) {
+        assertThrows(PlatformDomainException::class.java) {
             ReactiveOidcJwtDecoderFactory.create("https://issuer.example", "")
         }
     }

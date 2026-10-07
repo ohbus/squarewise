@@ -29,8 +29,7 @@ object OidcJwtDecoderFactory {
         audience: String,
         allowedAlgorithms: Set<String> = setOf(OidcSecurityConstants.DEFAULT_SIGNING_ALGORITHM)
     ): JwtDecoder {
-        require(issuerUri.isNotBlank()) { OidcSecurityConstants.ISSUER_REQUIRED_MESSAGE }
-        require(audience.isNotBlank()) { OidcSecurityConstants.AUDIENCE_REQUIRED_MESSAGE }
+        OidcConfigurationValidator.validate(issuerUri, audience)
 
         val decoder = JwtDecoders.fromIssuerLocation(issuerUri) as NimbusJwtDecoder
         val audienceValidator = JwtClaimValidator<Collection<String>>(OidcSecurityConstants.AUDIENCE_CLAIM) { values ->
@@ -63,8 +62,7 @@ object OidcJwtDecoderFactory {
         audience: String,
         allowedAlgorithms: Set<String> = setOf(OidcSecurityConstants.DEFAULT_SIGNING_ALGORITHM)
     ): JwtDecoder {
-        require(issuerUri.isNotBlank()) { OidcSecurityConstants.ISSUER_REQUIRED_MESSAGE }
-        require(audience.isNotBlank()) { OidcSecurityConstants.AUDIENCE_REQUIRED_MESSAGE }
+        OidcConfigurationValidator.validate(issuerUri, audience)
 
         val decoder = NimbusJwtDecoder.withPublicKey(publicKey).build()
         val audienceValidator = JwtClaimValidator<Collection<String>>(OidcSecurityConstants.AUDIENCE_CLAIM) { values ->
@@ -97,8 +95,7 @@ object OidcJwtDecoderFactory {
         audience: String,
         allowedAlgorithms: Set<String> = setOf(OidcSecurityConstants.DEFAULT_SIGNING_ALGORITHM)
     ): JwtDecoder {
-        require(issuerUri.isNotBlank()) { OidcSecurityConstants.ISSUER_REQUIRED_MESSAGE }
-        require(audience.isNotBlank()) { OidcSecurityConstants.AUDIENCE_REQUIRED_MESSAGE }
+        OidcConfigurationValidator.validate(issuerUri, audience)
 
         val processor = DefaultJWTProcessor<SecurityContext>()
         val keySelector = JWSVerificationKeySelector(

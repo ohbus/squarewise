@@ -115,3 +115,8 @@ git diff --check
 - The tracker therefore records an explicit cross-task acceptance dependency;
   no compatibility behavior or acceptance criterion is weakened to make the
   hygiene count appear complete.
+- Migrated the owned OIDC servlet/reactive decoder validation, signing-algorithm
+  policy, and production cryptographic-secret guard to the same governed
+  `PlatformDomainException` configuration boundary. The validation is
+  centralized for the servlet and reactive decoder factories, and tests now
+  assert the catalog-governed failure type.
