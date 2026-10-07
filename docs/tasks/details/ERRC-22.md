@@ -77,3 +77,20 @@ git diff --check
 - Deployed to GraphQL BFF service.
 - Transparent to clients; extensions additions are purely additive.
 - Rollback: Standard Git revert of service branch if regressions occur.
+
+## Implementation Notes and Evidence
+
+- Replaced the four BFF production legacy throw sites with `BffDomainException`
+  and governed `BffErrors`/`PlatformErrors` definitions. Browser-origin input
+  validation now uses the typed `BffInputException` boundary.
+- Reworked `GraphQlExceptionResolver` to classify local and transport failures
+  through compiled definitions. Upstream `UpstreamProblemException` documents
+  continue through the identity-preserving decoder/resolver path, retaining
+  `code`, `numericCode`, `errorName`, `requestId`, and `source`.
+- Removed all BFF entries from the error-hygiene allowlist; no legacy exception,
+  error-code, or message-matching references remain in BFF production sources.
+- Focused resolver, upstream-identity, and GraphQL controller tests passed.
+  The declared full BFF command remains blocked by the pre-existing Spring test
+  context/DataSource bean-creation failure: 25 of 183 tests fail before request
+  execution. ERRC-17 owns closure of that environment gate, so this task remains
+  `in_progress` pending a clean full-suite/JaCoCo run.

@@ -9,8 +9,9 @@ import com.subhrodip.squarewise.bff.transport.model.input.CreateGroupInput
 import com.subhrodip.squarewise.bff.transport.model.input.RepaymentInput
 
 import com.subhrodip.squarewise.bff.transport.ExpenseCoreGateway
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.bff.errors.BffDomainException
+import com.subhrodip.squarewise.errors.catalog.BffErrors
+import com.subhrodip.squarewise.errors.catalog.PlatformErrors
 import com.subhrodip.squarewise.bff.realtime.GroupInvalidation
 import com.subhrodip.squarewise.bff.realtime.LiveUpdateFanout
 import org.springframework.graphql.data.method.annotation.Argument
@@ -46,11 +47,11 @@ class GroupGraphqlController(
         Flux.using(
             {
                 if (groupId.isBlank()) {
-                    throw ApplicationException(ErrorCode.ERR_02, "groupId must not be blank")
+                    throw BffDomainException(BffErrors.GRAPHQL_INPUT_INVALID, "groupId must not be blank")
                 }
                 liveFanout.subscribe(
                     authenticatedSubject(principal)
-                        ?: throw ApplicationException(ErrorCode.ERR_03, "authenticated subject is required"),
+                        ?: throw BffDomainException(PlatformErrors.AUTHENTICATION_REQUIRED, "authenticated subject is required"),
                     groupId
                 )
             },
@@ -114,7 +115,7 @@ class GroupGraphqlController(
         @AuthenticationPrincipal(expression = "tokenValue") principal: Any?
     ): Mono<BffSettlement> {
         val groupId = input.groupId
-            ?: return Mono.error(ApplicationException(ErrorCode.ERR_02, "groupId is required for recording a repayment"))
+            ?: return Mono.error(BffDomainException(BffErrors.GRAPHQL_INPUT_INVALID, "groupId is required for recording a repayment"))
         return gateway.recordRepayment(groupId, input, bearerToken(principal))
             .doOnSuccess { settlement ->
                 if (settlement != null) {

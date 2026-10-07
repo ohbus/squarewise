@@ -23,7 +23,10 @@ class BffGraphQLErrorResolver {
             exception is TimeoutException -> BffErrors.UPSTREAM_TIMEOUT
             else -> BffErrors.GRAPHQL_AGGREGATION_FAILED
         }
-        return error(environment, definition.safeDetail, definition.errorName, GraphQLExtensionsFormatter.fromDefinition(definition, requestId), classification(definition))
+            val extensions = GraphQLExtensionsFormatter.fromDefinition(definition, requestId).toMutableMap().apply {
+                if (definition.legacyCode == "ERR-11") put("retryAfterSeconds", 60)
+            }
+            return error(environment, definition.safeDetail, definition.errorName, extensions, classification(definition))
     }
 
     private fun error(environment: DataFetchingEnvironment, detail: String, code: String, extensions: Map<String, Any>, type: ErrorType): GraphQLError =

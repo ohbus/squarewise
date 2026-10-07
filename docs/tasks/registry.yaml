@@ -8699,7 +8699,7 @@
       "parent_id": "ERRC-01",
       "title": "Migrate BFF definitions and failures",
       "phase": "implementation",
-      "status": "todo",
+      "status": "in_progress",
       "owner_role": "bff",
       "owner_agent": "/root",
       "depends_on": [
@@ -8725,7 +8725,11 @@
         "uv run python tools/contracts/validate.py",
         "git diff --check"
       ],
-      "evidence": [],
+      "evidence": [
+        "Focused BFF governed resolver, upstream identity, and controller tests passed.",
+        "Full BFF command ran 183 tests; 25 failed during Spring DataSource context creation, before request execution.",
+        "Error hygiene passed with 4 unrelated allowlisted violations; contract validation and diff check pending final commit review."
+      ],
       "reviewer": "/root",
       "blocker": null
     },

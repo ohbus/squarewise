@@ -1,8 +1,10 @@
 package com.subhrodip.squarewise.bff.graphql
 
 import com.subhrodip.squarewise.bff.transport.UpstreamServiceException
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.bff.errors.BffDomainException
+import com.subhrodip.squarewise.errors.catalog.BffErrors
+import com.subhrodip.squarewise.errors.catalog.PlatformErrors
+import com.subhrodip.squarewise.errors.code.ErrorDefinition
 import graphql.language.Field
 import graphql.execution.ExecutionStepInfo
 import graphql.execution.ResultPath
@@ -30,15 +32,21 @@ class GraphQlExceptionResolverTest {
     }
 
     @Test
-    fun `maps every application error code to its public GraphQL contract`() {
-        ErrorCode.entries.forEach { errorCode ->
-            val error = resolver.resolve(ApplicationException(errorCode), environment)
+    fun `maps every governed BFF definition to its public GraphQL contract`() {
+        listOf(
+            BffErrors.GRAPHQL_INPUT_INVALID,
+            BffErrors.GRAPHQL_OPERATION_INVALID,
+            BffErrors.GRAPHQL_AGGREGATION_FAILED,
+            BffErrors.SUBSCRIPTION_LIMIT_EXCEEDED,
+            PlatformErrors.AUTHENTICATION_REQUIRED,
+        ).forEach { definition ->
+            val error = resolver.resolve(BffDomainException(definition), environment)
 
-            assertEquals(expectedGraphQlCode(errorCode), error.extensions?.get("code"))
-            assertEquals(errorCode.safeDetail, error.message)
-            assertEquals(expectedClassification(errorCode), error.errorType)
+            assertEquals(expectedGraphQlCode(definition), error.extensions?.get("code"))
+            assertEquals(definition.safeDetail, error.message)
+            assertEquals(expectedClassification(definition), error.errorType)
             assertNotNull(error.extensions?.get("requestId"))
-            if (errorCode == ErrorCode.ERR_11) {
+            if (definition == BffErrors.SUBSCRIPTION_LIMIT_EXCEEDED) {
                 assertEquals(60, error.extensions?.get("retryAfterSeconds"))
             } else {
                 assertNull(error.extensions?.get("retryAfterSeconds"))
@@ -73,30 +81,26 @@ class GraphQlExceptionResolverTest {
         val argumentError = resolver.resolve(IllegalArgumentException("secret detail"), environment)
         assertEquals("VALIDATION_FAILED", argumentError.extensions?.get("code"))
         assertEquals(ErrorType.BAD_REQUEST, argumentError.errorType)
-        assertEquals(ErrorCode.ERR_02.safeDetail, argumentError.message)
+        assertEquals(BffErrors.GRAPHQL_INPUT_INVALID.safeDetail, argumentError.message)
 
         val unknownError = resolver.resolve(IllegalStateException("secret detail"), environment)
         assertEquals("INTERNAL_ERROR", unknownError.extensions?.get("code"))
         assertEquals(ErrorType.INTERNAL_ERROR, unknownError.errorType)
-        assertEquals(ErrorCode.ERR_01.safeDetail, unknownError.message)
+        assertEquals(BffErrors.GRAPHQL_AGGREGATION_FAILED.safeDetail, unknownError.message)
     }
 
-    private fun expectedGraphQlCode(errorCode: ErrorCode): String = when (errorCode) {
-        ErrorCode.ERR_01, ErrorCode.ERR_07, ErrorCode.ERR_08 -> "INTERNAL_ERROR"
-        ErrorCode.ERR_02, ErrorCode.ERR_10 -> "VALIDATION_FAILED"
-        ErrorCode.ERR_03 -> "UNAUTHENTICATED"
-        ErrorCode.ERR_04 -> "FORBIDDEN"
-        ErrorCode.ERR_05 -> "NOT_FOUND"
-        ErrorCode.ERR_06, ErrorCode.ERR_09 -> "CONFLICT"
-        ErrorCode.ERR_11 -> "RATE_LIMITED"
-        ErrorCode.ERR_12 -> "GOVERNANCE_COMPLETED"
+    private fun expectedGraphQlCode(definition: ErrorDefinition): String = when (definition.legacyCode) {
+        "ERR-02" -> "VALIDATION_FAILED"
+        "ERR-03" -> "UNAUTHENTICATED"
+        "ERR-11" -> "RATE_LIMITED"
+        else -> "INTERNAL_ERROR"
     }
 
-    private fun expectedClassification(errorCode: ErrorCode): ErrorType = when (errorCode) {
-        ErrorCode.ERR_03 -> ErrorType.UNAUTHORIZED
-        ErrorCode.ERR_04 -> ErrorType.FORBIDDEN
-        ErrorCode.ERR_05 -> ErrorType.NOT_FOUND
-        ErrorCode.ERR_01, ErrorCode.ERR_07, ErrorCode.ERR_08 -> ErrorType.INTERNAL_ERROR
+    private fun expectedClassification(definition: ErrorDefinition): ErrorType = when (definition.httpStatus) {
+        401 -> ErrorType.UNAUTHORIZED
+        403 -> ErrorType.FORBIDDEN
+        404 -> ErrorType.NOT_FOUND
+        in 500..599 -> ErrorType.INTERNAL_ERROR
         else -> ErrorType.BAD_REQUEST
     }
 
