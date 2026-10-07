@@ -77,7 +77,14 @@ git diff --check
 ## Implementation Notes and Evidence
 
 - Added the `tools:benchmarks:jmh` module with three JMH benchmark classes and a `run` compatibility task matching the declared validation command.
-- Added `tests/performance/k6/error_storm_test.js` with separate 2,500 errors/s and 2,500 valid-operations/s scenarios, explicit bearer-token enforcement, p99/dropped-iteration thresholds, and once-per-second JVM heap/process-CPU samples from the Prometheus actuator endpoint.
+- Added `tests/performance/k6/error_storm_test.js` with explicit baseline and
+  storm modes. The storm mode supports a `BASELINE_VALID_P99_MS` input and
+  enforces the valid-operation p99 at no more than 105% of that baseline, in
+  addition to the error p99 and dropped-iteration thresholds. Storm mode fails
+  setup without a positive baseline, preventing an absolute threshold from being
+  misreported as degradation evidence. Both modes require a bearer token and
+  sample JVM heap/process CPU from the Prometheus actuator endpoint once per
+  second.
 - Added an immutable startup-built `ErrorCatalog.byNumericCode` index and parity coverage; the real indexed lookup measured 2.427 ns/op in a focused JMH follow-up on JDK 25.0.4.1. Decomposition measured 7.639 ns/op, serialization 0.843 us/op, and governed exception creation 1,207.547 ns/op.
 - The one-second k6 wiring smoke crossed thresholds with 864 dropped iterations and connection refusals from the single-host local stack. No 10-minute, production-like regional capacity evidence exists yet.
 - A focused JMH run with `-prof gc` measured indexed lookup at 2.389 +/- 0.588 ns/op,

@@ -6,53 +6,75 @@ import { sleep } from 'k6';
 const baseUrl = __ENV.BASE_URL || 'http://localhost:28081';
 const token = __ENV.BEARER_TOKEN || '';
 const duration = __ENV.DURATION || '10m';
+const loadMode = __ENV.LOAD_MODE || 'storm';
+const errorRate = Number(__ENV.ERROR_RATE || '2500');
+const validRate = Number(__ENV.VALID_RATE || '2500');
+const baselineValidP99Ms = Number(__ENV.BASELINE_VALID_P99_MS || '0');
+const validP99Threshold = baselineValidP99Ms > 0 ? baselineValidP99Ms * 1.05 : 500;
 const heapUsedBytes = new Gauge('jvm_heap_used_bytes');
 const cpuUsageRatio = new Trend('jvm_process_cpu_usage_ratio');
 
-export const options = {
-  scenarios: {
-    error_storm: {
-      executor: 'constant-arrival-rate',
-      rate: 2500,
-      timeUnit: '1s',
-      duration,
-      preAllocatedVUs: 500,
-      maxVUs: 5000,
-      exec: 'errorStorm',
-      tags: { workload: 'error-storm' },
-    },
-    valid_operations: {
-      executor: 'constant-arrival-rate',
-      rate: 2500,
-      timeUnit: '1s',
-      duration,
-      preAllocatedVUs: 500,
-      maxVUs: 5000,
-      exec: 'validOperation',
-      tags: { workload: 'valid-operation' },
-    },
-    telemetry: {
-      executor: 'constant-arrival-rate',
-      rate: 1,
-      timeUnit: '1s',
-      duration,
-      preAllocatedVUs: 1,
-      maxVUs: 2,
-      exec: 'sampleTelemetry',
-      tags: { workload: 'telemetry' },
-    },
-  },
-  thresholds: {
-    'http_req_duration{workload:error-storm}': ['p(99)<25'],
-    'http_req_duration{workload:valid-operation}': ['p(99)<500'],
-    'http_req_failed{workload:error-storm}': ['rate<0.01'],
-    dropped_iterations: ['count==0'],
-  },
+const commonValidScenario = {
+  executor: 'constant-arrival-rate',
+  rate: validRate,
+  timeUnit: '1s',
+  duration,
+  preAllocatedVUs: 500,
+  maxVUs: 5000,
+  exec: 'validOperation',
+  tags: { workload: 'valid-operation' },
 };
+
+const telemetryScenario = {
+  executor: 'constant-arrival-rate',
+  rate: 1,
+  timeUnit: '1s',
+  duration,
+  preAllocatedVUs: 1,
+  maxVUs: 2,
+  exec: 'sampleTelemetry',
+  tags: { workload: 'telemetry' },
+};
+
+const scenarios = {
+  valid_operations: commonValidScenario,
+  telemetry: telemetryScenario,
+};
+
+const thresholds = {
+  'http_req_duration{workload:valid-operation}': [`p(99)<${validP99Threshold}`],
+  dropped_iterations: ['count==0'],
+};
+
+if (loadMode !== 'baseline') {
+  scenarios.error_storm = {
+    executor: 'constant-arrival-rate',
+    rate: errorRate,
+    timeUnit: '1s',
+    duration,
+    preAllocatedVUs: 500,
+    maxVUs: 5000,
+    exec: 'errorStorm',
+    tags: { workload: 'error-storm' },
+  };
+  thresholds['http_req_duration{workload:error-storm}'] = ['p(99)<25'];
+  thresholds['http_req_failed{workload:error-storm}'] = ['rate<0.01'];
+}
+
+export const options = { scenarios, thresholds };
 
 export function setup() {
   if (!token) {
     throw new Error('BEARER_TOKEN is required; no legacy placeholder fallback is permitted');
+  }
+  if (loadMode !== 'baseline' && loadMode !== 'storm') {
+    throw new Error(`LOAD_MODE must be baseline or storm, received: ${loadMode}`);
+  }
+  if (!Number.isFinite(errorRate) || errorRate <= 0 || !Number.isFinite(validRate) || validRate <= 0) {
+    throw new Error('ERROR_RATE and VALID_RATE must be positive finite numbers');
+  }
+  if (loadMode === 'storm' && (!Number.isFinite(baselineValidP99Ms) || baselineValidP99Ms <= 0)) {
+    throw new Error('BASELINE_VALID_P99_MS must be a positive finite baseline for storm mode');
   }
   return { token };
 }

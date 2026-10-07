@@ -10,11 +10,16 @@ versus ordinary exception creation:
 ./gradlew.bat :tools:benchmarks:jmh:run --no-daemon
 ```
 
-The k6 workload in `tests/performance/k6/error_storm_test.js` models 2,500
-contained error responses per second alongside 2,500 authenticated successful
-operations per second, while sampling JVM heap usage and process CPU through
-the Prometheus actuator endpoint once per second. It defaults to ten minutes
-and requires an explicit signed `BEARER_TOKEN`.
+The k6 workload in `tests/performance/k6/error_storm_test.js` supports a
+`LOAD_MODE=baseline` run for valid-operation p99 measurement and a
+`LOAD_MODE=storm` run that models 2,500 contained error responses per second
+alongside 2,500 authenticated successful operations per second. The storm run
+requires `BASELINE_VALID_P99_MS` and sets the valid-operation threshold to 105%
+of that baseline. Storm mode fails setup without a positive baseline, so an
+absolute threshold cannot be mistaken for degradation evidence. Both modes
+sample JVM heap usage and process CPU through the Prometheus actuator endpoint
+once per second, default to ten minutes, and require an explicit signed
+`BEARER_TOKEN`.
 
 ## Budgets
 
