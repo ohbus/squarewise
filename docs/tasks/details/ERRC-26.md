@@ -91,7 +91,7 @@ git diff --check
   threshold detects unexpected failures rather than the intended error workload.
   The exported k6 summary explicitly includes p95 and p99 statistics for the
   required latency evidence.
-- Added an immutable startup-built `ErrorCatalog.byNumericCode` index and parity coverage. A fresh full JMH run on JDK 25.0.4.1 measured indexed lookup at 2.438 +/- 1.805 ns/op, decomposition at 7.517 +/- 2.548 ns/op, serialization at 0.846 +/- 0.429 us/op, governed exception creation at 1,217.069 +/- 94.126 ns/op, and standard exception creation at 1,042.700 +/- 333.352 ns/op.
+- Added an immutable startup-built `ErrorCatalog.byNumericCode` index and parity coverage. The current-head full JMH run on JDK 25.0.4.1 measured indexed lookup at 2.432 +/- 2.025 ns/op, decomposition at 7.499 +/- 1.370 ns/op, serialization at 0.878 +/- 0.275 us/op, governed exception creation at 1,187.047 +/- 163.300 ns/op, and standard exception creation at 1,044.582 +/- 116.176 ns/op.
 - The one-second k6 wiring smoke crossed thresholds with 864 dropped iterations and connection refusals from the single-host local stack. No 10-minute, production-like regional capacity evidence exists yet.
 - After authenticating actuator telemetry and classifying intended 4xx responses as
   expected, a one-second local baseline/storm wiring smoke at one error and one

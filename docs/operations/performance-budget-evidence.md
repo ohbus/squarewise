@@ -44,11 +44,11 @@ required percentile evidence is not dependent on k6's default summary set.
 
 ## 2026-10-07 local measurement
 
-The JMH module compiled and ran on JDK 25.0.4.1. The fresh full configured run
-reported indexed catalog lookup at 2.438 +/- 1.805 ns/op, decomposition at
-7.517 +/- 2.548 ns/op, governed exception creation at 1,217.069 +/- 94.126
-ns/op, standard exception creation at 1,042.700 +/- 333.352 ns/op, and
-serialization at 0.846 +/- 0.429 us/op. The indexed lookup meets the <50 ns
+The JMH module compiled and ran on JDK 25.0.4.1. The current-head full configured
+run reported indexed catalog lookup at 2.432 +/- 2.025 ns/op, decomposition at
+7.499 +/- 1.370 ns/op, governed exception creation at 1,187.047 +/- 163.300
+ns/op, standard exception creation at 1,044.582 +/- 116.176 ns/op, and
+serialization at 0.878 +/- 0.275 us/op. The indexed lookup meets the <50 ns
 budget, while the governed exception is not cheaper than ordinary stack
 capture. A focused
 `-prof gc` run measured indexed lookup at 2.389 +/- 0.588 ns/op, with zero
