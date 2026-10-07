@@ -15,6 +15,7 @@ const heapUsedBytes = new Gauge('jvm_heap_used_bytes');
 const cpuUsageRatio = new Trend('jvm_process_cpu_usage_ratio');
 const gcPauseSecondsTotal = new Trend('jvm_gc_pause_seconds_total');
 const gcCollectionsTotal = new Trend('jvm_gc_collections_total');
+const containedErrorResponses = http.expectedStatuses(400, 401, 403, 404, 409, 422, 429);
 
 const commonValidScenario = {
   executor: 'constant-arrival-rate',
@@ -88,6 +89,7 @@ export function setup() {
 export function errorStorm() {
   const response = http.get(`${baseUrl}/accounts/v1/profiles/not-a-uuid`, {
     headers: { Accept: 'application/json' },
+    responseCallback: containedErrorResponses,
     tags: { endpoint: 'invalid-profile' },
   });
   check(response, { 'error response is contained': (value) => value.status >= 400 && value.status < 500 });
@@ -102,9 +104,9 @@ export function validOperation(data) {
   sleep(0.001);
 }
 
-export function sampleTelemetry() {
+export function sampleTelemetry(data) {
   const response = http.get(`${baseUrl}/actuator/prometheus`, {
-    headers: { Accept: 'text/plain' },
+    headers: { Accept: 'text/plain', Authorization: `Bearer ${data.token}` },
     tags: { endpoint: 'actuator-prometheus' },
   });
   check(response, { 'telemetry endpoint is available': (value) => value.status === 200 });

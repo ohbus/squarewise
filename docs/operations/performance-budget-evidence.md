@@ -25,8 +25,11 @@ requires `BASELINE_VALID_P99_MS` and sets the valid-operation threshold to 105%
 of that baseline. Storm mode fails setup without a positive baseline, so an
 absolute threshold cannot be mistaken for degradation evidence. Both modes
 sample JVM heap usage, process CPU, aggregate GC pause seconds, and GC
-collection count through the Prometheus actuator endpoint once per second,
+collection count through the authenticated Prometheus actuator endpoint once per second,
 default to ten minutes, and require an explicit signed `BEARER_TOKEN`.
+Expected contained 4xx responses are configured as expected k6 statuses, so the
+storm failure-rate threshold measures transport/unexpected-response failures
+instead of counting the injected error responses themselves.
 The harness also configures p95 and p99 in the exported k6 summary so the
 required percentile evidence is not dependent on k6's default summary set.
 
