@@ -8971,7 +8971,7 @@
       "parent_id": "ERRC-01",
       "title": "Dual-read/dual-write staged rollout",
       "phase": "operations",
-      "status": "todo",
+      "status": "in_progress",
       "owner_role": "operations",
       "owner_agent": "/root",
       "depends_on": [
@@ -8997,9 +8997,13 @@
         "uv run python tools/contracts/validate.py",
         "git diff --check"
       ],
-      "evidence": [],
+      "evidence": [
+        "Added canary rollout manifest with 5/25/100 percent service stages, additive compatibility rules, halt thresholds, and 60-second rollback budget.",
+        "Added rollout verification ledger with explicit NOT EXECUTED rows for all four services and rollback rehearsal.",
+        "Local compatibility evidence is not staging or production rollout evidence; ERRC-26 and ERRC-27 remain open."
+      ],
       "reviewer": "/root",
-      "blocker": null
+      "blocker": "Staging traffic, canary metrics, rollback rehearsal, and preceding ERRC-26/ERRC-27 acceptance are unavailable."
     },
     {
       "id": "ERRC-29",
