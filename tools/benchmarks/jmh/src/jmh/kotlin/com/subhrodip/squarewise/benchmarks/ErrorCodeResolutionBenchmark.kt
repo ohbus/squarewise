@@ -27,6 +27,6 @@ open class ErrorCodeResolutionBenchmark {
     /** Resolves one immutable definition from the compiled catalog. */
     @Benchmark
     fun catalogLookup(blackhole: Blackhole) {
-        blackhole.consume(ErrorCatalog.all.first { it.numericCode.value == code.value })
+        blackhole.consume(ErrorCatalog.find(code.value))
     }
 }

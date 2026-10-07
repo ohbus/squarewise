@@ -27,9 +27,10 @@ signed `BEARER_TOKEN`.
 ## 2026-10-07 local measurement
 
 The JMH module compiled and ran on JDK 25.0.4.1. The full configured run
-reported decomposition at 7.639 ns/op, catalog list lookup at 65.752 ns/op,
-governed exception creation at 1,207.547 ns/op, and standard exception creation
-at 1,041.401 ns/op. The catalog lookup therefore misses the <50 ns budget and
+reported decomposition at 7.639 ns/op, while the optimized indexed catalog
+lookup measured 2.427 ns/op in a focused two-iteration follow-up. Governed
+exception creation measured 1,207.547 ns/op, and standard exception creation
+at 1,041.401 ns/op. The indexed lookup meets the <50 ns budget, while the
 the governed exception is not cheaper than ordinary stack capture. After adding
 the Java-time Jackson module, a standalone two-iteration serialization run
 reported 0.843 us/op, below its 5 us technical target.

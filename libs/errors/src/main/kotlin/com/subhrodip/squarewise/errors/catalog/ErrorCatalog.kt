@@ -12,4 +12,10 @@ object ErrorCatalog {
         addAll(BffErrors.all)
         addAll(PlatformErrors.all)
     }
+
+    /** Immutable startup-built index for allocation-free numeric-code resolution. */
+    val byNumericCode: Map<String, ErrorDefinition> = all.associateBy { it.numericCode.value }
+
+    /** Finds a compiled definition by its canonical six-digit identity. */
+    fun find(numericCode: String): ErrorDefinition? = byNumericCode[numericCode]
 }
