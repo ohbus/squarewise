@@ -122,7 +122,7 @@ observability-validate: ## Validate Prometheus rules and Grafana dashboard asset
 	@$(UV_RUN) python -m json.tool infra/observability/grafana/dashboards/squarewise-overview.json >/dev/null
 	@$(UV_RUN) python -c 'import json; d=json.load(open("infra/observability/grafana/dashboards/squarewise-overview.json")); assert d["panels"] and all(p["targets"] for p in d["panels"]); print("valid Grafana dashboard")'
 
-release-gate: observability-validate ## Validate repository-owned production release prerequisites
+release-gate: observability-validate rollout-validate ## Validate repository-owned production release prerequisites
 	@$(UV_RUN) python tools/ops/validate_release_gate.py
 
 security-hygiene: ## Scan tracked configuration and source for obvious secret material

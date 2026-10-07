@@ -89,6 +89,8 @@ git diff --check
   job, preserving local/hosted gate parity.
 - Added the rollout gate to the local `ci` target as well, so both standard and
   CI-equivalent local paths execute the same configuration checks.
+- Added the rollout gate to `release-gate`, preventing release prerequisite
+  validation from bypassing canary manifest and ledger checks.
 - The rollout validator now requires each stage name to match its service and
   rejects smoke paths that are absolute, traverse outside the repository, or
   resolve through a symlink outside the repository. Regression coverage protects

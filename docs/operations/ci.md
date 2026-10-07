@@ -164,6 +164,9 @@ The hosted lint gate also runs the ERRC-28 rollout manifest/ledger validator and
 its regression suite, keeping canary configuration safety checks in parity with
 the local `validate` target.
 
+The repository `release-gate` includes the same rollout validation before
+production-prerequisite checks are evaluated.
+
 Workflow files are syntax-checked with a pinned `yamllint` invocation installed
 ephemerally through `uvx`; CI does not assume Ruby is present on slim runners.
 The reusable workflow is the single source for action versions, Microsoft
