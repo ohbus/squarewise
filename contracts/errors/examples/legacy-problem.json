@@ -1,0 +1,10 @@
+{
+  "type": "https://squarewise.example/problems/NOT_FOUND",
+  "title": "Resource not found",
+  "status": 404,
+  "code": "NOT_FOUND",
+  "source": "squarewise-accounts",
+  "requestId": "00000000-0000-0000-0000-000000000001",
+  "detail": "The requested resource was not found.",
+  "timestamp": "2026-10-07T10:00:00Z"
+}

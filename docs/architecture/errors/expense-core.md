@@ -1,13 +1,13 @@
 # Expense Core error ownership guide
 
-Status: proposed inventory; codes are not implemented or contractually published.
+Status: allocated and authoritative under `ERRC-04`; matches `contracts/errors/error-catalog.yaml`.
 
 Expense Core owns Domains `21`-`28`. Financial mutation errors must state transaction,
 idempotency, audit, sync-change, and outbox outcomes. No response may imply failure if
 the durable financial write committed unless the contract explicitly describes an
 accepted/indeterminate result.
 
-## Candidate public families
+## Allocated public families
 
 | Candidate | Name | Current-compatible HTTP | Legacy `code` | Required distinction |
 |---|---|:---:|---|---|

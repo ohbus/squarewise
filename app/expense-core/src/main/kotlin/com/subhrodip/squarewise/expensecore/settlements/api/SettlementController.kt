@@ -1,4 +1,6 @@
 package com.subhrodip.squarewise.expensecore.settlements.api
+
+import com.subhrodip.squarewise.errors.catalog.PlatformErrors
 import com.subhrodip.squarewise.expensecore.settlements.domain.Settlement
 import com.subhrodip.squarewise.expensecore.settlements.domain.SuggestedSettlement
 import com.subhrodip.squarewise.expensecore.settlements.service.SettlementService
@@ -17,8 +19,8 @@ import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
 import java.security.Principal
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
+import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
 
 import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
 
@@ -50,9 +52,9 @@ class SettlementController(
 
     private fun ensureMembership(groupId: UUID, principal: Principal?) {
         val subject = principal?.name?.takeIf { it.isNotBlank() }
-            ?: throw ApplicationException(ErrorCode.ERR_03, "Authenticated subject is required")
+            ?: throw ExpenseDomainException(PlatformErrors.AUTHENTICATION_REQUIRED, "Authenticated subject is required")
         if (!membershipRepository.existsByGroupIdAndSubject(groupId, subject)) {
-            throw ApplicationException(ErrorCode.ERR_05, "Group $groupId not found")
+            throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group $groupId not found")
         }
     }
 }

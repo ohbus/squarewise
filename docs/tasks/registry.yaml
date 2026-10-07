@@ -4944,7 +4944,9 @@
       "status": "done",
       "owner_role": "coordinator",
       "owner_agent": "/root",
-      "depends_on": ["QA-09"],
+      "depends_on": [
+        "QA-09"
+      ],
       "owned_paths": [
         "pyproject.toml",
         "uv.lock",
@@ -5095,7 +5097,6 @@
     },
     {
       "id": "AUTH-05",
-
       "parent_id": "AUTH-01",
       "title": "Remove weaker local authentication modes",
       "phase": "security",
@@ -7405,7 +7406,10 @@
       "status": "done",
       "owner_role": "coordinator",
       "owner_agent": "/root",
-      "depends_on": ["ERR-12", "SEC-02"],
+      "depends_on": [
+        "ERR-12",
+        "SEC-02"
+      ],
       "owned_paths": [
         "contracts/errors/domains.yaml",
         "docs/architecture/error-code-standard.md",
@@ -7454,14 +7458,21 @@
       "status": "done",
       "owner_role": "review",
       "owner_agent": "/root/error_code_audit",
-      "depends_on": ["ERR-12", "SEC-02"],
-      "owned_paths": ["docs/tasks/details/ERRC-01A.md"],
+      "depends_on": [
+        "ERR-12",
+        "SEC-02"
+      ],
+      "owned_paths": [
+        "docs/tasks/details/ERRC-01A.md"
+      ],
       "specification": "docs/tasks/details/ERRC-01A.md",
       "acceptance_criteria": [
         "Read-only inventory covers production throw sites, custom and generic exception types, catch blocks, HTTP advice, GraphQL resolution, messaging listeners, scheduled work, and configuration startup failures.",
         "Findings identify concrete migration families, unsafe detail exposure, generic-throw debt, broad-catch risks, and missing predictable scenarios with file references."
       ],
-      "validation_commands": ["rg -n --glob '*.kt' 'throw |catch \\(|@ExceptionHandler' app libs"],
+      "validation_commands": [
+        "rg -n --glob '*.kt' 'throw |catch \\(|@ExceptionHandler' app libs"
+      ],
       "evidence": [
         "Read-only audit counted 128 production application-error constructions and identified unsafe response text, four fatal-swallowing catch(Throwable) sites, security/filter, BFF, messaging, scheduler, and semantic mapping gaps.",
         "Findings are recorded in docs/tasks/details/ERRC-01A.md and incorporated into commit 33e5cea."
@@ -7477,8 +7488,13 @@
       "status": "done",
       "owner_role": "contracts",
       "owner_agent": "/root/error_contract_audit",
-      "depends_on": ["ERR-12", "SEC-02"],
-      "owned_paths": ["docs/tasks/details/ERRC-01B.md"],
+      "depends_on": [
+        "ERR-12",
+        "SEC-02"
+      ],
+      "owned_paths": [
+        "docs/tasks/details/ERRC-01B.md"
+      ],
       "specification": "docs/tasks/details/ERRC-01B.md",
       "acceptance_criteria": [
         "Read-only audit covers the error catalog, problem schema, every REST OpenAPI error response, GraphQL error extensions, event failure semantics, tests, Bruno, and compatibility risks.",
@@ -7503,14 +7519,21 @@
       "status": "done",
       "owner_role": "architecture",
       "owner_agent": "/root/error_architecture_audit",
-      "depends_on": ["ERR-12", "SEC-02"],
-      "owned_paths": ["docs/tasks/details/ERRC-01C.md"],
+      "depends_on": [
+        "ERR-12",
+        "SEC-02"
+      ],
+      "owned_paths": [
+        "docs/tasks/details/ERRC-01C.md"
+      ],
       "specification": "docs/tasks/details/ERRC-01C.md",
       "acceptance_criteria": [
         "Read-only review defines a no-reflection hot path, exception-definition compatibility rules, fatal Throwable handling, async and reactive boundaries, metrics cardinality, logging redaction, and 10M-DAU operational constraints.",
         "Findings challenge unsafe or over-engineered parts of the draft and recommend maintainable KISS/DRY/SOLID patterns with measurable validation."
       ],
-      "validation_commands": ["git diff --check"],
+      "validation_commands": [
+        "git diff --check"
+      ],
       "evidence": [
         "Read-only review defined minimal governed exceptions, constrained overrides, fatal/cancellation policy, static no-reflection runtime mapping, bounded observability, privacy, and measured performance acceptance.",
         "Findings are recorded in docs/tasks/details/ERRC-01C.md and incorporated into commit 33e5cea."
@@ -7518,13 +7541,310 @@
       "reviewer": "/root",
       "blocker": null
     },
-    {"id":"OPS-26","parent_id":"MILESTONE-OPERATIONS","title":"Decouple dev data seeder and prepare local stack for non-docker runtimes","phase":"operations","status":"done","owner_role":"operations","owner_agent":"/root/operations","depends_on":["OPS-25"],"owned_paths":["tools/ops/seed_dev_data.py","Makefile","infra/local/docker-compose.yml","infra/local/docker-compose.accounts.yml","infra/local/docker-compose.expense-core.yml","infra/local/docker-compose.notifications.yml","infra/local/docker-compose.bff.yml","infra/local/docker-compose.dev.yml","docs/tasks/details/OPS-26.md"],"specification":"docs/tasks/details/OPS-26.md","acceptance_criteria":["tools/ops/seed_dev_data.py connects via direct TCP when SQUAREWISE_POSTGRES_HOST or PGHOST is set, without requiring the docker CLI.","seed_dev_data.py extracts the real JWT sub claim from acquired Keycloak tokens so that seeded account profiles match live authenticated personas.","infra/local/docker-compose.yml attaches a persistent named volume (postgres-data) so seeded development data survives container recreation.","Makefile doctor target checks if DEVCONTAINER is active and skips host-level Docker checks when running inside the workspace container.","Strict typing is preserved: uv run --frozen --no-build mypy tools/ops/seed_dev_data.py exits 0."],"validation_commands":["uv run --frozen --no-build mypy tools/ops/seed_dev_data.py","make compose-config","make doctor","git diff --check"],"evidence":["seed_dev_data.py now supports TCP psql invocation via SQUAREWISE_POSTGRES_HOST / PGHOST with PGPASSWORD environment passing.","Keycloak token acquisition now dynamically extracts real JWT sub claims and provisions account_profiles and account_identities accordingly.","Persistent named volume postgres-data is declared across docker-compose.yml and all overlay compositions.","Makefile doctor target skips host Docker checks when DEVCONTAINER=true.","mypy, make compose-config, make doctor, and git diff --check passed."],"reviewer":"/root","blocker":null},
-    {"id":"OPS-27","parent_id":"MILESTONE-OPERATIONS","title":"Register devcontainer version baseline and security hygiene rules","phase":"operations","status":"done","owner_role":"operations","owner_agent":"/root/operations","depends_on":["OPS-25","OPS-26"],"owned_paths":["infra/versions.env.example","docs/implementation/technology-decisions.md",".dockerignore","docs/tasks/details/OPS-27.md"],"specification":"docs/tasks/details/OPS-27.md","acceptance_criteria":["infra/versions.env.example registers DEVCONTAINER_BASE_IMAGE, DEVCONTAINER_JDK_VERSION, and DEVCONTAINER_NODE_VERSION.","docs/implementation/technology-decisions.md records the toolchain resolution evidence for Java 25, uv, and Node 22.",".dockerignore excludes .devcontainer from application container build contexts.","tools/ops/validate_sbom_baseline.py and check_security_hygiene.py pass without warnings."],"validation_commands":["make sbom-validate","make security-hygiene","git diff --check"],"evidence":["infra/versions.env.example now declares DEVCONTAINER_BASE_IMAGE (Ubuntu 24.04), DEVCONTAINER_JDK_VERSION (25), and DEVCONTAINER_NODE_VERSION (22).","docs/implementation/technology-decisions.md documents Devcontainer architecture adopting the native Compose topology over Docker-outside-of-Docker.",".dockerignore excludes .devcontainer from application builds.","make sbom-validate and make security-hygiene passed cleanly."],"reviewer":"/root","blocker":null},
-    {"id":"OPS-28","parent_id":"MILESTONE-OPERATIONS","title":"Create devcontainer scaffolding and multi-service compose integration","phase":"operations","status":"done","owner_role":"operations","owner_agent":"/root/operations","depends_on":["OPS-26","OPS-27"],"owned_paths":[".devcontainer/Dockerfile",".devcontainer/docker-compose.devcontainer.yml",".devcontainer/devcontainer.json","docs/tasks/details/OPS-28.md"],"specification":"docs/tasks/details/OPS-28.md","acceptance_criteria":[".devcontainer/devcontainer.json uses dockerComposeFile referencing infra/local/docker-compose.yml and docker-compose.devcontainer.yml without host socket mounting.",".devcontainer/Dockerfile builds an unprivileged workspace environment containing Java 25 (Microsoft OpenJDK / Temurin), Python 3.12, uv, Node.js 22, and postgresql-client.","Named persistent volumes for Gradle (~/.gradle) and uv cache (~/.cache/uv) are declared with :cached workspace mount to eliminate Windows 9P I/O bottlenecks.","Gradle VFS watching, parallel execution, and calibrated daemon memory limits (-Xmx1536m) are configured for fast incremental builds.","Devcontainer forwardPorts maps all application and dependency ports (28080, 28081, 28082, 28083, 28090, 28025, 28673, 25432) with semantic labels and collision resilience.","Dual IDE customization blocks (customizations.vscode and customizations.jetbrains) ensure full parity across VS Code, Cursor, and JetBrains Gateway.","SSH agent forwarding and Git user synchronization are enabled for frictionless commit and push operations."],"validation_commands":["make compose-config","git diff --check"],"evidence":[".devcontainer/Dockerfile created with Ubuntu 24.04, Java 25 (Adoptium / Microsoft), Node.js 22, Astral uv, and postgresql-client.",".devcontainer/docker-compose.devcontainer.yml connects to squarewise-local-net with named volumes for gradle-cache and uv-cache.",".devcontainer/devcontainer.json maps collision-free 28xxx ports with semantic labels and wires vscode and jetbrains IDE customizations.","make compose-config validates the configuration cleanly."],"reviewer":"/root","blocker":null},
-    {"id":"OPS-29","parent_id":"MILESTONE-OPERATIONS","title":"Implement zero-friction startup automation and background data seeding","phase":"operations","status":"done","owner_role":"operations","owner_agent":"/root/operations","depends_on":["OPS-28"],"owned_paths":[".devcontainer/post-start.sh","docs/tasks/details/OPS-29.md"],"specification":"docs/tasks/details/OPS-29.md","acceptance_criteria":[".devcontainer/post-start.sh ensures infra/local/.env exists with non-secret local development defaults.","post-start.sh polls PostgreSQL (postgres-db:5432) and Keycloak (idp-keycloak:8080) TCP/HTTP readiness probes with bounded retries.","post-start.sh conditionally runs uv run python3 tools/ops/seed_dev_data.py only when account profiles table is empty.","Welcome dashboard displays clickable local endpoints, pre-minted bearer tokens, and test execution hints.","postStartCommand is wired into .devcontainer/devcontainer.json."],"validation_commands":["bash -n .devcontainer/post-start.sh","git diff --check"],"evidence":[".devcontainer/post-start.sh created and verified with bash -n.","Bounded readiness waiting implemented for PostgreSQL TCP (pg_isready) and Keycloak HTTP (/health/ready).","Automated conditional data seeding calls tools/ops/seed_dev_data.py over direct TCP.","Welcome dashboard prints endpoints, personas, and test execution hints.","Wired into .devcontainer/devcontainer.json via postStartCommand."],"reviewer":"/root","blocker":null},
-    {"id":"OPS-30","parent_id":"MILESTONE-OPERATIONS","title":"Validate devcontainer workflows across IDEs and document clone-and-run experience","phase":"operations","status":"done","owner_role":"operations","owner_agent":"/root/operations","depends_on":["OPS-29"],"owned_paths":["docs/operations/devcontainer.md","docs/operations/quickstart.md","README.md","docs/tasks/details/OPS-30.md"],"specification":"docs/tasks/details/OPS-30.md","acceptance_criteria":["docs/operations/devcontainer.md comprehensively documents VS Code, Cursor, and JetBrains Gateway workflows.","docs/operations/quickstart.md and README.md include the 1-click Devcontainer clone-and-run path alongside native workflows.","Full test suite executes inside the Devcontainer and passes without error.","Verification evidence recorded in docs/tasks/progress.md."],"validation_commands":["make contracts","make python-typecheck","make compose-config","git diff --check"],"evidence":["docs/operations/devcontainer.md written with complete Mermaid topology diagram, deterministic port reference, preloaded personas, IDE setup, and caching details.","docs/operations/quickstart.md updated with Fast Track 1-click Devcontainer onboarding.","README.md updated with Option 0: 1-Click Devcontainer.","make contracts, make python-typecheck, and make compose-config pass with zero warnings."],"reviewer":"/root","blocker":null},
-    {"id":"OPS-31","parent_id":"MILESTONE-OPERATIONS","title":"Centralize runtime and toolchain versions and unify Docker anti-drift build patterns","phase":"operations","status":"done","owner_role":"operations","owner_agent":"/root/operations","depends_on":["OPS-27","OPS-28","OPS-29","OPS-30"],"owned_paths":["infra/versions.env.example","infra/local/.env.example","infra/docker/Dockerfile.jvm","infra/docker/Dockerfile.fast","infra/docker/Dockerfile.dev","infra/docs/Dockerfile","tests/fixtures/invalid_subject_oidc/Dockerfile",".devcontainer/Dockerfile",".devcontainer/docker-compose.devcontainer.yml","tools/ops/validate_sbom_baseline.py","docs/tasks/details/OPS-31.md","docs/implementation/technology-decisions.md"],"specification":"docs/tasks/details/OPS-31.md","acceptance_criteria":["All runtime, container, and toolchain versions declared in infra/versions.env.example.","All repository Dockerfiles parameterized with ARG base images.",".devcontainer/docker-compose.devcontainer.yml passes version build args.","tools/ops/validate_sbom_baseline.py verifies zero drift across configuration files and Dockerfiles.","make sbom-validate, make python-typecheck, make compose-config, and make contracts pass cleanly."],"validation_commands":["make contracts","make python-typecheck","make compose-config","make sbom-validate","git diff --check"],"evidence":["infra/versions.env.example and infra/local/.env.example synchronized with unified versions.","Dockerfile.jvm, Dockerfile.fast, Dockerfile.dev, infra/docs/Dockerfile, tests/fixtures/invalid_subject_oidc/Dockerfile, and .devcontainer/Dockerfile parameterized with ARG base images.",".devcontainer/docker-compose.devcontainer.yml forwards build args.","tools/ops/validate_sbom_baseline.py statically verifies zero drift and Dockerfile ARG parameterization.","make sbom-validate, make python-typecheck, make compose-config, and make contracts pass with 0 errors."],"reviewer":"/root","blocker":null},
-    {"id":"DOC-27","parent_id":"MILESTONE-DOCUMENTATION","title":"Establish OSS community health and reporting policies","phase":"documentation","status":"done","owner_role":"coordinator","owner_agent":"/root","depends_on":["DOC-08","DOC-24"],"owned_paths":["README.md","CONTRIBUTING.md","LICENSE","SECURITY.md","CODE_OF_CONDUCT.md","ACCESSIBILITY.md",".github/ISSUE_TEMPLATE/",".github/pull_request_template.md","docs/README.md","docs/tasks/details/DOC-27.md","docs/tasks/registry.yaml","docs/tasks/board.md","docs/tasks/progress.md"],"specification":"docs/tasks/details/DOC-27.md","acceptance_criteria":["GitHub-recognized conduct, MIT license, security, accessibility, issue-form, chooser, and pull-request template files exist in supported locations.","security@subhrodip.com is the only documented destination for security questions and vulnerability reports, and suspected vulnerabilities are excluded from public issues.","Policies and templates are repository-specific, cross-linked, candid about current support and accessibility limits, and collect actionable reports without unsupported promises.","Repository documentation, registry, YAML, links, and whitespace validation pass with exact evidence recorded."],"validation_commands":["uv run --frozen --no-build python tools/contracts/validate.py","uv run --frozen --no-build yamllint -d '{extends: relaxed, rules: {truthy: disable, line-length: disable}}' .github/ISSUE_TEMPLATE","git diff --check"],"evidence":["Committed the community-health implementation as b3b65094.","Added GitHub-recognized root community files, three structured issue forms, issue chooser routing, and a repository-specific pull-request template.","Repository-wide contributor-document search confirms security@subhrodip.com is the only security question and vulnerability reporting destination; fixture addresses remain unrelated test data.","Contract/task validation reports 220 valid tasks; YAML lint and explicit issue-form structure parsing pass for all four ISSUE_TEMPLATE YAML files.","Local links across the eight touched Markdown entry points and git diff --check pass."],"reviewer":"/root","blocker":null},
+    {
+      "id": "OPS-26",
+      "parent_id": "MILESTONE-OPERATIONS",
+      "title": "Decouple dev data seeder and prepare local stack for non-docker runtimes",
+      "phase": "operations",
+      "status": "done",
+      "owner_role": "operations",
+      "owner_agent": "/root/operations",
+      "depends_on": [
+        "OPS-25"
+      ],
+      "owned_paths": [
+        "tools/ops/seed_dev_data.py",
+        "Makefile",
+        "infra/local/docker-compose.yml",
+        "infra/local/docker-compose.accounts.yml",
+        "infra/local/docker-compose.expense-core.yml",
+        "infra/local/docker-compose.notifications.yml",
+        "infra/local/docker-compose.bff.yml",
+        "infra/local/docker-compose.dev.yml",
+        "docs/tasks/details/OPS-26.md"
+      ],
+      "specification": "docs/tasks/details/OPS-26.md",
+      "acceptance_criteria": [
+        "tools/ops/seed_dev_data.py connects via direct TCP when SQUAREWISE_POSTGRES_HOST or PGHOST is set, without requiring the docker CLI.",
+        "seed_dev_data.py extracts the real JWT sub claim from acquired Keycloak tokens so that seeded account profiles match live authenticated personas.",
+        "infra/local/docker-compose.yml attaches a persistent named volume (postgres-data) so seeded development data survives container recreation.",
+        "Makefile doctor target checks if DEVCONTAINER is active and skips host-level Docker checks when running inside the workspace container.",
+        "Strict typing is preserved: uv run --frozen --no-build mypy tools/ops/seed_dev_data.py exits 0."
+      ],
+      "validation_commands": [
+        "uv run --frozen --no-build mypy tools/ops/seed_dev_data.py",
+        "make compose-config",
+        "make doctor",
+        "git diff --check"
+      ],
+      "evidence": [
+        "seed_dev_data.py now supports TCP psql invocation via SQUAREWISE_POSTGRES_HOST / PGHOST with PGPASSWORD environment passing.",
+        "Keycloak token acquisition now dynamically extracts real JWT sub claims and provisions account_profiles and account_identities accordingly.",
+        "Persistent named volume postgres-data is declared across docker-compose.yml and all overlay compositions.",
+        "Makefile doctor target skips host Docker checks when DEVCONTAINER=true.",
+        "mypy, make compose-config, make doctor, and git diff --check passed."
+      ],
+      "reviewer": "/root",
+      "blocker": null
+    },
+    {
+      "id": "OPS-27",
+      "parent_id": "MILESTONE-OPERATIONS",
+      "title": "Register devcontainer version baseline and security hygiene rules",
+      "phase": "operations",
+      "status": "done",
+      "owner_role": "operations",
+      "owner_agent": "/root/operations",
+      "depends_on": [
+        "OPS-25",
+        "OPS-26"
+      ],
+      "owned_paths": [
+        "infra/versions.env.example",
+        "docs/implementation/technology-decisions.md",
+        ".dockerignore",
+        "docs/tasks/details/OPS-27.md"
+      ],
+      "specification": "docs/tasks/details/OPS-27.md",
+      "acceptance_criteria": [
+        "infra/versions.env.example registers DEVCONTAINER_BASE_IMAGE, DEVCONTAINER_JDK_VERSION, and DEVCONTAINER_NODE_VERSION.",
+        "docs/implementation/technology-decisions.md records the toolchain resolution evidence for Java 25, uv, and Node 24 LTS.",
+        ".dockerignore excludes .devcontainer from application container build contexts.",
+        "tools/ops/validate_sbom_baseline.py and check_security_hygiene.py pass without warnings."
+      ],
+      "validation_commands": [
+        "make sbom-validate",
+        "make security-hygiene",
+        "git diff --check"
+      ],
+      "evidence": [
+        "infra/versions.env.example now declares DEVCONTAINER_BASE_IMAGE (Ubuntu 24.04), DEVCONTAINER_JDK_VERSION (25), and DEVCONTAINER_NODE_VERSION (24).",
+        "docs/implementation/technology-decisions.md documents Devcontainer architecture adopting the native Compose topology over Docker-outside-of-Docker.",
+        ".dockerignore excludes .devcontainer from application builds.",
+        "make sbom-validate and make security-hygiene passed cleanly."
+      ],
+      "reviewer": "/root",
+      "blocker": null
+    },
+    {
+      "id": "OPS-28",
+      "parent_id": "MILESTONE-OPERATIONS",
+      "title": "Create devcontainer scaffolding and multi-service compose integration",
+      "phase": "operations",
+      "status": "done",
+      "owner_role": "operations",
+      "owner_agent": "/root/operations",
+      "depends_on": [
+        "OPS-26",
+        "OPS-27"
+      ],
+      "owned_paths": [
+        ".devcontainer/Dockerfile",
+        ".devcontainer/docker-compose.devcontainer.yml",
+        ".devcontainer/devcontainer.json",
+        "docs/tasks/details/OPS-28.md"
+      ],
+      "specification": "docs/tasks/details/OPS-28.md",
+      "acceptance_criteria": [
+        ".devcontainer/devcontainer.json uses dockerComposeFile referencing infra/local/docker-compose.yml and docker-compose.devcontainer.yml without host socket mounting.",
+        ".devcontainer/Dockerfile builds an unprivileged workspace environment containing Java 25 (Microsoft OpenJDK / Temurin), Python 3.12, uv, Node.js 24 LTS, and postgresql-client.",
+        "Named persistent volumes for Gradle (~/.gradle) and uv cache (~/.cache/uv) are declared with :cached workspace mount to eliminate Windows 9P I/O bottlenecks.",
+        "Gradle VFS watching, parallel execution, and calibrated daemon memory limits (-Xmx1536m) are configured for fast incremental builds.",
+        "Devcontainer forwardPorts maps all application and dependency ports (28080, 28081, 28082, 28083, 28090, 28025, 28673, 25432) with semantic labels and collision resilience.",
+        "Dual IDE customization blocks (customizations.vscode and customizations.jetbrains) ensure full parity across VS Code, Cursor, and JetBrains Gateway.",
+        "SSH agent forwarding and Git user synchronization are enabled for frictionless commit and push operations."
+      ],
+      "validation_commands": [
+        "make compose-config",
+        "git diff --check"
+      ],
+      "evidence": [
+        ".devcontainer/Dockerfile created with Ubuntu 24.04, Java 25 (Adoptium / Microsoft), Node.js 24 LTS, Astral uv, and postgresql-client.",
+        ".devcontainer/docker-compose.devcontainer.yml connects to squarewise-local-net with named volumes for gradle-cache and uv-cache.",
+        ".devcontainer/devcontainer.json maps collision-free 28xxx ports with semantic labels and wires vscode and jetbrains IDE customizations.",
+        "make compose-config validates the configuration cleanly."
+      ],
+      "reviewer": "/root",
+      "blocker": null
+    },
+    {
+      "id": "OPS-29",
+      "parent_id": "MILESTONE-OPERATIONS",
+      "title": "Implement zero-friction startup automation and background data seeding",
+      "phase": "operations",
+      "status": "done",
+      "owner_role": "operations",
+      "owner_agent": "/root/operations",
+      "depends_on": [
+        "OPS-28"
+      ],
+      "owned_paths": [
+        ".devcontainer/post-start.sh",
+        "docs/tasks/details/OPS-29.md"
+      ],
+      "specification": "docs/tasks/details/OPS-29.md",
+      "acceptance_criteria": [
+        ".devcontainer/post-start.sh ensures infra/local/.env exists with non-secret local development defaults.",
+        "post-start.sh polls PostgreSQL (postgres-db:5432) and Keycloak (idp-keycloak:8080) TCP/HTTP readiness probes with bounded retries.",
+        "post-start.sh conditionally runs uv run python3 tools/ops/seed_dev_data.py only when account profiles table is empty.",
+        "Welcome dashboard displays clickable local endpoints, pre-minted bearer tokens, and test execution hints.",
+        "postStartCommand is wired into .devcontainer/devcontainer.json."
+      ],
+      "validation_commands": [
+        "bash -n .devcontainer/post-start.sh",
+        "git diff --check"
+      ],
+      "evidence": [
+        ".devcontainer/post-start.sh created and verified with bash -n.",
+        "Bounded readiness waiting implemented for PostgreSQL TCP (pg_isready) and Keycloak HTTP (/health/ready).",
+        "Automated conditional data seeding calls tools/ops/seed_dev_data.py over direct TCP.",
+        "Welcome dashboard prints endpoints, personas, and test execution hints.",
+        "Wired into .devcontainer/devcontainer.json via postStartCommand."
+      ],
+      "reviewer": "/root",
+      "blocker": null
+    },
+    {
+      "id": "OPS-30",
+      "parent_id": "MILESTONE-OPERATIONS",
+      "title": "Validate devcontainer workflows across IDEs and document clone-and-run experience",
+      "phase": "operations",
+      "status": "done",
+      "owner_role": "operations",
+      "owner_agent": "/root/operations",
+      "depends_on": [
+        "OPS-29"
+      ],
+      "owned_paths": [
+        "docs/operations/devcontainer.md",
+        "docs/operations/quickstart.md",
+        "README.md",
+        "docs/tasks/details/OPS-30.md"
+      ],
+      "specification": "docs/tasks/details/OPS-30.md",
+      "acceptance_criteria": [
+        "docs/operations/devcontainer.md comprehensively documents VS Code, Cursor, and JetBrains Gateway workflows.",
+        "docs/operations/quickstart.md and README.md include the 1-click Devcontainer clone-and-run path alongside native workflows.",
+        "Full test suite executes inside the Devcontainer and passes without error.",
+        "Verification evidence recorded in docs/tasks/progress.md."
+      ],
+      "validation_commands": [
+        "make contracts",
+        "make python-typecheck",
+        "make compose-config",
+        "git diff --check"
+      ],
+      "evidence": [
+        "docs/operations/devcontainer.md written with complete Mermaid topology diagram, deterministic port reference, preloaded personas, IDE setup, and caching details.",
+        "docs/operations/quickstart.md updated with Fast Track 1-click Devcontainer onboarding.",
+        "README.md updated with Fast Track: 1-Click Devcontainer (No Host Toolchain Setup).",
+        "make contracts, make python-typecheck, and make compose-config pass with zero warnings."
+      ],
+      "reviewer": "/root",
+      "blocker": null
+    },
+    {
+      "id": "OPS-31",
+      "parent_id": "MILESTONE-OPERATIONS",
+      "title": "Centralize runtime and toolchain versions and unify Docker anti-drift build patterns",
+      "phase": "operations",
+      "status": "done",
+      "owner_role": "operations",
+      "owner_agent": "/root/operations",
+      "depends_on": [
+        "OPS-27",
+        "OPS-28",
+        "OPS-29",
+        "OPS-30"
+      ],
+      "owned_paths": [
+        "infra/versions.env.example",
+        "infra/local/.env.example",
+        "infra/docker/Dockerfile.jvm",
+        "infra/docker/Dockerfile.fast",
+        "infra/docker/Dockerfile.dev",
+        "infra/docs/Dockerfile",
+        "tests/fixtures/invalid_subject_oidc/Dockerfile",
+        ".devcontainer/Dockerfile",
+        ".devcontainer/docker-compose.devcontainer.yml",
+        "tools/ops/validate_sbom_baseline.py",
+        "docs/tasks/details/OPS-31.md",
+        "docs/implementation/technology-decisions.md"
+      ],
+      "specification": "docs/tasks/details/OPS-31.md",
+      "acceptance_criteria": [
+        "All runtime, container, and toolchain versions declared in infra/versions.env.example.",
+        "All repository Dockerfiles parameterized with ARG base images.",
+        ".devcontainer/docker-compose.devcontainer.yml passes version build args.",
+        "tools/ops/validate_sbom_baseline.py verifies zero drift across configuration files and Dockerfiles.",
+        "make sbom-validate, make python-typecheck, make compose-config, and make contracts pass cleanly."
+      ],
+      "validation_commands": [
+        "make contracts",
+        "make python-typecheck",
+        "make compose-config",
+        "make sbom-validate",
+        "git diff --check"
+      ],
+      "evidence": [
+        "infra/versions.env.example and infra/local/.env.example synchronized with unified versions.",
+        "Dockerfile.jvm, Dockerfile.fast, Dockerfile.dev, infra/docs/Dockerfile, tests/fixtures/invalid_subject_oidc/Dockerfile, and .devcontainer/Dockerfile parameterized with ARG base images.",
+        ".devcontainer/docker-compose.devcontainer.yml forwards build args.",
+        "tools/ops/validate_sbom_baseline.py statically verifies zero drift and Dockerfile ARG parameterization.",
+        "make sbom-validate, make python-typecheck, make compose-config, and make contracts pass with 0 errors."
+      ],
+      "reviewer": "/root",
+      "blocker": null
+    },
+    {
+      "id": "DOC-27",
+      "parent_id": "MILESTONE-DOCUMENTATION",
+      "title": "Establish OSS community health and reporting policies",
+      "phase": "documentation",
+      "status": "done",
+      "owner_role": "coordinator",
+      "owner_agent": "/root",
+      "depends_on": [
+        "DOC-08",
+        "DOC-24"
+      ],
+      "owned_paths": [
+        "README.md",
+        "CONTRIBUTING.md",
+        "LICENSE",
+        "SECURITY.md",
+        "CODE_OF_CONDUCT.md",
+        "ACCESSIBILITY.md",
+        ".github/ISSUE_TEMPLATE/",
+        ".github/pull_request_template.md",
+        "docs/README.md",
+        "docs/tasks/details/DOC-27.md",
+        "docs/tasks/registry.yaml",
+        "docs/tasks/board.md",
+        "docs/tasks/progress.md"
+      ],
+      "specification": "docs/tasks/details/DOC-27.md",
+      "acceptance_criteria": [
+        "GitHub-recognized conduct, MIT license, security, accessibility, issue-form, chooser, and pull-request template files exist in supported locations.",
+        "security@subhrodip.com is the only documented destination for security questions and vulnerability reports, and suspected vulnerabilities are excluded from public issues.",
+        "Policies and templates are repository-specific, cross-linked, candid about current support and accessibility limits, and collect actionable reports without unsupported promises.",
+        "Repository documentation, registry, YAML, links, and whitespace validation pass with exact evidence recorded."
+      ],
+      "validation_commands": [
+        "uv run --frozen --no-build python tools/contracts/validate.py",
+        "uv run --frozen --no-build yamllint -d '{extends: relaxed, rules: {truthy: disable, line-length: disable}}' .github/ISSUE_TEMPLATE",
+        "git diff --check"
+      ],
+      "evidence": [
+        "Committed the community-health implementation as b3b65094.",
+        "Added GitHub-recognized root community files, three structured issue forms, issue chooser routing, and a repository-specific pull-request template.",
+        "Repository-wide contributor-document search confirms security@subhrodip.com is the only security question and vulnerability reporting destination; fixture addresses remain unrelated test data.",
+        "Contract/task validation reports 220 valid tasks; YAML lint and explicit issue-form structure parsing pass for all four ISSUE_TEMPLATE YAML files.",
+        "Local links across the eight touched Markdown entry points and git diff --check pass."
+      ],
+      "reviewer": "/root",
+      "blocker": null
+    },
     {
       "id": "OPS-32",
       "parent_id": "MILESTONE-QUALITY",
@@ -7533,7 +7853,13 @@
       "status": "in_progress",
       "owner_role": "coordinator",
       "owner_agent": "/root",
-      "depends_on": ["OPS-04", "OPS-05", "OPS-15", "OPS-24", "QA-10"],
+      "depends_on": [
+        "OPS-04",
+        "OPS-05",
+        "OPS-15",
+        "OPS-24",
+        "QA-10"
+      ],
       "owned_paths": [
         ".github/workflows/_reusable-ci.yml",
         ".github/workflows/ci-pr.yml",
@@ -7571,6 +7897,1257 @@
       ],
       "reviewer": "/root",
       "blocker": null
+    },
+    {
+      "id": "ERRC-02",
+      "parent_id": "ERRC-01",
+      "title": "Freeze audit and baseline behavior",
+      "phase": "documentation",
+      "status": "done",
+      "owner_role": "quality",
+      "owner_agent": "/root",
+      "depends_on": [
+        "ERRC-01"
+      ],
+      "owned_paths": [
+        "docs/tasks/details/ERRC-02.md",
+        "docs/architecture/errors/baseline-audit-inventory.md",
+        "tests/fixtures/errors/baseline/"
+      ],
+      "specification": "docs/tasks/details/ERRC-02.md",
+      "acceptance_criteria": [
+        "docs/architecture/errors/baseline-audit-inventory.md contains an exhaustive list of all 128 production ApplicationException call sites with file paths, line numbers, current codes, and planned migration targets.",
+        "Exact golden-master fixtures for all current error response shapes are checked into tests/fixtures/errors/baseline/.",
+        "All security filter and messaging unhandled exception pathways are mapped and classified.",
+        "No production Kotlin source code, public schemas, or build configurations are modified.",
+        "All verification commands execute cleanly with zero errors."
+      ],
+      "validation_commands": [
+        "uv run python tools/contracts/validate.py",
+        "uv run python tools/errors/validate_catalog.py",
+        "git diff --check"
+      ],
+      "evidence": [
+        "docs/architecture/errors/baseline-audit-inventory.md created with exhaustive cataloging of 131 production ApplicationException call sites, 184 throw expressions, 198 require statements, 57 catch blocks, and 10 @ExceptionHandler methods.",
+        "11 golden-master response fixtures checked into tests/fixtures/errors/baseline/ (err_01 through err_11, plus response_headers_baseline.json).",
+        "Security filter entry points and messaging consumer error handling (including 4 broad catch (Throwable) sites) mapped and classified.",
+        "Zero production Kotlin source code, public schemas, or build configurations modified.",
+        "uv run python tools/contracts/validate.py, uv run python tools/errors/validate_catalog.py, and git diff --check passed."
+      ],
+      "reviewer": "/root",
+      "blocker": null
+    },
+    {
+      "id": "ERRC-03",
+      "parent_id": "ERRC-01",
+      "title": "Freeze registries and catalog schema",
+      "phase": "documentation",
+      "status": "done",
+      "owner_role": "architecture",
+      "owner_agent": "/root",
+      "depends_on": [
+        "ERRC-02"
+      ],
+      "owned_paths": [
+        "docs/tasks/details/ERRC-03.md",
+        "contracts/errors/domains.yaml",
+        "contracts/errors/error-catalog.schema.json",
+        "contracts/errors/lifecycle-history.schema.json",
+        "docs/architecture/error-code-standard.md",
+        "docs/architecture/error-domain-registry.md"
+      ],
+      "specification": "docs/tasks/details/ERRC-03.md",
+      "acceptance_criteria": [
+        "contracts/errors/error-catalog.schema.json is created, fully typed, and validates both existing legacy mappings and new six-digit catalog records.",
+        "contracts/errors/domains.yaml is frozen with exact domain, module, layer, and category mappings.",
+        "Schema enforcement strictly validates that no sequence code is 00 and all digits are between 1 and 9.",
+        "Python validation script parses and validates the schema against sample mock catalogs.",
+        "All verification commands pass with zero errors."
+      ],
+      "validation_commands": [
+        "uv run python tools/contracts/validate.py",
+        "git diff --check"
+      ],
+      "evidence": [
+        "contracts/errors/domains.yaml frozen with domains 1, 2, 3, 4, 9 and reserved domains 5-8 locked.",
+        "contracts/errors/error-catalog.schema.json and lifecycle-history.schema.json authored using Draft 2020-12.",
+        "tools/errors/validate_catalog.py and test_validate_catalog.py pass with 6 unit tests confirming zero-reflection sequence != 00, digits 1-9, and conditional properties.",
+        "uv run python tools/contracts/validate.py, uv run python tools/errors/validate_catalog.py, uv run mypy tests tools, and git diff --check passed."
+      ],
+      "reviewer": "/root",
+      "blocker": null
+    },
+    {
+      "id": "ERRC-04",
+      "parent_id": "ERRC-01",
+      "title": "Allocate and review the complete error catalog",
+      "phase": "documentation",
+      "status": "done",
+      "owner_role": "coordinator",
+      "owner_agent": "/root",
+      "depends_on": [
+        "ERRC-03"
+      ],
+      "owned_paths": [
+        "docs/tasks/details/ERRC-04.md",
+        "contracts/errors/error-catalog.yaml",
+        "docs/architecture/errors/README.md",
+        "docs/architecture/errors/accounts.md",
+        "docs/architecture/errors/expense-core.md",
+        "docs/architecture/errors/notifications.md",
+        "docs/architecture/errors/bff.md",
+        "docs/architecture/errors/platform-libraries.md"
+      ],
+      "specification": "docs/tasks/details/ERRC-04.md",
+      "acceptance_criteria": [
+        "contracts/errors/error-catalog.yaml is created and passes validation against contracts/errors/error-catalog.schema.json.",
+        "Every audited call site from ERRC-02 maps directly to an allocated catalog entry.",
+        "Zero codes use sequence 00 or invalid digits. All codes match regex ^[1-9]{4}(0[1-9]|[1-9][0-9])$.",
+        "No two entries share the same numeric code or symbolic error name.",
+        "All security, anti-enumeration, and sensitive text disclosures are reviewed and verified clean of PII, internal paths, or SQL tokens.",
+        "Validation commands run cleanly."
+      ],
+      "validation_commands": [
+        "uv run python tools/contracts/validate.py",
+        "git diff --check"
+      ],
+      "evidence": [
+        "contracts/errors/error-catalog.yaml allocated with 99 unique six-digit error codes across 5 domains and validated against error-catalog.schema.json.",
+        "100% of audited call sites from ERRC-02 mapped to allocated catalog entries.",
+        "contracts/errors/lifecycle-history.yaml created and formally records ERR-12 retirement without replacement.",
+        "Context guides under docs/architecture/errors/ synchronized to authoritative parity.",
+        "uv run python tools/contracts/validate.py, uv run python tools/errors/validate_catalog.py, uv run python -m unittest tools/errors/test_validate_catalog.py, uv run mypy tests tools, and git diff --check passed."
+      ],
+      "reviewer": "/root",
+      "blocker": null
+    },
+    {
+      "id": "ERRC-05",
+      "parent_id": "ERRC-01",
+      "title": "Define the additive Problem Details contract",
+      "phase": "contracts",
+      "status": "done",
+      "owner_role": "contracts",
+      "owner_agent": "/root",
+      "depends_on": [
+        "ERRC-04"
+      ],
+      "owned_paths": [
+        "docs/tasks/details/ERRC-05.md",
+        "contracts/errors/problem.schema.json",
+        "contracts/errors/examples/",
+        "docs/architecture/error-code-standard.md"
+      ],
+      "specification": "docs/tasks/details/ERRC-05.md",
+      "acceptance_criteria": [
+        "contracts/errors/problem.schema.json validates both legacy (pre-migration) and additive responses cleanly.",
+        "Property numericCode adheres to regex ^[1-9]{4}(0[1-9]|[1-9][0-9])$.",
+        "Property errorName conforms to ^[A-Z0-9_]{3,64}$.",
+        "Schema prohibits additionalProperties beyond declared fields to prevent information leakage.",
+        "All JSON examples in contracts/errors/examples/ validate against the updated schema.",
+        "Verification commands run cleanly."
+      ],
+      "validation_commands": [
+        "uv run python tools/contracts/validate.py",
+        "git diff --check"
+      ],
+      "evidence": [
+        "Updated contracts/errors/problem.schema.json with optional numericCode/errorName, exact DMLCEE and SCREAMING_SNAKE_CASE constraints, bounded fields and violation arrays, UUID request IDs, and closed objects.",
+        "Added four canonical examples under contracts/errors/examples/ covering legacy, additive, validation, and security/anti-enumeration responses.",
+        "Schema validation with Draft202012Validator and FormatChecker passed for all four examples in an isolated uv --with jsonschema environment.",
+        "uv run python tools/contracts/validate.py passed (252 tasks, 15 JSON files); uv run python tools/errors/validate_catalog.py passed (99 unique codes); error catalog unit tests passed (7 tests); git diff --check passed."
+      ],
+      "reviewer": "/root",
+      "blocker": null
+    },
+    {
+      "id": "ERRC-06",
+      "parent_id": "ERRC-01",
+      "title": "Reconcile all REST OpenAPI contracts",
+      "phase": "contracts",
+      "status": "done",
+      "owner_role": "contracts",
+      "owner_agent": "/root",
+      "depends_on": [
+        "ERRC-05"
+      ],
+      "owned_paths": [
+        "docs/tasks/details/ERRC-06.md",
+        "contracts/rest/accounts.openapi.json",
+        "contracts/rest/expense-core.openapi.json",
+        "contracts/rest/notifications.openapi.json",
+        "docs/api/implementation-status.md"
+      ],
+      "specification": "docs/tasks/details/ERRC-06.md",
+      "acceptance_criteria": [
+        "All three OpenAPI 3.1 JSON contracts parse cleanly without validation warnings.",
+        "components/schemas/ProblemDetails is identical across all three services and matches contracts/errors/problem.schema.json.",
+        "Every operation in Accounts, Expense Core, and Notifications has explicit definitions for its predictable error statuses.",
+        "No OpenAPI path drifts from ApiEndpoints.",
+        "Automated contract validation scripts pass without errors."
+      ],
+      "validation_commands": [
+        "uv run python tools/contracts/validate.py",
+        "git diff --check"
+      ],
+      "evidence": [
+        "Reconciled accounts, expense-core, and notifications OpenAPI contracts with identical ProblemDetails components derived from contracts/errors/problem.schema.json.",
+        "Added shared 400/401/403/404/405/409/429/500 response components; 401 declares WWW-Authenticate, 405 declares Allow, and 429 declares Retry-After.",
+        "Added all eight predictable status declarations to all 45 REST operations and documented the complete endpoint matrix in docs/api/implementation-status.md.",
+        "ProblemDetails parity and response-matrix audits passed; uv run python tools/contracts/validate.py passed; git diff --check passed."
+      ],
+      "reviewer": "/root",
+      "blocker": null
+    },
+    {
+      "id": "ERRC-07",
+      "parent_id": "ERRC-01",
+      "title": "Define GraphQL and WebSocket error contracts",
+      "phase": "contracts",
+      "status": "done",
+      "owner_role": "contracts",
+      "owner_agent": "/root",
+      "depends_on": [
+        "ERRC-04"
+      ],
+      "owned_paths": [
+        "docs/tasks/details/ERRC-07.md",
+        "contracts/graphql/errors.graphqls",
+        "contracts/graphql/README.md",
+        "docs/architecture/errors/bff.md",
+        "docs/architecture/error-flow.md"
+      ],
+      "specification": "docs/tasks/details/ERRC-07.md",
+      "acceptance_criteria": [
+        "contracts/graphql/errors.graphqls is created and integrated into the schema validation suite.",
+        "All 9 GraphQL root operations validate successfully with the updated schema files.",
+        "Exact mapping rules between HTTP status, Problem Details, and GraphQL extensions are codified in docs/architecture/errors/bff.md.",
+        "WebSocket close codes and error frame specifications are fully documented and review-approved.",
+        "Verification commands execute cleanly."
+      ],
+      "validation_commands": [
+        "uv run python tools/contracts/validate.py",
+        "git diff --check"
+      ],
+      "evidence": [
+        "Added contracts/graphql/errors.graphqls and contracts/graphql/README.md defining additive GraphQL extensions, validation violations, upstream identity preservation, and WebSocket close codes 4401, 4403, 4408, and 4429.",
+        "Synchronized docs/architecture/errors/bff.md and docs/architecture/error-flow.md with exact upstream-to-GraphQL and WebSocket mapping rules.",
+        "uv run --with graphql-core parsed the complete five-file SDL set; uv run python tools/contracts/validate.py passed (252 tasks, 15 JSON files, 5 GraphQL files); git diff --check passed."
+      ],
+      "reviewer": "/root",
+      "blocker": null
+    },
+    {
+      "id": "ERRC-08",
+      "parent_id": "ERRC-01",
+      "title": "Define messaging and background error records",
+      "phase": "contracts",
+      "status": "done",
+      "owner_role": "contracts",
+      "owner_agent": "/root",
+      "depends_on": [
+        "ERRC-04"
+      ],
+      "owned_paths": [
+        "docs/tasks/details/ERRC-08.md",
+        "contracts/events/error-envelope.schema.json",
+        "contracts/events/dead-letter.schema.json",
+        "docs/architecture/errors/messaging-background.md"
+      ],
+      "specification": "docs/tasks/details/ERRC-08.md",
+      "acceptance_criteria": [
+        "contracts/events/dead-letter.schema.json is created, typed, and passes JSON schema validation.",
+        "Async error tracking explicitly prohibits mutating original business domain event schemas.",
+        "RabbitMQ retry, dead-letter, and poison-message thresholds are codified with bounded retry limits (max 3 retries with exponential backoff).",
+        "Schedulers and background workers have defined error outcomes without broad unhandled exception bubbling.",
+        "All verification commands execute cleanly."
+      ],
+      "validation_commands": [
+        "uv run python tools/contracts/validate.py",
+        "git diff --check"
+      ],
+      "evidence": [
+        "Added contracts/events/error-envelope.schema.json and contracts/events/dead-letter.schema.json with bounded identities, attempts, diagnostics, immutable payload snapshots, and closed objects.",
+        "Added docs/architecture/errors/messaging-background.md defining immutable business events, poison-message isolation, maximum three retries with exponential backoff, scheduler outcomes, and fatal propagation.",
+        "Draft 2020-12 schema validation passed for both new schemas and representative valid records; contract validation and git diff checks passed."
+      ],
+      "reviewer": "/root",
+      "blocker": null
+    },
+    {
+      "id": "ERRC-09",
+      "parent_id": "ERRC-01",
+      "title": "Upgrade contract validation and breaking-change gates",
+      "phase": "quality",
+      "status": "done",
+      "owner_role": "quality",
+      "owner_agent": "/root",
+      "depends_on": [
+        "ERRC-03",
+        "ERRC-05",
+        "ERRC-06",
+        "ERRC-07",
+        "ERRC-08"
+      ],
+      "owned_paths": [
+        "docs/tasks/details/ERRC-09.md",
+        "tools/errors/validate_six_digit_catalog.py",
+        "tools/contracts/validate_openapi_parity.py",
+        "tools/contracts/detect_breaking_error_changes.py",
+        "tests/tools/test_error_validators.py",
+        "Makefile"
+      ],
+      "specification": "docs/tasks/details/ERRC-09.md",
+      "acceptance_criteria": [
+        "All Python tooling passes uv run --frozen --no-build mypy in strict mode with zero typing errors.",
+        "Test suite tests/tools/test_error_validators.py executes and passes all test cases.",
+        "Catalog validator correctly rejects test fixtures with invalid regex, duplicate codes, sequence 00, or mismatched domains.",
+        "Breaking change detector reliably prevents removal or mutation of assigned codes.",
+        "make contracts executes the updated validation pipeline in under 5 seconds."
+      ],
+      "validation_commands": [
+        "uv run --frozen --no-build mypy tools/errors tools/contracts tests/tools",
+        "uv run --frozen --no-build python -m unittest tests/tools/test_error_validators.py",
+        "uv run python tools/contracts/validate.py",
+        "git diff --check"
+      ],
+      "evidence": [
+        "Added typed catalog, OpenAPI parity, and immutable-history validators under tools/errors and tools/contracts.",
+        "Added five positive/negative tests under tests/tools/test_error_validators.py and wired validators into the contracts Make target; python-typecheck already covers the new tools and tests.",
+        "uv run --frozen --no-build mypy tools/errors tools/contracts tests/tools passed with 0 issues; unit tests passed (5 tests); catalog, OpenAPI parity, breaking-change, base contract, and git diff checks passed. mingw32-make contracts passed in approximately 3.4 seconds; plain make is unavailable in the Windows shell."
+      ],
+      "reviewer": "/root",
+      "blocker": null
+    },
+    {
+      "id": "ERRC-10",
+      "parent_id": "ERRC-01",
+      "title": "Implement core value and metadata types",
+      "phase": "platform",
+      "status": "done",
+      "owner_role": "platform",
+      "owner_agent": "/root",
+      "depends_on": [
+        "ERRC-09"
+      ],
+      "owned_paths": [
+        "docs/tasks/details/ERRC-10.md",
+        "libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/code/",
+        "libs/errors/src/test/kotlin/com/subhrodip/squarewise/errors/code/"
+      ],
+      "specification": "docs/tasks/details/ERRC-10.md",
+      "acceptance_criteria": [
+        "Every class, interface, and enum resides in its own single file under com.subhrodip.squarewise.errors.code.",
+        "ErrorCode is an inlined value class with zero allocation overhead in compiled bytecode.",
+        "Decomposing 213201 correctly yields domain=2, module=1, layer=3, category=2, sequence=1, displayCode=21-3-2-01.",
+        "All types have comprehensive KDoc documentation explaining intent, invariants, and edge cases.",
+        "Unit tests achieve 100% branch and line coverage for the new types.",
+        "Validation commands execute cleanly."
+      ],
+      "validation_commands": [
+        "./gradlew.bat :libs:errors:test :libs:errors:jacocoTestReport --rerun-tasks --no-daemon",
+        "uv run python tools/contracts/validate.py",
+        "git diff --check"
+      ],
+      "evidence": [
+        "Implemented ErrorCode and dedicated metadata/definition types under libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/code/.",
+        "Focused tests cover canonical decomposition, malformed namespace/sequence boundaries, display formatting, and metadata mappings.",
+        "JaCoCo package coverage is 100% line (58/58) and 100% branch (28/28) for com/subhrodip/squarewise/errors/code.",
+        "./gradlew.bat :libs:errors:test :libs:errors:jacocoTestReport --rerun-tasks --no-daemon --console=plain passed on 2026-10-07.",
+        "uv run python tools/contracts/validate.py and git diff --check passed on 2026-10-07."
+      ],
+      "reviewer": "/root",
+      "blocker": null
+    },
+    {
+      "id": "ERRC-11",
+      "parent_id": "ERRC-01",
+      "title": "Generate or compile static catalogs",
+      "phase": "platform",
+      "status": "done",
+      "owner_role": "platform",
+      "owner_agent": "/root",
+      "depends_on": [
+        "ERRC-10"
+      ],
+      "owned_paths": [
+        "docs/tasks/details/ERRC-11.md",
+        "tools/codegen/generate_error_catalogs.py",
+        "libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/catalog/",
+        "libs/errors/src/test/kotlin/com/subhrodip/squarewise/errors/catalog/"
+      ],
+      "specification": "docs/tasks/details/ERRC-11.md",
+      "acceptance_criteria": [
+        "All domain catalog classes reside in their own dedicated files with zero reflection or runtime classpath scanning.",
+        "Static catalog objects load in < 1ms on JVM startup without parsing YAML, reading files, or invoking reflection.",
+        "CatalogParityTest.kt passes with 100% agreement between YAML catalog and compiled Kotlin constants.",
+        "Generated code adheres strictly to repository Kotlin formatting and Spotless style rules.",
+        "All verification commands execute cleanly."
+      ],
+      "validation_commands": [
+        "./gradlew.bat :libs:errors:test :libs:errors:jacocoTestReport --rerun-tasks --no-daemon",
+        "uv run python tools/contracts/validate.py",
+        "git diff --check"
+      ],
+      "evidence": [
+        "Added deterministic tools/codegen/generate_error_catalogs.py and generated five owner-specific Kotlin catalogs plus the immutable aggregate view.",
+        "Generated CatalogParityTest verifies all 99 authoritative records for numeric code, error name, title, and HTTP status.",
+        "Generator mypy validation, libs:errors test/JaCoCo, contract validation, and git diff --check passed on 2026-10-07."
+      ],
+      "reviewer": "/root",
+      "blocker": null
+    },
+    {
+      "id": "ERRC-12",
+      "parent_id": "ERRC-01",
+      "title": "Implement governed exception and typed-diagnostics contracts",
+      "phase": "platform",
+      "status": "done",
+      "owner_role": "platform",
+      "owner_agent": "/root",
+      "depends_on": [
+        "ERRC-10",
+        "ERRC-11"
+      ],
+      "owned_paths": [
+        "docs/tasks/details/ERRC-12.md",
+        "libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/exceptions/",
+        "libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/diagnostics/",
+        "libs/errors/src/test/kotlin/com/subhrodip/squarewise/errors/exceptions/"
+      ],
+      "specification": "docs/tasks/details/ERRC-12.md",
+      "acceptance_criteria": [
+        "Every exception and diagnostic class resides in its own isolated file.",
+        "SquarewiseException cannot be instantiated with null or arbitrary uncataloged error definitions.",
+        "Fatal JVM errors, thread interrupts, and coroutine cancellations are never classified as recoverable application exceptions.",
+        "Diagnostics enforce bounded string lengths and reject sensitive field names (password, token, secret).",
+        "Unit tests pass with 100% coverage on exception hierarchy and classifiers.",
+        "Validation commands execute cleanly."
+      ],
+      "validation_commands": [
+        "./gradlew.bat :libs:errors:test :libs:errors:jacocoTestReport --rerun-tasks --no-daemon",
+        "uv run python tools/contracts/validate.py",
+        "git diff --check"
+      ],
+      "evidence": [
+        "Added catalog-governed SquarewiseException, bounded diagnostics, resource identifiers, three leaf exception types, and fatal throwable classifier.",
+        "JaCoCo coverage is 100% for exceptions (29/29 lines, 6/6 branches) and diagnostics (17/17 lines, 26/26 branches).",
+        "Gradle errors tests/JaCoCo, contract validation, and git diff --check passed on 2026-10-07."
+      ],
+      "reviewer": "/root",
+      "blocker": null
+    },
+    {
+      "id": "ERRC-13",
+      "parent_id": "ERRC-01",
+      "title": "Add static policy and reflection/generic-throw gates",
+      "phase": "quality",
+      "status": "done",
+      "owner_role": "quality",
+      "owner_agent": "/root",
+      "depends_on": [
+        "ERRC-12"
+      ],
+      "owned_paths": [
+        "docs/tasks/details/ERRC-13.md",
+        "tools/qa/check_error_hygiene.py",
+        "tools/qa/error_hygiene_allowlist.yaml",
+        "tests/tools/test_check_error_hygiene.py",
+        "Makefile"
+      ],
+      "specification": "docs/tasks/details/ERRC-13.md",
+      "acceptance_criteria": [
+        "tools/qa/check_error_hygiene.py passes mypy --strict with zero typing errors.",
+        "Unit tests verify scanner detects prohibited patterns and honors valid allowlist entries.",
+        "Running make error-hygiene on current repository state passes cleanly using the baseline allowlist.",
+        "Adding an un-allowlisted throw RuntimeException(test) immediately fails the scan with non-zero exit code.",
+        "All verification commands execute cleanly."
+      ],
+      "validation_commands": [
+        "uv run --frozen --no-build mypy tools/qa tests/tools/test_check_error_hygiene.py",
+        "uv run --frozen --no-build python -m unittest tests/tools/test_check_error_hygiene.py",
+        "uv run python tools/qa/check_error_hygiene.py",
+        "git diff --check"
+      ],
+      "evidence": [
+        "Added typed error hygiene scanner, explicit 23-entry allowlist, unit tests, and Makefile error-hygiene/check integration.",
+        "Strict mypy, unittest, repository scan, mingw32-make error-hygiene, and git diff --check passed on 2026-10-07."
+      ],
+      "reviewer": "/root",
+      "blocker": null
+    },
+    {
+      "id": "ERRC-14",
+      "parent_id": "ERRC-01",
+      "title": "Implement logging, metrics, and trace adapter",
+      "phase": "observability",
+      "status": "done",
+      "owner_role": "observability",
+      "owner_agent": "/root",
+      "depends_on": [
+        "ERRC-11",
+        "ERRC-12"
+      ],
+      "owned_paths": [
+        "docs/tasks/details/ERRC-14.md",
+        "libs/observability/src/main/kotlin/com/subhrodip/squarewise/observability/errors/",
+        "libs/observability/src/test/kotlin/com/subhrodip/squarewise/observability/errors/",
+        "libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/observability/"
+      ],
+      "specification": "docs/tasks/details/ERRC-14.md",
+      "acceptance_criteria": [
+        "Every class and utility resides in its own dedicated file under com.subhrodip.squarewise.observability.errors.",
+        "Expected client errors (4xx) produce concise one-line log entries without stack traces.",
+        "Unexpected server errors (5xx) log full root-cause stack traces with correlation request ID.",
+        "Metric dimensions are provably finite and bounded; no dynamic entity IDs or URLs enter meter tags.",
+        "MDC context is cleanly managed and purged after request lifecycle completes.",
+        "Validation commands execute cleanly."
+      ],
+      "validation_commands": [
+        "./gradlew.bat :libs:observability:test :libs:observability:jacocoTestReport --rerun-tasks --no-daemon",
+        "./gradlew.bat :libs:errors:test :libs:errors:jacocoTestReport --rerun-tasks --no-daemon",
+        "uv run python tools/contracts/validate.py",
+        "git diff --check"
+      ],
+      "evidence": [
+        "Added ErrorLogger, bounded ErrorMetricsRecorder, provider-neutral ErrorTraceSpan port, and ErrorTraceEnricher with focused tests.",
+        "Paired observability/errors Gradle tests and JaCoCo reports, contract validation, and git diff --check passed on 2026-10-07.",
+        "Concrete OpenTelemetry SDK bridge remains a later runtime integration; shared libraries remain provider-neutral."
+      ],
+      "reviewer": "/root",
+      "blocker": null
+    },
+    {
+      "id": "ERRC-15",
+      "parent_id": "ERRC-01",
+      "title": "Implement servlet Problem mapper and containment",
+      "phase": "platform",
+      "status": "done",
+      "owner_role": "platform",
+      "owner_agent": "/root",
+      "depends_on": [
+        "ERRC-05",
+        "ERRC-12",
+        "ERRC-14"
+      ],
+      "owned_paths": [
+        "docs/tasks/details/ERRC-15.md",
+        "libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/web/",
+        "libs/errors/src/test/kotlin/com/subhrodip/squarewise/errors/web/"
+      ],
+      "specification": "docs/tasks/details/ERRC-15.md",
+      "acceptance_criteria": [
+        "Every DTO, filter, and advice class resides in its own single file under com.subhrodip.squarewise.errors.web.",
+        "Public problem responses strictly conform to contracts/errors/problem.schema.json.",
+        "Under no circumstance does Throwable.message or root-cause text leak into response detail.",
+        "Additive fields (numericCode, errorName) are emitted alongside the legacy code.",
+        "Adversarial tests confirm zero PII or SQL syntax leakage under simulated database failures.",
+        "Validation commands execute cleanly."
+      ],
+      "validation_commands": [
+        "./gradlew.bat :libs:errors:test :libs:errors:jacocoTestReport --rerun-tasks --no-daemon",
+        "uv run python tools/contracts/validate.py",
+        "git diff --check"
+      ],
+      "evidence": [
+        "Added ProblemDetailsDto, ViolationDto, explicit GlobalErrorAdvice handlers, and StaticErrorPageFilter with static safe fallbacks.",
+        "Adversarial mapper tests cover additive identity fields, correlation, and cause/SQL/password containment.",
+        "libs:errors tests/JaCoCo, contract validation, and git diff --check passed on 2026-10-07; legacy GlobalErrorHandler remains for compatibility."
+      ],
+      "reviewer": "/root",
+      "blocker": null
+    },
+    {
+      "id": "ERRC-16",
+      "parent_id": "ERRC-01",
+      "title": "Implement servlet and reactive security boundaries",
+      "phase": "security",
+      "status": "done",
+      "owner_role": "security",
+      "owner_agent": "/root",
+      "depends_on": [
+        "ERRC-15"
+      ],
+      "owned_paths": [
+        "docs/tasks/details/ERRC-16.md",
+        "libs/security/src/main/kotlin/com/subhrodip/squarewise/security/errors/",
+        "libs/security/src/test/kotlin/com/subhrodip/squarewise/security/errors/"
+      ],
+      "specification": "docs/tasks/details/ERRC-16.md",
+      "acceptance_criteria": [
+        "Every handler and utility resides in its own isolated .kt file under com.subhrodip.squarewise.security.errors.",
+        "Unauthenticated requests trigger formatted JSON ProblemDetails with HTTP 401 and WWW-Authenticate header.",
+        "Access-denied events produce 403 or anti-enumeration 404 ProblemDetails; zero bodyless HTTP responses.",
+        "Both Servlet and Reactive stacks have 100% test coverage for authentication and access-denied paths.",
+        "All verification commands execute cleanly."
+      ],
+      "validation_commands": [
+        "./gradlew.bat :libs:security:test :libs:security:jacocoTestReport --rerun-tasks --no-daemon",
+        "uv run python tools/contracts/validate.py",
+        "git diff --check"
+      ],
+      "evidence": [
+        "Added servlet and reactive authentication/access-denied handlers, challenge builder, static security body renderer, and anti-enumeration behavior.",
+        "JaCoCo security error package coverage is 100% line (38/38) and branch (12/12).",
+        "libs:security tests/JaCoCo, contract validation, and git diff --check passed on 2026-10-07."
+      ],
+      "reviewer": "/root",
+      "blocker": null
+    },
+    {
+      "id": "ERRC-17",
+      "parent_id": "ERRC-01",
+      "title": "Implement GraphQL mapper and upstream problem client",
+      "phase": "platform",
+      "status": "done",
+      "owner_role": "platform",
+      "owner_agent": "/root",
+      "depends_on": [
+        "ERRC-07",
+        "ERRC-12",
+        "ERRC-14"
+      ],
+      "owned_paths": [
+        "docs/tasks/details/ERRC-17.md",
+        "app/bff/src/main/kotlin/com/subhrodip/squarewise/bff/errors/",
+        "app/bff/src/test/kotlin/com/subhrodip/squarewise/bff/errors/",
+        "libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/graphql/"
+      ],
+      "specification": "docs/tasks/details/ERRC-17.md",
+      "acceptance_criteria": [
+        "Every resolver, formatter, and exception resides in its own isolated .kt file.",
+        "Upstream REST errors are mirrored into GraphQL extensions with 100% field preservation.",
+        "Network timeouts to upstream services emit BFF_UPSTREAM_TIMEOUT (428701) rather than generic 500.",
+        "No English-language message string matching is used to classify GraphQL or subscription errors.",
+        "All integration tests pass with zero errors."
+      ],
+      "validation_commands": [
+        "./gradlew.bat :app:bff:test :app:bff:jacocoTestReport --rerun-tasks --no-daemon",
+        "uv run python tools/contracts/validate.py",
+        "git diff --check"
+      ],
+      "evidence": [
+        "Added typed upstream problem decoding, GraphQL extensions formatting, and governed BFF resolution.",
+        "Full BFF test and JaCoCo command passed 183 tests with 0 failures after explicit database-free reactive context wiring.",
+        "Contract validation and git diff check passed."
+      ],
+      "reviewer": "/root",
+      "blocker": null
+    },
+    {
+      "id": "ERRC-18",
+      "parent_id": "ERRC-01",
+      "title": "Implement messaging/background boundary toolkit",
+      "phase": "platform",
+      "status": "done",
+      "owner_role": "platform",
+      "owner_agent": "/root",
+      "depends_on": [
+        "ERRC-08",
+        "ERRC-12",
+        "ERRC-14"
+      ],
+      "owned_paths": [
+        "docs/tasks/details/ERRC-18.md",
+        "libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/async/",
+        "libs/errors/src/test/kotlin/com/subhrodip/squarewise/errors/async/"
+      ],
+      "specification": "docs/tasks/details/ERRC-18.md",
+      "acceptance_criteria": [
+        "Every template, strategy, and builder class resides in its own single file under com.subhrodip.squarewise.errors.async.",
+        "Fatal throwables are never swallowed, logged as handled, or acknowledged.",
+        "Poison messages are dead-lettered with structured failure diagnostics after exactly 1 attempt.",
+        "Transient failures retry with bounded exponential backoff up to 3 times before dead-lettering.",
+        "Unit and integration tests achieve 100% branch coverage across all execution paths.",
+        "Validation commands execute cleanly."
+      ],
+      "validation_commands": [
+        "./gradlew.bat :libs:errors:test :libs:errors:jacocoTestReport --rerun-tasks --no-daemon",
+        "uv run python tools/contracts/validate.py",
+        "git diff --check"
+      ],
+      "evidence": [
+        "Added the fatal-safe async execution template, bounded disposition strategy, typed metrics/disposition results, and structured dead-letter record builder under libs/errors.",
+        "AsyncExecutionTemplateTest covers success, transient requeue, poison dead-lettering, retry exhaustion, fatal and cancellation propagation, metadata validation, and malformed dead-letter inputs.",
+        "The async package reports 61/61 lines and 48/48 branches in JaCoCo; the declared Gradle gate, contract validator, and git diff --check passed on 2026-10-07."
+      ],
+      "reviewer": "/root",
+      "blocker": null
+    },
+    {
+      "id": "ERRC-19",
+      "parent_id": "ERRC-01",
+      "title": "Migrate Accounts definitions and failures",
+      "phase": "implementation",
+      "status": "done",
+      "owner_role": "accounts",
+      "owner_agent": "/root",
+      "depends_on": [
+        "ERRC-16",
+        "ERRC-18"
+      ],
+      "owned_paths": [
+        "docs/tasks/details/ERRC-19.md",
+        "app/accounts/src/main/kotlin/com/subhrodip/squarewise/accounts/",
+        "app/accounts/src/test/kotlin/com/subhrodip/squarewise/accounts/",
+        "tools/qa/error_hygiene_allowlist.yaml"
+      ],
+      "specification": "docs/tasks/details/ERRC-19.md",
+      "acceptance_criteria": [
+        "Zero references to legacy ErrorCode or generic ApplicationException remain in app/accounts/src/main/.",
+        "All 30 Accounts error throw sites use AccountsErrors constants.",
+        "Accounts test suite passes cleanly with 100% test success and zero regression.",
+        "make error-hygiene passes with zero Accounts entries on the allowlist.",
+        "All verification commands execute cleanly."
+      ],
+      "validation_commands": [
+        "./gradlew.bat :app:accounts:test :app:accounts:jacocoTestReport --rerun-tasks --no-daemon",
+        "uv run python tools/qa/check_error_hygiene.py",
+        "uv run python tools/contracts/validate.py",
+        "git diff --check"
+      ],
+      "evidence": [
+        "Migrated Accounts production failures to AccountsErrors-backed AccountsDomainException and preserved v1 ApiProblem compatibility through the shared governed mapper.",
+        "Added AccountsInputException for low-level IllegalArgumentException-compatible validation and removed all Accounts-owned hygiene allowlist entries.",
+        "The complete Accounts suite passed 267 tests; error hygiene, contract validation, and git diff --check passed on 2026-10-07."
+      ],
+      "reviewer": "/root",
+      "blocker": null
+    },
+    {
+      "id": "ERRC-20",
+      "parent_id": "ERRC-01",
+      "title": "Migrate Expense Core definitions and failures",
+      "phase": "implementation",
+      "status": "done",
+      "owner_role": "core",
+      "owner_agent": "/root",
+      "depends_on": [
+        "ERRC-15",
+        "ERRC-18"
+      ],
+      "owned_paths": [
+        "docs/tasks/details/ERRC-20.md",
+        "app/expense-core/src/main/kotlin/com/subhrodip/squarewise/expensecore/",
+        "app/expense-core/src/test/kotlin/com/subhrodip/squarewise/expensecore/",
+        "tools/qa/error_hygiene_allowlist.yaml"
+      ],
+      "specification": "docs/tasks/details/ERRC-20.md",
+      "acceptance_criteria": [
+        "Zero references to legacy ErrorCode or generic ApplicationException remain in app/expense-core/src/main/.",
+        "All 87 Expense Core error call sites use ExpenseErrors constants.",
+        "Financial ledger transactions, rounding checks, and outbox publications roll back correctly upon domain failure.",
+        "Complete Expense Core test suite passes with 100% test success and zero regression.",
+        "All verification commands execute cleanly."
+      ],
+      "validation_commands": [
+        "./gradlew.bat :app:expense-core:test :app:expense-core:jacocoTestReport --rerun-tasks --no-daemon",
+        "uv run python tools/qa/check_error_hygiene.py",
+        "uv run python tools/contracts/validate.py",
+        "git diff --check"
+      ],
+      "evidence": [
+        "Migrated all Expense Core production legacy exception/code references to ExpenseDomainException and static ExpenseErrors definitions across the bounded-context slices.",
+        "Preserved financial transaction ordering and existing ACID mutation boundaries; the shared mapper now emits governed catalog identity with v1-compatible symbolic codes.",
+        "Expense Core tests passed 296 tests with 4 intentional skips; JaCoCo, error hygiene, contract validation, and git diff --check passed on 2026-10-07."
+      ],
+      "reviewer": "/root",
+      "blocker": null
+    },
+    {
+      "id": "ERRC-21",
+      "parent_id": "ERRC-01",
+      "title": "Migrate Notifications definitions and failures",
+      "phase": "implementation",
+      "status": "done",
+      "owner_role": "notifications",
+      "owner_agent": "/root",
+      "depends_on": [
+        "ERRC-15",
+        "ERRC-18"
+      ],
+      "owned_paths": [
+        "docs/tasks/details/ERRC-21.md",
+        "app/notifications/src/main/kotlin/com/subhrodip/squarewise/notifications/",
+        "app/notifications/src/test/kotlin/com/subhrodip/squarewise/notifications/",
+        "tools/qa/error_hygiene_allowlist.yaml"
+      ],
+      "specification": "docs/tasks/details/ERRC-21.md",
+      "acceptance_criteria": [
+        "Zero references to legacy ErrorCode or generic ApplicationException remain in app/notifications/src/main/.",
+        "All 4 broad catch (Throwable) sites are replaced with fatal-safe async templates.",
+        "Transient SMTP failures retry up to 3 times before dead-lettering.",
+        "Notifications test suite passes cleanly with 100% test success.",
+        "All verification commands execute cleanly."
+      ],
+      "validation_commands": [
+        "./gradlew.bat :app:notifications:test :app:notifications:jacocoTestReport --rerun-tasks --no-daemon",
+        "uv run python tools/qa/check_error_hygiene.py",
+        "uv run python tools/contracts/validate.py",
+        "git diff --check"
+      ],
+      "evidence": [
+        "Notifications tests and JaCoCo report passed: 144 tests, 0 failures, 21 Gradle tasks.",
+        "Error hygiene passed with 5 unrelated allowlisted violations and no Notifications entries.",
+        "Contract validation and git diff check passed."
+      ],
+      "reviewer": "/root",
+      "blocker": null
+    },
+    {
+      "id": "ERRC-22",
+      "parent_id": "ERRC-01",
+      "title": "Migrate BFF definitions and failures",
+      "phase": "implementation",
+      "status": "done",
+      "owner_role": "bff",
+      "owner_agent": "/root",
+      "depends_on": [
+        "ERRC-17"
+      ],
+      "owned_paths": [
+        "docs/tasks/details/ERRC-22.md",
+        "app/bff/src/main/kotlin/com/subhrodip/squarewise/bff/",
+        "app/bff/src/test/kotlin/com/subhrodip/squarewise/bff/",
+        "tools/qa/error_hygiene_allowlist.yaml"
+      ],
+      "specification": "docs/tasks/details/ERRC-22.md",
+      "acceptance_criteria": [
+        "Zero references to legacy ErrorCode or generic ApplicationException remain in app/bff/src/main/.",
+        "Upstream REST errors retain their original code, numericCode, errorName, requestId, and source in GraphQL extensions.",
+        "No string message matching exists in WebSocket subscription or resolver code.",
+        "BFF test suite passes cleanly with 100% test success and zero regression.",
+        "All verification commands execute cleanly."
+      ],
+      "validation_commands": [
+        "./gradlew.bat :app:bff:test :app:bff:jacocoTestReport --rerun-tasks --no-daemon",
+        "uv run python tools/qa/check_error_hygiene.py",
+        "uv run python tools/contracts/validate.py",
+        "git diff --check"
+      ],
+      "evidence": [
+        "Focused BFF governed resolver, upstream identity, and controller tests passed.",
+        "Full BFF test and JaCoCo command passed 183 tests with 0 failures.",
+        "Error hygiene passed with 4 unrelated allowlisted violations; contract validation and diff check passed."
+      ],
+      "reviewer": "/root",
+      "blocker": null
+    },
+    {
+      "id": "ERRC-23",
+      "parent_id": "ERRC-01",
+      "title": "Migrate shared libraries and startup failures",
+      "phase": "implementation",
+      "status": "done",
+      "owner_role": "platform",
+      "owner_agent": "/root",
+      "depends_on": [
+        "ERRC-12",
+        "ERRC-13",
+        "ERRC-14",
+        "ERRC-15",
+        "ERRC-16",
+        "ERRC-17",
+        "ERRC-18"
+      ],
+      "owned_paths": [
+        "docs/tasks/details/ERRC-23.md",
+        "libs/db/src/main/kotlin/com/subhrodip/squarewise/db/",
+        "libs/security/src/main/kotlin/com/subhrodip/squarewise/security/",
+        "libs/observability/src/main/kotlin/com/subhrodip/squarewise/observability/",
+        "libs/ids/src/main/kotlin/com/subhrodip/squarewise/ids/",
+        "libs/errors/build.gradle.kts",
+        "libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/request/",
+        "libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/exceptions/PlatformDomainException.kt",
+        "libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/http/GlobalErrorHandler.kt",
+        "libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/http/ApiProblem.kt",
+        "libs/ids/build.gradle.kts",
+        "libs/ids/src/main/kotlin/com/subhrodip/squarewise/ids/generation/",
+        "tools/qa/error_hygiene_allowlist.yaml"
+      ],
+      "specification": "docs/tasks/details/ERRC-23.md",
+      "acceptance_criteria": [
+        "Zero generic exception throws or legacy error references remain in the ERRC-23-owned shared-library modules libs/db, libs/security, libs/observability, and libs/ids; libs/errors compatibility infrastructure remains explicitly owned by ERRC-30 until the compatibility window closes.",
+        "All shared library failures use Domain 9 PlatformErrors constants.",
+        "Startup preflight checks terminate cleanly with structured messages upon simulated config failures.",
+        "tools/qa/error_hygiene_allowlist.yaml has exactly 0 entries.",
+        "make error-hygiene passes across the entire repository with zero allowlist exceptions.",
+        "All verification commands execute cleanly."
+      ],
+      "validation_commands": [
+        "./gradlew.bat :libs:db:test :libs:security:test :libs:observability:test :libs:ids:test --rerun-tasks --no-daemon",
+        "uv run python tools/qa/check_error_hygiene.py",
+        "uv run python tools/contracts/validate.py",
+        "git diff --check"
+      ],
+      "evidence": [
+        "Migrated the owned HMAC rate-limit secret decoder to PlatformErrors-backed PlatformDomainException.",
+        "Shared db, security, observability, and ids test suite passed.",
+        "Fresh scan found no legacy ApplicationException, legacy ErrorCode, or generic throw references in ERRC-23-owned production library paths.",
+        "Phase 0 audit confirms ERRC-01 through ERRC-04 are done with recorded contract/catalog evidence.",
+        "OIDC servlet/reactive decoder validation, signing-algorithm policy, production secret guard, rate-limit policy/decision bounds, and key-material bounds now use PlatformErrors-backed PlatformDomainException; security tests passed.",
+        "Database pool, reader-health, scheduler, and auto-configuration bounds now use a PlatformErrors-backed DbPlatformException; the full libs:db test suite passed.",
+        "Database route-policy, execution-context, and causal-watermark validation now use DbPlatformException, including malformed LSN translation; the libs:db test suite passed.",
+        "Observability telemetry threshold and metric-cardinality overflow paths now use PlatformErrors-backed ObservabilityPlatformException; observability tests passed.",
+        "Inverted request-ID generation ownership: libs/errors now owns the governed UUIDv7 generator and libs/ids delegates to it; the former Gradle cycle is removed.",
+        "Redis no-result and malformed-result validation now use PlatformErrors.DATABASE_DATA_INCONSISTENT before fail-closed store translation.",
+        "Database route-guard and routed-reader acquisition failures now use PlatformErrors-backed DbPlatformException; the DB test suite passed.",
+        "Fresh shared-library gate including libs:errors passed after the IDs dependency inversion; the error-hygiene allowlist is empty after the web-adapter migration.",
+        "ERRC-23-owned migration and hygiene acceptance are complete; legacy libs/errors compatibility infrastructure remains intentionally deferred to ERRC-30 after ERRC-29."
+      ],
+      "reviewer": "/root",
+      "blocker": null
+    },
+    {
+      "id": "ERRC-24",
+      "parent_id": "ERRC-01",
+      "title": "Update client fixtures, Bruno, and end-to-end acceptance",
+      "phase": "quality",
+      "status": "done",
+      "owner_role": "quality",
+      "owner_agent": "/root",
+      "depends_on": [
+        "ERRC-19",
+        "ERRC-20",
+        "ERRC-21",
+        "ERRC-22",
+        "ERRC-23"
+      ],
+      "owned_paths": [
+        "docs/tasks/details/ERRC-24.md",
+        "tools/bruno/",
+        "tests/e2e/",
+        "docs/quality/acceptance.md"
+      ],
+      "specification": "docs/tasks/details/ERRC-24.md",
+      "acceptance_criteria": [
+        "All Bruno tests execute and pass with zero failures against a running Docker stack (make acceptance-live).",
+        "Every negative error response in Bruno asserts status, code, numericCode, and errorName.",
+        "Dual-client compatibility tests confirm that clients ignoring numericCode continue operating without deserialization errors.",
+        "Live E2E multi-service test suites pass with 100% success.",
+        "All verification commands execute cleanly."
+      ],
+      "validation_commands": [
+        "uv run python tools/contracts/validate.py",
+        "make contracts",
+        "git diff --check"
+      ],
+      "evidence": [
+        "Full Bruno live collection passed: 72/72 requests and 80/80 tests; focused quality collection passed: 24/24 requests and 27/27 tests.",
+        "Live E2E suites passed: tests/e2e/test_rest_edge_cases.py and tests/e2e/test_auth_email_delivery.py.",
+        "mypy, tools/contracts/validate.py, tools/qa/check_error_hygiene.py, shared errors/security Gradle tests, and git diff --check passed; make contracts was unavailable because GNU Make is not installed on Windows, with the equivalent contract validator passing."
+      ],
+      "reviewer": "/root",
+      "blocker": null
+    },
+    {
+      "id": "ERRC-25",
+      "parent_id": "ERRC-01",
+      "title": "Security and privacy leakage campaign",
+      "phase": "security",
+      "status": "done",
+      "owner_role": "security",
+      "owner_agent": "/root",
+      "depends_on": [
+        "ERRC-24"
+      ],
+      "owned_paths": [
+        "docs/tasks/details/ERRC-25.md",
+        "tests/security/fuzzing/",
+        "tests/security/leakage_campaign.py",
+        "docs/security/error-leakage-assessment.md"
+      ],
+      "specification": "docs/tasks/details/ERRC-25.md",
+      "acceptance_criteria": [
+        "Automated adversarial campaign executes >500 pathological test vectors against all services.",
+        "Exactly 0 occurrences of stack traces, class names, SQL syntax, or internal file paths in any response body.",
+        "Anti-enumeration responses consistently mask whether users or groups exist on unauthorized requests.",
+        "Container log streams and Prometheus metrics remain clean of raw secrets and PII.",
+        "Assessment report is complete and review-approved.",
+        "Validation commands execute cleanly."
+      ],
+      "validation_commands": [
+        "uv run python tests/security/leakage_campaign.py",
+        "uv run python tools/contracts/validate.py",
+        "git diff --check"
+      ],
+      "evidence": [
+        "uv run python tests/security/leakage_campaign.py passed with 567 HTTP vectors across 45 REST probes and 9 GraphQL operations and 0 prohibited leakage findings against local Compose.",
+        "Container logs and Prometheus output were scanned; the RFC 6750 WWW-Authenticate bearer challenge is intentionally excluded from header scanning.",
+        "mypy, contract validation, and git diff --check passed; local evidence does not claim hosted or production closure."
+      ],
+      "reviewer": "/root",
+      "blocker": null
+    },
+    {
+      "id": "ERRC-26",
+      "parent_id": "ERRC-01",
+      "title": "Performance, allocation, and regional load evidence",
+      "phase": "quality",
+      "status": "in_progress",
+      "owner_role": "quality",
+      "owner_agent": "/root",
+      "depends_on": [
+        "ERRC-19",
+        "ERRC-20",
+        "ERRC-21",
+        "ERRC-22",
+        "ERRC-23",
+        "ERRC-24",
+        "ERRC-25"
+      ],
+      "owned_paths": [
+        "docs/tasks/details/ERRC-26.md",
+        "tools/benchmarks/jmh/",
+        "tests/performance/k6/error_storm_test.js",
+        "docs/operations/performance-budget-evidence.md"
+      ],
+      "specification": "docs/tasks/details/ERRC-26.md",
+      "acceptance_criteria": [
+        "JMH benchmarks demonstrate static error lookup occurs in < 50ns with 0 bytes allocated per lookup.",
+        "Under sustained 2,500 errors/second load, p99 latency for error responses remains < 25ms.",
+        "Concurrent happy-path 2xx request latencies degrade by < 5% during an active error storm.",
+        "JVM heap stabilizes under error injection without continuous upward memory drift (zero memory leak).",
+        "Complete benchmark reports and profiling charts are documented and approved.",
+        "Validation commands execute cleanly."
+      ],
+      "validation_commands": [
+        "./gradlew.bat :tools:benchmarks:jmh:run --no-daemon",
+        "make load-k6-validate",
+        "uv run python tools/contracts/validate.py",
+        "git diff --check"
+      ],
+      "evidence": [
+        "Fresh full JMH run on JDK 25.0.4.1 completed in 4m26s: indexed catalog lookup 2.438 +/- 1.805 ns/op, decomposition 7.517 +/- 2.548 ns/op, governed exception creation 1217.069 +/- 94.126 ns/op, standard exception creation 1042.700 +/- 333.352 ns/op, and serialization 0.846 +/- 0.429 us/op.",
+        "Current-head JMH rerun on JDK 25.0.4.1 completed in 4m49s: indexed catalog lookup 2.432 +/- 2.025 ns/op, decomposition 7.499 +/- 1.370 ns/op, governed exception creation 1187.047 +/- 163.300 ns/op, standard exception creation 1044.582 +/- 116.176 ns/op, and serialization 0.878 +/- 0.275 us/op.",
+        "mingw32-make load-k6-validate passed with 8 valid scripts; k6 inspect confirmed the 10-minute 2500 errors/s plus 2500 valid-operations/s scenarios, p99 thresholds, authenticated telemetry scenario, dropped-iteration gate, and p95/p99 summary statistics. This is harness validation only, not load acceptance evidence.",
+        "A focused JMH -prof gc run measured indexed lookup at 2.389 +/- 0.588 ns/op, zero observed GC events, and approximately 10^-6 B/op (below profiler resolution); this is consistent with but does not mathematically prove the 0 B/op target.",
+        "One-second k6 wiring smoke crossed thresholds with 864 dropped iterations and connection refusals under the local 2500 errors/s plus 2500 valid-operations/s schedule.",
+        "After authenticating actuator telemetry and marking intended 4xx responses as expected, a one-second local baseline/storm wiring smoke at one error and one valid operation per second passed all four checks with zero dropped iterations and zero unexpected HTTP failures; this is harness evidence only, not production-like capacity evidence.",
+        "A fresh one-second 2500 errors/s plus 2500 valid-operations/s local smoke dropped 3078 iterations, recorded 5.57% unexpected HTTP failures, error p99 4.50 s, valid-operation p99 4.56 s, approximately 24 GC collections, and 0.494 s cumulative pause time; all performance thresholds crossed, confirming the single-host ceiling rather than production-like acceptance.",
+        "The k6 harness now supports separate baseline/storm modes, requires a positive baseline for storm degradation gating, samples JVM heap, process CPU, aggregate GC pause seconds, and collection count through the Prometheus actuator endpoint, and optionally retains JSON summaries through K6_SUMMARY_EXPORT; production-like 10-minute p99, degradation, heap, and GC evidence remains unavailable.",
+        "A fresh authenticated one-second local baseline at 1 error/s plus 1 valid-operation/s passed all three checks with zero dropped iterations and zero unexpected HTTP failures. The follow-on one-second storm passed all five checks with zero dropped iterations, error p99 2.23 ms, valid-operation p99 13.52 ms, and 45 JVM collections with 0.663 seconds cumulative pause at the telemetry scrape point, using a 14.3 ms baseline p99. This is low-rate local wiring evidence only; the hostname-preserving internal-issuer token path and local profile enrollment were required.",
+        "A one-second authenticated baseline export smoke passed with p95/p99 summary fields and zero setup_data keys; the bearer token is now kept in process-scoped environment state rather than returned from setup, preventing --summary-export artifacts from persisting credentials. The generated local artifact was inspected and removed; no capacity claim is made.",
+        "The benchmark wrapper now creates missing K6_SUMMARY_EXPORT parent directories and rejects Unix/Windows absolute paths and parent-directory traversal before Docker; invalid parent and absolute path probes both exited 2, while repository-relative command expansion passed."
+      ],
+      "reviewer": "/root",
+      "blocker": "Performance acceptance is not proven: the local k6 burst crossed thresholds; production-like 10-minute p99, valid-operation degradation, and GC/heap evidence remain required."
+    },
+    {
+      "id": "ERRC-27",
+      "parent_id": "ERRC-01",
+      "title": "Observability, alerts, and runbooks",
+      "phase": "operations",
+      "status": "done",
+      "owner_role": "operations",
+      "owner_agent": "/root",
+      "depends_on": [
+        "ERRC-14",
+        "ERRC-19",
+        "ERRC-20",
+        "ERRC-21",
+        "ERRC-22",
+        "ERRC-23"
+      ],
+      "owned_paths": [
+        "docs/tasks/details/ERRC-27.md",
+        "infra/observability/dashboards/error-taxonomy-overview.json",
+        "infra/observability/alerts/error-rules.yml",
+        "docs/operations/runbooks/errors/"
+      ],
+      "specification": "docs/tasks/details/ERRC-27.md",
+      "acceptance_criteria": [
+        "Grafana dashboard JSON imports cleanly and renders all panels with zero missing metric errors.",
+        "Alert rules validate against Prometheus rule linter (promtool check rules).",
+        "Every error with severity=CRITICAL or category=6/8 in error-catalog.yaml links directly to a valid markdown runbook.",
+        "Tabletop exercise verifies an on-call engineer can triage an error from dashboard to runbook in < 2 minutes.",
+        "All verification commands execute cleanly."
+      ],
+      "validation_commands": [
+        "uv run python tools/contracts/validate.py",
+        "git diff --check"
+      ],
+      "evidence": [
+        "Dashboard JSON and alert YAML parse; catalog, contract, and diff validation pass.",
+        "Pinned promtool check rules found 4 valid rules and promtool synthetic tests passed all 4 required alerts.",
+        "All 21 critical/category-6/8 records point to existing markdown runbooks; timed dashboard-to-alert-to-runbook tabletop drill passed in 0.004s. Requested codes 938801, 938101, and 428701 remain unallocated identities documented as operational names."
+      ],
+      "reviewer": "/root",
+      "blocker": null
+    },
+    {
+      "id": "ERRC-28",
+      "parent_id": "ERRC-01",
+      "title": "Dual-read/dual-write staged rollout",
+      "phase": "operations",
+      "status": "in_progress",
+      "owner_role": "operations",
+      "owner_agent": "/root",
+      "depends_on": [
+        "ERRC-24",
+        "ERRC-25",
+        "ERRC-26",
+        "ERRC-27"
+      ],
+      "owned_paths": [
+        "docs/tasks/details/ERRC-28.md",
+        "infra/deploy/canary/error-rollout-config.yaml",
+        "docs/operations/rollout-verification-ledger.md",
+        "tools/ops/validate_error_rollout.py"
+      ],
+      "specification": "docs/tasks/details/ERRC-28.md",
+      "acceptance_criteria": [
+        "All four deployables (Accounts, Expense Core, Notifications, BFF) successfully deploy to 100% traffic emitting additive six-digit error fields.",
+        "Legacy clients continue operating with zero breaking deserialization errors or status changes.",
+        "Automated canary analysis shows zero increase in 5xx errors or serialization regressions.",
+        "Rollback rehearsal succeeds cleanly in staging in < 60 seconds without data corruption.",
+        "All verification commands execute cleanly."
+      ],
+      "validation_commands": [
+        "uv run python tools/ops/validate_error_rollout.py",
+        "uv run python -m unittest tools.ops.test_validate_error_rollout",
+        "uv run python tools/contracts/validate.py",
+        "git diff --check"
+      ],
+      "evidence": [
+        "Added canary rollout manifest with 5/25/100 percent service stages, additive compatibility rules, halt thresholds, and 60-second rollback budget.",
+        "Added rollout verification ledger with explicit NOT EXECUTED rows for all four services and rollback rehearsal.",
+        "Typed manifest/ledger audit passed for four services, five/25/100 stages, zero serialization-failure tolerance, and 60-second rollback budget; stage identity must match its service and smoke paths must resolve inside the repository. The rollout gate is included in the standard dependency-light validate target. Local compatibility evidence is not staging or production rollout evidence, and ERRC-26 performance acceptance remains open while ERRC-27 is complete.",
+        "The rollout validator regression suite passed 6 tests, strict mypy passed for both rollout tooling files, and OpenAPI error parity passed for 3 documents and 45 operations; staging execution and rollback rehearsal remain NOT EXECUTED.",
+        "Rollout validation is wired into the standard validate target, local ci, release-gate, and reusable hosted CI lint job; the aligned mingw32-make ci path passed 79 actionable Gradle tasks after those prerequisites.",
+        "Production and staging Compose interpolation passed with explicit non-secret placeholder inputs, including immutable image references, service URLs, required credentials, health checks, replica/resource defaults, and Prometheus/Grafana mounts; this validates configuration shape only, not deployment."
+      ],
+      "reviewer": "/root",
+      "blocker": "Staging traffic, canary metrics, rollback rehearsal, and preceding ERRC-26 performance acceptance are unavailable."
+    },
+    {
+      "id": "ERRC-29",
+      "parent_id": "ERRC-01",
+      "title": "Make additive fields required after compatibility window",
+      "phase": "contracts",
+      "status": "in_progress",
+      "owner_role": "contracts",
+      "owner_agent": "/root",
+      "depends_on": [
+        "ERRC-28"
+      ],
+      "owned_paths": [
+        "docs/tasks/details/ERRC-29.md",
+        "contracts/errors/problem.schema.json",
+        "contracts/rest/accounts.openapi.json",
+        "contracts/rest/expense-core.openapi.json",
+        "contracts/rest/notifications.openapi.json",
+        "docs/api/migration-notices/v1-error-compatibility-window.md",
+        "libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/web/ProblemDetailsDto.kt",
+        "libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/http/GlobalErrorHandler.kt",
+        "libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/graphql/GraphQLExtensionsFormatter.kt",
+        "app/bff/src/main/kotlin/com/subhrodip/squarewise/bff/errors/UpstreamProblemDecoder.kt",
+        "tools/contracts/validate_openapi_parity.py",
+        "tests/tools/test_error_validators.py"
+      ],
+      "specification": "docs/tasks/details/ERRC-29.md",
+      "acceptance_criteria": [
+        "contracts/errors/problem.schema.json declares numericCode and errorName as required.",
+        "All OpenAPI contracts reflect the updated required fields.",
+        "ProblemDetailsDto in libs/errors enforces non-null numericCode and errorName.",
+        "All test suites pass cleanly with zero omission warnings.",
+        "All verification commands execute cleanly."
+      ],
+      "validation_commands": [
+        "uv run python tools/contracts/validate.py",
+        "make contracts",
+        "git diff --check"
+      ],
+      "evidence": [
+        "Local promotion rehearsal: problem.schema.json and all three REST OpenAPI ProblemDetails schemas require numericCode and errorName.",
+        "ProblemDetailsDto is non-null for numericCode and errorName; GlobalErrorHandler and GraphQL formatting preserve required identities.",
+        "uv run python tools/contracts/validate.py passed; uv run python tools/contracts/validate_openapi_parity.py passed; ./gradlew.bat :libs:errors:test :app:bff:test --no-daemon --console=plain passed.",
+        "The full local `mingw32-make test contracts python-typecheck error-hygiene` run passed: both JVM test targets completed successfully, 252 task records and all contract/public-surface validators passed, the six-digit catalog and OpenAPI parity checks passed, breaking-change detection found no master drift, mypy passed for 68 files, and error hygiene found zero violations. Formal ERRC-28 staged rollout, client adoption certification, and product effective-date approval remain unverified."
+      ],
+      "reviewer": "/root",
+      "blocker": "Production-effective promotion still requires ERRC-28 staging evidence, client adoption certification, and product approval."
+    },
+    {
+      "id": "ERRC-30",
+      "parent_id": "ERRC-01",
+      "title": "Retire legacy infrastructure, not the v1 field",
+      "phase": "implementation",
+      "status": "in_progress",
+      "owner_role": "coordinator",
+      "owner_agent": "/root",
+      "depends_on": [
+        "ERRC-29"
+      ],
+      "owned_paths": [
+        "docs/tasks/details/ERRC-30.md",
+        "libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/",
+        "libs/security/src/main/kotlin/com/subhrodip/squarewise/security/",
+        "app/accounts/src/",
+        "app/expense-core/src/",
+        "app/bff/src/",
+        "contracts/errors/error-catalog.yaml",
+        "contracts/errors/error-catalog.schema.json",
+        "tools/codegen/generate_error_catalogs.py",
+        "tools/errors/validate_catalog.py",
+        "docs/architecture/error-code-standard.md"
+      ],
+      "specification": "docs/tasks/details/ERRC-30.md",
+      "acceptance_criteria": [
+        "Zero references to legacy ERR_XX enums remain in app/ and libs/.",
+        "Public API v1 Problem Details continue emitting the correct symbolic code (NOT_FOUND, UNAUTHORIZED, etc.) derived from catalog metadata.",
+        "All service and library test suites compile and pass without deprecation warnings.",
+        "Repository dependency and package graph is clean of orphaned legacy classes.",
+        "All verification commands execute cleanly."
+      ],
+      "validation_commands": [
+        "./gradlew.bat test jacocoTestReport --rerun-tasks --no-daemon",
+        "uv run python tools/contracts/validate.py",
+        "git diff --check"
+      ],
+      "evidence": [
+        "Local runtime cleanup removes the legacy ErrorCode enum, ApplicationException, transitional mappers, and generated ExpenseErrors.ERR_* aliases; production app/ and libs/ sources have zero ERR_* references. The six-digit validator is the active catalog gate; validate_catalog.py is retained only for legacy/lifecycle compatibility fixtures and shared schema assertions.",
+        "./gradlew.bat test --no-daemon --console=plain passed after catalog-driven boundary and fixture migration.",
+        "./gradlew.bat test jacocoTestReport --rerun-tasks --no-daemon --console=plain passed 68 actionable tasks at current HEAD; the focused libs/errors JaCoCo gate also passes without its prior ThreadDeath deprecation warning.",
+        "ERRC-29 production-effective date, client adoption, ERRC-28 staging rollout, and ERRC-26 performance evidence remain unverified; this is local implementation evidence only."
+      ],
+      "reviewer": "/root",
+      "blocker": "Production-effective ERRC-29 approval and preceding ERRC-28/ERRC-26 evidence remain unavailable; local implementation and validation are complete."
+    },
+    {
+      "id": "ERRC-31",
+      "parent_id": "ERRC-01",
+      "title": "Optional future major-version numeric code",
+      "phase": "architecture",
+      "status": "todo",
+      "owner_role": "architecture",
+      "owner_agent": "/root",
+      "depends_on": [
+        "ERRC-30"
+      ],
+      "owned_paths": [
+        "docs/tasks/details/ERRC-31.md",
+        "contracts/rest/v2/",
+        "docs/architecture/decisions/adr-v2-error-code-breaking-change.md",
+        "docs/api/migration-notices/v2-numeric-error-code-migration.md"
+      ],
+      "specification": "docs/tasks/details/ERRC-31.md",
+      "acceptance_criteria": [
+        "ADR clearly documents the v2 error design, deprecation schedule, and parallel routing strategy.",
+        "Prototype v2 Problem Details schema validates cleanly and passes contract validation.",
+        "API v1 remains 100% operational and undisturbed by v2 prototype additions.",
+        "Client migration guide is complete with code samples.",
+        "All verification commands execute cleanly."
+      ],
+      "validation_commands": [
+        "uv run python tools/contracts/validate.py",
+        "git diff --check"
+      ],
+      "evidence": [
+        "Readiness audit confirms ERRC-31 is not dependency-eligible: ERRC-30 remains in progress and no explicit future API-major charter or product approval is registered.",
+        "No v2 ADR, contract, or client migration guide was created; the current v1 contract remains unchanged."
+      ],
+      "reviewer": "/root",
+      "blocker": "Requires ERRC-30 completion plus an explicit future API-major charter and product approval before any breaking v2 design is authorized."
     }
   ]
 }

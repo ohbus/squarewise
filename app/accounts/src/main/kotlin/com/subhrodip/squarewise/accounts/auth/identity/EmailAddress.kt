@@ -1,5 +1,7 @@
 package com.subhrodip.squarewise.accounts.auth.identity
 
+import com.subhrodip.squarewise.accounts.errors.AccountsInputException
+
 import java.net.IDN
 import java.text.Normalizer
 import java.util.Locale
@@ -44,7 +46,7 @@ value class EmailAddress private constructor(val value: String) {
             }
 
             val domain = runCatching { IDN.toASCII(domainInput, IDN.USE_STD3_ASCII_RULES) }
-                .getOrElse { throw IllegalArgumentException("Email domain is invalid", it) }
+                .getOrElse { throw AccountsInputException("Email domain is invalid", it) }
             require(domain.isNotEmpty() && domain.none { it == '@' || it.isWhitespace() }) {
                 "Email domain is invalid"
             }

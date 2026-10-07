@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://squarewise.example/schemas/dead-letter.json",
+  "title": "Squarewise dead-letter failure record",
+  "description": "Bounded diagnostic record for a terminal asynchronous event failure. The encoded payload is an immutable copy of the original message.",
+  "type": "object",
+  "required": [
+    "originalQueue",
+    "eventId",
+    "eventType",
+    "schemaVersion",
+    "failedAt",
+    "attemptCount",
+    "numericCode",
+    "errorName",
+    "diagnosticReason",
+    "messagePayloadBase64"
+  ],
+  "properties": {
+    "originalQueue": { "type": "string", "minLength": 1, "maxLength": 255 },
+    "eventId": { "type": "string", "format": "uuid" },
+    "eventType": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "schemaVersion": { "type": "integer", "minimum": 1 },
+    "failedAt": { "type": "string", "format": "date-time" },
+    "attemptCount": { "type": "integer", "minimum": 1, "maximum": 4 },
+    "numericCode": {
+      "type": "string",
+      "pattern": "^[1-9]{4}(0[1-9]|[1-9][0-9])$"
+    },
+    "errorName": {
+      "type": "string",
+      "pattern": "^[A-Z0-9_]{3,64}$"
+    },
+    "diagnosticReason": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "messagePayloadBase64": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 13981016,
+      "pattern": "^[A-Za-z0-9+/]+={0,2}$"
+    }
+  },
+  "additionalProperties": false
+}

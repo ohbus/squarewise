@@ -1,5 +1,7 @@
 package com.subhrodip.squarewise.security.ratelimit
 
+import com.subhrodip.squarewise.errors.catalog.PlatformErrors
+import com.subhrodip.squarewise.security.errors.PlatformDomainException
 import java.time.Duration
 
 /**
@@ -20,7 +22,11 @@ data class RateLimitDecision(
     val policyId: String
 ) {
     init {
-        require(remaining >= 0) { "Remaining permits cannot be negative" }
-        require(!retryAfter.isNegative) { "Retry-after cannot be negative" }
+        if (remaining < 0) {
+            throw PlatformDomainException(PlatformErrors.PLATFORM_CONFIGURATION_INVALID, "Remaining permits cannot be negative")
+        }
+        if (retryAfter.isNegative) {
+            throw PlatformDomainException(PlatformErrors.PLATFORM_CONFIGURATION_INVALID, "Retry-after cannot be negative")
+        }
     }
 }

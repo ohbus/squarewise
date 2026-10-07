@@ -22,8 +22,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.transaction.annotation.Transactional
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
 
 @SpringBootTest
 @Transactional
@@ -56,11 +55,11 @@ class JpaExpenseStoreTest @Autowired constructor(
             allocations = listOf(ExpenseAllocation(participantId, 100))
         )
 
-        val error = assertThrows(ApplicationException::class.java) {
+        val error = assertThrows(SquarewiseException::class.java) {
             expenseStore.create(groupId, record, "missing-group-create", "alice")
         }
 
-        assertEquals(ErrorCode.ERR_05, error.errorCode)
+        assertEquals("NOT_FOUND", error.definition.legacyCode)
         assertNull(expenseStore.findById(expenseId))
         assertTrue(balancePostingRepository.findByGroupId(groupId).isEmpty())
         assertTrue(outboxStore.snapshot().isEmpty())
@@ -111,10 +110,10 @@ class JpaExpenseStoreTest @Autowired constructor(
             payers = listOf(ExpensePayer(activeMembershipId, 500), ExpensePayer(activeMembershipId, 500)),
             allocations = listOf(ExpenseAllocation(activeMembershipId, 1000))
         )
-        val duplicateError = assertThrows(ApplicationException::class.java) {
+        val duplicateError = assertThrows(SquarewiseException::class.java) {
             expenseStore.create(group.groupId, duplicateParticipant, "duplicate-key", "alice")
         }
-        assertEquals(ErrorCode.ERR_02, duplicateError.errorCode)
+        assertEquals("VALIDATION_FAILED", duplicateError.definition.legacyCode)
 
         val duplicateAllocationId = UUID.randomUUID()
         val duplicateAllocation = duplicateParticipant.copy(
@@ -125,10 +124,10 @@ class JpaExpenseStoreTest @Autowired constructor(
                 ExpenseAllocation(activeMembershipId, 500)
             )
         )
-        val duplicateAllocationError = assertThrows(ApplicationException::class.java) {
+        val duplicateAllocationError = assertThrows(SquarewiseException::class.java) {
             expenseStore.create(group.groupId, duplicateAllocation, "duplicate-allocation-key", "alice")
         }
-        assertEquals(ErrorCode.ERR_02, duplicateAllocationError.errorCode)
+        assertEquals("VALIDATION_FAILED", duplicateAllocationError.definition.legacyCode)
 
         val inactiveId = UUID.randomUUID()
         val inactiveParticipant = duplicateParticipant.copy(
@@ -136,10 +135,10 @@ class JpaExpenseStoreTest @Autowired constructor(
             payers = listOf(ExpensePayer(activeMembershipId, 1000)),
             allocations = listOf(ExpenseAllocation(inactiveId, 1000))
         )
-        val inactiveError = assertThrows(ApplicationException::class.java) {
+        val inactiveError = assertThrows(SquarewiseException::class.java) {
             expenseStore.create(group.groupId, inactiveParticipant, "inactive-key", "alice")
         }
-        assertEquals(ErrorCode.ERR_05, inactiveError.errorCode)
+        assertEquals("NOT_FOUND", inactiveError.definition.legacyCode)
 
         assertEquals(initialRevision, groupRepository.findById(group.groupId).orElseThrow().revision)
         assertNull(expenseStore.findById(duplicateId))
@@ -167,15 +166,15 @@ class JpaExpenseStoreTest @Autowired constructor(
         expenseStore.create(group.groupId, record, "member-create-key", "alice")
         val revisionBefore = groupRepository.findById(group.groupId).orElseThrow().revision
 
-        val updateError = assertThrows(ApplicationException::class.java) {
+        val updateError = assertThrows(SquarewiseException::class.java) {
             expenseStore.update(group.groupId, expenseId, record.copy(description = "Changed"), "bob")
         }
-        assertEquals(ErrorCode.ERR_05, updateError.errorCode)
+        assertEquals("NOT_FOUND", updateError.definition.legacyCode)
 
-        val deleteError = assertThrows(ApplicationException::class.java) {
+        val deleteError = assertThrows(SquarewiseException::class.java) {
             expenseStore.delete(group.groupId, expenseId, version = 1, actorSubject = "bob")
         }
-        assertEquals(ErrorCode.ERR_05, deleteError.errorCode)
+        assertEquals("NOT_FOUND", deleteError.definition.legacyCode)
 
         val unchanged = expenseStore.findById(expenseId)
         assertEquals("Train tickets", unchanged?.description)
@@ -207,20 +206,20 @@ class JpaExpenseStoreTest @Autowired constructor(
         val archivedRevision = groupRepository.findById(group.groupId).orElseThrow().revision
 
         val newExpense = existing.copy(expenseId = UUID.randomUUID(), description = "Rejected fare")
-        val createError = assertThrows(ApplicationException::class.java) {
+        val createError = assertThrows(SquarewiseException::class.java) {
             expenseStore.create(group.groupId, newExpense, "archive-rejected-key", "alice")
         }
-        assertEquals(ErrorCode.ERR_06, createError.errorCode)
+        assertEquals("CONFLICT", createError.definition.legacyCode)
 
-        val updateError = assertThrows(ApplicationException::class.java) {
+        val updateError = assertThrows(SquarewiseException::class.java) {
             expenseStore.update(group.groupId, expenseId, existing.copy(description = "Rejected update"), "alice")
         }
-        assertEquals(ErrorCode.ERR_06, updateError.errorCode)
+        assertEquals("CONFLICT", updateError.definition.legacyCode)
 
-        val deleteError = assertThrows(ApplicationException::class.java) {
+        val deleteError = assertThrows(SquarewiseException::class.java) {
             expenseStore.delete(group.groupId, expenseId, version = 1, actorSubject = "alice")
         }
-        assertEquals(ErrorCode.ERR_06, deleteError.errorCode)
+        assertEquals("CONFLICT", deleteError.definition.legacyCode)
 
         assertEquals(archivedRevision, groupRepository.findById(group.groupId).orElseThrow().revision)
         assertEquals("Existing fare", expenseStore.findById(expenseId)?.description)
@@ -354,7 +353,7 @@ class JpaExpenseStoreTest @Autowired constructor(
 
         expenseStore.create(group.groupId, original, "same-idempotency-key")
 
-        val error = assertThrows(ApplicationException::class.java) {
+        val error = assertThrows(SquarewiseException::class.java) {
             expenseStore.create(
                 group.groupId,
                 original.copy(description = "Changed expense"),
@@ -362,7 +361,7 @@ class JpaExpenseStoreTest @Autowired constructor(
             )
         }
 
-        assertEquals(ErrorCode.ERR_06, error.errorCode)
+        assertEquals("CONFLICT", error.definition.legacyCode)
         assertEquals("Original expense", expenseStore.findById(expenseId)?.description)
     }
 
@@ -391,10 +390,10 @@ class JpaExpenseStoreTest @Autowired constructor(
 
         expenseStore.create(groupId, record1, "idemp-1")
 
-        val err = assertThrows(ApplicationException::class.java) {
+        val err = assertThrows(SquarewiseException::class.java) {
             expenseStore.create(groupId, record2, "idemp-2")
         }
-        assertEquals(ErrorCode.ERR_06, err.errorCode)
+        assertEquals("CONFLICT", err.definition.legacyCode)
     }
 
     @Test
@@ -455,10 +454,10 @@ class JpaExpenseStoreTest @Autowired constructor(
         )
 
         conflictingPayloads.forEachIndexed { index, conflicting ->
-            val error = assertThrows(ApplicationException::class.java) {
+            val error = assertThrows(SquarewiseException::class.java) {
                 expenseStore.create(group.groupId, conflicting, "conflict-$index")
             }
-            assertEquals(ErrorCode.ERR_06, error.errorCode)
+            assertEquals("CONFLICT", error.definition.legacyCode)
         }
 
         val persisted = expenseStore.findById(expenseId)
@@ -621,7 +620,7 @@ class JpaExpenseStoreTest @Autowired constructor(
     /** Verifies update lookup and soft-deleted rejection outcomes do not mutate group state. */
     @Test
     fun `rejects update for missing group expense and deleted expense`() {
-        val missingGroupError = assertThrows(ApplicationException::class.java) {
+        val missingGroupError = assertThrows(SquarewiseException::class.java) {
             expenseStore.update(
                 UUID.randomUUID(),
                 UUID.randomUUID(),
@@ -640,10 +639,10 @@ class JpaExpenseStoreTest @Autowired constructor(
                 )
             )
         }
-        assertEquals(ErrorCode.ERR_05, missingGroupError.errorCode)
+        assertEquals("NOT_FOUND", missingGroupError.definition.legacyCode)
 
         val group = groupStore.create("update-boundary-owner", CreateGroupRequest("Update boundaries", "TRIP", "EUR"))
-        val missingExpenseError = assertThrows(ApplicationException::class.java) {
+        val missingExpenseError = assertThrows(SquarewiseException::class.java) {
             expenseStore.update(
                 group.groupId,
                 UUID.randomUUID(),
@@ -662,7 +661,7 @@ class JpaExpenseStoreTest @Autowired constructor(
                 )
             )
         }
-        assertEquals(ErrorCode.ERR_05, missingExpenseError.errorCode)
+        assertEquals("NOT_FOUND", missingExpenseError.definition.legacyCode)
 
         val expenseId = UUID.randomUUID()
         val record = ExpenseRecord(
@@ -682,10 +681,10 @@ class JpaExpenseStoreTest @Autowired constructor(
         expenseStore.delete(group.groupId, expenseId, version = 1)
         val revisionAfterDelete = groupRepository.findById(group.groupId).orElseThrow().revision
 
-        val deletedExpenseError = assertThrows(ApplicationException::class.java) {
+        val deletedExpenseError = assertThrows(SquarewiseException::class.java) {
             expenseStore.update(group.groupId, expenseId, record)
         }
-        assertEquals(ErrorCode.ERR_05, deletedExpenseError.errorCode)
+        assertEquals("NOT_FOUND", deletedExpenseError.definition.legacyCode)
         assertEquals(revisionAfterDelete, groupRepository.findById(group.groupId).orElseThrow().revision)
     }
 
@@ -805,31 +804,31 @@ class JpaExpenseStoreTest @Autowired constructor(
 
         // Update with stale version 99
         val staleUpdate = record.copy(version = 99, description = "Updated pass")
-        val updateErr = assertThrows(ApplicationException::class.java) {
+        val updateErr = assertThrows(SquarewiseException::class.java) {
             expenseStore.update(groupId, expenseId, staleUpdate)
         }
-        assertEquals(ErrorCode.ERR_06, updateErr.errorCode)
+        assertEquals("CONFLICT", updateErr.definition.legacyCode)
 
         // Delete with stale version 99
-        val deleteErr = assertThrows(ApplicationException::class.java) {
+        val deleteErr = assertThrows(SquarewiseException::class.java) {
             expenseStore.delete(groupId, expenseId, version = 99)
         }
-        assertEquals(ErrorCode.ERR_06, deleteErr.errorCode)
+        assertEquals("CONFLICT", deleteErr.definition.legacyCode)
     }
 
     /** Verifies delete lookup, null-version, and already-deleted outcomes preserve the soft-delete contract. */
     @Test
     fun `rejects missing and repeated deletes without additional ledger effects`() {
-        val missingGroupError = assertThrows(ApplicationException::class.java) {
+        val missingGroupError = assertThrows(SquarewiseException::class.java) {
             expenseStore.delete(UUID.randomUUID(), UUID.randomUUID(), version = null, actorSubject = "alice")
         }
-        assertEquals(ErrorCode.ERR_05, missingGroupError.errorCode)
+        assertEquals("NOT_FOUND", missingGroupError.definition.legacyCode)
 
         val group = groupStore.create("alice", CreateGroupRequest("Delete boundaries", "TRIP", "EUR"))
-        val missingExpenseError = assertThrows(ApplicationException::class.java) {
+        val missingExpenseError = assertThrows(SquarewiseException::class.java) {
             expenseStore.delete(group.groupId, UUID.randomUUID(), version = null, actorSubject = "alice")
         }
-        assertEquals(ErrorCode.ERR_03, missingExpenseError.errorCode)
+        assertEquals("UNAUTHENTICATED", missingExpenseError.definition.legacyCode)
 
         val expenseId = UUID.randomUUID()
         val participantId = UUID.randomUUID()
@@ -854,10 +853,10 @@ class JpaExpenseStoreTest @Autowired constructor(
         assertEquals(revisionBeforeDelete + 1, revisionAfterDelete)
         assertEquals(0L, balancePostingRepository.findByExpenseId(expenseId).sumOf { it.amountMinor })
 
-        val repeatedDeleteError = assertThrows(ApplicationException::class.java) {
+        val repeatedDeleteError = assertThrows(SquarewiseException::class.java) {
             expenseStore.delete(group.groupId, expenseId, version = null, actorSubject = "alice")
         }
-        assertEquals(ErrorCode.ERR_05, repeatedDeleteError.errorCode)
+        assertEquals("NOT_FOUND", repeatedDeleteError.definition.legacyCode)
         assertEquals(revisionAfterDelete, groupRepository.findById(group.groupId).orElseThrow().revision)
         assertEquals(2, balancePostingRepository.findByExpenseId(expenseId).size)
     }

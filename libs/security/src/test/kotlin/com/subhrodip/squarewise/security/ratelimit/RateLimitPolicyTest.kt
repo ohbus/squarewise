@@ -4,30 +4,31 @@ import java.time.Duration
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
+import com.subhrodip.squarewise.security.errors.PlatformDomainException
 
 /** Verifies bounded shared rate-limit policy configuration. */
 class RateLimitPolicyTest {
     @Test
     fun `rejects disabled and oversized policies`() {
-        assertThrows(IllegalArgumentException::class.java) {
+        assertThrows(PlatformDomainException::class.java) {
             RateLimitPolicy("login", maximumPermits = 0, window = Duration.ofMinutes(1))
         }
-        assertThrows(IllegalArgumentException::class.java) {
+        assertThrows(PlatformDomainException::class.java) {
             RateLimitPolicy("login", maximumPermits = 1, window = Duration.ZERO)
         }
-        assertThrows(IllegalArgumentException::class.java) {
+        assertThrows(PlatformDomainException::class.java) {
             RateLimitPolicy("login", maximumPermits = 1, window = Duration.ofDays(2))
         }
-        assertThrows(IllegalArgumentException::class.java) {
+        assertThrows(PlatformDomainException::class.java) {
             RateLimitPolicy("login", maximumPermits = 1, window = Duration.ofMinutes(1), cooldown = Duration.ofMinutes(2))
         }
-        assertThrows(IllegalArgumentException::class.java) {
+        assertThrows(PlatformDomainException::class.java) {
             RateLimitPolicy("login", maximumPermits = 1, window = Duration.ofMillis(1_500))
         }
-        assertThrows(IllegalArgumentException::class.java) {
+        assertThrows(PlatformDomainException::class.java) {
             RateLimitPolicy("auth-é", maximumPermits = 1, window = Duration.ofMinutes(1))
         }
-        assertThrows(IllegalArgumentException::class.java) {
+        assertThrows(PlatformDomainException::class.java) {
             RateLimitPolicy(
                 "login",
                 maximumPermits = 1,
@@ -35,7 +36,7 @@ class RateLimitPolicyTest {
                 cooldown = Duration.ofSeconds(3)
             )
         }
-        assertThrows(IllegalArgumentException::class.java) {
+        assertThrows(PlatformDomainException::class.java) {
             RateLimitPolicy(
                 "login",
                 maximumPermits = 1,
@@ -70,20 +71,20 @@ class RateLimitPolicyTest {
             "auth`test",
             "auth{test}"
         ).forEach { identifier ->
-            assertThrows(IllegalArgumentException::class.java) {
+            assertThrows(PlatformDomainException::class.java) {
                 RateLimitPolicy(identifier, maximumPermits = 1, window = Duration.ofMinutes(1))
             }
         }
-        assertThrows(IllegalArgumentException::class.java) {
+        assertThrows(PlatformDomainException::class.java) {
             RateLimitPolicy("login", maximumPermits = 1_000_001, window = Duration.ofMinutes(1))
         }
-        assertThrows(IllegalArgumentException::class.java) {
+        assertThrows(PlatformDomainException::class.java) {
             RateLimitPolicy("login", maximumPermits = 1, window = Duration.ofSeconds(10), cooldown = Duration.ofSeconds(-1))
         }
-        assertThrows(IllegalArgumentException::class.java) {
+        assertThrows(PlatformDomainException::class.java) {
             RateLimitPolicy("login", maximumPermits = 1, window = Duration.ofMillis(1_000), cooldown = Duration.ofMillis(-1))
         }
-        assertThrows(IllegalArgumentException::class.java) {
+        assertThrows(PlatformDomainException::class.java) {
             RateLimitPolicy("login", maximumPermits = 1, window = Duration.ofNanos(1_000_000_001))
         }
     }

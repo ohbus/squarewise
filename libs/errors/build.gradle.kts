@@ -5,7 +5,7 @@ plugins {
 kotlin { jvmToolchain(25) }
 dependencies {
     api(libs.boot.web)
-    api(project(":libs:ids"))
+    api(libs.uuid.creator)
     implementation(libs.boot.data.jpa)
     testImplementation(libs.boot.test)
     testRuntimeOnly(libs.junit.platform.launcher)

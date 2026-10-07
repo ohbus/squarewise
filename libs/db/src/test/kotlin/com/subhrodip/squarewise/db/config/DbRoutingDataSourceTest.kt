@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.db.config
+import com.subhrodip.squarewise.db.errors.DbPlatformException
 import com.subhrodip.squarewise.db.health.DbReaderState
 import com.subhrodip.squarewise.db.health.DbReaderHealth
 
@@ -25,7 +26,7 @@ class DbRoutingDataSourceTest {
         val reader = mock(DataSource::class.java)
         val routing = DbRoutingDataSource(writer, mapOf("replica" to reader))
 
-        assertFailsWith<IllegalStateException> {
+        assertFailsWith<DbPlatformException> {
             DbContextHolder.withContext(DbExecutionContext("expense.create", DbOperationKind.COMMAND)) {
                 routing.connection(DbRoute.READER, "replica")
             }
@@ -97,9 +98,9 @@ class DbRoutingDataSourceTest {
         val context = DbExecutionContext("expense.search", DbOperationKind.QUERY, ReadConsistency.EVENTUAL, true)
 
         DbContextHolder.withContext(context) {
-            assertFailsWith<IllegalStateException> { routing.connection(DbRoute.READER, "missing") }
+            assertFailsWith<DbPlatformException> { routing.connection(DbRoute.READER, "missing") }
             `when`(reader.connection).thenThrow(SQLException("reader unavailable"))
-            assertFailsWith<SQLException> { routing.connection(DbRoute.READER, "replica") }
+            assertFailsWith<DbPlatformException> { routing.connection(DbRoute.READER, "replica") }
         }
         assertEquals(DbReaderState.OPEN, health.state("replica"))
     }
@@ -116,7 +117,7 @@ class DbRoutingDataSourceTest {
         DbContextHolder.withContext(
             DbExecutionContext("expense.search", DbOperationKind.QUERY, ReadConsistency.EVENTUAL, readerEligible = true)
         ) {
-            assertFailsWith<SQLException> { routing.getConnection() }
+            assertFailsWith<DbPlatformException> { routing.getConnection() }
         }
     }
 
@@ -142,7 +143,7 @@ class DbRoutingDataSourceTest {
         DbContextHolder.withContext(
             DbExecutionContext("expense.search", DbOperationKind.QUERY, ReadConsistency.EVENTUAL, readerEligible = true)
         ) {
-            assertFailsWith<SQLException> { routing.getConnection() }
+            assertFailsWith<DbPlatformException> { routing.getConnection() }
         }
     }
 }

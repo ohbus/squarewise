@@ -5,8 +5,7 @@ import com.subhrodip.squarewise.accounts.profile.service.ProfileRules
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
 
 class ProfileRulesTest {
     @Test
@@ -17,13 +16,13 @@ class ProfileRulesTest {
 
     @Test
     fun `rejects invalid subject and timezone with defined statuses`() {
-        val ex = assertThrows(ApplicationException::class.java) {
+        val ex = assertThrows(SquarewiseException::class.java) {
             ProfileRules.requireSubject("alice with spaces")
         }
-        assertEquals(ErrorCode.ERR_03, ex.errorCode)
-        val ex2 = assertThrows(ApplicationException::class.java) {
+        assertEquals("UNAUTHENTICATED", ex.definition.legacyCode)
+        val ex2 = assertThrows(SquarewiseException::class.java) {
             ProfileRules.requireTimezone("not/a-zone")
         }
-        assertEquals(ErrorCode.ERR_02, ex2.errorCode)
+        assertEquals("VALIDATION_FAILED", ex2.definition.legacyCode)
     }
 }

@@ -4,8 +4,7 @@ import com.subhrodip.squarewise.accounts.auth.credential.HmacCredentialDigest
 import com.subhrodip.squarewise.accounts.auth.identity.AccountIdentity
 import com.subhrodip.squarewise.accounts.auth.identity.AccountIdentityStore
 import com.subhrodip.squarewise.accounts.auth.provider.IdentityProviderPort
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
@@ -66,11 +65,11 @@ class TokenSessionServiceRaceTest {
             )
         ).thenReturn(0)
 
-        val exception = assertThrows(ApplicationException::class.java) {
+        val exception = assertThrows(SquarewiseException::class.java) {
             service.rotateSession(rawRefreshToken, "browser", now.plusSeconds(1))
         }
 
-        assertEquals(ErrorCode.ERR_03, exception.errorCode)
+        assertEquals("UNAUTHENTICATED", exception.definition.legacyCode)
         verify(repository).revokeFamily(session.familyId, now.plusSeconds(1))
         verifyNoInteractions(tokenProvider)
     }

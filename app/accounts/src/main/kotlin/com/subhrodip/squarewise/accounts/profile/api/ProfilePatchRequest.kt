@@ -1,7 +1,7 @@
 package com.subhrodip.squarewise.accounts.profile.api
 
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.accounts.errors.AccountsDomainException
+import com.subhrodip.squarewise.errors.catalog.AccountsErrors
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
@@ -15,7 +15,7 @@ data class ProfilePatchRequest(
     /** Rejects an empty PATCH request before persistence side effects. */
     fun validateNotEmpty() {
         if (displayName == null && timezone == null && defaultCurrency == null) {
-            throw ApplicationException(ErrorCode.ERR_02, "At least one profile field is required")
+            throw AccountsDomainException(AccountsErrors.PROFILE_REQUEST_INVALID)
         }
     }
 }

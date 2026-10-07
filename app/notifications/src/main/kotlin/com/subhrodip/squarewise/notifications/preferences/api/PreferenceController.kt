@@ -10,8 +10,9 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import jakarta.validation.Valid
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.notifications.errors.NotificationDomainException
+import com.subhrodip.squarewise.errors.catalog.NotificationErrors
+import com.subhrodip.squarewise.errors.catalog.PlatformErrors
 import java.security.Principal
 
 import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
@@ -29,5 +30,5 @@ class PreferenceController(private val store: PreferenceStore) {
     }
 
     private fun subject(principal: Principal?): String = principal?.name?.trim()?.takeIf { it.isNotEmpty() }
-        ?: throw ApplicationException(ErrorCode.ERR_03, "authenticated subject is required")
+        ?: throw NotificationDomainException(PlatformErrors.AUTHENTICATION_REQUIRED, "authenticated subject is required")
 }

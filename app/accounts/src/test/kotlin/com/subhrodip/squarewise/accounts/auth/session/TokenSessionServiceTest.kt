@@ -5,8 +5,7 @@ import com.subhrodip.squarewise.accounts.auth.identity.AccountIdentity
 import com.subhrodip.squarewise.accounts.auth.identity.AccountIdentityStore
 import com.subhrodip.squarewise.accounts.auth.credential.HmacCredentialDigest
 import com.subhrodip.squarewise.accounts.auth.provider.InternalJwtTokenProvider
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
 import java.time.Instant
 import java.util.UUID
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -118,10 +117,10 @@ class TokenSessionServiceTest @Autowired constructor(
     fun `rejects blank and unknown refresh tokens during rotation`() {
         val now = Instant.now()
 
-        assertThrows(ApplicationException::class.java) {
+        assertThrows(SquarewiseException::class.java) {
             service.rotateSession(" ", "test", now)
         }
-        assertThrows(ApplicationException::class.java) {
+        assertThrows(SquarewiseException::class.java) {
             service.rotateSession("unknown-rotate-token", "test", now)
         }
     }
@@ -147,14 +146,14 @@ class TokenSessionServiceTest @Autowired constructor(
         )
 
         // Presenting old token again (reuse attack)
-        val ex = assertThrows(ApplicationException::class.java) {
+        val ex = assertThrows(SquarewiseException::class.java) {
             service.rotateSession(
                 rawRefreshToken = initial.refreshToken,
                 deviceLabel = "attacker",
                 now = now.plusSeconds(20)
             )
         }
-        assertEquals(ErrorCode.ERR_03, ex.errorCode)
+        assertEquals("UNAUTHENTICATED", ex.definition.legacyCode)
 
         // The whole family, including rotated, must now be revoked
         val rotatedSession = sessionRepository.findByRefreshTokenDigest(digest.digest(rotated.refreshToken))
@@ -182,11 +181,11 @@ class TokenSessionServiceTest @Autowired constructor(
             clientKind = "BROWSER"
         ))
 
-        val ex = assertThrows(ApplicationException::class.java) {
+        val ex = assertThrows(SquarewiseException::class.java) {
             service.rotateSession(rawRefreshToken, "test", now.plusSeconds(1))
         }
 
-        assertEquals(ErrorCode.ERR_03, ex.errorCode)
+        assertEquals("UNAUTHENTICATED", ex.definition.legacyCode)
     }
 
     /** Verifies a replacement-only refresh session is treated as token reuse. */
@@ -223,11 +222,11 @@ class TokenSessionServiceTest @Autowired constructor(
             clientKind = "BROWSER"
         ))
 
-        val ex = assertThrows(ApplicationException::class.java) {
+        val ex = assertThrows(SquarewiseException::class.java) {
             service.rotateSession(rawRefreshToken, "test", now.plusSeconds(1))
         }
 
-        assertEquals(ErrorCode.ERR_03, ex.errorCode)
+        assertEquals("UNAUTHENTICATED", ex.definition.legacyCode)
     }
 
     /** Verifies a legacy accountless refresh session fails closed without mutation. */
@@ -249,11 +248,11 @@ class TokenSessionServiceTest @Autowired constructor(
             clientKind = "NATIVE"
         ))
 
-        val ex = assertThrows(ApplicationException::class.java) {
+        val ex = assertThrows(SquarewiseException::class.java) {
             service.rotateSession(rawRefreshToken, "legacy", now.plusSeconds(1))
         }
 
-        assertEquals(ErrorCode.ERR_03, ex.errorCode)
+        assertEquals("UNAUTHENTICATED", ex.definition.legacyCode)
         assertEquals(null, sessionRepository.findById(sessionId).orElseThrow().revokedAt)
     }
 
@@ -416,11 +415,11 @@ class TokenSessionServiceTest @Autowired constructor(
         )
         currentSubject = "internal:remapped@example.com"
 
-        val ex = assertThrows(ApplicationException::class.java) {
+        val ex = assertThrows(SquarewiseException::class.java) {
             service.rotateSession(initial.refreshToken, "test", now.plusSeconds(1))
         }
 
-        assertEquals(ErrorCode.ERR_03, ex.errorCode)
+        assertEquals("UNAUTHENTICATED", ex.definition.legacyCode)
         val stored = sessionRepository.findByRefreshTokenDigest(digest.digest(initial.refreshToken))
         assertNotNull(stored?.revokedAt)
     }
@@ -437,7 +436,7 @@ class TokenSessionServiceTest @Autowired constructor(
             now = now
         )
 
-        val ex = assertThrows(ApplicationException::class.java) {
+        val ex = assertThrows(SquarewiseException::class.java) {
             service.rotateSession(
                 rawRefreshToken = initial.refreshToken,
                 deviceLabel = "test",
@@ -445,7 +444,7 @@ class TokenSessionServiceTest @Autowired constructor(
             )
         }
 
-        assertEquals(ErrorCode.ERR_03, ex.errorCode)
+        assertEquals("UNAUTHENTICATED", ex.definition.legacyCode)
         assertNotNull(sessionRepository.findByRefreshTokenDigest(digest.digest(initial.refreshToken))?.revokedAt)
     }
 
@@ -462,11 +461,11 @@ class TokenSessionServiceTest @Autowired constructor(
         )
         identityAvailable = false
 
-        val ex = assertThrows(ApplicationException::class.java) {
+        val ex = assertThrows(SquarewiseException::class.java) {
             service.rotateSession(initial.refreshToken, "test", now.plusSeconds(1))
         }
 
-        assertEquals(ErrorCode.ERR_03, ex.errorCode)
+        assertEquals("UNAUTHENTICATED", ex.definition.legacyCode)
         assertEquals(null, sessionRepository.findByRefreshTokenDigest(digest.digest(initial.refreshToken))?.revokedAt)
     }
 
@@ -483,11 +482,11 @@ class TokenSessionServiceTest @Autowired constructor(
         )
         identityDeletionRequested = true
 
-        val ex = assertThrows(ApplicationException::class.java) {
+        val ex = assertThrows(SquarewiseException::class.java) {
             service.rotateSession(initial.refreshToken, "test", now.plusSeconds(1))
         }
 
-        assertEquals(ErrorCode.ERR_03, ex.errorCode)
+        assertEquals("UNAUTHENTICATED", ex.definition.legacyCode)
         assertNotNull(sessionRepository.findByRefreshTokenDigest(digest.digest(initial.refreshToken))?.revokedAt)
     }
 
@@ -509,7 +508,7 @@ class TokenSessionServiceTest @Autowired constructor(
             clientKind = "NATIVE"
         ))
 
-        assertThrows(ApplicationException::class.java) {
+        assertThrows(SquarewiseException::class.java) {
             service.rotateSession(legacyCredential, "legacy", now.plusSeconds(1))
         }
 

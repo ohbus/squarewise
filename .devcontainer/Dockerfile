@@ -4,7 +4,7 @@ FROM ${DEVCONTAINER_BASE_IMAGE}
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG DEVCONTAINER_JDK_VERSION=25
-ARG DEVCONTAINER_NODE_VERSION=22
+ARG DEVCONTAINER_NODE_VERSION=24
 ARG PYTHON_VERSION=3.12
 ARG UV_VERSION=0.6.5
 ARG POSTGRES_CLIENT_VERSION=17
@@ -42,7 +42,7 @@ RUN JAVA_DIR=$(dirname $(dirname $(readlink -f $(which javac 2>/dev/null || whic
 ENV JAVA_HOME=/usr/lib/jvm/default-java
 ENV PATH="${JAVA_HOME}/bin:${PATH}"
 
-# 3. Install Node.js LTS (for executing @usebruno/cli via npx)
+# 3. Install Node.js 24 LTS (for executing @usebruno/cli via npx)
 RUN curl -fsSL https://deb.nodesource.com/setup_${DEVCONTAINER_NODE_VERSION}.x | bash - \
     && apt-get install -y --no-install-recommends nodejs \
     && rm -rf /var/lib/apt/lists/*

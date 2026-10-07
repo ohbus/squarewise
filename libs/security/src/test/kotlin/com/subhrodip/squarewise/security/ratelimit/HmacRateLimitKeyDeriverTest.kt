@@ -1,5 +1,6 @@
 package com.subhrodip.squarewise.security.ratelimit
 
+import com.subhrodip.squarewise.security.errors.PlatformDomainException
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -20,8 +21,8 @@ class HmacRateLimitKeyDeriverTest {
 
     @Test
     fun `short or malformed deployment secrets fail closed`() {
-        assertThrows<IllegalArgumentException> { HmacRateLimitKeyDeriver.fromBase64("not-base64") }
-        assertThrows<IllegalArgumentException> {
+        assertThrows<PlatformDomainException> { HmacRateLimitKeyDeriver.fromBase64("not-base64") }
+        assertThrows<PlatformDomainException> {
             HmacRateLimitKeyDeriver.fromBase64("AQIDBAUGBwgJCg==")
         }
     }

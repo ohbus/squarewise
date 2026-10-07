@@ -23,8 +23,8 @@ import jakarta.persistence.PersistenceContext
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
+import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
 import java.nio.charset.StandardCharsets
 import java.time.Instant
 import java.time.LocalDate
@@ -77,7 +77,7 @@ class RecurringExpenseService(
         }
 
         if (!groupRepository.existsById(groupId)) {
-            throw ApplicationException(ErrorCode.ERR_05, "Group $groupId not found")
+            throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group $groupId not found")
         }
 
         val scheduleId = request.scheduleId ?: UuidGenerator.next()
@@ -111,10 +111,10 @@ class RecurringExpenseService(
         request: UpdateRecurringScheduleRequest
     ): RecurringExpenseSchedule {
         val schedule = scheduleRepository.findById(scheduleId).orElseThrow {
-            ApplicationException(ErrorCode.ERR_05, "Schedule $scheduleId not found")
+            ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Schedule $scheduleId not found")
         }
         if (schedule.groupId != groupId) {
-            throw ApplicationException(ErrorCode.ERR_05, "Schedule $scheduleId not in group $groupId")
+            throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Schedule $scheduleId not in group $groupId")
         }
 
         require(request.description.isNotBlank()) { "description must not be blank" }
@@ -164,7 +164,7 @@ class RecurringExpenseService(
     @Transactional
     override fun pauseSchedule(scheduleId: UUID): RecurringExpenseSchedule {
         val schedule = scheduleRepository.findById(scheduleId).orElseThrow {
-            ApplicationException(ErrorCode.ERR_05, "Schedule $scheduleId not found")
+            ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Schedule $scheduleId not found")
         }
         schedule.paused = true
         return scheduleRepository.save(schedule)
@@ -173,7 +173,7 @@ class RecurringExpenseService(
     @Transactional
     override fun resumeSchedule(scheduleId: UUID): RecurringExpenseSchedule {
         val schedule = scheduleRepository.findById(scheduleId).orElseThrow {
-            ApplicationException(ErrorCode.ERR_05, "Schedule $scheduleId not found")
+            ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Schedule $scheduleId not found")
         }
         schedule.paused = false
         return scheduleRepository.save(schedule)

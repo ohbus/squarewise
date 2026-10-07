@@ -1,4 +1,4 @@
-# Documentation index
+# Documentation Index
 
 <p align="left">
   <img src="visuals/squarewise-logo.svg" alt="Squarewise Logo" width="300">
@@ -32,6 +32,7 @@ This index is the navigation entry point for repository documentation. [`AGENTS.
 - [Architecture overview](architecture/overview.md)
 - [Project structure](architecture/project-structure.md)
 - [Error flow](architecture/error-flow.md)
+- [Six-digit error migration opening specification (ERRC-01)](tasks/details/ERRC-01.md)
 - [Six-digit error-code standard](architecture/error-code-standard.md)
 - [Error domain/module registry](architecture/error-domain-registry.md)
 - [Error handling and exception guide](architecture/error-handling-guide.md)

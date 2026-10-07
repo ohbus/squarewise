@@ -1,0 +1,16 @@
+# Authoritative Squarewise Error Lifecycle History
+# Tracks deprecations, retirements, and migration sunset policies.
+
+- code: ERR-12
+  errorName: GOVERNANCE_CHECK_SUCCESS
+  status: RETIRED
+  introducedIn: 1.0.0
+  deprecatedIn: 2.0.0
+  retiredIn: 2.0.0
+  sunsetDate: '2026-10-07'
+  replacedBy: null
+  rationale: ERR-12 was a governance verification marker returning HTTP 200, not an
+    actual error. Formally retired without replacement under the six-digit error-code
+    standard.
+  migrationGuidance: Remove dependencies on ERR-12. Health and governance endpoints
+    return standard HTTP 200 responses without error problem documents.

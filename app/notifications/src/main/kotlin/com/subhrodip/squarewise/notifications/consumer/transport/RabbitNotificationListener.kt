@@ -3,6 +3,12 @@
 package com.subhrodip.squarewise.notifications.consumer.transport
 import com.subhrodip.squarewise.notifications.consumer.model.NotificationEvent
 import com.subhrodip.squarewise.notifications.consumer.service.NotificationConsumer
+import com.subhrodip.squarewise.errors.async.AsyncContext
+import com.subhrodip.squarewise.errors.async.AsyncExecutionResult
+import com.subhrodip.squarewise.errors.async.AsyncExecutionTemplate
+import com.subhrodip.squarewise.errors.async.AsyncMetricsRecorder
+import com.subhrodip.squarewise.errors.async.MessageDisposition
+import com.subhrodip.squarewise.errors.catalog.NotificationErrors
 
 import com.rabbitmq.client.Channel
 import java.util.UUID
@@ -39,7 +45,8 @@ fun BrokerEnvelope.toNotificationEvent(): NotificationEvent {
 @Component
 class RabbitNotificationListener(
     private val consumer: NotificationConsumer,
-    private val envelopeParser: BrokerEnvelopeParser
+    private val envelopeParser: BrokerEnvelopeParser,
+    private val asyncExecutionTemplate: AsyncExecutionTemplate = AsyncExecutionTemplate(AsyncMetricsRecorder { _, _, _ -> })
 ) : ChannelAwareMessageListener {
     @RabbitListener(
         queues = ["\${squarewise.notifications.queue:squarewise.notifications.v2}"],
@@ -48,12 +55,22 @@ class RabbitNotificationListener(
     override fun onMessage(message: Message, channel: Channel?) {
         val deliveryTag = message.messageProperties.deliveryTag
         try {
-            consumer.consume(envelopeParser.parse(message.body).toNotificationEvent())
-            channel?.basicAck(deliveryTag, false)
+            val event = envelopeParser.parse(message.body).toNotificationEvent()
+            when (val result = asyncExecutionTemplate.execute(
+                context = AsyncContext(event.eventId, event.eventType, 1, attemptCount(message), "notifications.rabbit"),
+                definition = NotificationErrors.NOTIFICATION_DISPATCH_FAILED,
+                queue = "squarewise.notifications.v2",
+                payload = message.body,
+            ) { consumer.consume(event) }) {
+                is AsyncExecutionResult.Completed -> channel?.basicAck(deliveryTag, false)
+                is AsyncExecutionResult.Failed -> channel?.basicReject(deliveryTag, result.disposition == MessageDisposition.NACK_REQUEUE)
+            }
         } catch (_: InvalidEnvelopeException) {
             channel?.basicReject(deliveryTag, false)
-        } catch (_: Throwable) {
-            channel?.basicReject(deliveryTag, message.messageProperties.redelivered != true)
         }
     }
+
+    private fun attemptCount(message: Message): Int =
+        (message.messageProperties.headers["x-attempt"] as? Number)?.toInt()?.coerceIn(1, 4)
+            ?: if (message.messageProperties.isRedelivered == true) 3 else 1
 }

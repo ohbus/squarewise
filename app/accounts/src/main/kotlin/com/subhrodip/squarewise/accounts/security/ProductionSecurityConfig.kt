@@ -6,6 +6,8 @@ import com.subhrodip.squarewise.accounts.auth.jwks.RsaKeyProvider
 import com.subhrodip.squarewise.security.OidcJwtDecoderFactory
 import com.subhrodip.squarewise.security.OidcSecurityConstants
 import com.subhrodip.squarewise.security.HttpHeadersConfiguration
+import com.subhrodip.squarewise.security.errors.ServletProblemAccessDeniedHandler
+import com.subhrodip.squarewise.security.errors.ServletProblemAuthenticationEntryPoint
 import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
@@ -70,6 +72,12 @@ class ProductionSecurityConfig(
                 ).permitAll()
                 .anyRequest().authenticated()
         }
-        .oauth2ResourceServer { it.jwt {} }
+        .exceptionHandling {
+            it.authenticationEntryPoint(ServletProblemAuthenticationEntryPoint())
+                .accessDeniedHandler(ServletProblemAccessDeniedHandler())
+        }
+        .oauth2ResourceServer {
+            it.authenticationEntryPoint(ServletProblemAuthenticationEntryPoint()).jwt {}
+        }
         .build()
 }

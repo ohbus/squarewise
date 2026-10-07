@@ -1,5 +1,6 @@
 package com.subhrodip.squarewise.expensecore.security
 
+import com.subhrodip.squarewise.security.errors.PlatformDomainException
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.assertj.core.api.Assertions.assertThat
@@ -18,7 +19,7 @@ class ProductionSecurityConfigTest {
     /** Verifies invalid issuer configuration fails closed before any remote discovery. */
     @Test
     fun `rejects blank issuer in configured oidc policy`() {
-        assertThrows(IllegalArgumentException::class.java) {
+        assertThrows(PlatformDomainException::class.java) {
             ProductionSecurityConfig("", "squarewise-api", "RS256").jwtDecoder()
         }
     }

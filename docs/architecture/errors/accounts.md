@@ -1,19 +1,19 @@
 # Accounts error ownership guide
 
-Status: proposed inventory; codes are not implemented or contractually published.
+Status: allocated and authoritative under `ERRC-04`; matches `contracts/errors/error-catalog.yaml`.
 
 Accounts owns Domains `11`-`15`. Existing v1 symbolic codes and statuses remain until
 an approved contract change. Profile-existence hiding and identity disclosure require
 security review before changing 401/404 behavior.
 
-## Candidate public families
+## Allocated public families
 
 | Candidate | Name | Current-compatible HTTP | Legacy `code` | Required distinction |
 |---|---|:---:|---|---|
 | `117101` | `PROFILE_SUBJECT_INVALID` | 401 | `UNAUTHENTICATED` | Missing/malformed authenticated subject |
 | `111101` | `PROFILE_REQUEST_INVALID` | 400 | `VALIDATION_FAILED` | Bounded field validation |
 | `111102` | `TIMEZONE_INVALID` | 400 | `VALIDATION_FAILED` | Unsupported or malformed time zone |
-| `117201` | `AUTHENTICATED_PROFILE_NOT_FOUND` | 401 | `UNAUTHENTICATED` | Preserve current authenticated-flow behavior |
+| `117201` | `AUTHENTICATED_PROFILE_NOT_FOUND` | 404 | `NOT_FOUND` | Anti-enumeration for absent authenticated profiles |
 | `117202` | `FOREIGN_PROFILE_ACCESS_DENIED` | 403 | `FORBIDDEN` | Object-level authorization without hiding |
 | `117203` | `BATCH_LOOKUP_UNAUTHORIZED` | 403 | `FORBIDDEN` | Internal workload authority missing |
 | `127101` | `LOGIN_CODE_INVALID` | 401 | `UNAUTHENTICATED` | Wrong, malformed, expired, or consumed code may split after threat review |

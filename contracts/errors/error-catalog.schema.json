@@ -1,0 +1,297 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://squarewise.example/schemas/error-catalog.json",
+  "title": "Squarewise Error Catalog",
+  "description": "Authoritative schema governing six-digit error-code catalog records and backward-compatible legacy mappings.",
+  "oneOf": [
+    {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          { "$ref": "#/$defs/sixDigitErrorDefinition" },
+          { "$ref": "#/$defs/legacyErrorDefinition" }
+        ]
+      }
+    },
+    {
+      "type": "object",
+      "required": ["errors"],
+      "properties": {
+        "schemaVersion": { "type": "integer" },
+        "status": { "type": "string" },
+        "errors": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              { "$ref": "#/$defs/sixDigitErrorDefinition" },
+              { "$ref": "#/$defs/legacyErrorDefinition" }
+            ]
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  ],
+  "$defs": {
+    "sixDigitErrorDefinition": {
+      "type": "object",
+      "required": [
+        "numericCode",
+        "errorName",
+        "domain",
+        "module",
+        "layer",
+        "category",
+        "sequence",
+        "title",
+        "safeDetail",
+        "messageKey",
+        "owner",
+        "source",
+        "component",
+        "operation",
+        "transports",
+        "retryPolicy",
+        "severity",
+        "introducedIn"
+      ],
+      "properties": {
+        "numericCode": {
+          "type": "string",
+          "pattern": "^[1-9]{4}(0[1-9]|[1-9][0-9])$",
+          "description": "Six-character immutable machine form DMLCEE (no zero digit, sequence 01-99)."
+        },
+        "errorName": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]*$",
+          "description": "Globally unique immutable SCREAMING_SNAKE_CASE symbolic name."
+        },
+        "legacyCode": {
+          "type": ["string", "null"],
+          "pattern": "^[A-Z0-9_]+$",
+          "description": "Explicit current v1 symbolic code when one exists; null otherwise."
+        },
+        "domain": {
+          "type": "integer",
+          "enum": [1, 2, 3, 4, 9],
+          "description": "Bounded-context domain: 1=Accounts, 2=Expense Core, 3=Notifications, 4=BFF, 9=Platform."
+        },
+        "module": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9,
+          "description": "Functional capability module within domain (1-9)."
+        },
+        "layer": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9,
+          "description": "Semantic architecture layer (1-9): 1=Interface, 2=App, 3=Domain, 4=Persistence, 5=Messaging, 6=Integration, 7=Security, 8=Infra, 9=Shared Runtime."
+        },
+        "category": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9,
+          "description": "Remediation category (1-9): 1=Validation, 2=Missing, 3=Conflict, 4=State, 5=Business Rule, 6=Data/Consistency, 7=Communication, 8=Availability/Timeout, 9=Internal/Unexpected."
+        },
+        "sequence": {
+          "oneOf": [
+            { "type": "integer", "minimum": 1, "maximum": 99 },
+            { "type": "string", "pattern": "^(0[1-9]|[1-9][0-9])$" }
+          ],
+          "description": "Monotonic sequence number within DMLC namespace (01-89 normal, 90-98 reserved, 99 unclassified)."
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Locale-neutral, non-sensitive public title."
+        },
+        "safeDetail": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Safe, non-sensitive public detail message with zero disclosure of PII or internal state."
+        },
+        "messageKey": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_.-]*$",
+          "description": "Stable client localization message key (e.g. error.expense.not_found)."
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Owning bounded context and engineering team."
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Originating application or service authority (e.g. squarewise-expense-core)."
+        },
+        "component": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Component or subsystem (e.g. expenses, authentication, outbox)."
+        },
+        "operation": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Attributed API or internal operation (e.g. create-expense, verify-email)."
+        },
+        "transports": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": ["REST", "GRAPHQL", "WEBSOCKET", "MESSAGING", "SCHEDULED", "STARTUP", "INTERNAL"]
+          },
+          "description": "Transports across which this error can be communicated."
+        },
+        "httpStatus": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 599,
+          "description": "Default HTTP status code when transported over REST."
+        },
+        "graphqlClassification": {
+          "type": "string",
+          "enum": ["BAD_REQUEST", "UNAUTHENTICATED", "FORBIDDEN", "NOT_FOUND", "INTERNAL_ERROR", "EXECUTION_ERROR", "OPERATION_RESOLUTION_ERROR"],
+          "description": "GraphQL error classification when transported over GraphQL."
+        },
+        "legacyCompatibility": {
+          "type": ["object", "string", "null"],
+          "description": "Backward-compatibility mappings for v1 clients."
+        },
+        "retryPolicy": {
+          "type": "string",
+          "enum": ["NEVER", "RETRY_AFTER", "REAUTHENTICATE", "REFRESH", "RESYNC", "SAME_IDEMPOTENCY_KEY"],
+          "description": "Client remediation policy."
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["INFO", "WARNING", "ERROR", "CRITICAL"],
+          "description": "Operational severity level."
+        },
+        "requiredHeaders": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Required HTTP response headers (e.g. WWW-Authenticate, Retry-After, Allow)."
+        },
+        "disclosure": {
+          "type": ["string", "object"],
+          "description": "Information disclosure constraints (e.g. anti-enumeration, public, internal-only)."
+        },
+        "introducedIn": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Version or milestone when this error was introduced."
+        },
+        "deprecatedIn": {
+          "type": ["string", "null"],
+          "description": "Version or milestone when this error was deprecated."
+        },
+        "retiredIn": {
+          "type": ["string", "null"],
+          "description": "Version or milestone when this error was retired."
+        },
+        "replacedBy": {
+          "type": ["string", "null"],
+          "pattern": "^[1-9]{4}(0[1-9]|[1-9][0-9])$",
+          "description": "Six-digit replacement code if retired or deprecated."
+        },
+        "runbook": {
+          "type": ["string", "null"],
+          "description": "Link to on-call or operator runbook."
+        }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "transports": { "contains": { "const": "REST" } }
+            },
+            "required": ["transports"]
+          },
+          "then": {
+            "required": ["httpStatus"]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "transports": { "contains": { "const": "GRAPHQL" } }
+            },
+            "required": ["transports"]
+          },
+          "then": {
+            "required": ["graphqlClassification"]
+          }
+        },
+        {
+          "if": {
+            "anyOf": [
+              { "properties": { "severity": { "const": "CRITICAL" } } },
+              { "properties": { "retryPolicy": { "not": { "const": "NEVER" } } } },
+              { "properties": { "category": { "enum": [6, 8] } } }
+            ]
+          },
+          "then": {
+            "required": ["runbook"],
+            "properties": {
+              "runbook": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      ]
+    },
+    "legacyErrorDefinition": {
+      "type": "object",
+      "required": [
+        "code",
+        "service",
+        "component",
+        "operation",
+        "httpStatus",
+        "severity",
+        "retryable",
+        "safeDetail"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "pattern": "^ERR-[0-9]{2}$",
+          "description": "Legacy error code format (ERR-01 through ERR-12)."
+        },
+        "service": {
+          "type": "string",
+          "minLength": 1
+        },
+        "component": {
+          "type": "string",
+          "minLength": 1
+        },
+        "operation": {
+          "type": "string",
+          "minLength": 1
+        },
+        "httpStatus": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 599
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["info", "warning", "error", "critical"]
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "safeDetail": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

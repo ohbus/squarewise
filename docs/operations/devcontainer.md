@@ -14,7 +14,7 @@ flowchart TB
 
     subgraph BridgeNet["Docker Bridge Network: squarewise-local-net"]
         subgraph WorkspaceContainer["Workspace Devcontainer (Service: devcontainer)"]
-            DevTools["Java 25 (OpenJDK) • Python 3.12 (uv) • Node 22 • psql-client"]
+            DevTools["Java 25 (OpenJDK) • Python 3.12 (uv) • Node.js 24 LTS • psql-client"]
             Caches[("Named Volumes: ~/.gradle & ~/.cache/uv<br/>Native ext4 Speed (:cached)")]
         end
 
@@ -57,7 +57,7 @@ flowchart TB
 3. When prompted with **"Folder contains a Dev Container configuration file. Reopen to develop in a container"**, click **Reopen in Container**.
    - Alternatively, open the Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`) and select **Dev Containers: Reopen in Container**.
 4. The Devcontainer automatically:
-   - Builds the workspace image (Java 25, Python 3.12, `uv`, Node 22, `psql`).
+   - Builds the workspace image (Java 25, Python 3.12, `uv`, Node.js 24 LTS, `psql`).
    - Starts all backing services (`postgres-db`, `message-broker`, `rate-limit-redis`, `mailpit-email`, `idp-keycloak`).
    - Runs `updateContentCommand` to warm the `uv` virtual environment and Gradle wrapper.
    - Executes `.devcontainer/post-start.sh` to await service health and seed development personas and sample groups.

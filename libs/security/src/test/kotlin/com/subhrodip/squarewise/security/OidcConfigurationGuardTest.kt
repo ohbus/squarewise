@@ -3,6 +3,7 @@ package com.subhrodip.squarewise.security
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
+import com.subhrodip.squarewise.security.errors.PlatformDomainException
 
 /** Verifies the production-like OIDC configuration fail-closed boundary. */
 class OidcConfigurationGuardTest {
@@ -15,21 +16,21 @@ class OidcConfigurationGuardTest {
 
     @Test
     fun `rejects missing issuer`() {
-        assertThrows(IllegalArgumentException::class.java) {
+        assertThrows(PlatformDomainException::class.java) {
             OidcConfigurationGuard("", "squarewise-api", "production")
         }
     }
 
     @Test
     fun `rejects missing audience`() {
-        assertThrows(IllegalArgumentException::class.java) {
+        assertThrows(PlatformDomainException::class.java) {
             OidcConfigurationGuard("https://keycloak.example/realms/squarewise", "", "production")
         }
     }
 
     @Test
     fun `rejects non-https issuer`() {
-        assertThrows(IllegalArgumentException::class.java) {
+        assertThrows(PlatformDomainException::class.java) {
             OidcConfigurationGuard("http://keycloak.example/realms/squarewise", "squarewise-api", "production")
         }
     }

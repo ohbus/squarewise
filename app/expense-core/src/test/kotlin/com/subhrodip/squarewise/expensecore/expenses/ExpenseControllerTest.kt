@@ -1,6 +1,5 @@
 package com.subhrodip.squarewise.expensecore.expenses
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
 import com.subhrodip.squarewise.expensecore.expenses.api.ExpenseController
 import com.subhrodip.squarewise.expensecore.expenses.api.request.AllocationInputDto
 import com.subhrodip.squarewise.expensecore.expenses.api.request.AllocationItemDto
@@ -70,15 +69,15 @@ class ExpenseControllerTest {
 
     @Test
     fun `rejects missing and blank authenticated subjects before membership lookup`() {
-        val missing = assertThrows<ApplicationException> {
+        val missing = assertThrows<SquarewiseException> {
             controller.getBalances(UUID.randomUUID(), null)
         }
-        assertEquals(ErrorCode.ERR_03, missing.errorCode)
+        assertEquals("UNAUTHENTICATED", missing.definition.legacyCode)
 
-        val blank = assertThrows<ApplicationException> {
+        val blank = assertThrows<SquarewiseException> {
             controller.getBalances(UUID.randomUUID(), Principal { "   " })
         }
-        assertEquals(ErrorCode.ERR_03, blank.errorCode)
+        assertEquals("UNAUTHENTICATED", blank.definition.legacyCode)
     }
 
     /** Verifies every financial mutation rejects a missing principal before validation or persistence. */
@@ -106,22 +105,22 @@ class ExpenseControllerTest {
         )
 
         assertEquals(
-            ErrorCode.ERR_03,
-            assertThrows<ApplicationException> {
+            "UNAUTHENTICATED",
+            assertThrows<SquarewiseException> {
                 controller.createExpense(groupId, "unauthenticated-create", createRequest, null)
-            }.errorCode
+            }.definition.legacyCode
         )
         assertEquals(
-            ErrorCode.ERR_03,
-            assertThrows<ApplicationException> {
+            "UNAUTHENTICATED",
+            assertThrows<SquarewiseException> {
                 controller.updateExpense(groupId, expenseId, updateRequest, null)
-            }.errorCode
+            }.definition.legacyCode
         )
         assertEquals(
-            ErrorCode.ERR_03,
-            assertThrows<ApplicationException> {
+            "UNAUTHENTICATED",
+            assertThrows<SquarewiseException> {
                 controller.deleteExpense(groupId, expenseId, null, null)
-            }.errorCode
+            }.definition.legacyCode
         )
     }
 
@@ -148,10 +147,10 @@ class ExpenseControllerTest {
         )
 
         assertEquals(
-            ErrorCode.ERR_02,
-            assertThrows<ApplicationException> {
+            "VALIDATION_FAILED",
+            assertThrows<SquarewiseException> {
                 controller.createExpense(groupId, "overflow-create", request, Principal { "test-user" })
-            }.errorCode
+            }.definition.legacyCode
         )
 
         val update = UpdateExpenseRequest(
@@ -162,10 +161,10 @@ class ExpenseControllerTest {
             allocation = request.allocation
         )
         assertEquals(
-            ErrorCode.ERR_02,
-            assertThrows<ApplicationException> {
+            "VALIDATION_FAILED",
+            assertThrows<SquarewiseException> {
                 controller.updateExpense(groupId, expenseId, update, Principal { "test-user" })
-            }.errorCode
+            }.definition.legacyCode
         )
     }
 
@@ -557,10 +556,10 @@ class ExpenseControllerTest {
         )
 
         invalidRequests.forEach { request ->
-            val error = assertThrows<ApplicationException> {
+            val error = assertThrows<SquarewiseException> {
                 controller.updateExpense(groupId, expenseId, request, principal)
             }
-            assertEquals(ErrorCode.ERR_02, error.errorCode)
+            assertEquals("VALIDATION_FAILED", error.definition.legacyCode)
         }
     }
 
@@ -590,10 +589,10 @@ class ExpenseControllerTest {
         )
 
         invalidRequests.forEachIndexed { index, request ->
-            val error = assertThrows<ApplicationException> {
+            val error = assertThrows<SquarewiseException> {
                 controller.createExpense(groupId, "create-validation-$index", request, principal)
             }
-            assertEquals(ErrorCode.ERR_02, error.errorCode)
+            assertEquals("VALIDATION_FAILED", error.definition.legacyCode)
         }
     }
 
@@ -614,11 +613,11 @@ class ExpenseControllerTest {
             )
         )
 
-        val error = assertThrows<ApplicationException> {
+        val error = assertThrows<SquarewiseException> {
             controller.createExpense(groupId, "category-boundary", request, Principal { "test-user" })
         }
 
-        assertEquals(ErrorCode.ERR_02, error.errorCode)
+        assertEquals("VALIDATION_FAILED", error.definition.legacyCode)
     }
 
     /** Verifies blank categories use the documented neutral category on create and update. */
@@ -808,7 +807,7 @@ class ExpenseControllerTest {
             )
         )
 
-        val error = assertThrows<ApplicationException> {
+        val error = assertThrows<SquarewiseException> {
             controller.createExpense(
                 groupId,
                 "bounded-allocation-count",
@@ -816,7 +815,7 @@ class ExpenseControllerTest {
                 Principal { "test-user" }
             )
         }
-        assertEquals(ErrorCode.ERR_02, error.errorCode)
+        assertEquals("VALIDATION_FAILED", error.definition.legacyCode)
     }
 
     /** Verifies simultaneous oversized payer and allocation collections fail at the shared bound. */
@@ -836,7 +835,7 @@ class ExpenseControllerTest {
             )
         )
 
-        val error = assertThrows<ApplicationException> {
+        val error = assertThrows<SquarewiseException> {
             controller.createExpense(
                 UUID.randomUUID(),
                 "both-collections-bounded",
@@ -844,6 +843,6 @@ class ExpenseControllerTest {
                 Principal { "test-user" }
             )
         }
-        assertEquals(ErrorCode.ERR_02, error.errorCode)
+        assertEquals("VALIDATION_FAILED", error.definition.legacyCode)
     }
 }

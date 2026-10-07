@@ -1,5 +1,6 @@
 package com.subhrodip.squarewise.db.health
 
+import com.subhrodip.squarewise.db.errors.DbPlatformException
 import com.subhrodip.squarewise.db.routing.DbExecutionContext
 import com.subhrodip.squarewise.db.routing.DbOperationKind
 import com.subhrodip.squarewise.db.routing.ReadConsistency
@@ -54,9 +55,9 @@ class DbReaderHealthTest {
     /** Constructor guards reject configurations that could disable or busy-loop health checks. */
     @Test
     fun `health policy requires positive threshold and open duration`() {
-        assertFailsWith<IllegalArgumentException> { DbReaderHealth(failureThreshold = 0) }
-        assertFailsWith<IllegalArgumentException> { DbReaderHealth(openDuration = Duration.ZERO) }
-        assertFailsWith<IllegalArgumentException> { DbReaderHealth(openDuration = Duration.ofSeconds(-1)) }
+        assertFailsWith<DbPlatformException> { DbReaderHealth(failureThreshold = 0) }
+        assertFailsWith<DbPlatformException> { DbReaderHealth(openDuration = Duration.ZERO) }
+        assertFailsWith<DbPlatformException> { DbReaderHealth(openDuration = Duration.ofSeconds(-1)) }
     }
 
     /** Lagging, disconnected, and unknown readers all fail closed for eventual reads. */
@@ -155,7 +156,7 @@ class DbReaderHealthTest {
     /** Scheduler construction rejects a non-positive lag budget. */
     @Test
     fun `scheduler requires a positive lag budget`() {
-        assertFailsWith<IllegalArgumentException> {
+        assertFailsWith<DbPlatformException> {
             DbReaderHealthScheduler(emptyMap(), DbReaderHealth(), lagBudgetMs = 0)
         }
     }

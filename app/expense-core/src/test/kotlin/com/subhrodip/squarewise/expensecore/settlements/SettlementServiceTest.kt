@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.util.UUID
 import org.junit.jupiter.api.Assertions.assertThrows
-import com.subhrodip.squarewise.errors.domain.ApplicationException
+import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
 
 /** Verifies settlement-service validation, idempotency, reversal, and suggestion delegation. */
 class SettlementServiceTest {
@@ -31,7 +31,7 @@ class SettlementServiceTest {
         val to = UUID.randomUUID()
         service.record(groupId, UUID.randomUUID(), from, to, 1250, "EUR", "actor-1", "settlement-key-0001")
 
-        assertThrows(ApplicationException::class.java) {
+        assertThrows(SquarewiseException::class.java) {
             service.record(groupId, UUID.randomUUID(), from, to, 1300, "EUR", "actor-1", "settlement-key-0001")
         }
     }

@@ -1,9 +1,12 @@
 package com.subhrodip.squarewise.expensecore.settlements.persistence
+
+import com.subhrodip.squarewise.errors.catalog.PlatformErrors
+import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
 import com.subhrodip.squarewise.expensecore.settlements.domain.Settlement
 import com.subhrodip.squarewise.expensecore.settlements.domain.SettlementStatus
 
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
+
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
@@ -21,7 +24,7 @@ class InMemorySettlementStore : SettlementStore {
                 existing.toParticipantId != settlement.toParticipantId ||
                 existing.amountMinor != settlement.amountMinor
             ) {
-                throw ApplicationException(ErrorCode.ERR_06, "Idempotency key was already used with a different settlement")
+                throw ExpenseDomainException(PlatformErrors.RESOURCE_CONFLICT, "Idempotency key was already used with a different settlement")
             }
             return existing
         }
@@ -32,7 +35,7 @@ class InMemorySettlementStore : SettlementStore {
     override fun reverse(groupId: UUID, settlementId: UUID, reason: String): Settlement {
         val key = groupId to settlementId
         val settlement = settlements[key]
-            ?: throw ApplicationException(ErrorCode.ERR_05, "Settlement not found")
+            ?: throw ExpenseDomainException(PlatformErrors.RESOURCE_NOT_FOUND, "Settlement not found")
         if (settlement.status == SettlementStatus.REVERSED) return settlement
         return settlement.copy(reason = reason, status = SettlementStatus.REVERSED).also {
             settlements[key] = it

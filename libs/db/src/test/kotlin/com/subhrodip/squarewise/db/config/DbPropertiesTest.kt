@@ -1,5 +1,6 @@
 package com.subhrodip.squarewise.db.config
 
+import com.subhrodip.squarewise.db.errors.DbPlatformException
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -54,35 +55,35 @@ class DbPropertiesTest {
 
     @Test
     fun `writer endpoint is required`() {
-        assertFailsWith<IllegalArgumentException> { PoolProperties().validate("writer") }
+        assertFailsWith<DbPlatformException> { PoolProperties().validate("writer") }
     }
 
     @Test
     fun `pool size is bounded`() {
-        assertFailsWith<IllegalArgumentException> {
+        assertFailsWith<DbPlatformException> {
             PoolProperties(url = "jdbc:postgresql://writer/db", username = "app", maximumPoolSize = 201)
                 .validate("writer")
         }
-        assertFailsWith<IllegalArgumentException> { validPool.copy(maximumPoolSize = 0).validate("writer") }
+        assertFailsWith<DbPlatformException> { validPool.copy(maximumPoolSize = 0).validate("writer") }
     }
 
     /** Every required pool bound rejects values outside its documented safe range. */
     @Test
     fun `pool endpoint and timing bounds are enforced`() {
-        assertFailsWith<IllegalArgumentException> { validPool.copy(username = "").validate("writer") }
-        assertFailsWith<IllegalArgumentException> { validPool.copy(url = " ").validate("writer") }
-        assertFailsWith<IllegalArgumentException> { validPool.copy(username = " ").validate("writer") }
-        assertFailsWith<IllegalArgumentException> {
+        assertFailsWith<DbPlatformException> { validPool.copy(username = "").validate("writer") }
+        assertFailsWith<DbPlatformException> { validPool.copy(url = " ").validate("writer") }
+        assertFailsWith<DbPlatformException> { validPool.copy(username = " ").validate("writer") }
+        assertFailsWith<DbPlatformException> {
             validPool.copy(connectionTimeoutMs = 249).validate("writer")
         }
-        assertFailsWith<IllegalArgumentException> {
+        assertFailsWith<DbPlatformException> {
             validPool.copy(connectionTimeoutMs = 120_001).validate("writer")
         }
-        assertFailsWith<IllegalArgumentException> {
+        assertFailsWith<DbPlatformException> {
             validPool.copy(maxLifetimeMs = 29_999).validate("writer")
         }
         validPool.copy(maxLifetimeMs = 30_000).validate("writer")
-        assertFailsWith<IllegalArgumentException> {
+        assertFailsWith<DbPlatformException> {
             validPool.copy(maxLifetimeMs = Long.MIN_VALUE).validate("writer")
         }
     }

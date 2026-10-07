@@ -3,7 +3,7 @@ plugins {
 }
 kotlin { jvmToolchain(25) }
 dependencies {
-    api(libs.uuid.creator)
+    api(project(":libs:errors"))
     testImplementation(libs.boot.test)
     testRuntimeOnly(libs.junit.platform.launcher)
 }

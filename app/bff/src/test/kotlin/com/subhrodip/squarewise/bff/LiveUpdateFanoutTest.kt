@@ -11,8 +11,7 @@ import com.subhrodip.squarewise.bff.messaging.persistence.BffEventDeduplicator
 import com.subhrodip.squarewise.bff.realtime.GroupInvalidation
 import com.subhrodip.squarewise.bff.realtime.LiveUpdate
 import com.subhrodip.squarewise.bff.realtime.LiveUpdateFanout
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
 
 
 import org.assertj.core.api.Assertions.assertThat
@@ -41,8 +40,8 @@ class LiveUpdateFanoutTest {
         val fanout = LiveUpdateFanout(maxSubscriptionsPerUser = 1)
         fanout.subscribe("user-1", "group-1")
 
-        val error = assertThrows<ApplicationException> { fanout.subscribe("user-1", "group-2") }
-        assertThat(error.errorCode).isEqualTo(ErrorCode.ERR_11)
+        val error = assertThrows<SquarewiseException> { fanout.subscribe("user-1", "group-2") }
+        assertThat(error.definition.legacyCode).isEqualTo("RATE_LIMITED")
     }
 
     @Test

@@ -1,12 +1,12 @@
 # BFF error ownership guide
 
-Status: proposed inventory; codes are not implemented or contractually published.
+Status: allocated and authoritative under `ERRC-04`; matches `contracts/errors/error-catalog.yaml`.
 
 The database-free BFF owns Domains `41`-`43`. It preserves valid upstream identities
 and creates a BFF identity only for a failure introduced by GraphQL, gateway transport,
 aggregation, or live-update behavior.
 
-## Candidate BFF-owned families
+## Allocated BFF-owned families
 
 | Candidate | Name | REST/GraphQL classification | Legacy `code` | Required distinction |
 |---|---|---|---|---|
@@ -54,3 +54,26 @@ bodies, each network failure class, timeout and cancellation races, circuit open
 partial aggregation, resolver validation, response serialization, Reactor-context
 request ID, subscription quota, reconnect/replay, fanout outage, malformed live event,
 redaction, and GraphQL extension compatibility.
+
+## GraphQL and WebSocket contract
+
+`contracts/graphql/errors.graphqls` is authoritative for all nine root
+operations. Every formatted error includes the required v1 `code`, `requestId`,
+`source`, and `timestamp`; valid upstream Problem Details additionally preserve
+optional `numericCode`, `errorName`, and bounded validation violations.
+
+| Upstream outcome | GraphQL result | Extension identity |
+|---|---|---|
+| Valid upstream 4xx/5xx Problem Details | `errors[]`; nullable fields may return partial data | Preserve the complete validated upstream identity |
+| Unparseable upstream response | `errors[]` with no upstream identity | BFF `UPSTREAM_PROTOCOL_INVALID` (`426701`) |
+| Upstream timeout/unavailable transport | `errors[]` with no provider detail | BFF timeout/availability identity (`426801`/`426802`) |
+| Resolver or input rejection | `errors[]` | BFF `GRAPHQL_INPUT_INVALID` (`411101`) or operation-invalid (`411102`) |
+
+GraphQL transport remains HTTP 200 for a response containing an `errors` array.
+The BFF does not infer an identity from HTTP status alone when a valid upstream
+Problem Details document is available.
+
+For `graphql-transport-ws`, lifecycle failures use close codes 4401 (unauthorized
+or expired authentication), 4403 (revoked subscription access), 4408 (idle
+timeout), and 4429 (subscription rate limit). Reasons are bounded and never
+contain stack traces, provider text, tokens, or personal data.

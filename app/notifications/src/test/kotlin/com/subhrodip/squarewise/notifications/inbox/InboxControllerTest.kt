@@ -16,8 +16,7 @@ import com.subhrodip.squarewise.db.routing.DbContextHolder
 import com.subhrodip.squarewise.db.routing.DbOperationKind
 import com.subhrodip.squarewise.db.routing.ReadConsistency
 import com.subhrodip.squarewise.errors.http.GlobalErrorHandler
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
 import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -77,10 +76,10 @@ class InboxControllerTest {
     @Test
     fun `rejects malformed cursor`() {
         val testInbox = NotificationInboxService(InMemoryNotificationInboxStore())
-        val err = assertThrows(ApplicationException::class.java) {
+        val err = assertThrows(SquarewiseException::class.java) {
             testInbox.page("alice", "bad", 10)
         }
-        assertEquals(ErrorCode.ERR_02, err.errorCode)
+        assertEquals("VALIDATION_FAILED", err.definition.legacyCode)
     }
 
     @Test
@@ -148,11 +147,11 @@ class InboxControllerTest {
 
     @Test
     fun `page limit violation is represented by the validation application exception`() {
-        val error = assertThrows(ApplicationException::class.java) {
+        val error = assertThrows(SquarewiseException::class.java) {
             controller.list(Principal { "alice" }, null, 101)
         }
 
-        assertEquals(ErrorCode.ERR_02, error.errorCode)
+        assertEquals("VALIDATION_FAILED", error.definition.legacyCode)
     }
 
     @Test

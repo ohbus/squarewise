@@ -1,10 +1,9 @@
 # Error domain and module registry
 
-Status: accepted documentation baseline under `ERRC-01`; not implemented.
+Status: frozen and authoritative under `ERRC-03`.
 
-This is the proposed canonical ownership table for Squarewise error namespaces.
-It becomes the allocation authority when the implementation gate accepts and
-validates [the machine-readable registry](../../contracts/errors/domains.yaml).
+This is the canonical ownership table for Squarewise error namespaces.
+It is the allocation authority validated by [the machine-readable registry](../../contracts/errors/domains.yaml).
 After publication, domain and module numbers are immutable.
 
 The namespace names a stable capability, never a deployable, team, database,

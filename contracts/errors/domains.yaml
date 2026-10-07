@@ -1,12 +1,11 @@
-# Proposed canonical domain and module registry for the six-digit error-code standard.
-# ERRC-01 is documentation-only: validation and runtime consumption are follow-on work.
-# Domain and module numbers become immutable once the implementation gate accepts them.
+# Authoritative canonical domain and module registry for the six-digit error-code standard.
+# Domain and module numbers are immutable under six-digit error-code governance.
 #
 # Format: DM-L-C-EE where D=domain, M=module, L=layer, C=category, EE=error(01-99)
 # See: docs/architecture/error-code-standard.md
 
 schemaVersion: 1
-status: accepted-design-not-implemented
+status: frozen-authoritative
 format:
   machine: DMLCEE
   display: DM-L-C-EE
@@ -121,7 +120,7 @@ domains:
 
 reserved:
   domains: [5, 6, 7, 8]
-  description: Available for future bounded contexts. Not yet allocated.
+  description: "Available for future bounded contexts. Frozen and locked. Not yet allocated without formal ADR."
 
 layers:
   1: { name: Interface, description: "REST, GraphQL, CLI, or input/output boundary" }

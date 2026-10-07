@@ -2,6 +2,7 @@
 
 package com.subhrodip.squarewise.notifications.email.security
 import java.util.Base64
+import com.subhrodip.squarewise.notifications.errors.NotificationInputException
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -15,7 +16,7 @@ class AuthEmailSecurityConfiguration(
     @Bean
     fun authEmailEnvelopeProtector(): AuthEmailEnvelopeProtector = AuthEmailEnvelopeProtector(
         runCatching { Base64.getDecoder().decode(encodedKey) }
-            .getOrElse { throw IllegalArgumentException("Auth email envelope key must be base64", it) }
-            .also { require(it.size == 32) { "Auth email envelope key must contain exactly 32 bytes" } }
+            .getOrElse { throw NotificationInputException("Auth email envelope key must be base64", it) }
+            .also { if (it.size != 32) throw NotificationInputException("Auth email envelope key must contain exactly 32 bytes") }
     )
 }

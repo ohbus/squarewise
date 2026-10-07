@@ -1,0 +1,40 @@
+apiVersion: squarewise.dev/v1
+kind: ErrorContractRollout
+metadata:
+  name: additive-six-digit-errors
+spec:
+  compatibility:
+    legacyCodePreserved: true
+    additiveFields:
+      - numericCode
+      - errorName
+    rollbackKeepsAdditiveFieldsOptional: true
+  analysis:
+    interval: 60s
+    minimumHealthySamples: 300
+    haltOn:
+      fiveHundredRateIncrease: 0.0005
+      p99LatencyIncreaseMs: 10
+      serializationFailureRate: 0
+      unmappedErrorEmissionRate: 0
+  stages:
+    - name: accounts
+      service: accounts
+      percentages: [5, 25, 100]
+      smoke: tools/bruno/accounts
+    - name: expense-core
+      service: expense-core
+      percentages: [5, 25, 100]
+      smoke: tools/bruno/expense-core
+    - name: notifications
+      service: notifications
+      percentages: [5, 25, 100]
+      smoke: tools/bruno/notifications
+    - name: bff
+      service: bff
+      percentages: [5, 25, 100]
+      smoke: tools/bruno/bff
+  rollback:
+    maximumSeconds: 60
+    preserveDatabaseState: true
+    trigger: any-analysis-halt

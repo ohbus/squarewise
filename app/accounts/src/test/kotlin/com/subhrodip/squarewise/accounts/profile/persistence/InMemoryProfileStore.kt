@@ -1,13 +1,15 @@
 package com.subhrodip.squarewise.accounts.profile.persistence
 
+import com.subhrodip.squarewise.accounts.errors.AccountsDomainException
 import com.subhrodip.squarewise.accounts.profile.model.StoredProfile
 import com.subhrodip.squarewise.accounts.auth.identity.AccountIdentity
 import com.subhrodip.squarewise.accounts.auth.identity.AccountIdentityStore
 import com.subhrodip.squarewise.accounts.profile.api.ProfileResponse
 import com.subhrodip.squarewise.accounts.profile.service.ProfileRules
 import com.subhrodip.squarewise.accounts.profile.api.ProfilePatchRequest
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.errors.catalog.AccountsErrors
+import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
+
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
@@ -85,7 +87,7 @@ class InMemoryProfileStore : ProfileStore, AccountIdentityStore {
     }
 
     override fun update(subject: String, patch: ProfilePatchRequest): ProfileResponse {
-        val current = get(subject) ?: throw ApplicationException(ErrorCode.ERR_03, "Profile not found")
+        val current = get(subject) ?: throw AccountsDomainException(AccountsErrors.AUTHENTICATED_PROFILE_NOT_FOUND)
         val updated = current.copy(
             displayName = patch.displayName ?: current.displayName,
             timezone = patch.timezone?.also(ProfileRules::requireTimezone) ?: current.timezone,
@@ -96,7 +98,7 @@ class InMemoryProfileStore : ProfileStore, AccountIdentityStore {
     }
 
     override fun requestDeletion(subject: String) {
-        val current = profiles[subject] ?: throw ApplicationException(ErrorCode.ERR_03, "Profile not found")
+        val current = profiles[subject] ?: throw AccountsDomainException(AccountsErrors.AUTHENTICATED_PROFILE_NOT_FOUND)
         profiles[subject] = current.copy(deletionRequested = true)
     }
 

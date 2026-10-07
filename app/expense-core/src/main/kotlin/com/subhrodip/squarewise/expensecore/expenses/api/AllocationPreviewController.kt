@@ -9,8 +9,8 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
+import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
 import jakarta.validation.Valid
 
 import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
@@ -22,12 +22,12 @@ class AllocationPreviewController {
     @ResponseStatus(HttpStatus.OK)
     fun preview(@Valid @RequestBody request: AllocationPreviewRequest): AllocationPreviewResponse {
         val total = request.totalMinor.toLongOrNull()
-            ?: throw ApplicationException(ErrorCode.ERR_02, "totalMinor must be a non-negative integer")
-        if (total < 0) throw ApplicationException(ErrorCode.ERR_02, "totalMinor must be non-negative")
+            ?: throw ExpenseDomainException(ExpenseErrors.EXPENSE_REQUEST_INVALID, "totalMinor must be a non-negative integer")
+        if (total < 0) throw ExpenseDomainException(ExpenseErrors.EXPENSE_REQUEST_INVALID, "totalMinor must be non-negative")
         val allocations = try {
             AllocationCalculator.equal(total, request.participantIds)
         } catch (error: IllegalArgumentException) {
-            throw ApplicationException(ErrorCode.ERR_02, error.message, error)
+            throw ExpenseDomainException(ExpenseErrors.EXPENSE_REQUEST_INVALID, error.message, error)
         }
             .mapValues { (_, value) -> value.toString() }
         return AllocationPreviewResponse(request.totalMinor, allocations)

@@ -1,12 +1,10 @@
 # Error ownership guides
 
-Status: proposed error inventory under `ERRC-01`; exact catalog freeze is follow-on
-implementation work.
+Status: authoritative error inventory under `ERRC-04`; reconciled with `contracts/errors/error-catalog.yaml`.
 
 These guides turn the canonical standard into bounded-context ownership decisions.
-They are not proof that the listed codes or exception types exist. Candidate codes
-are reserved by documentation so implementation can validate every boundary before
-publishing the final catalog.
+The codes defined herein are allocated in the authoritative machine-readable catalog
+`contracts/errors/error-catalog.yaml` and govern runtime error definitions across all domains.
 
 | Guide | Domain | Primary concerns |
 |---|:---:|---|

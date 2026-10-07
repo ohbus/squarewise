@@ -1,5 +1,6 @@
 package com.subhrodip.squarewise.db.policy
 
+import com.subhrodip.squarewise.db.errors.DbPlatformException
 import com.subhrodip.squarewise.db.routing.DbExecutionContext
 import com.subhrodip.squarewise.db.routing.DbOperationKind
 import com.subhrodip.squarewise.db.routing.DbRoute
@@ -17,14 +18,14 @@ class DbRouteGuardTest {
 
     @Test
     fun `commands cannot use a reader`() {
-        assertFailsWith<IllegalStateException> {
+        assertFailsWith<DbPlatformException> {
             guard.validate(DbExecutionContext("expense.create", DbOperationKind.COMMAND), DbRoute.READER)
         }
     }
 
     @Test
     fun `locking queries cannot use a reader`() {
-        assertFailsWith<IllegalStateException> {
+        assertFailsWith<DbPlatformException> {
             guard.validate(DbExecutionContext("group.lock", DbOperationKind.LOCKING_QUERY), DbRoute.READER)
         }
     }

@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://squarewise.example/schemas/error-envelope.json",
+  "title": "Squarewise asynchronous error envelope",
+  "description": "Failure metadata stored beside an immutable business event; it never replaces or mutates the original event envelope.",
+  "type": "object",
+  "required": [
+    "eventId",
+    "eventType",
+    "schemaVersion",
+    "failedAt",
+    "attemptCount",
+    "disposition",
+    "numericCode",
+    "errorName",
+    "diagnosticReason",
+    "source"
+  ],
+  "properties": {
+    "eventId": { "type": "string", "format": "uuid" },
+    "eventType": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "schemaVersion": { "type": "integer", "minimum": 1 },
+    "failedAt": { "type": "string", "format": "date-time" },
+    "attemptCount": { "type": "integer", "minimum": 1, "maximum": 4 },
+    "disposition": {
+      "type": "string",
+      "enum": ["RETRY_SCHEDULED", "DEAD_LETTERED", "ACKNOWLEDGED"]
+    },
+    "numericCode": {
+      "type": "string",
+      "pattern": "^[1-9]{4}(0[1-9]|[1-9][0-9])$"
+    },
+    "errorName": {
+      "type": "string",
+      "pattern": "^[A-Z0-9_]{3,64}$"
+    },
+    "diagnosticReason": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "source": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "originalEventSha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "retryAt": { "type": ["string", "null"], "format": "date-time" }
+  },
+  "additionalProperties": false
+}

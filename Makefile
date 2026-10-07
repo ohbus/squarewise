@@ -18,7 +18,7 @@ export SQUAREWISE_SECURITY_CREDENTIAL_DIGEST_SECRET ?= AAECAwQFBgcICQoLDA0ODxARE
 export SQUAREWISE_SECURITY_AUTH_EMAIL_ENVELOPE_KEY ?= ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj8=
 
 .DEFAULT_GOAL := help
-.PHONY: help doctor bootstrap sync validate contracts lint python-typecheck test test-unit test-integration coverage build package check ci ci-e2e acceptance acceptance-live bruno-run workflow-validate observability-validate release-gate security-hygiene architecture-validate sbom-validate load-probe load-k6-validate load-k6 load-k6-rate-limit e2e e2e-auth-email e2e-auth-notification-limit e2e-notification-general-limit e2e-auth-notification-outage e2e-auth-login-replicas e2e-auth-refresh-concurrency e2e-rest-edge e2e-auth-cache e2e-auth-surfaces e2e-auth-bff-replicas e2e-auth-no-accounts e2e-auth-query-latency smoke docs-diagrams docs-diagrams-config compose-config devcontainer-config redis-status redis-logs redis-clear-rate-limit generate-secrets deps-config deps-up deps-status deps-logs deps-down accounts-deps-config accounts-deps-up accounts-deps-status accounts-deps-logs accounts-deps-down expense-core-deps-config expense-core-deps-up expense-core-deps-status expense-core-deps-logs expense-core-deps-down notifications-deps-config notifications-deps-up notifications-deps-status notifications-deps-logs notifications-deps-down bff-deps-config bff-deps-up bff-deps-status bff-deps-logs bff-deps-down full-config full-up full-status full-logs full-down compose-dev-up compose-dev-down compose-dev-logs compose-up compose-down dev-setup seed seed-large seed-reset docker-build-all docker-build-% prod-config clean clean-gradle status
+.PHONY: help doctor bootstrap sync validate contracts lint python-typecheck test test-unit test-integration coverage build package error-hygiene check ci ci-e2e acceptance acceptance-live bruno-run workflow-validate observability-validate release-gate security-hygiene architecture-validate sbom-validate rollout-validate load-probe load-k6-validate load-k6 load-k6-error-storm load-k6-rate-limit e2e e2e-auth-email e2e-auth-notification-limit e2e-notification-general-limit e2e-auth-notification-outage e2e-auth-login-replicas e2e-auth-refresh-concurrency e2e-rest-edge e2e-auth-cache e2e-auth-surfaces e2e-auth-bff-replicas e2e-auth-no-accounts e2e-auth-query-latency smoke docs-diagrams docs-diagrams-config compose-config devcontainer-config redis-status redis-logs redis-clear-rate-limit generate-secrets deps-config deps-up deps-status deps-logs deps-down accounts-deps-config accounts-deps-up accounts-deps-status accounts-deps-logs accounts-deps-down expense-core-deps-config expense-core-deps-up expense-core-deps-status expense-core-deps-logs expense-core-deps-down notifications-deps-config notifications-deps-up notifications-deps-status notifications-deps-logs notifications-deps-down bff-deps-config bff-deps-up bff-deps-status bff-deps-logs bff-deps-down full-config full-up full-status full-logs full-down compose-dev-up compose-dev-down compose-dev-logs compose-up compose-down dev-setup seed seed-large seed-reset docker-build-all docker-build-% prod-config clean clean-gradle status
 
 help: ## Show available commands
 	@awk 'BEGIN {FS = ":.*##"; printf "Squarewise commands\n\n"} /^[a-zA-Z0-9_.-]+:.*##/ {printf "  %-24s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -39,15 +39,21 @@ sync: ## Install and update the Python virtual environment from uv.lock
 bootstrap: doctor ## Resolve the Gradle wrapper and verify the scaffold
 	@$(GRADLE) help
 
-validate: contracts compose-config ## Run dependency-light repository checks
+validate: contracts compose-config rollout-validate ## Run dependency-light repository checks
 	@$(GRADLE) test
 
 contracts: ## Validate contract JSON, GraphQL declarations, and task links
 	@$(UV_RUN) python tools/contracts/validate.py
 	@$(UV_RUN) python tools/contracts/validate_public_surface.py
+	@$(UV_RUN) python tools/errors/validate_six_digit_catalog.py
+	@$(UV_RUN) python tools/contracts/validate_openapi_parity.py
+	@$(UV_RUN) python tools/contracts/detect_breaking_error_changes.py
 
 python-typecheck: ## Run the strict repository Python type checker
 	@$(UV_RUN) mypy tests tools
+
+error-hygiene: ## Enforce governed error-path static policy
+	@$(UV_RUN) python tools/qa/check_error_hygiene.py
 
 docs-diagrams-config: ## Validate the Mermaid renderer Compose file
 	@$(COMPOSE) -f infra/docs/docker-compose.yml config --quiet
@@ -89,9 +95,9 @@ package: ## Build executable jars for every application
 	@$(GRADLE) bootJar
 	@$(UV_RUN) python -c "from pathlib import Path; [print(path) for path in Path('app').glob('*/build/libs/*.jar')]"
 
-check: validate python-typecheck coverage package ## Validate, type-check, test, report coverage, and package
+check: validate python-typecheck error-hygiene coverage package ## Validate, type-check, test, report coverage, and package
 
-ci: contracts compose-config ## Run the hosted CI verification stages locally with parallel Gradle workers
+ci: contracts compose-config release-gate ## Run the hosted CI verification stages locally with parallel Gradle workers
 	@$(GRADLE) test check jacocoTestReport bootJar --parallel --no-daemon
 
 ci-e2e: ci e2e ## Run local CI verification plus the contract/deployment E2E smoke suite
@@ -116,7 +122,7 @@ observability-validate: ## Validate Prometheus rules and Grafana dashboard asset
 	@$(UV_RUN) python -m json.tool infra/observability/grafana/dashboards/squarewise-overview.json >/dev/null
 	@$(UV_RUN) python -c 'import json; d=json.load(open("infra/observability/grafana/dashboards/squarewise-overview.json")); assert d["panels"] and all(p["targets"] for p in d["panels"]); print("valid Grafana dashboard")'
 
-release-gate: observability-validate ## Validate repository-owned production release prerequisites
+release-gate: observability-validate rollout-validate ## Validate repository-owned production release prerequisites
 	@$(UV_RUN) python tools/ops/validate_release_gate.py
 
 security-hygiene: ## Scan tracked configuration and source for obvious secret material
@@ -128,16 +134,26 @@ architecture-validate: ## Enforce application service dependency boundaries
 sbom-validate: ## Validate centralized dependency-version baseline for SBOM generation
 	@$(UV_RUN) python tools/ops/validate_sbom_baseline.py
 
+rollout-validate: ## Validate the additive error-contract canary manifest and evidence ledger shape
+	@$(UV_RUN) python tools/ops/validate_error_rollout.py
+	@$(UV_RUN) python -m unittest tools.ops.test_validate_error_rollout
+
 load-probe: ## Run an HTTP load probe; set URL, CONCURRENCY, and DURATION
 	@test -n "$(URL)" || (echo "Set URL, e.g. make load-probe URL=http://localhost:28080/actuator/health"; exit 2)
 	@$(UV_RUN) python tools/ops/http_load_probe.py "$(URL)" --concurrency "$${CONCURRENCY:-4}" --duration "$${DURATION:-10}"
 
 load-k6-validate: ## Validate modular k6 scripts and endpoint tags
-	@$(UV_RUN) python -c 'import pathlib; files=list(pathlib.Path("tests/load/k6").glob("*.js")); assert len(files) >= 6; assert all("options" in f.read_text() and "thresholds" in f.read_text() for f in files); print(f"valid k6 scripts: {len(files)}")'
+	@$(UV_RUN) python -c 'import pathlib; files=[*pathlib.Path("tests/load/k6").glob("*.js"), pathlib.Path("tests/performance/k6/error_storm_test.js")]; assert len(files) >= 7; assert all("options" in f.read_text() and "thresholds" in f.read_text() for f in files); print(f"valid k6 scripts: {len(files)}")'
 
 load-k6: load-k6-validate ## Run one k6 script in Docker; set SCRIPT=tests/load/k6/accounts.js
 	@test -n "$(SCRIPT)" || (echo "Set SCRIPT, e.g. make load-k6 SCRIPT=tests/load/k6/accounts.js"; exit 2)
 	@docker run --rm -i --network squarewise-local-net -v "$(CURDIR):/work:ro" -e BASE_URL -e ACCOUNTS_URL -e EXPENSE_CORE_URL -e NOTIFICATIONS_URL -e BEARER_TOKEN grafana/k6 run "/work/$(SCRIPT)"
+
+load-k6-error-storm: load-k6-validate ## Run the ERRC-26 baseline or storm scenario; set LOAD_MODE and BASELINE_VALID_P99_MS for storm mode
+	@test -n "$(BEARER_TOKEN)" || (echo "Set BEARER_TOKEN to a signed test persona token"; exit 2)
+	@test -z "$(K6_SUMMARY_EXPORT)" || case "$(K6_SUMMARY_EXPORT)" in /*|[A-Za-z]:*|\\*|..|../*|*/..|*/../*|*\\..\\*|*\\..) echo "K6_SUMMARY_EXPORT must be a repository-relative path without parent traversal"; exit 2;; esac
+	@if [ -n "$(K6_SUMMARY_EXPORT)" ]; then mkdir -p "$$(dirname "$(K6_SUMMARY_EXPORT)")"; fi
+	@docker run --rm -i --network squarewise-local-net -v "$(CURDIR):/work$(if $(K6_SUMMARY_EXPORT),,:ro)" -e BASE_URL -e BEARER_TOKEN -e DURATION -e LOAD_MODE -e ERROR_RATE -e VALID_RATE -e BASELINE_VALID_P99_MS grafana/k6 run $(if $(K6_SUMMARY_EXPORT),--summary-export "/work/$(K6_SUMMARY_EXPORT)",) "/work/tests/performance/k6/error_storm_test.js"
 
 load-k6-rate-limit: load-k6-validate ## Run the isolated GraphQL admission k6 scenario
 	@k6 run tests/load/k6/rate-limit-graphql.js

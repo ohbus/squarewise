@@ -1,5 +1,7 @@
 package com.subhrodip.squarewise.db.policy
 
+import com.subhrodip.squarewise.db.errors.DbPlatformException
+import com.subhrodip.squarewise.errors.catalog.PlatformErrors
 import com.subhrodip.squarewise.db.routing.DbOperationKind
 import com.subhrodip.squarewise.db.routing.DbRoute
 import com.subhrodip.squarewise.db.routing.ReadConsistency
@@ -16,19 +18,24 @@ data class DbOperationPolicy(
     val readerEligible: Boolean = false,
 ) {
     init {
-        require(operationName.matches(OPERATION_NAME)) {
-            "operationName must be a stable lowercase dot-delimited identifier"
+        if (!operationName.matches(OPERATION_NAME)) {
+            invalid("operationName must be a stable lowercase dot-delimited identifier")
         }
-        require(!readerEligible || kind == DbOperationKind.QUERY) {
-            "Only non-mutating queries may be reader eligible"
+        if (readerEligible && kind != DbOperationKind.QUERY) {
+            invalid("Only non-mutating queries may be reader eligible")
         }
-        require(!readerEligible || consistency != ReadConsistency.STRONG) {
-            "Strong queries must use the writer"
+        if (readerEligible && consistency == ReadConsistency.STRONG) {
+            invalid("Strong queries must use the writer")
         }
-        require(kind != DbOperationKind.COMMAND || !readerEligible) {
-            "Commands cannot use a reader"
+        if (kind == DbOperationKind.COMMAND && readerEligible) {
+            invalid("Commands cannot use a reader")
         }
     }
+
+    private fun invalid(detail: String): Nothing = throw DbPlatformException(
+        PlatformErrors.PLATFORM_CONFIGURATION_INVALID,
+        detail
+    )
 
     /** Returns the only valid route for a writer-only operation. */
     fun defaultRoute(): DbRoute = if (readerEligible) DbRoute.READER else DbRoute.WRITER

@@ -1,6 +1,7 @@
 plugins { alias(libs.plugins.kotlin.jvm) }
 kotlin { jvmToolchain(25) }
 dependencies {
+    api(project(":libs:errors"))
     compileOnly(libs.boot.data.jpa)
     compileOnly(libs.boot.flyway)
     compileOnly(libs.boot.web)

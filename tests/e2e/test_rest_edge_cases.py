@@ -14,6 +14,7 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 import uuid
 from tests.http_constants import ACCEPT, APPLICATION_JSON, AUTHORIZATION, CONTENT_TYPE, IDEMPOTENCY_KEY, TEXT_CSV
+from tests.e2e.error_contract import assert_problem_details
 from tests.e2e.qa10_evidence import write_execution_evidence
 
 
@@ -112,10 +113,11 @@ def main(evidence_output: Path | None = None, source_revision: str = "local-work
     status, _ = request_json(f"{ACCOUNTS_URL}{ACCOUNTS_EXPORTS}", token=None)
     expect("Accounts rejects unauthenticated export listing", status, 401)
 
-    status, _ = request_json(
+    status, body = request_json(
         f"{ACCOUNTS_URL}{ACCOUNTS_ME}", method="PATCH", body={}
     )
     expect("Accounts rejects empty profile patch", status, 400)
+    assert_problem_details("Accounts empty profile patch", status, body, 400, "VALIDATION_FAILED")
 
     status, _ = request_json(
         f"{ACCOUNTS_URL}{ACCOUNTS_ME}", method="PATCH",
@@ -461,12 +463,13 @@ def main(evidence_output: Path | None = None, source_revision: str = "local-work
     )
     expect("malformed group identifier is rejected", status, 400, 404)
 
-    status, _ = request_json(
+    status, body = request_json(
         f"{EXPENSE_CORE_URL}{EXPENSE_ALLOCATIONS_PREVIEW}",
         method="POST",
         body={"totalMinor": "-1", "participantIds": ["alice"]},
     )
     expect("allocation validation rejects negative totals", status, 400)
+    assert_problem_details("negative allocation", status, body, 400, "VALIDATION_FAILED")
 
     status, _ = request_json(
         f"{EXPENSE_CORE_URL}{EXPENSE_ALLOCATIONS_PREVIEW}",
@@ -649,11 +652,12 @@ def main(evidence_output: Path | None = None, source_revision: str = "local-work
 
     altered = dict(payload)
     altered["description"] = "tampered replay"
-    status, _ = request_json(
+    status, body = request_json(
         f"{EXPENSE_CORE_URL}{EXPENSE_GROUP_EXPENSES.format(group_id=group_id)}",
         method="POST", body=altered, headers={IDEMPOTENCY_KEY: key},
     )
     expect("tampered idempotency replay conflicts", status, 409)
+    assert_problem_details("tampered idempotency replay", status, body, 409, "CONFLICT")
 
     status, _ = request_json(
         f"{EXPENSE_CORE_URL}{EXPENSE_GROUP_EXPENSES.format(group_id=group_id)}",
@@ -672,8 +676,9 @@ def main(evidence_output: Path | None = None, source_revision: str = "local-work
     )
     expect("Expense Core archiveGroup succeeds for an authorized member", status, 200)
 
-    status, _ = request_json(f"{EXPENSE_CORE_URL}{EXPENSE_GROUP.format(group_id=group_id)}")
+    status, body = request_json(f"{EXPENSE_CORE_URL}{EXPENSE_GROUP.format(group_id=group_id)}")
     expect("archived group is hidden from member lookup", status, 404)
+    assert_problem_details("archived group lookup", status, body, 404, "NOT_FOUND")
 
     status, _ = request_json(
         f"{EXPENSE_CORE_URL}{EXPENSE_GROUP_MEMBERS.format(group_id=group_id)}"

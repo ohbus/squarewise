@@ -1,5 +1,6 @@
 package com.subhrodip.squarewise.db.config
 
+import com.subhrodip.squarewise.db.errors.DbPlatformException
 import com.subhrodip.squarewise.db.health.DbReaderHealth
 import com.subhrodip.squarewise.observability.db.DbTelemetry
 import com.zaxxer.hikari.HikariDataSource
@@ -66,7 +67,7 @@ class DbAutoConfigurationTest {
 
     @Test
     fun `rejects non-positive replay lag budget`() {
-        assertFailsWith<IllegalArgumentException> {
+        assertFailsWith<DbPlatformException> {
             configuration.squarewiseDbHealthProbeIntervalMs(
                 DbProperties(readerLagBudgetMs = 0, healthProbeIntervalMs = 2_000)
             )
@@ -76,7 +77,7 @@ class DbAutoConfigurationTest {
     @Test
     fun `rejects health probe intervals outside the scheduler bounds`() {
         listOf(249L, 120_001L).forEach { interval ->
-            assertFailsWith<IllegalArgumentException> {
+            assertFailsWith<DbPlatformException> {
                 configuration.squarewiseDbHealthProbeIntervalMs(
                     DbProperties(readerLagBudgetMs = 5_000, healthProbeIntervalMs = interval)
                 )

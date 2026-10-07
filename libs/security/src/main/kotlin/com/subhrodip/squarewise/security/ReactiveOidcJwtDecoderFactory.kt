@@ -14,8 +14,7 @@ object ReactiveOidcJwtDecoderFactory {
         audience: String,
         allowedAlgorithms: Set<String> = setOf(OidcSecurityConstants.DEFAULT_SIGNING_ALGORITHM)
     ): ReactiveJwtDecoder {
-        require(issuerUri.isNotBlank()) { OidcSecurityConstants.ISSUER_REQUIRED_MESSAGE }
-        require(audience.isNotBlank()) { OidcSecurityConstants.AUDIENCE_REQUIRED_MESSAGE }
+        OidcConfigurationValidator.validate(issuerUri, audience)
         val decoder = NimbusReactiveJwtDecoder.withIssuerLocation(issuerUri).build()
         decoder.setJwtValidator(
             DelegatingOAuth2TokenValidator(

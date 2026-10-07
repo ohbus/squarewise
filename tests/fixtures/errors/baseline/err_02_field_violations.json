@@ -1,0 +1,25 @@
+{
+  "status": 400,
+  "headers": {
+    "Content-Type": "application/problem+json"
+  },
+  "body": {
+    "type": "https://squarewise.example/problems/err_02",
+    "title": "Request validation failed",
+    "status": 400,
+    "code": "VALIDATION_FAILED",
+    "source": "accounts",
+    "requestId": "550e8400-e29b-41d4-a716-446655440002",
+    "detail": "One or more fields are invalid",
+    "violations": [
+      {
+        "field": "displayName",
+        "message": "must not be blank"
+      },
+      {
+        "field": "defaultCurrency",
+        "message": "currency code must be a 3-letter ISO-4217 code"
+      }
+    ]
+  }
+}

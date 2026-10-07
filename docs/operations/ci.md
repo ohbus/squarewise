@@ -143,6 +143,10 @@ Run the complete hosted verification equivalent locally with:
 make ci
 ```
 
+The local CI target includes the repository `release-gate`, including the ERRC-28
+rollout manifest/regression gate and observability/release prerequisites, before
+Gradle verification begins.
+
 This runs the same contract and Compose preflight, then asks Gradle to execute
 tests, checks, JaCoCo reporting, and application packaging with `--parallel`.
 Gradle's project task graph avoids rebuilding work that is already up to date.
@@ -156,6 +160,13 @@ parallelism is the corresponding local optimization. Hosted master image builds
 fan out only after every verification matrix job succeeds. Local image builds
 are available independently through `make docker-build-all` or
 `make docker-build-<service>` and never push to a registry.
+
+The hosted lint gate also runs the ERRC-28 rollout manifest/ledger validator and
+its regression suite, keeping canary configuration safety checks in parity with
+the local `validate` target.
+
+The repository `release-gate` includes the same rollout validation before
+production-prerequisite checks are evaluated.
 
 Workflow files are syntax-checked with a pinned `yamllint` invocation installed
 ephemerally through `uvx`; CI does not assume Ruby is present on slim runners.

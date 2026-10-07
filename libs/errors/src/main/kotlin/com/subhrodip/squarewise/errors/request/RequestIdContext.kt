@@ -23,6 +23,9 @@ object RequestIdContext {
      */
     fun get(): String = current.get() ?: MDC.get(MDC_KEY) ?: "missing-request-id"
 
+    /** Return the active ID or create one when a security filter runs first. */
+    fun getOrGenerate(): String = current.get() ?: MDC.get(MDC_KEY) ?: RequestIdGenerator.next().toString()
+
     /**
      * Executes the given [action] within the context of the provided correlation [value].
      *

@@ -1,7 +1,5 @@
 package com.subhrodip.squarewise.errors.request
 
-import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
-import com.subhrodip.squarewise.ids.generation.UuidGenerator
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
@@ -29,7 +27,7 @@ class RequestIdFilter : OncePerRequestFilter() {
         val candidate = request.getHeader(HEADER)?.takeIf { header ->
             header.length in 1..128 && header.all { c -> c.isLetterOrDigit() || c in "-_" }
         }
-        val requestId = candidate ?: UuidGenerator.next().toString()
+        val requestId = candidate ?: RequestIdGenerator.next().toString()
         response.setHeader(HEADER, requestId)
 
         val startTime = System.currentTimeMillis()
@@ -51,7 +49,7 @@ class RequestIdFilter : OncePerRequestFilter() {
     }
 
     companion object {
-        const val HEADER: String = ApiEndpoints.Headers.REQUEST_ID
+        const val HEADER: String = "X-Request-Id"
         private val log = LoggerFactory.getLogger(RequestIdFilter::class.java)
     }
 }

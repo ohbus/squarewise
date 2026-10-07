@@ -1,0 +1,15 @@
+{
+  "title": "Squarewise error taxonomy overview",
+  "uid": "squarewise-error-taxonomy",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "15s",
+  "tags": ["squarewise", "errors", "six-digit"],
+  "panels": [
+    {"type":"timeseries","title":"Error rate by domain","gridPos":{"h":8,"w":12,"x":0,"y":0},"targets":[{"expr":"sum by (domain) (rate(squarewise_errors_total{job=\"squarewise\"}[5m]))","legendFormat":"{{domain}}"}]},
+    {"type":"bargauge","title":"Top 10 six-digit errors","gridPos":{"h":8,"w":12,"x":12,"y":0},"targets":[{"expr":"topk(10, sum by (code, error_name) (increase(squarewise_errors_total{job=\"squarewise\"}[1h])))","legendFormat":"{{code}} {{error_name}}"}]},
+    {"type":"timeseries","title":"4xx versus 5xx ratio","gridPos":{"h":8,"w":12,"x":0,"y":8},"targets":[{"expr":"sum(rate(http_server_requests_seconds_count{job=\"squarewise\",status=~\"4..\"}[5m]))","legendFormat":"4xx"},{"expr":"sum(rate(http_server_requests_seconds_count{job=\"squarewise\",status=~\"5..\"}[5m]))","legendFormat":"5xx"}]},
+    {"type":"timeseries","title":"Outbox and dead-letter activity","gridPos":{"h":8,"w":12,"x":12,"y":8},"targets":[{"expr":"sum(rate(squarewise_errors_total{job=\"squarewise\",code=\"285701\"}[5m]))","legendFormat":"outbox relay failures"},{"expr":"sum(rate(rabbitmq_queue_messages_ready{queue=~\".*dead.*|.*dlq.*\"}[5m]))","legendFormat":"dead-letter queue"}]},
+    {"type":"timeseries","title":"Latency impact of errors","gridPos":{"h":8,"w":24,"x":0,"y":16},"targets":[{"expr":"histogram_quantile(0.95, sum by (service, le) (rate(http_server_requests_seconds_bucket{job=\"squarewise\"}[5m])))","legendFormat":"p95 {{service}}"},{"expr":"sum by (service) (rate(squarewise_errors_total{job=\"squarewise\"}[5m]))","legendFormat":"errors {{service}}"}]}
+  ]
+}

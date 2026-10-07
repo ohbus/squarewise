@@ -1,6 +1,8 @@
 @file:Suppress("CanConvertToMultiDollarString")
 
 package com.subhrodip.squarewise.accounts.auth.config
+
+import com.subhrodip.squarewise.accounts.errors.AccountsInputException
 import com.subhrodip.squarewise.accounts.auth.abuse.LoginRateLimitKeyDeriver
 import com.subhrodip.squarewise.accounts.auth.abuse.LoginRateLimitService
 import com.subhrodip.squarewise.accounts.auth.abuse.LoginVerificationRateLimitService
@@ -141,11 +143,11 @@ class AuthenticationCredentialConfiguration(
 
     private fun decodeSecret(): ByteArray = runCatching {
         Base64.getDecoder().decode(encodedDigestSecret)
-    }.getOrElse { throw IllegalArgumentException("Credential digest secret must be base64", it) }
+    }.getOrElse { throw AccountsInputException("Credential digest secret must be base64", it) }
         .also { require(it.size >= 32) { "Credential digest secret must contain at least 32 bytes" } }
 
     private fun decodeEnvelopeKey(): ByteArray = runCatching {
         Base64.getDecoder().decode(encodedEnvelopeKey)
-    }.getOrElse { throw IllegalArgumentException("Auth email envelope key must be base64", it) }
+    }.getOrElse { throw AccountsInputException("Auth email envelope key must be base64", it) }
         .also { require(it.size == 32) { "Auth email envelope key must contain exactly 32 bytes" } }
 }

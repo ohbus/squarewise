@@ -1,5 +1,6 @@
 package com.subhrodip.squarewise.db.policy
 
+import com.subhrodip.squarewise.db.errors.DbPlatformException
 import com.subhrodip.squarewise.db.routing.DbOperationKind
 import com.subhrodip.squarewise.db.routing.DbRoute
 import com.subhrodip.squarewise.db.routing.ReadConsistency
@@ -40,7 +41,7 @@ class DbOperationPolicyTest {
     fun `operation names must be stable lowercase identifiers`() {
         listOf("", "Expense.Search", "expense search", ".expense", "expense.", "expense..search")
             .forEach { name ->
-                assertFailsWith<IllegalArgumentException> {
+                assertFailsWith<DbPlatformException> {
                     DbOperationPolicy(name, DbOperationKind.QUERY)
                 }
             }
@@ -55,7 +56,7 @@ class DbOperationPolicyTest {
             DbOperationKind.MIGRATION,
             DbOperationKind.RECONCILIATION,
         ).forEach { kind ->
-            assertFailsWith<IllegalArgumentException> {
+            assertFailsWith<DbPlatformException> {
                 DbOperationPolicy(
                     operationName = "operation.check",
                     kind = kind,
@@ -68,7 +69,7 @@ class DbOperationPolicyTest {
 
     @Test
     fun `reader eligible queries cannot require strong consistency`() {
-        assertFailsWith<IllegalArgumentException> {
+        assertFailsWith<DbPlatformException> {
             DbOperationPolicy(
                 operationName = "operation.check",
                 kind = DbOperationKind.QUERY,

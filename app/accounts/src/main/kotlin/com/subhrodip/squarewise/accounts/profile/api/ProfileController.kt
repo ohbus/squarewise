@@ -7,13 +7,6 @@ import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.ExceptionHandler
-import org.springframework.http.ResponseEntity
-import com.subhrodip.squarewise.errors.http.ApiProblem
-import org.springframework.http.MediaType
-import org.springframework.http.HttpStatusCode
-import com.subhrodip.squarewise.errors.http.FieldViolation
-import com.subhrodip.squarewise.errors.request.RequestIdContext
 import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -21,8 +14,8 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.accounts.errors.AccountsDomainException
+import com.subhrodip.squarewise.errors.catalog.AccountsErrors
 import java.security.Principal
 import java.util.UUID
 import com.subhrodip.squarewise.db.routing.DbContextHolder
@@ -40,10 +33,9 @@ class ProfileController(
     private val exportService: ExportRequestService,
     private val dbTelemetry: DbTelemetry = DbTelemetry()
 ) {
-    private val serviceName: String = "accounts"
     @GetMapping(ApiEndpoints.Accounts.V1.ME)
     fun get(principal: Principal): ProfileResponse =
-        profiles.get(principal.name) ?: throw ApplicationException(ErrorCode.ERR_03, "Authenticated profile not found")
+        profiles.get(principal.name) ?: throw AccountsDomainException(AccountsErrors.AUTHENTICATED_PROFILE_NOT_FOUND)
 
     @PatchMapping(ApiEndpoints.Accounts.V1.ME)
     fun update(
@@ -54,59 +46,6 @@ class ProfileController(
         return profiles.update(principal.name, request)
     }
 
-    /**
-     * Translates profile-domain failures at the controller boundary so the response identifies
-     * the Accounts service and retains the public RFC 7807 shape.
-     *
-     * @param error domain failure raised while handling a profile operation
-     * @return structured problem response with the catalog HTTP status
-     */
-    @ExceptionHandler(ApplicationException::class)
-    fun applicationFailure(error: ApplicationException): ResponseEntity<ApiProblem> {
-        val status = HttpStatus.resolve(error.errorCode.httpStatus) ?: HttpStatus.INTERNAL_SERVER_ERROR
-        return problem(
-            code = error.errorCode,
-            status = status,
-            title = error.message ?: error.errorCode.safeDetail,
-            detail = error.message ?: error.errorCode.safeDetail,
-            violations = emptyList()
-        )
-    }
-
-    private fun problem(
-        code: ErrorCode,
-        status: HttpStatusCode,
-        title: String,
-        detail: String,
-        violations: List<FieldViolation>
-    ): ResponseEntity<ApiProblem> =
-        ResponseEntity.status(status)
-            .contentType(MediaType.APPLICATION_PROBLEM_JSON)
-            .body(
-                ApiProblem(
-                    type = "https://squarewise.example/problems/${code.name.lowercase()}",
-                    title = title,
-                    status = status.value(),
-                    code = mapErrorCode(code),
-                    source = serviceName,
-                    requestId = RequestIdContext.get(),
-                    detail = detail,
-                    violations = violations
-                )
-            )
-
-    /**
-     * Map internal ErrorCode enum to external string identifier expected by API clients/tests.
-     */
-    private fun mapErrorCode(errorCode: ErrorCode): String =
-        when (errorCode) {
-            ErrorCode.ERR_02 -> "VALIDATION_FAILED"
-            ErrorCode.ERR_03 -> "UNAUTHENTICATED"
-            ErrorCode.ERR_04 -> "FORBIDDEN"
-            ErrorCode.ERR_05 -> "NOT_FOUND"
-            else -> errorCode.name
-        }
-
     @PostMapping(ApiEndpoints.Accounts.V1.ME_DELETION_REQUEST)
     @ResponseStatus(HttpStatus.ACCEPTED)
     fun requestDeletion(principal: Principal) {
@@ -116,14 +55,14 @@ class ProfileController(
     @PostMapping(ApiEndpoints.Accounts.V1.ME_EXPORT_REQUEST)
     @ResponseStatus(HttpStatus.ACCEPTED)
     fun requestExport(principal: Principal?): ExportRequestResponse {
-        val subject = principal?.name ?: throw ApplicationException(ErrorCode.ERR_03, "Authenticated subject is required")
+        val subject = principal?.name ?: throw AccountsDomainException(AccountsErrors.PROFILE_SUBJECT_INVALID)
         val request = exportService.request(subject)
         return ExportRequestResponse(request.exportId, request.status, request.requestedAt)
     }
 
     @GetMapping(ApiEndpoints.Accounts.V1.ME_EXPORT_REQUESTS)
     fun listExportRequests(principal: Principal?): List<ExportRequestResponse> {
-        val subject = principal?.name ?: throw ApplicationException(ErrorCode.ERR_03, "Authenticated subject is required")
+        val subject = principal?.name ?: throw AccountsDomainException(AccountsErrors.PROFILE_SUBJECT_INVALID)
         return exportService.listBySubject(subject).map {
             ExportRequestResponse(it.exportId, it.status, it.requestedAt)
         }
@@ -140,7 +79,7 @@ class ProfileController(
      * @param principal authenticated caller security principal.
      * @param workloadRole optional internal service trust header.
      * @return [ProfileResponse] matching the account ID.
-     * @throws ApplicationException ERR_03 if unauthenticated, ERR_04 if unauthorized, or ERR_05 if not found.
+     * @throws AccountsDomainException if unauthenticated, unauthorized, or not found.
      */
     @GetMapping(ApiEndpoints.Accounts.V1.PROFILES_BY_ID)
     fun getProfileById(
@@ -153,15 +92,15 @@ class ProfileController(
     ): ProfileResponse {
         val isWorkload = workloadRole == ApiEndpoints.Headers.WORKLOAD_ROLE_INTERNAL
         if (!isWorkload) {
-            val callerSubject = principal?.name ?: throw ApplicationException(ErrorCode.ERR_03, "Authentication required")
-            val callerProfile = profiles.get(callerSubject) ?: throw ApplicationException(ErrorCode.ERR_03, "Authenticated profile not found")
+            val callerSubject = principal?.name ?: throw AccountsDomainException(AccountsErrors.PROFILE_SUBJECT_INVALID)
+            val callerProfile = profiles.get(callerSubject) ?: throw AccountsDomainException(AccountsErrors.AUTHENTICATED_PROFILE_NOT_FOUND)
             if (callerProfile.accountId != accountId) {
-                throw ApplicationException(ErrorCode.ERR_04, "Access denied to foreign profile")
+                throw AccountsDomainException(AccountsErrors.FOREIGN_PROFILE_ACCESS_DENIED)
             }
         }
         return dbTelemetry.measureQuery("profile.lookup", "approved-query") {
             DbContextHolder.withContext(profileReadContext("profile.lookup")) {
-                profiles.findById(accountId) ?: throw ApplicationException(ErrorCode.ERR_05, "Profile not found")
+                profiles.findById(accountId) ?: throw AccountsDomainException(AccountsErrors.AUTHENTICATED_PROFILE_NOT_FOUND)
             }
         }
     }
@@ -177,7 +116,7 @@ class ProfileController(
      * @param principal authenticated caller security principal.
      * @param workloadRole optional internal service trust header.
      * @return list of resolved [ProfileResponse] records matching existing IDs.
-     * @throws ApplicationException ERR_03 if unauthenticated or ERR_04 if unauthorized.
+     * @throws AccountsDomainException if unauthenticated or unauthorized.
      */
     @PostMapping(ApiEndpoints.Accounts.V1.PROFILES_BATCH)
     fun getProfilesBatch(
@@ -190,11 +129,11 @@ class ProfileController(
     ): List<ProfileResponse> {
         val isWorkload = workloadRole == ApiEndpoints.Headers.WORKLOAD_ROLE_INTERNAL
         if (!isWorkload) {
-            val callerSubject = principal?.name ?: throw ApplicationException(ErrorCode.ERR_03, "Authentication required")
-            val callerProfile = profiles.get(callerSubject) ?: throw ApplicationException(ErrorCode.ERR_03, "Authenticated profile not found")
+            val callerSubject = principal?.name ?: throw AccountsDomainException(AccountsErrors.PROFILE_SUBJECT_INVALID)
+            val callerProfile = profiles.get(callerSubject) ?: throw AccountsDomainException(AccountsErrors.AUTHENTICATED_PROFILE_NOT_FOUND)
             val requestedDistinctIds = request.accountIds.toSet()
             if (requestedDistinctIds.any { it != callerProfile.accountId }) {
-                throw ApplicationException(ErrorCode.ERR_04, "Batch profile lookup requires internal workload authority")
+                throw AccountsDomainException(AccountsErrors.BATCH_LOOKUP_UNAUTHORIZED)
             }
         }
         return dbTelemetry.measureQuery("profile.batch_lookup", "approved-query") {

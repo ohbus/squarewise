@@ -2,8 +2,7 @@ package com.subhrodip.squarewise.expensecore.expenses
 import com.subhrodip.squarewise.expensecore.expenses.api.AllocationPreviewController
 import com.subhrodip.squarewise.expensecore.expenses.api.request.AllocationPreviewRequest
 import com.subhrodip.squarewise.expensecore.expenses.domain.AllocationCalculator
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -54,7 +53,7 @@ class AllocationPreviewControllerTest {
 
     @Test
     fun `preview rejects a non numeric total before allocation`() {
-        assertThrows(ApplicationException::class.java) {
+        assertThrows(SquarewiseException::class.java) {
             AllocationPreviewController().preview(
                 AllocationPreviewRequest("not-a-number", listOf("a"))
             )
@@ -63,7 +62,7 @@ class AllocationPreviewControllerTest {
 
     @Test
     fun `preview rejects a negative total before allocation`() {
-        assertThrows(ApplicationException::class.java) {
+        assertThrows(SquarewiseException::class.java) {
             AllocationPreviewController().preview(
                 AllocationPreviewRequest("-1", listOf("a"))
             )
@@ -72,13 +71,13 @@ class AllocationPreviewControllerTest {
 
     @Test
     fun `preview maps allocation calculator rejection to the stable error`() {
-        val error = assertThrows(ApplicationException::class.java) {
+        val error = assertThrows(SquarewiseException::class.java) {
             AllocationPreviewController().preview(
                 AllocationPreviewRequest("100", listOf("alice", "alice"))
             )
         }
 
-        assertEquals(ErrorCode.ERR_02, error.errorCode)
+        assertEquals("VALIDATION_FAILED", error.definition.legacyCode)
         assertEquals("participant IDs must be unique", error.message)
     }
 }

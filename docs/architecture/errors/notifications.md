@@ -1,11 +1,11 @@
 # Notifications error ownership guide
 
-Status: proposed inventory; codes are not implemented or contractually published.
+Status: allocated and authoritative under `ERRC-04`; matches `contracts/errors/error-catalog.yaml`.
 
 Notifications owns Domains `31`-`34`. Delivery failures are primarily asynchronous;
 they must not invent HTTP statuses or overwrite the originating business event.
 
-## Candidate public families
+## Allocated public families
 
 | Candidate | Name | Current-compatible HTTP | Legacy `code` | Required distinction |
 |---|---|:---:|---|---|

@@ -36,14 +36,14 @@ In accordance with `GEMINI.md` ("Never duplicate versions in build files; record
 # Devcontainer workspace baseline (OPS-27)
 DEVCONTAINER_BASE_IMAGE=mcr.microsoft.com/devcontainers/base:ubuntu-24.04
 DEVCONTAINER_JDK_VERSION=25
-DEVCONTAINER_NODE_VERSION=22
+DEVCONTAINER_NODE_VERSION=24
 ```
 
 ### 2. Technology decisions documentation
 Update `docs/implementation/technology-decisions.md` to document:
 - Selection of `mcr.microsoft.com/devcontainers/base:ubuntu-24.04` as the workspace base.
 - Microsoft OpenJDK 25 / Temurin 25 as the official Devcontainer JVM runtime (matching CI reusable workflow).
-- Node.js 22 LTS for executing `@usebruno/cli@4.1.0` via `npx` during `make bruno-run`.
+- Node.js 24 LTS for executing `@usebruno/cli@4.1.0` via `npx` during `make bruno-run`.
 - The decision to adopt the native Devcontainer Compose topology over Docker-outside-of-Docker (DooD), avoiding root-equivalent host socket exposure.
 
 ### 3. Docker build context hygiene
@@ -51,7 +51,7 @@ Update `.dockerignore` to add `.devcontainer` under Git, IDE, and developer meta
 
 ## Acceptance criteria
 - [x] `infra/versions.env.example` registers `DEVCONTAINER_BASE_IMAGE`, `DEVCONTAINER_JDK_VERSION`, and `DEVCONTAINER_NODE_VERSION`.
-- [x] `docs/implementation/technology-decisions.md` records the toolchain resolution evidence for Java 25, uv, and Node 22.
+- [x] `docs/implementation/technology-decisions.md` records the toolchain resolution evidence for Java 25, uv, and Node 24 LTS.
 - [x] `.dockerignore` excludes `.devcontainer` from application container build contexts.
 - [x] `tools/ops/validate_sbom_baseline.py` and `check_security_hygiene.py` pass without warnings.
 

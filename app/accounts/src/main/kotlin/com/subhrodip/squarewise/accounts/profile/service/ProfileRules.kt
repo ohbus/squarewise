@@ -1,7 +1,7 @@
 package com.subhrodip.squarewise.accounts.profile.service
 
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.accounts.errors.AccountsDomainException
+import com.subhrodip.squarewise.errors.catalog.AccountsErrors
 import java.time.DateTimeException
 import java.time.ZoneId
 
@@ -10,7 +10,7 @@ object ProfileRules {
 
     fun requireSubject(subject: String): String {
         if (!subjectPattern.matches(subject)) {
-            throw ApplicationException(ErrorCode.ERR_03, "Authenticated subject is invalid")
+            throw AccountsDomainException(AccountsErrors.PROFILE_SUBJECT_INVALID)
         }
         return subject
     }
@@ -19,7 +19,7 @@ object ProfileRules {
         try {
             ZoneId.of(timezone)
         } catch (_: DateTimeException) {
-            throw ApplicationException(ErrorCode.ERR_02, "timezone must be a valid IANA zone")
+            throw AccountsDomainException(AccountsErrors.TIMEZONE_INVALID)
         }
         return timezone
     }

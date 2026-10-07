@@ -1,27 +1,21 @@
 package com.subhrodip.squarewise.errors
-import org.mockito.Mockito.`when`
-import org.mockito.Mockito.mock
-
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.errors.catalog.PlatformErrors
+import com.subhrodip.squarewise.errors.exceptions.PlatformDomainException
 import com.subhrodip.squarewise.errors.http.GlobalErrorHandler
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotNull
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.mockito.Mockito.`when`
+import org.mockito.Mockito.mock
 import org.springframework.core.MethodParameter
 import org.springframework.http.HttpInputMessage
 import org.springframework.http.HttpStatus
-import org.springframework.http.HttpStatusCode
 import org.springframework.dao.OptimisticLockingFailureException
-import org.springframework.http.MediaType
 import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.validation.BeanPropertyBindingResult
 import org.springframework.validation.FieldError
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.ServletRequestBindingException
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
-import org.mockito.Mockito
 
 class GlobalErrorHandlerTest {
 
@@ -35,71 +29,27 @@ class GlobalErrorHandlerTest {
     }
 
     @Test
-    fun `applicationException maps correctly to ApiProblem`() {
-        val ex = ApplicationException(ErrorCode.ERR_05, "Group 123 not found")
-        val response = handler.applicationException(ex)
+    fun `governed catalog failure maps directly to v1 and six-digit identities`() {
+        val response = handler.governedException(
+            PlatformDomainException(PlatformErrors.RESOURCE_NOT_FOUND, "Group 123 not found")
+        )
 
         assertEquals(HttpStatus.NOT_FOUND, response.statusCode)
-        val body = response.body
-        assertNotNull(body)
-        assertEquals(404, body?.status)
-        assertEquals("NOT_FOUND", body?.code)
-        assertEquals("test-service", body?.source)
-        assertEquals("Group 123 not found", body?.detail)
+        assertEquals("NOT_FOUND", response.body?.code)
+        assertEquals("919201", response.body?.numericCode)
+        assertEquals("RESOURCE_NOT_FOUND", response.body?.errorName)
+        assertEquals("The requested API resource or route does not exist.", response.body?.detail)
     }
 
     @Test
-    fun `rate limit application error maps to 429 with bounded retry header`() {
-        val response = handler.applicationException(ApplicationException(ErrorCode.ERR_11))
+    fun `governed rate limit maps to 429 with bounded retry header`() {
+        val response = handler.governedException(
+            PlatformDomainException(PlatformErrors.SECURITY_RATE_LIMITED)
+        )
 
         assertEquals(HttpStatus.TOO_MANY_REQUESTS, response.statusCode)
         assertEquals("RATE_LIMITED", response.body?.code)
         assertEquals("60", response.headers.getFirst("Retry-After"))
-    }
-
-    /**
-     * Verifies an invalid catalog status fails closed to an internal error.
-     *
-     * Production [ErrorCode] entries all carry valid HTTP statuses; the mocked
-     * value exercises the handler's defensive fallback if that invariant is
-     * ever violated by a future catalog change.
-     */
-    @Test
-    fun `invalid catalog status falls back to internal error`() {
-        val invalidCode = mock(ErrorCode::class.java)
-        `when`(invalidCode.httpStatus).thenReturn(999)
-        `when`(invalidCode.safeDetail).thenReturn("Unknown catalog error")
-        `when`(invalidCode.code).thenReturn("ERR-X")
-        `when`(invalidCode.name).thenReturn("ERR_X")
-
-        val response = handler.applicationException(ApplicationException(invalidCode, "safe detail"))
-
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.statusCode)
-        assertEquals("safe detail", response.body?.detail)
-    }
-
-    @Test
-    fun `all ErrorCode values map to RFC problem schema codes`() {
-        val allowedCodes = setOf(
-            "VALIDATION_FAILED",
-            "UNAUTHENTICATED",
-            "FORBIDDEN",
-            "NOT_FOUND",
-            "CONFLICT",
-            "IDEMPOTENCY_CONFLICT",
-            "RATE_LIMITED",
-            "INTERNAL_ERROR"
-        )
-
-        ErrorCode.entries.forEach { code ->
-            val ex = ApplicationException(code, "Test error for $code")
-            val response = handler.applicationException(ex)
-            val problemCode = response.body?.code
-            assertTrue(
-                allowedCodes.contains(problemCode),
-                "Code '$problemCode' for $code must be one of problem.schema.json allowed codes"
-            )
-        }
     }
 
     @Test
@@ -122,44 +72,6 @@ class GlobalErrorHandlerTest {
         val response = handler.unexpected(RuntimeException("Database connection dropped"))
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.statusCode)
         assertEquals("INTERNAL_ERROR", response.body?.code)
-    }
-
-    /** Verifies every catalog code keeps its public status and bounded response metadata. */
-    @Test
-    fun `every catalog error maps to its governed status`() {
-        val expectedStatuses = mapOf(
-            ErrorCode.ERR_01 to HttpStatus.INTERNAL_SERVER_ERROR,
-            ErrorCode.ERR_02 to HttpStatus.BAD_REQUEST,
-            ErrorCode.ERR_03 to HttpStatus.UNAUTHORIZED,
-            ErrorCode.ERR_04 to HttpStatus.FORBIDDEN,
-            ErrorCode.ERR_05 to HttpStatus.NOT_FOUND,
-            ErrorCode.ERR_06 to HttpStatus.CONFLICT,
-            ErrorCode.ERR_07 to HttpStatus.INTERNAL_SERVER_ERROR,
-            ErrorCode.ERR_08 to HttpStatus.BAD_GATEWAY,
-            ErrorCode.ERR_09 to HttpStatus.CONFLICT,
-            ErrorCode.ERR_10 to HttpStatusCode.valueOf(422),
-            ErrorCode.ERR_11 to HttpStatus.TOO_MANY_REQUESTS,
-            ErrorCode.ERR_12 to HttpStatus.OK
-        )
-
-        expectedStatuses.forEach { (code, status) ->
-            val response = handler.applicationException(ApplicationException(code, "safe detail"))
-
-            assertEquals(status, response.statusCode, "Unexpected HTTP status for $code")
-            assertEquals(MediaType.APPLICATION_PROBLEM_JSON, response.headers.contentType)
-            assertEquals("test-service", response.body?.source)
-            assertEquals("missing-request-id", response.body?.requestId)
-            assertEquals("safe detail", response.body?.detail)
-            assertEquals(if (code == ErrorCode.ERR_11) "60" else null, response.headers.getFirst("Retry-After"))
-        }
-
-        val safeFallback = handler.applicationException(ApplicationException(ErrorCode.ERR_01))
-        assertEquals("Internal server error", safeFallback.body?.detail)
-
-        val nullMessage = Mockito.mock(ApplicationException::class.java)
-        Mockito.`when`(nullMessage.errorCode).thenReturn(ErrorCode.ERR_02)
-        Mockito.`when`(nullMessage.message).thenReturn(null)
-        assertEquals("Invalid request parameters", handler.applicationException(nullMessage).body?.detail)
     }
 
     /** Verifies the content-negotiation failure intentionally has no RFC 7807 body. */

@@ -1,0 +1,16 @@
+{
+  "status": 409,
+  "headers": {
+    "Content-Type": "application/problem+json"
+  },
+  "body": {
+    "type": "https://squarewise.example/problems/err_06",
+    "title": "Conflict",
+    "status": 409,
+    "code": "CONFLICT",
+    "source": "expense-core",
+    "requestId": "550e8400-e29b-41d4-a716-446655440006",
+    "detail": "Resource conflict detected",
+    "violations": []
+  }
+}

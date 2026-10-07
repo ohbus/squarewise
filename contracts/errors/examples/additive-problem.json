@@ -1,0 +1,13 @@
+{
+  "type": "https://squarewise.example/problems/GROUP_NOT_FOUND",
+  "title": "Resource not found",
+  "status": 404,
+  "code": "NOT_FOUND",
+  "numericCode": "213201",
+  "errorName": "GROUP_NOT_FOUND",
+  "source": "squarewise-expense-core",
+  "requestId": "00000000-0000-0000-0000-000000000002",
+  "detail": "The requested group was not found.",
+  "timestamp": "2026-10-07T10:01:00Z",
+  "instance": "/expense-core/v1/groups/00000000-0000-0000-0000-000000000003"
+}

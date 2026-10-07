@@ -1,6 +1,7 @@
 package com.subhrodip.squarewise.bff.config
 
 import java.net.URI
+import com.subhrodip.squarewise.bff.errors.BffInputException
 
 /**
  * Exact-origin policy for browser GraphQL requests.
@@ -25,7 +26,7 @@ class BrowserOriginPolicy(allowedOrigins: List<String>) {
     fun configuredOrigins(): Set<String> = allowed
 
     private fun canonicalOrigin(value: String): String = canonicalOriginOrNull(value)
-        ?: throw IllegalArgumentException("Browser origin must be an absolute origin without a path")
+        ?: throw BffInputException("Browser origin must be an absolute origin without a path")
 
     private fun canonicalOriginOrNull(value: String): String? {
         val uri = runCatching { URI(value.trim()) }.getOrNull() ?: return null

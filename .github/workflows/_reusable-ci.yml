@@ -145,6 +145,8 @@ jobs:
           git diff --check
           uv run --frozen --no-build python3 tools/contracts/validate.py
           uv run --frozen --no-build python3 tools/contracts/validate_public_surface.py
+          uv run --frozen --no-build python3 tools/ops/validate_error_rollout.py
+          uv run --frozen --no-build python3 -m unittest tools.ops.test_validate_error_rollout
           uv run --frozen --no-build python3 tools/ops/check_security_hygiene.py
           uv run --frozen --no-build python3 tools/ops/check_architecture.py
           uv run --frozen --no-build python3 tools/ops/validate_sbom_baseline.py

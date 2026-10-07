@@ -1,0 +1,17 @@
+"""
+Standard extensions attached to every GraphQL error response.
+"""
+type ErrorExtensions {
+  code: String!
+  numericCode: String
+  errorName: String
+  requestId: String!
+  source: String!
+  timestamp: DateTime!
+  violations: [ValidationError!]
+}
+
+type ValidationError {
+  field: String!
+  message: String!
+}

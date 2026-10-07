@@ -1,7 +1,7 @@
 package com.subhrodip.squarewise.bff.realtime
 
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.bff.errors.BffDomainException
+import com.subhrodip.squarewise.errors.catalog.BffErrors
 import com.subhrodip.squarewise.bff.realtime.GroupInvalidation
 import com.subhrodip.squarewise.bff.realtime.LiveSubscription
 import com.subhrodip.squarewise.bff.realtime.LiveUpdate
@@ -76,7 +76,7 @@ class LiveUpdateFanout(
         return synchronized(admissionLock) {
             removeExpired()
             if (subscriptions.values.count { it.subscription.userId == userId } >= maxSubscriptionsPerUser) {
-                throw ApplicationException(ErrorCode.ERR_11, "subscription limit exceeded")
+                throw BffDomainException(BffErrors.SUBSCRIPTION_LIMIT_EXCEEDED, "subscription limit exceeded")
             }
             val subscription = LiveSubscription(
                 UuidGenerator.next().toString(), userId, groupId, Instant.now(clock).plus(subscriptionTtl)

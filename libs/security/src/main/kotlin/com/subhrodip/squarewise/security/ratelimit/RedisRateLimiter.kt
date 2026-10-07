@@ -1,5 +1,7 @@
 package com.subhrodip.squarewise.security.ratelimit
 
+import com.subhrodip.squarewise.errors.catalog.PlatformErrors
+import com.subhrodip.squarewise.security.errors.PlatformDomainException
 import java.time.Duration
 import java.util.concurrent.TimeoutException
 import io.micrometer.core.instrument.MeterRegistry
@@ -26,7 +28,12 @@ class RedisRateLimiter(
     private val script = DefaultRedisScript<String>(SCRIPT, String::class.java)
 
     override fun consume(key: String, policy: RateLimitPolicy): RateLimitDecision {
-        require(key.length in 1..256) { "Rate-limit key material must be 1-256 characters" }
+        if (key.length !in 1..256) {
+            throw PlatformDomainException(
+                PlatformErrors.PLATFORM_CONFIGURATION_INVALID,
+                "Rate-limit key material must be 1-256 characters"
+            )
+        }
         val redisKey = "squarewise:rl:v1:${keyDeriver.derive(key)}"
         val timer = meterRegistry?.let(Timer::start)
         return try {
@@ -36,9 +43,17 @@ class RedisRateLimiter(
                 policy.window.seconds.toString(),
                 policy.maximumPermits.toString(),
                 policy.cooldown.seconds.toString()
-            ) ?: throw IllegalStateException("Redis returned no rate-limit decision")
+            ) ?: throw PlatformDomainException(
+                PlatformErrors.DATABASE_DATA_INCONSISTENT,
+                "Redis returned no rate-limit decision"
+            )
             val fields = result.split('|')
-            require(fields.size == 3) { "Redis returned malformed rate-limit decision" }
+            if (fields.size != 3) {
+                throw PlatformDomainException(
+                    PlatformErrors.DATABASE_DATA_INCONSISTENT,
+                    "Redis returned malformed rate-limit decision"
+                )
+            }
             val allowed = fields[0] == "1"
             val remaining = fields[1].toInt().coerceIn(0, policy.maximumPermits)
             val retryAfterSeconds = fields[2].toLong().coerceAtLeast(0)

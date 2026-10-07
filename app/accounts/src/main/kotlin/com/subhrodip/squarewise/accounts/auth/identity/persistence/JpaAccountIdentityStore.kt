@@ -1,5 +1,7 @@
 package com.subhrodip.squarewise.accounts.auth.identity.persistence
 
+import com.subhrodip.squarewise.accounts.errors.AccountsInputException
+
 import com.subhrodip.squarewise.accounts.auth.identity.AccountIdentity
 import com.subhrodip.squarewise.accounts.auth.identity.AccountIdentityStore
 import com.subhrodip.squarewise.accounts.profile.persistence.ProfileRepository
@@ -144,7 +146,7 @@ class JpaAccountIdentityStore(
     override fun updateEmail(accountId: UUID, email: String, verified: Boolean): AccountIdentity {
         val identities = identityRepository.findByAccountId(accountId)
         val identity = identities.firstOrNull()
-            ?: throw IllegalArgumentException("No identity found for account $accountId")
+            ?: throw AccountsInputException("No identity found for account $accountId")
 
         identity.email = email
         identity.emailVerified = verified

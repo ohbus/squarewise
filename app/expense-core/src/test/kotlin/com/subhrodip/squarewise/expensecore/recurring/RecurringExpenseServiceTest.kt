@@ -22,8 +22,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.transaction.annotation.Transactional
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
 import java.nio.charset.StandardCharsets
 import java.time.Instant
 import java.time.LocalDate
@@ -285,15 +284,15 @@ class RecurringExpenseServiceTest @Autowired constructor(
     @Test
     fun `pause and resume throw 404 for non-existent schedule`() {
         val missingId = UUID.randomUUID()
-        val pauseErr = assertThrows(ApplicationException::class.java) {
+        val pauseErr = assertThrows(SquarewiseException::class.java) {
             service.pauseSchedule(missingId)
         }
-        assertEquals(ErrorCode.ERR_05, pauseErr.errorCode)
+        assertEquals("NOT_FOUND", pauseErr.definition.legacyCode)
 
-        val resumeErr = assertThrows(ApplicationException::class.java) {
+        val resumeErr = assertThrows(SquarewiseException::class.java) {
             service.resumeSchedule(missingId)
         }
-        assertEquals(ErrorCode.ERR_05, resumeErr.errorCode)
+        assertEquals("NOT_FOUND", resumeErr.definition.legacyCode)
     }
 
     @Test
@@ -785,7 +784,7 @@ class RecurringExpenseServiceTest @Autowired constructor(
             )
         }
 
-        assertThrows(ApplicationException::class.java) {
+        assertThrows(SquarewiseException::class.java) {
             service.createSchedule(
                 UUID.randomUUID(),
                 CreateRecurringScheduleRequest(
@@ -820,10 +819,10 @@ class RecurringExpenseServiceTest @Autowired constructor(
             startDate = LocalDate.of(2026, 9, 1)
         )
 
-        assertThrows(ApplicationException::class.java) {
+        assertThrows(SquarewiseException::class.java) {
             service.updateSchedule(UUID.randomUUID(), schedule.scheduleId, valid)
         }
-        assertThrows(ApplicationException::class.java) {
+        assertThrows(SquarewiseException::class.java) {
             service.updateSchedule(group.groupId, UUID.randomUUID(), valid)
         }
         assertThrows(IllegalArgumentException::class.java) { service.updateSchedule(group.groupId, schedule.scheduleId, valid.copy(description = " ")) }

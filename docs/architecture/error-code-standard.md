@@ -1,6 +1,6 @@
 # Six-digit domain/module error-code standard
 
-Status: accepted documentation baseline under `ERRC-01`; not implemented.
+Status: frozen and authoritative under `ERRC-03`.
 
 This document defines Squarewise's stable error identity. It does not change the
 current REST or GraphQL contract. The implementation and compatibility sequence
@@ -174,6 +174,16 @@ not digit-derived behavior.
 Existing v1 statuses remain unchanged until a separately reviewed contract
 change. In particular, sync cursor expiry currently remains 400 and
 rate-limiter-store failure remains 429 during compatibility rollout.
+
+The promoted Problem Details contract keeps the v1 symbolic `code` required and
+requires `numericCode` and `errorName` for all current emissions. The
+compatibility notice remains the authority for external rollout effective date;
+until that date, legacy-only upstream input is handled at the BFF boundary with
+a BFF-owned protocol-invalid identity. Its public fields are bounded: `title` is at most 128 characters,
+`detail` 512, `source` 80, and `instance` 256; `requestId` is a UUID. Validation
+responses contain at most 50 closed violation objects, each with a field path
+of at most 256 characters and a message of at most 512 characters. Unknown
+top-level and violation properties are rejected to prevent accidental leakage.
 
 ## Allocation decision
 

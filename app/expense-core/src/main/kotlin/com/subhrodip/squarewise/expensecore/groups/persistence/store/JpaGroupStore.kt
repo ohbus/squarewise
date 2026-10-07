@@ -27,8 +27,8 @@ import java.util.UUID
 import org.springframework.context.annotation.Primary
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import com.subhrodip.squarewise.errors.domain.ApplicationException
-import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
+import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
 
 /**
  * JPA persistence adapter implementing [GroupStore] for group lifecycle operations,
@@ -110,7 +110,7 @@ class JpaGroupStore(
         checkActiveMembership(groupId, subject)
         val entity = groups.findForMembershipUpdate(groupId) ?: notFound()
         if (entity.status == "ARCHIVED") {
-            throw ApplicationException(ErrorCode.ERR_06, "Group is already archived")
+            throw ExpenseDomainException(ExpenseErrors.GROUP_NAME_CONFLICT, "Group is already archived")
         }
         entity.status = "ARCHIVED"
         entity.revision += 1
@@ -173,7 +173,7 @@ class JpaGroupStore(
         checkActiveGroup(group)
         val target = memberships.findByMembershipIdAndGroupId(membershipId, groupId) ?: notFound()
         if (target.status == "REMOVED") {
-            throw ApplicationException(ErrorCode.ERR_06, "Member is already removed")
+            throw ExpenseDomainException(ExpenseErrors.GROUP_NAME_CONFLICT, "Member is already removed")
         }
         target.status = "REMOVED"
         memberships.save(target)
@@ -213,7 +213,7 @@ class JpaGroupStore(
         if (request.placeholderId != null) {
             val placeholder = memberships.findByMembershipIdAndGroupId(request.placeholderId, groupId)
             if (placeholder == null || !placeholder.isPlaceholder || placeholder.status != "ACTIVE" || placeholder.subject != null) {
-                throw ApplicationException(ErrorCode.ERR_06, "Placeholder not found or already bound")
+                throw ExpenseDomainException(ExpenseErrors.GROUP_NAME_CONFLICT, "Placeholder not found or already bound")
             }
         }
         val token = invitationToken()
@@ -327,7 +327,7 @@ class JpaGroupStore(
 
     private fun checkActiveGroup(group: GroupEntity) {
         if (group.status == "ARCHIVED") {
-            throw ApplicationException(ErrorCode.ERR_06, "Group is archived")
+            throw ExpenseDomainException(ExpenseErrors.GROUP_NAME_CONFLICT, "Group is archived")
         }
     }
 
@@ -370,10 +370,10 @@ class JpaGroupStore(
         UuidGenerator.next().toString().replace("-", "") + UuidGenerator.next().toString().replace("-", "")
 
     private fun conflict(message: String): Nothing =
-        throw ApplicationException(ErrorCode.ERR_06, message)
+        throw ExpenseDomainException(ExpenseErrors.GROUP_NAME_CONFLICT, message)
 
     private fun notFound(): Nothing =
-        throw ApplicationException(ErrorCode.ERR_05, "Group not found")
+        throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group not found")
 
     private companion object {
         val INVITATION_TOKEN = Regex("^[a-f0-9]{64}$")

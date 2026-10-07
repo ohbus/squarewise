@@ -7,6 +7,8 @@ import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
 import com.subhrodip.squarewise.security.ReactiveOidcJwtDecoderFactory
 import com.subhrodip.squarewise.security.OidcSecurityConstants
 import com.subhrodip.squarewise.security.HttpHeadersConfiguration
+import com.subhrodip.squarewise.security.errors.ReactiveProblemAccessDeniedHandler
+import com.subhrodip.squarewise.security.errors.ReactiveProblemAuthenticationEntryPoint
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -43,6 +45,12 @@ class ProductionSecurityConfig(
                 ).permitAll()
                 .anyExchange().authenticated()
         }
-        .oauth2ResourceServer { it.jwt {} }
+        .exceptionHandling {
+            it.authenticationEntryPoint(ReactiveProblemAuthenticationEntryPoint())
+                .accessDeniedHandler(ReactiveProblemAccessDeniedHandler())
+        }
+        .oauth2ResourceServer {
+            it.authenticationEntryPoint(ReactiveProblemAuthenticationEntryPoint()).jwt {}
+        }
         .build()
 }

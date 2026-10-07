@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.security.oauth2.jwt.Jwt
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
+import com.subhrodip.squarewise.security.errors.PlatformDomainException
 
 /** Verifies the configurable asymmetric JWT algorithm policy. */
 class OidcJwtAlgorithmPolicyTest {
@@ -27,14 +28,14 @@ class OidcJwtAlgorithmPolicyTest {
 
     @Test
     fun `rejects symmetric algorithms in configuration`() {
-        assertThrows(IllegalArgumentException::class.java) { policy("HS256") }
+        assertThrows(PlatformDomainException::class.java) { policy("HS256") }
     }
 
     /** Empty or whitespace-only configuration cannot silently produce an allow-list. */
     @Test
     fun `rejects empty configured algorithm set`() {
-        assertThrows(IllegalArgumentException::class.java) { OidcJwtAlgorithmPolicy(emptySet()) }
-        assertThrows(IllegalArgumentException::class.java) { OidcJwtAlgorithmPolicy(setOf(" ", "")) }
+        assertThrows(PlatformDomainException::class.java) { OidcJwtAlgorithmPolicy(emptySet()) }
+        assertThrows(PlatformDomainException::class.java) { OidcJwtAlgorithmPolicy(setOf(" ", "")) }
     }
 
     /** A token without an algorithm header is rejected fail-closed. */
