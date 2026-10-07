@@ -100,3 +100,25 @@ For each executed suite record task ID, commit, toolchain/dependency versions,
 command, exit code, reports, fixture/seed, duration and unresolved defects. For
 failure/recovery tests also retain an ordered timeline and before/after ledger
 counts. Reviewers check outcomes against contracts, not only green test counts.
+
+## ERRC-24 additive error acceptance matrix
+
+Every live REST error assertion must retain the v1 symbolic `code` and verify
+the additive `numericCode`, `errorName`, and UUID `requestId` fields. The Bruno
+collection owns repeatable request-level contract checks; the live E2E suites
+own stateful and fault-injection scenarios.
+
+| Status | Scenario | Primary evidence |
+| --- | --- | --- |
+| 400 | Invalid profile/allocation/request parameters | `tests/e2e/test_rest_edge_cases.py`; Bruno negative probes |
+| 401 | Missing, malformed, expired, wrong-issuer, wrong-audience, and replayed credentials | `tools/bruno/quality/`; `tests/e2e/test_auth_email_delivery.py` |
+| 403 | Authenticated cross-scope access where the contract exposes authorization failure | service-specific live authorization suites; retain anti-enumeration 404 where required |
+| 404 | Missing and archived groups/resources, including hidden non-member resources | `tools/bruno/accounts/get-profile-by-id.bru`; `tools/bruno/quality/error-attribution.bru`; `tests/e2e/test_rest_edge_cases.py` |
+| 409 | Tampered idempotency replay and stale/conflicting mutations | `tests/e2e/test_rest_edge_cases.py`; `tests/e2e/test_concurrency_subscriptions.py` |
+| 429 | Login verification and Redis/rate-limit admission thresholds | `tests/e2e/test_auth_email_delivery.py`; `tests/e2e/test_auth_cache_resilience.py`; `tests/e2e/test_auth_rate_limit_surfaces.py` |
+
+The legacy-client compatibility probe projects an additive Problem Details
+response down to the v1 fields and verifies that a consumer ignoring the new
+fields still deserializes `code`, `status`, and `detail` successfully. Live
+execution evidence must be recorded in `docs/tasks/progress.md`; source-level
+coverage or a successful local contract scan does not close the live-stack gate.

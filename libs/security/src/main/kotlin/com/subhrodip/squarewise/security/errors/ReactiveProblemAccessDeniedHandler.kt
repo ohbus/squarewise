@@ -18,7 +18,9 @@ class ReactiveProblemAccessDeniedHandler(
         val response = exchange.response
         response.statusCode = if (hideUnauthorizedResources) HttpStatus.NOT_FOUND else HttpStatus.FORBIDDEN
         response.headers.contentType = MediaType.APPLICATION_PROBLEM_JSON
-        val buffer = response.bufferFactory().wrap(SecurityProblemBody.render(definition, RequestIdContext.get()).toByteArray())
+        val requestId = RequestIdContext.getOrGenerate()
+        response.headers.set("X-Request-Id", requestId)
+        val buffer = response.bufferFactory().wrap(SecurityProblemBody.render(definition, requestId).toByteArray())
         return response.writeWith(Mono.just(buffer))
     }
 }

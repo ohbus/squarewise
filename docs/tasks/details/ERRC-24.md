@@ -71,6 +71,16 @@ git diff --check
 - Bruno test execution report showing 100% assertion pass rate.
 - E2E acceptance test run logs recorded in task progress update.
 
+## Implementation Notes and Evidence
+
+- Upgraded the existing negative Bruno probes across Accounts, Notifications, and the quality suite to assert the additive `numericCode`, `errorName`, and UUIDv7 `requestId` fields alongside the legacy `code` and HTTP status.
+- Added `quality/legacy-client-compatibility.bru`, which projects only `code`, `status`, and `detail` to prove a legacy client can deserialize the response while modern fields remain available.
+- Added typed E2E problem-contract assertions to the invalid-allocation, archived-group, invalid-magic-link, replay-conflict, and rate-limit scenarios.
+- Live Bruno collection passed against the rebuilt Docker stack: 72 requests, 80 tests, 0 failures. The focused quality run also passed: 24 requests, 27 tests, 0 failures.
+- Live E2E suites passed: `uv run python tests/e2e/test_rest_edge_cases.py` and `uv run python tests/e2e/test_auth_email_delivery.py`.
+- Acceptance exposed two runtime integration gaps and they were closed in the owning boundaries: production servlet/reactive security chains now use the structured 401/403 handlers, and the legacy error adapter now derives additive fields from governed definitions instead of emitting nulls.
+- `make contracts` is unavailable in this Windows environment because GNU Make is not installed; the equivalent `uv run python tools/contracts/validate.py` gate passed.
+
 ## Rollout & Rollback Strategy
 
 - Test suite and fixture updates.

@@ -2,6 +2,7 @@ package com.subhrodip.squarewise.security.errors
 
 import com.subhrodip.squarewise.errors.catalog.PlatformErrors
 import com.subhrodip.squarewise.errors.request.RequestIdContext
+import com.subhrodip.squarewise.errors.request.RequestIdFilter
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.springframework.http.MediaType
@@ -16,6 +17,8 @@ class ServletProblemAccessDeniedHandler(
         val definition = if (hideUnauthorizedResources) PlatformErrors.RESOURCE_NOT_FOUND else PlatformErrors.ACCESS_DENIED
         response.status = if (hideUnauthorizedResources) 404 else 403
         response.contentType = MediaType.APPLICATION_PROBLEM_JSON_VALUE
-        response.writer.write(SecurityProblemBody.render(definition, RequestIdContext.get()))
+        val requestId = RequestIdContext.getOrGenerate()
+        response.setHeader(RequestIdFilter.HEADER, requestId)
+        response.writer.write(SecurityProblemBody.render(definition, requestId))
     }
 }

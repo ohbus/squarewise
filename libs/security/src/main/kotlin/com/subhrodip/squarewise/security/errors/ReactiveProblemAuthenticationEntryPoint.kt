@@ -21,7 +21,9 @@ class ReactiveProblemAuthenticationEntryPoint : ServerAuthenticationEntryPoint {
         response.statusCode = status
         response.headers.contentType = MediaType.APPLICATION_PROBLEM_JSON
         response.headers.set(HttpHeaders.WWW_AUTHENTICATE, SecurityChallengeHeaderBuilder.invalidBearerToken())
-        val buffer = response.bufferFactory().wrap(SecurityProblemBody.render(definition, RequestIdContext.get()).toByteArray())
+        val requestId = RequestIdContext.getOrGenerate()
+        response.headers.set("X-Request-Id", requestId)
+        val buffer = response.bufferFactory().wrap(SecurityProblemBody.render(definition, requestId).toByteArray())
         return response.writeWith(Mono.just(buffer))
     }
 }

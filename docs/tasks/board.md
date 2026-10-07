@@ -198,7 +198,7 @@ This workstream manages the six-digit `DM-L-C-EE` domain/module error-code stand
 
 | ID | Owner | Status | Deliverable |
 | --- | --- | --- | --- |
-| [ERRC-24](details/ERRC-24.md) | quality | todo | Update Bruno collections and live multi-service end-to-end acceptance test suites |
+| [ERRC-24](details/ERRC-24.md) | quality | done | Update Bruno collections and live multi-service end-to-end acceptance test suites |
 | [ERRC-25](details/ERRC-25.md) | security | todo | Execute adversarial fuzzing campaign proving zero stack, SQL, secret, or PII leakage |
 | [ERRC-26](details/ERRC-26.md) | quality | todo | Gather JMH (<50ns lookup) and k6 error storm evidence supporting 10M+-DAU scale |
 | [ERRC-27](details/ERRC-27.md) | operations | todo | Create Grafana dashboards, Prometheus alert rules, and operational runbooks |

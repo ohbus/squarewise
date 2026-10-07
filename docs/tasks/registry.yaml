@@ -8803,7 +8803,7 @@
       "parent_id": "ERRC-01",
       "title": "Update client fixtures, Bruno, and end-to-end acceptance",
       "phase": "quality",
-      "status": "todo",
+      "status": "done",
       "owner_role": "quality",
       "owner_agent": "/root",
       "depends_on": [
@@ -8832,7 +8832,11 @@
         "make contracts",
         "git diff --check"
       ],
-      "evidence": [],
+      "evidence": [
+        "Full Bruno live collection passed: 72/72 requests and 80/80 tests; focused quality collection passed: 24/24 requests and 27/27 tests.",
+        "Live E2E suites passed: tests/e2e/test_rest_edge_cases.py and tests/e2e/test_auth_email_delivery.py.",
+        "mypy, tools/contracts/validate.py, tools/qa/check_error_hygiene.py, shared errors/security Gradle tests, and git diff --check passed; make contracts was unavailable because GNU Make is not installed on Windows, with the equivalent contract validator passing."
+      ],
       "reviewer": "/root",
       "blocker": null
     },

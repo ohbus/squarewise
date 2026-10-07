@@ -44,6 +44,8 @@ class GlobalErrorHandlerTest {
         assertNotNull(body)
         assertEquals(404, body?.status)
         assertEquals("NOT_FOUND", body?.code)
+        assertEquals("919201", body?.numericCode)
+        assertEquals("RESOURCE_NOT_FOUND", body?.errorName)
         assertEquals("test-service", body?.source)
         assertEquals("Group 123 not found", body?.detail)
     }

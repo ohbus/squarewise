@@ -13,6 +13,7 @@ from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 from tests.http_constants import AUTHORIZATION, CONTENT_TYPE
+from tests.e2e.error_contract import assert_problem_details
 from tests.e2e.qa10_evidence import write_execution_evidence
 
 ACCOUNTS_URL = os.environ.get("SQUAREWISE_ACCOUNTS_URL", "http://localhost:28081")
@@ -96,12 +97,13 @@ def main(evidence_output: Path | None = None, source_revision: str = "local-work
     refresh_token = tokens.get("refreshToken")
     assert access_token and refresh_token, "verifyLogin must return access and refresh tokens"
 
-    replay_status, _ = request_json(
+    replay_status, replay_response = request_json(
         f"{ACCOUNTS_URL}/accounts/v1/auth/login/verify",
         method="POST",
         body={"credential": credential, "clientKind": "NATIVE"},
     )
     assert replay_status == 401, "verifyLogin must reject a replayed one-time credential"
+    assert_problem_details("replayed login credential", replay_status, replay_response, 401, "UNAUTHENTICATED")
 
     verification_limit = int(os.environ.get("SQUAREWISE_AUTH_LOGIN_VERIFY_MAX_REQUESTS", "5"))
     invalid_credential = f"{credential}-invalid"
@@ -126,6 +128,13 @@ def main(evidence_output: Path | None = None, source_revision: str = "local-work
         "verification admission must fail closed with HTTP 429 after the configured window is exhausted"
     )
     assert isinstance(verification_denial, dict)
+    assert_problem_details(
+        "verification rate-limit denial",
+        verification_denial_status,
+        verification_denial,
+        429,
+        "RATE_LIMITED",
+    )
     assert verification_denial.get("code") == "RATE_LIMITED", (
         "verification denial must retain the structured RATE_LIMITED error code"
     )

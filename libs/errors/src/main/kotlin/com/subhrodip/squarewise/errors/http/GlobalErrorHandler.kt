@@ -4,6 +4,8 @@ package com.subhrodip.squarewise.errors.http
 
 import com.subhrodip.squarewise.errors.domain.ApplicationException
 import com.subhrodip.squarewise.errors.domain.ErrorCode
+import com.subhrodip.squarewise.errors.catalog.PlatformErrors
+import com.subhrodip.squarewise.errors.code.ErrorDefinition
 import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
 import com.subhrodip.squarewise.errors.request.RequestIdContext
 import com.subhrodip.squarewise.errors.web.ProblemDetailsDto
@@ -204,6 +206,7 @@ class GlobalErrorHandler(
         violations: List<FieldViolation> = emptyList(),
         retryAfterSeconds: Long? = null
     ): ResponseEntity<ProblemDetailsDto> =
+        definitionFor(code).let { definition ->
         ResponseEntity.status(status)
             .headers(HttpHeaders().apply {
                 retryAfterSeconds?.let { set(HttpHeaders.RETRY_AFTER, it.toString()) }
@@ -217,8 +220,22 @@ class GlobalErrorHandler(
                 source = serviceName,
                 requestId = RequestIdContext.get(),
                 detail = detail,
+                numericCode = definition.numericCode.value,
+                errorName = definition.errorName,
                 violations = violations,
             ))
+        }
+
+    private fun definitionFor(code: ErrorCode): ErrorDefinition = when (code) {
+        ErrorCode.ERR_02 -> PlatformErrors.REQUEST_VALIDATION_FAILED
+        ErrorCode.ERR_03 -> PlatformErrors.AUTHENTICATION_REQUIRED
+        ErrorCode.ERR_04 -> PlatformErrors.ACCESS_DENIED
+        ErrorCode.ERR_05 -> PlatformErrors.RESOURCE_NOT_FOUND
+        ErrorCode.ERR_06, ErrorCode.ERR_09 -> PlatformErrors.RESOURCE_CONFLICT
+        ErrorCode.ERR_08 -> PlatformErrors.BROKER_UNAVAILABLE
+        ErrorCode.ERR_11 -> PlatformErrors.SECURITY_RATE_LIMITED
+        else -> PlatformErrors.UNEXPECTED_INTERNAL_ERROR
+    }
 
     private fun problemDetails(
         type: String,

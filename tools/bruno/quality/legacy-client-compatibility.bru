@@ -1,0 +1,33 @@
+meta {
+  name: Legacy clients ignore additive error identity fields
+  type: http
+  seq: 30
+}
+
+get {
+  url: {{baseUrlExpenseCore}}/expense-core/v1/groups/00000000-0000-0000-0000-000000000099
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}
+
+tests {
+  test("modern response exposes additive identity", function() {
+    expect(res.getStatus()).to.eql(404);
+    const body = res.getBody();
+    expect(body.code).to.be.a("string");
+    expect(body.numericCode).to.match(/^[1-9][0-9]{5}$/);
+    expect(body.errorName).to.match(/^[A-Z0-9_]{3,64}$/);
+    expect(body.requestId).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+  });
+
+  test("legacy projection remains deserializable", function() {
+    const body = res.getBody();
+    const legacyClientPayload = { code: body.code, status: body.status, detail: body.detail };
+    expect(legacyClientPayload.code).to.be.a("string");
+    expect(legacyClientPayload.status).to.eql(404);
+  });
+}
