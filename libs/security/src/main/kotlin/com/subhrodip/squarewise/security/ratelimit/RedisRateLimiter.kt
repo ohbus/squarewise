@@ -43,9 +43,17 @@ class RedisRateLimiter(
                 policy.window.seconds.toString(),
                 policy.maximumPermits.toString(),
                 policy.cooldown.seconds.toString()
-            ) ?: throw IllegalStateException("Redis returned no rate-limit decision")
+            ) ?: throw PlatformDomainException(
+                PlatformErrors.DATABASE_DATA_INCONSISTENT,
+                "Redis returned no rate-limit decision"
+            )
             val fields = result.split('|')
-            require(fields.size == 3) { "Redis returned malformed rate-limit decision" }
+            if (fields.size != 3) {
+                throw PlatformDomainException(
+                    PlatformErrors.DATABASE_DATA_INCONSISTENT,
+                    "Redis returned malformed rate-limit decision"
+                )
+            }
             val allowed = fields[0] == "1"
             val remaining = fields[1].toInt().coerceIn(0, policy.maximumPermits)
             val retryAfterSeconds = fields[2].toLong().coerceAtLeast(0)

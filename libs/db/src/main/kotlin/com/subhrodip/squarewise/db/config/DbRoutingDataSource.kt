@@ -2,9 +2,11 @@ package com.subhrodip.squarewise.db.config
 
 import com.subhrodip.squarewise.db.routing.DbRoute
 import com.subhrodip.squarewise.db.routing.DbContextHolder
+import com.subhrodip.squarewise.db.errors.DbPlatformException
 import com.subhrodip.squarewise.db.health.DbReaderDecision
 import com.subhrodip.squarewise.db.health.DbReaderHealth
 import com.subhrodip.squarewise.db.policy.DbRouteGuard
+import com.subhrodip.squarewise.errors.catalog.PlatformErrors
 import com.subhrodip.squarewise.observability.db.DbTelemetry
 import java.sql.Connection
 import java.sql.SQLException
@@ -37,7 +39,10 @@ class DbRoutingDataSource(
                 telemetry.acquisition(operation, "writer", (System.nanoTime() - started) / 1_000_000)
             }
         }
-        val reader = readers[readerName] ?: error("No configured reader pool named '$readerName'")
+        val reader = readers[readerName] ?: throw DbPlatformException(
+            PlatformErrors.PLATFORM_CONFIGURATION_INVALID,
+            "No configured reader pool is available"
+        )
         return try {
             val started = System.nanoTime()
             try {
@@ -49,7 +54,7 @@ class DbRoutingDataSource(
         } catch (failure: SQLException) {
             readerHealth.markFailure(readerName)
             telemetry.failure(readerName)
-            throw failure
+            throw DbPlatformException(PlatformErrors.DATABASE_UNAVAILABLE, cause = failure)
         }
     }
 
@@ -59,6 +64,9 @@ class DbRoutingDataSource(
     private fun routeForCurrentContext(): DbRoute = when (readerHealth.route(DbContextHolder.current(), readers.keys.firstOrNull() ?: "")) {
         DbReaderDecision.Reader -> DbRoute.READER
         DbReaderDecision.Writer -> DbRoute.WRITER
-        DbReaderDecision.Fail -> throw SQLException("No healthy reader is available for query '${DbContextHolder.current().operationName}'")
+        DbReaderDecision.Fail -> throw DbPlatformException(
+            PlatformErrors.DATABASE_UNAVAILABLE,
+            "No healthy reader is available"
+        )
     }
 }

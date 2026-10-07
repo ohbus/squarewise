@@ -8783,6 +8783,8 @@
         "Database route-policy, execution-context, and causal-watermark validation now use DbPlatformException, including malformed LSN translation; the libs:db test suite passed.",
         "Observability telemetry threshold and metric-cardinality overflow paths now use PlatformErrors-backed ObservabilityPlatformException; observability tests passed.",
         "IDs generation remains an explicit gap: libs/errors publicly depends on libs/ids for request IDs, and adding a reverse PlatformErrors dependency produces a Gradle cycle.",
+        "Redis no-result and malformed-result validation now use PlatformErrors.DATABASE_DATA_INCONSISTENT before fail-closed store translation.",
+        "Database route-guard and routed-reader acquisition failures now use PlatformErrors-backed DbPlatformException; the DB test suite passed.",
         "Three remaining libs/errors allowlist entries are owned by ERRC-30; zero-entry acceptance remains pending that task's ERRC-29 dependency."
       ],
       "reviewer": "/root",

@@ -140,3 +140,8 @@ git diff --check
   ID generation, so importing `PlatformErrors` from `libs/ids` would make the
   build cyclic. A dependency-inversion task is required before that path can
   adopt a governed Platform exception safely.
+- Replaced the final raw Redis result validation failures with governed
+  persistence-data exceptions before the existing fail-closed store translation.
+- Migrated the database route guard and routed-reader acquisition failures to
+  governed configuration/database-availability definitions; JDBC causes remain
+  attached internally while the public exception identity is static.
