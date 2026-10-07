@@ -85,6 +85,8 @@ git diff --check
 - Added `tools/ops/validate_error_rollout.py` and the `rollout-validate` target to enforce manifest safety bounds and ledger evidence shape before staging execution.
 - Included `rollout-validate` in the dependency-light `validate` gate so the
   standard repository validation path cannot omit the rollout regression suite.
+- Added the same validator and regression suite to the reusable hosted CI lint
+  job, preserving local/hosted gate parity.
 - The rollout validator now requires each stage name to match its service and
   rejects smoke paths that are absolute, traverse outside the repository, or
   resolve through a symlink outside the repository. Regression coverage protects

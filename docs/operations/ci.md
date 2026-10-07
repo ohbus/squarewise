@@ -157,6 +157,10 @@ fan out only after every verification matrix job succeeds. Local image builds
 are available independently through `make docker-build-all` or
 `make docker-build-<service>` and never push to a registry.
 
+The hosted lint gate also runs the ERRC-28 rollout manifest/ledger validator and
+its regression suite, keeping canary configuration safety checks in parity with
+the local `validate` target.
+
 Workflow files are syntax-checked with a pinned `yamllint` invocation installed
 ephemerally through `uvx`; CI does not assume Ruby is present on slim runners.
 The reusable workflow is the single source for action versions, Microsoft
