@@ -8987,7 +8987,8 @@
       "owned_paths": [
         "docs/tasks/details/ERRC-28.md",
         "infra/deploy/canary/error-rollout-config.yaml",
-        "docs/operations/rollout-verification-ledger.md"
+        "docs/operations/rollout-verification-ledger.md",
+        "tools/ops/validate_error_rollout.py"
       ],
       "specification": "docs/tasks/details/ERRC-28.md",
       "acceptance_criteria": [
@@ -8998,6 +8999,7 @@
         "All verification commands execute cleanly."
       ],
       "validation_commands": [
+        "uv run python tools/ops/validate_error_rollout.py",
         "uv run python tools/contracts/validate.py",
         "git diff --check"
       ],

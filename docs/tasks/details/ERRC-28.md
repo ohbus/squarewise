@@ -19,6 +19,7 @@ Execute the staged, canary-driven production rollout of the additive six-digit e
 - `docs/tasks/details/ERRC-28.md`
 - `infra/deploy/canary/error-rollout-config.yaml`
 - `docs/operations/rollout-verification-ledger.md`
+- `tools/ops/validate_error_rollout.py`
 
 ## Architecture & Design Patterns
 
@@ -66,6 +67,7 @@ Execute the staged, canary-driven production rollout of the additive six-digit e
 ## Validation Commands
 
 ```powershell
+uv run python tools/ops/validate_error_rollout.py
 uv run python tools/contracts/validate.py
 git diff --check
 ```
@@ -79,6 +81,7 @@ git diff --check
 
 - Added `infra/deploy/canary/error-rollout-config.yaml` defining tolerant-reader compatibility, 5%/25%/100% service stages, bounded canary halt thresholds, and a 60-second rollback budget.
 - Added `docs/operations/rollout-verification-ledger.md` with one explicit `NOT EXECUTED` row per service and a rollback rehearsal record.
+- Added `tools/ops/validate_error_rollout.py` and the `rollout-validate` target to enforce manifest safety bounds and ledger evidence shape before staging execution.
 - Local Bruno/E2E compatibility evidence supports the additive contract, but no staging or production-like traffic controller is available in this session.
 - ERRC-26 remains incomplete while production-like performance evidence is open;
   ERRC-27 is complete. ERRC-28 remains in progress until staged deployment
