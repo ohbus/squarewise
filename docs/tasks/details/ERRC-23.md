@@ -24,6 +24,14 @@ Migrate all error definitions, exception translation adapters, and startup failu
 - `libs/ids/src/main/kotlin/com/subhrodip/squarewise/ids/`
 - `tools/qa/error_hygiene_allowlist.yaml` (prune all remaining library entries)
 
+Coordinator-authorized dependency-inversion handoff for the IDs boundary:
+
+- `libs/errors/build.gradle.kts`
+- `libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/request/`
+- `libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/exceptions/PlatformDomainException.kt`
+- `libs/ids/build.gradle.kts`
+- `libs/ids/src/main/kotlin/com/subhrodip/squarewise/ids/generation/`
+
 ## Architecture & Design Patterns
 
 - **Ports & Adapters (Platform Boundary Decoupling)**: Shared technical libraries must not throw raw vendor exceptions (e.g. `PSQLException`, `AmqpException`). They translate low-level driver failures into Platform Domain 9 definitions (`93xxxx` Persistence, `94xxxx` Messaging, `92xxxx` Security).
@@ -135,11 +143,10 @@ git diff --check
   threshold validation and the bounded metric-cardinality overflow path to
   catalog-governed Platform errors; the latter now fails with the static
   observability degradation definition rather than `check`.
-- The IDs generation path remains unchanged after a dependency audit found a
-  circular Gradle edge: `libs/errors` publicly depends on `libs/ids` for request
-  ID generation, so importing `PlatformErrors` from `libs/ids` would make the
-  build cyclic. A dependency-inversion task is required before that path can
-  adopt a governed Platform exception safely.
+- Inverted the request-ID dependency: `libs/errors` now owns the UUIDv7 request
+  generator and governed identifier-generation failure, while `libs/ids`
+  delegates to that public generator. The former `libs/errors -> libs/ids`
+  edge was removed, allowing `libs/ids -> libs/errors` without a cycle.
 - Replaced the final raw Redis result validation failures with governed
   persistence-data exceptions before the existing fail-closed store translation.
 - Migrated the database route guard and routed-reader acquisition failures to

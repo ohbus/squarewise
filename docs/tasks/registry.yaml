@@ -8756,6 +8756,11 @@
         "libs/security/src/main/kotlin/com/subhrodip/squarewise/security/",
         "libs/observability/src/main/kotlin/com/subhrodip/squarewise/observability/",
         "libs/ids/src/main/kotlin/com/subhrodip/squarewise/ids/",
+        "libs/errors/build.gradle.kts",
+        "libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/request/",
+        "libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/exceptions/PlatformDomainException.kt",
+        "libs/ids/build.gradle.kts",
+        "libs/ids/src/main/kotlin/com/subhrodip/squarewise/ids/generation/",
         "tools/qa/error_hygiene_allowlist.yaml"
       ],
       "specification": "docs/tasks/details/ERRC-23.md",
@@ -8782,13 +8787,14 @@
         "Database pool, reader-health, scheduler, and auto-configuration bounds now use a PlatformErrors-backed DbPlatformException; the full libs:db test suite passed.",
         "Database route-policy, execution-context, and causal-watermark validation now use DbPlatformException, including malformed LSN translation; the libs:db test suite passed.",
         "Observability telemetry threshold and metric-cardinality overflow paths now use PlatformErrors-backed ObservabilityPlatformException; observability tests passed.",
-        "IDs generation remains an explicit gap: libs/errors publicly depends on libs/ids for request IDs, and adding a reverse PlatformErrors dependency produces a Gradle cycle.",
+        "Inverted request-ID generation ownership: libs/errors now owns the governed UUIDv7 generator and libs/ids delegates to it; the former Gradle cycle is removed.",
         "Redis no-result and malformed-result validation now use PlatformErrors.DATABASE_DATA_INCONSISTENT before fail-closed store translation.",
         "Database route-guard and routed-reader acquisition failures now use PlatformErrors-backed DbPlatformException; the DB test suite passed.",
+        "Fresh shared-library gate including libs:errors passed after the IDs dependency inversion; hygiene retains only the three ERRC-30-owned entries.",
         "Three remaining libs/errors allowlist entries are owned by ERRC-30; zero-entry acceptance remains pending that task's ERRC-29 dependency."
       ],
       "reviewer": "/root",
-      "blocker": "ERRC-23 still has three ERRC-30-owned libs/errors hygiene entries, and the IDs generator cannot import PlatformErrors until the libs/errors-to-libs/ids dependency cycle is inverted; ERRC-30 cannot start until ERRC-29 is complete."
+      "blocker": "ERRC-23 still has three ERRC-30-owned libs/errors hygiene entries; ERRC-30 cannot start until ERRC-29 is complete."
     },
     {
       "id": "ERRC-24",
