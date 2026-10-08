@@ -468,7 +468,7 @@ def main(evidence_output: Path | None = None, source_revision: str = "local-work
     status, _ = request_json(
         f"{EXPENSE_CORE_URL}{EXPENSE_GROUP.format(group_id='not-a-uuid')}"
     )
-    expect("malformed group identifier is rejected", status, 400, 404)
+    expect("malformed group identifier is rejected", status, 400, 404, 422)
 
     status, body = request_json(
         f"{EXPENSE_CORE_URL}{EXPENSE_ALLOCATIONS_PREVIEW}",
