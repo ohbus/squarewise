@@ -150,7 +150,7 @@ class AuthControllerTest @Autowired constructor(
     }
 
     @Test
-    fun `startLogin returns 422 Unprocessable Entity on invalid email`() {
+    fun `startLogin returns 422 Unprocessable Content on invalid email`() {
         mvc.perform(
             post(ApiEndpoints.Accounts.V1.PATH_LOGIN_START)
                 .contentType(MediaType.APPLICATION_JSON)
