@@ -40,6 +40,19 @@ class SquarewiseExceptionTest {
         assertEquals("REQUEST_VALIDATION_FAILED", validation.definition.errorName)
         assertEquals("RESOURCE_NOT_FOUND", notFound.definition.errorName)
         assertEquals("group", notFound.diagnostics.entries["resource.type"])
+
+        val businessRule = BusinessRuleViolationException(ExpenseErrors.ALLOCATION_SUM_MISMATCH)
+        assertEquals("ALLOCATION_SUM_MISMATCH", businessRule.definition.errorName)
+        assertEquals(ExpenseErrors.ALLOCATION_SUM_MISMATCH.numericCode, businessRule.definition.numericCode)
+
+        val businessRuleWithCause = BusinessRuleViolationException(
+            definition = ExpenseErrors.PARTICIPANT_SET_INVALID,
+            diagnostics = MapDiagnostics.of(mapOf("group.id" to "123")),
+            cause = IllegalArgumentException("invalid participants")
+        )
+        assertEquals("PARTICIPANT_SET_INVALID", businessRuleWithCause.definition.errorName)
+        assertEquals("123", businessRuleWithCause.diagnostics.entries["group.id"])
+        assertEquals("invalid participants", businessRuleWithCause.cause?.message)
     }
 
     @Test
