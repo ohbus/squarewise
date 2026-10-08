@@ -66,7 +66,7 @@ class GlobalErrorHandler(
         log.warn("Request validation failed [requestId={}]: {}", RequestIdContext.get(), summary)
         return problem(
             PlatformErrors.REQUEST_VALIDATION_FAILED,
-            HttpStatus.UNPROCESSABLE_ENTITY,
+            HttpStatus.UNPROCESSABLE_CONTENT,
             "Validation failed",
             "One or more request parameters failed validation.",
             violations
@@ -97,7 +97,7 @@ class GlobalErrorHandler(
         log.warn("Missing or invalid request parameter or header [requestId={}]: {}", RequestIdContext.get(), detail)
         return problem(
             PlatformErrors.REQUEST_VALUE_INVALID,
-            HttpStatus.UNPROCESSABLE_ENTITY,
+            HttpStatus.UNPROCESSABLE_CONTENT,
             "Missing or invalid request parameter or header",
             detail
         )
@@ -113,7 +113,7 @@ class GlobalErrorHandler(
         )
         return problem(
             PlatformErrors.REQUEST_VALUE_INVALID,
-            HttpStatus.UNPROCESSABLE_ENTITY,
+            HttpStatus.UNPROCESSABLE_CONTENT,
             "Type mismatch for parameter ${error.name}",
             error.message
         )
@@ -141,7 +141,7 @@ class GlobalErrorHandler(
         log.warn("Invalid request argument [requestId={}]: {}", RequestIdContext.get(), detail)
         return problem(
             PlatformErrors.REQUEST_VALUE_INVALID,
-            HttpStatus.UNPROCESSABLE_ENTITY,
+            HttpStatus.UNPROCESSABLE_CONTENT,
             "Request validation failed",
             detail
         )

@@ -109,7 +109,7 @@ class ProfileControllerTest {
     @Test
     fun `rejects empty patch`() {
         mvc.perform(patch(ApiEndpoints.Accounts.V1.PATH_ME).with(alice).contentType(MediaType.APPLICATION_JSON).content("{}"))
-            .andExpect(status().isUnprocessableEntity)
+            .andExpect(status().isUnprocessableContent)
             .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
     }
 
@@ -347,7 +347,7 @@ class ProfileControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"accountIds\": []}")
         )
-            .andExpect(status().isUnprocessableEntity)
+            .andExpect(status().isUnprocessableContent)
             .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
     }
 
@@ -373,7 +373,7 @@ class ProfileControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"accountIds\":[$accountIds]}")
         )
-            .andExpect(status().isUnprocessableEntity)
+            .andExpect(status().isUnprocessableContent)
             .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
     }
 

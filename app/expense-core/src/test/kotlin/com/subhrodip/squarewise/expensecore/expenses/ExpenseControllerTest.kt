@@ -378,7 +378,7 @@ class ExpenseControllerTest {
                 .header(ApiEndpoints.Headers.IDEMPOTENCY_KEY, "idemp-key-test-mismatch")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json)
-        ).andExpect(status().isUnprocessableEntity)
+        ).andExpect(status().isUnprocessableContent)
     }
 
     @Test
@@ -408,7 +408,7 @@ class ExpenseControllerTest {
             post(ApiEndpoints.ExpenseCore.V1.groupExpenses(groupId))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json)
-        ).andExpect(status().isUnprocessableEntity)
+        ).andExpect(status().isUnprocessableContent)
     }
 
     @Test
@@ -726,11 +726,11 @@ class ExpenseControllerTest {
         val groupId = UUID.randomUUID()
 
         mvc.perform(get(ApiEndpoints.ExpenseCore.V1.groupExpenses(groupId)).param("limit", "0"))
-            .andExpect(status().isUnprocessableEntity)
+            .andExpect(status().isUnprocessableContent)
             .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
 
         mvc.perform(get(ApiEndpoints.ExpenseCore.V1.groupExpenses(groupId)).param("limit", "101"))
-            .andExpect(status().isUnprocessableEntity)
+            .andExpect(status().isUnprocessableContent)
             .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
     }
 
@@ -750,7 +750,7 @@ class ExpenseControllerTest {
                 .header(ApiEndpoints.Headers.IDEMPOTENCY_KEY, "x".repeat(201))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json)
-        ).andExpect(status().isUnprocessableEntity)
+        ).andExpect(status().isUnprocessableContent)
     }
 
     @Test
@@ -769,7 +769,7 @@ class ExpenseControllerTest {
                 .header(ApiEndpoints.Headers.IDEMPOTENCY_KEY, "bounded-category")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json)
-        ).andExpect(status().isUnprocessableEntity)
+        ).andExpect(status().isUnprocessableContent)
     }
 
     @Test
@@ -790,7 +790,7 @@ class ExpenseControllerTest {
                 .header(ApiEndpoints.Headers.IDEMPOTENCY_KEY, "bounded-participants")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json)
-        ).andExpect(status().isUnprocessableEntity)
+        ).andExpect(status().isUnprocessableContent)
     }
 
     /** Verifies the allocation-side participant limit is enforced independently of payer count. */

@@ -45,7 +45,7 @@ class SettlementControllerTest {
             .header(ApiEndpoints.Headers.IDEMPOTENCY_KEY, "settlement-key-0001")
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"fromParticipantId\":\"${UUID.randomUUID()}\",\"toParticipantId\":\"${UUID.randomUUID()}\",\"amountMinor\":\"x\",\"currency\":\"EUR\"}"))
-            .andExpect(status().isUnprocessableEntity)
+            .andExpect(status().isUnprocessableContent)
     }
 
     @Test
@@ -195,12 +195,12 @@ class SettlementControllerTest {
         mvc.perform(post(ApiEndpoints.ExpenseCore.V1.groupSettlements(groupId)).with(user).header(ApiEndpoints.Headers.IDEMPOTENCY_KEY, "invalid-key-0001")
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"fromParticipantId\":\"$participant\",\"toParticipantId\":\"$participant\",\"amountMinor\":\"100\",\"currency\":\"EUR\"}"))
-            .andExpect(status().isUnprocessableEntity)
+            .andExpect(status().isUnprocessableContent)
 
         mvc.perform(post(ApiEndpoints.ExpenseCore.V1.groupSettlements(groupId)).with(user).header(ApiEndpoints.Headers.IDEMPOTENCY_KEY, "invalid-key-0002")
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"fromParticipantId\":\"${UUID.randomUUID()}\",\"toParticipantId\":\"${UUID.randomUUID()}\",\"amountMinor\":\"0\",\"currency\":\"EUR\"}"))
-            .andExpect(status().isUnprocessableEntity)
+            .andExpect(status().isUnprocessableContent)
 
         mvc.perform(post(ApiEndpoints.ExpenseCore.V1.groupSettlementReversal(groupId, UUID.randomUUID())).with(user)
             .contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"unknown\"}"))

@@ -99,7 +99,7 @@ class GlobalErrorHandlerTest {
     @Test
     fun `illegalArgument maps to 422 and VALIDATION_ERROR`() {
         val response = handler.illegalArgument(IllegalArgumentException("Invalid parameter"))
-        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, response.statusCode)
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, response.statusCode)
         assertEquals(CategoryCode.VALIDATION_ERROR.name, response.body?.code)
         assertEquals("Invalid parameter", response.body?.detail)
     }
@@ -211,7 +211,7 @@ class GlobalErrorHandlerTest {
         assertEquals("missing header", binding.body?.detail)
         assertEquals("Invalid request binding", bindingFallback.body?.detail)
         assertEquals("Type mismatch for parameter page", mismatch.body?.title)
-        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, mismatch.statusCode)
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, mismatch.statusCode)
         assertEquals("Type mismatch for parameter page", unknownType.body?.title)
         assertEquals("Resource was updated by another transaction", lockFallback.body?.detail)
         assertEquals("Invalid request", argumentFallback.body?.detail)

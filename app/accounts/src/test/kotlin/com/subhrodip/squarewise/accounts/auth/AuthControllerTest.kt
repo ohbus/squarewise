@@ -156,7 +156,7 @@ class AuthControllerTest @Autowired constructor(
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"email\":\"not-an-email\"}")
         )
-            .andExpect(status().isUnprocessableEntity)
+            .andExpect(status().isUnprocessableContent)
             .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
     }
 

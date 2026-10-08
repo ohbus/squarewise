@@ -48,7 +48,7 @@ class AllocationPreviewControllerTest {
             post(ApiEndpoints.ExpenseCore.V1.PATH_ALLOCATION_PREVIEW)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""{"totalMinor":"100","participantIds":[]}""")
-        ).andExpect(status().isUnprocessableEntity)
+        ).andExpect(status().isUnprocessableContent)
             .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
             .andExpect(jsonPath("$.requestId").value("missing-request-id"))
     }

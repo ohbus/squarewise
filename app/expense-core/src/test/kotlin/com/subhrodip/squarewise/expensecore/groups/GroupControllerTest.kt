@@ -56,7 +56,7 @@ class GroupControllerTest {
     fun `rejects invalid group request`() {
         val result = mvc.perform(post(ApiEndpoints.ExpenseCore.V1.PATH_GROUPS).with(alice).contentType(MediaType.APPLICATION_JSON)
             .content("{\"name\":\"\",\"kind\":\"INVALID\",\"currency\":\"eur\"}"))
-            .andExpect(status().isUnprocessableEntity).andReturn()
+            .andExpect(status().isUnprocessableContent).andReturn()
         assertEquals("VALIDATION_ERROR", result.response.getContentAsString().let { body ->
             Regex("\\\"code\\\":\\\"([^\\\"]+)\\\"").find(body)!!.groupValues[1]
         })

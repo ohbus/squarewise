@@ -143,7 +143,7 @@ class InboxControllerTest {
     @Test
     fun `rejects invalid inbox page limits with the validation application code`() {
         mvc.perform(get(ApiEndpoints.Notifications.V1.PATH_INBOX).with(user).param("limit", "0"))
-            .andExpect(status().isUnprocessableEntity)
+            .andExpect(status().isUnprocessableContent)
             .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
     }
 
@@ -162,7 +162,7 @@ class InboxControllerTest {
             get(ApiEndpoints.Notifications.V1.PATH_INBOX)
                 .with(user)
                 .param("cursor", "not-a-valid-cursor")
-        ).andExpect(status().isUnprocessableEntity)
+        ).andExpect(status().isUnprocessableContent)
             .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
     }
 
