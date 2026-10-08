@@ -18,9 +18,10 @@ object GraphQLExtensionsFormatter {
 
     /** Format a local catalog definition with the supplied request context. */
     fun fromDefinition(definition: ErrorDefinition, requestId: String): Map<String, Any> = buildMap {
-        put("code", definition.legacyCode ?: definition.errorName)
+        put("code", definition.category.name)
         put("numericCode", definition.numericCode.value)
         put("errorName", definition.errorName)
+        put("messageKey", definition.messageKey)
         put("requestId", requestId)
         put("source", "squarewise-bff")
         put("timestamp", Instant.now().toString())

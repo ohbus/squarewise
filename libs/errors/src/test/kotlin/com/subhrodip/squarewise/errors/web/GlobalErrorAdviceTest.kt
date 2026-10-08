@@ -1,6 +1,8 @@
 package com.subhrodip.squarewise.errors.web
 
 import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
+import com.subhrodip.squarewise.errors.catalog.PlatformErrors
+import com.subhrodip.squarewise.errors.code.CategoryCode
 import com.subhrodip.squarewise.errors.exceptions.ConcurrencyConflictException
 import com.subhrodip.squarewise.errors.request.RequestIdContext
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -19,9 +21,10 @@ class GlobalErrorAdviceTest {
             val body = response.body!!
 
             assertEquals(409, body.status)
-            assertEquals("CONFLICT", body.code)
-            assertEquals(ExpenseErrors.GROUP_NAME_CONFLICT.numericCode.value, body.numericCode)
-            assertEquals("GROUP_NAME_CONFLICT", body.errorName)
+            assertEquals(CategoryCode.STATE_CONFLICT.name, body.code)
+            assertEquals(PlatformErrors.RESOURCE_CONFLICT.numericCode.value, body.numericCode)
+            assertEquals("RESOURCE_CONFLICT", body.errorName)
+            assertEquals(PlatformErrors.RESOURCE_CONFLICT.messageKey, body.messageKey)
             assertFalse(body.detail.contains("password"))
             assertEquals("request-123", body.requestId)
         }
@@ -34,7 +37,7 @@ class GlobalErrorAdviceTest {
         val body = advice.unexpected(IllegalStateException("jdbc password=secret" )).body!!
 
         assertEquals(500, body.status)
-        assertEquals("INTERNAL_ERROR", body.code)
+        assertEquals(CategoryCode.INTERNAL_ERROR.name, body.code)
         assertEquals("UNEXPECTED_INTERNAL_ERROR", body.errorName)
         assertTrue(body.detail.isNotBlank())
         assertFalse(body.detail.contains("jdbc"))

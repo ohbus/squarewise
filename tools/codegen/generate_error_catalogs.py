@@ -49,7 +49,6 @@ def definition(record: dict[str, Any]) -> str:
         "SimpleErrorDefinition(",
         f'    numericCode = ErrorCode({kotlin_string(str(record["numericCode"]))}),',
         f'    errorName = {kotlin_string(str(record["errorName"]))},',
-        f'    legacyCode = {kotlin_string(str(record["legacyCode"])) if record.get("legacyCode") else "null"},',
         f'    title = {kotlin_string(str(record["title"]))},',
         f'    safeDetail = {kotlin_string(str(record["safeDetail"]))},',
         f'    messageKey = {kotlin_string(str(record["messageKey"]))},',

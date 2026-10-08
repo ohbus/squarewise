@@ -1,5 +1,6 @@
 package com.subhrodip.squarewise.errors
 import com.subhrodip.squarewise.errors.catalog.PlatformErrors
+import com.subhrodip.squarewise.errors.code.CategoryCode
 import com.subhrodip.squarewise.errors.exceptions.PlatformDomainException
 import com.subhrodip.squarewise.errors.http.GlobalErrorHandler
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -35,10 +36,10 @@ class GlobalErrorHandlerTest {
         )
 
         assertEquals(HttpStatus.NOT_FOUND, response.statusCode)
-        assertEquals("NOT_FOUND", response.body?.code)
+        assertEquals(CategoryCode.NOT_FOUND.name, response.body?.code)
         assertEquals("919201", response.body?.numericCode)
         assertEquals("RESOURCE_NOT_FOUND", response.body?.errorName)
-        assertEquals("The requested API resource or route does not exist.", response.body?.detail)
+        assertEquals("Group 123 not found", response.body?.detail)
     }
 
     @Test
@@ -48,15 +49,15 @@ class GlobalErrorHandlerTest {
         )
 
         assertEquals(HttpStatus.TOO_MANY_REQUESTS, response.statusCode)
-        assertEquals("RATE_LIMITED", response.body?.code)
+        assertEquals(CategoryCode.RATE_LIMIT_EXCEEDED.name, response.body?.code)
         assertEquals("60", response.headers.getFirst("Retry-After"))
     }
 
     @Test
-    fun `illegalArgument maps to BAD_REQUEST and VALIDATION_FAILED`() {
+    fun `illegalArgument maps to 422 and VALIDATION_ERROR`() {
         val response = handler.illegalArgument(IllegalArgumentException("Invalid parameter"))
-        assertEquals(HttpStatus.BAD_REQUEST, response.statusCode)
-        assertEquals("VALIDATION_FAILED", response.body?.code)
+        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, response.statusCode)
+        assertEquals(CategoryCode.VALIDATION_ERROR.name, response.body?.code)
         assertEquals("Invalid parameter", response.body?.detail)
     }
 
@@ -64,14 +65,14 @@ class GlobalErrorHandlerTest {
     fun `optimisticLock maps to CONFLICT`() {
         val response = handler.optimisticLock(OptimisticLockingFailureException("Version mismatch"))
         assertEquals(HttpStatus.CONFLICT, response.statusCode)
-        assertEquals("CONFLICT", response.body?.code)
+        assertEquals(CategoryCode.STATE_CONFLICT.name, response.body?.code)
     }
 
     @Test
     fun `unexpected exception maps to 500 and INTERNAL_ERROR`() {
         val response = handler.unexpected(RuntimeException("Database connection dropped"))
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.statusCode)
-        assertEquals("INTERNAL_ERROR", response.body?.code)
+        assertEquals(CategoryCode.INTERNAL_ERROR.name, response.body?.code)
     }
 
     /** Verifies the content-negotiation failure intentionally has no RFC 7807 body. */
@@ -92,7 +93,8 @@ class GlobalErrorHandlerTest {
 
         val response = handler.validation(MethodArgumentNotValidException(sampleParameter(), binding))
 
-        assertEquals(HttpStatus.BAD_REQUEST, response.statusCode)
+        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, response.statusCode)
+        assertEquals(CategoryCode.VALIDATION_ERROR.name, response.body?.code)
         assertEquals(2, response.body?.violations?.size)
         assertEquals("amount", response.body?.violations?.first()?.field)
         assertEquals("invalid currency", response.body?.violations?.last()?.message)
@@ -153,7 +155,7 @@ class GlobalErrorHandlerTest {
         assertEquals("missing header", binding.body?.detail)
         assertEquals("Invalid request binding", bindingFallback.body?.detail)
         assertEquals("Type mismatch for parameter page", mismatch.body?.title)
-        assertEquals(HttpStatus.BAD_REQUEST, mismatch.statusCode)
+        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, mismatch.statusCode)
         assertEquals("Type mismatch for parameter page", unknownType.body?.title)
         assertEquals("Resource was updated by another transaction", lockFallback.body?.detail)
         assertEquals("Invalid request", argumentFallback.body?.detail)

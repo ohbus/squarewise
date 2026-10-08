@@ -2,6 +2,7 @@ package com.subhrodip.squarewise.errors.exceptions
 
 import com.subhrodip.squarewise.errors.catalog.AccountsErrors
 import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
+import com.subhrodip.squarewise.errors.catalog.PlatformErrors
 import com.subhrodip.squarewise.errors.catalog.SimpleErrorDefinition
 import com.subhrodip.squarewise.errors.code.DisclosurePolicy
 import com.subhrodip.squarewise.errors.code.ErrorCode
@@ -25,10 +26,10 @@ class SquarewiseExceptionTest {
         val exception = ConcurrencyConflictException(cause = cause)
         val defaultException = ConcurrencyConflictException()
 
-        assertEquals(ExpenseErrors.GROUP_NAME_CONFLICT.errorName, exception.definition.errorName)
+        assertEquals(PlatformErrors.RESOURCE_CONFLICT.errorName, exception.definition.errorName)
         assertEquals(cause, exception.cause)
-        assertEquals("GROUP_NAME_CONFLICT", exception.message)
-        assertEquals("GROUP_NAME_CONFLICT", defaultException.definition.errorName)
+        assertEquals("RESOURCE_CONFLICT", exception.message)
+        assertEquals("RESOURCE_CONFLICT", defaultException.definition.errorName)
     }
 
     @Test
@@ -36,8 +37,8 @@ class SquarewiseExceptionTest {
         val validation = DomainValidationException(listOf(FieldViolation("name", "required")))
         val notFound = EntityNotFoundException(ResourceIdentifier("group"))
 
-        assertEquals("PROFILE_REQUEST_INVALID", validation.definition.errorName)
-        assertEquals("GROUP_NOT_FOUND", notFound.definition.errorName)
+        assertEquals("REQUEST_VALIDATION_FAILED", validation.definition.errorName)
+        assertEquals("RESOURCE_NOT_FOUND", notFound.definition.errorName)
         assertEquals("group", notFound.diagnostics.entries["resource.type"])
     }
 
@@ -46,7 +47,6 @@ class SquarewiseExceptionTest {
         val uncatalogued = SimpleErrorDefinition(
             numericCode = ErrorCode("999901"),
             errorName = "UNCATALOGUED_ERROR",
-            legacyCode = null,
             title = "Uncatalogued",
             safeDetail = "Uncatalogued",
             messageKey = "error.uncatalogued",

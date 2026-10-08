@@ -2,6 +2,7 @@ package com.subhrodip.squarewise.errors.web
 
 import com.subhrodip.squarewise.errors.catalog.PlatformErrors
 import com.subhrodip.squarewise.errors.code.ErrorDefinition
+import com.subhrodip.squarewise.errors.exceptions.DomainValidationException
 import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
 import com.subhrodip.squarewise.errors.request.RequestIdContext
 import org.slf4j.LoggerFactory
@@ -26,15 +27,34 @@ import java.net.URI
 class GlobalErrorAdvice(
     @Value("\${spring.application.name:unknown}") private val serviceName: String = "unknown",
 ) {
-    /** Map a governed domain failure with additive identity fields. */
+    /** Map a governed domain failure with additive identity fields and rich field violations if present. */
     @ExceptionHandler(SquarewiseException::class)
-    fun governed(exception: SquarewiseException): ResponseEntity<ProblemDetailsDto> = response(exception.definition)
+    fun governed(exception: SquarewiseException): ResponseEntity<ProblemDetailsDto> {
+        val violations = if (exception is DomainValidationException) {
+            exception.violations.map {
+                ViolationDto(
+                    field = it.field.take(MAX_FIELD_LENGTH),
+                    message = it.message.take(MAX_FIELD_LENGTH),
+                    messageKey = it.messageKey,
+                    rejectedValue = sanitizeRejectedValue(it.field, it.rejectedValue),
+                )
+            }
+        } else {
+            emptyList()
+        }
+        return response(exception.definition, violations = violations)
+    }
 
-    /** Map bean-validation failures without echoing rejected values. */
+    /** Map bean-validation failures with rich field diagnostics and i18n keys. */
     @ExceptionHandler(MethodArgumentNotValidException::class)
     fun validation(exception: MethodArgumentNotValidException): ResponseEntity<ProblemDetailsDto> {
         val violations = exception.bindingResult.fieldErrors.take(MAX_VIOLATIONS).map {
-            ViolationDto(it.field.take(MAX_FIELD_LENGTH), "The value is invalid")
+            ViolationDto(
+                field = it.field.take(MAX_FIELD_LENGTH),
+                message = it.defaultMessage?.take(MAX_FIELD_LENGTH) ?: "The value is invalid",
+                messageKey = it.code?.let { code -> "validation.${code.lowercase()}" },
+                rejectedValue = sanitizeRejectedValue(it.field, it.rejectedValue),
+            )
         }
         return response(PlatformErrors.REQUEST_VALIDATION_FAILED, violations = violations)
     }
@@ -69,14 +89,24 @@ class GlobalErrorAdvice(
             status = status,
             detail = definition.safeDetail,
             instance = "/errors/${definition.errorName.lowercase()}",
-            code = definition.legacyCode ?: definition.errorName,
+            code = definition.category.name,
             numericCode = definition.numericCode.value,
             errorName = definition.errorName,
+            messageKey = definition.messageKey,
             requestId = RequestIdContext.get(),
             source = serviceName,
             violations = violations,
         )
         return ResponseEntity.status(status).headers(headers).body(body)
+    }
+
+    private fun sanitizeRejectedValue(field: String, value: Any?): Any? {
+        if (value == null) return null
+        val lowerField = field.lowercase()
+        if (lowerField.contains("password") || lowerField.contains("token") || lowerField.contains("secret") || lowerField.contains("key")) {
+            return "[REDACTED]"
+        }
+        return value.toString().take(MAX_FIELD_LENGTH)
     }
 
     private companion object {

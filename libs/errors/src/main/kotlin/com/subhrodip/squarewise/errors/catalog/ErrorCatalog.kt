@@ -16,6 +16,14 @@ object ErrorCatalog {
     /** Immutable startup-built index for allocation-free numeric-code resolution. */
     val byNumericCode: Map<String, ErrorDefinition> = all.associateBy { it.numericCode.value }
 
+    /** Immutable identity set for O(1) zero-reflection exception validation. */
+    private val definitionSet: Set<ErrorDefinition> = java.util.Collections.newSetFromMap(
+        java.util.IdentityHashMap<ErrorDefinition, Boolean>(all.size)
+    ).apply { addAll(all) }
+
+    /** Checks in O(1) whether an ErrorDefinition belongs to the compiled catalog. */
+    fun contains(definition: ErrorDefinition): Boolean = definitionSet.contains(definition)
+
     /** Finds a compiled definition by its canonical six-digit identity. */
     fun find(numericCode: String): ErrorDefinition? = byNumericCode[numericCode]
 }
