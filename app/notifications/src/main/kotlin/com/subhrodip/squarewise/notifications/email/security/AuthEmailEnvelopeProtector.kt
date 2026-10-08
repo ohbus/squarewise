@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.notifications.email.security
+
 import java.nio.charset.StandardCharsets
 import com.subhrodip.squarewise.notifications.errors.NotificationInputException
 import java.util.Base64

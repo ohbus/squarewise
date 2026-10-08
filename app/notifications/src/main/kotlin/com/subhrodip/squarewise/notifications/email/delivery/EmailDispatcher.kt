@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.notifications.email.delivery
+
 import com.subhrodip.squarewise.notifications.email.config.EmailProperties
 import com.subhrodip.squarewise.notifications.email.smtp.JavaMailSender
 import com.subhrodip.squarewise.notifications.email.smtp.MailSendException

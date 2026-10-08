@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.notifications.email
+
 import java.time.Instant
 import com.subhrodip.squarewise.notifications.email.delivery.AuthEmailDeliveryConsumer
 import com.subhrodip.squarewise.notifications.email.delivery.AuthEmailDeliveryEvent

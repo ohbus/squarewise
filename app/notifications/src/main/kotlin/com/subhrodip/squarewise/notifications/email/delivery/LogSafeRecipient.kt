@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.notifications.email.delivery
+
 import java.security.MessageDigest
 
 /** Converts recipient identity into a stable non-reversible log correlation value. */

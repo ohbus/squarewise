@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.expensecore.messaging.config
+
 import org.springframework.boot.context.properties.ConfigurationProperties
 
 /** Configuration properties governing transactional outbox relay behavior. */

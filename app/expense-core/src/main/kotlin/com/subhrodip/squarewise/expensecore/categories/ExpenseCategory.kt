@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.expensecore.categories
+
 import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
 import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
 enum class ExpenseCategory(val key: String, val label: String) {

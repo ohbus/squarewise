@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.notifications.email.smtp
+
 import com.subhrodip.squarewise.notifications.email.config.EmailProperties
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component

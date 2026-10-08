@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.expensecore.groups.persistence.repository
+
 import com.subhrodip.squarewise.expensecore.groups.domain.GroupEntity
 import jakarta.persistence.LockModeType
 import java.util.UUID

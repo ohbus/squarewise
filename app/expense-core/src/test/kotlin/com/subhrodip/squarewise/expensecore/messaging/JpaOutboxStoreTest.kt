@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.expensecore.messaging
+
 import com.subhrodip.squarewise.expensecore.messaging.outbox.persistence.JpaOutboxStore
 import com.subhrodip.squarewise.expensecore.messaging.outbox.model.OutboxMessage
 import com.subhrodip.squarewise.expensecore.messaging.outbox.persistence.OutboxRepository

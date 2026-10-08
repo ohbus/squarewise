@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.expensecore.messaging.outbox.model
+
 import java.time.Instant
 import java.util.UUID
 

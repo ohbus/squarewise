@@ -1,6 +1,7 @@
 @file:Suppress("CanConvertToMultiDollarString")
 
 package com.subhrodip.squarewise.notifications.email.security
+
 import java.util.Base64
 import com.subhrodip.squarewise.notifications.errors.NotificationInputException
 import org.springframework.beans.factory.annotation.Value

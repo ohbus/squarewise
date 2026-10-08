@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.expensecore.expenses.persistence.entity
+
 import com.subhrodip.squarewise.expensecore.expenses.persistence.entity.ExpenseEntity
 
 import jakarta.persistence.Column

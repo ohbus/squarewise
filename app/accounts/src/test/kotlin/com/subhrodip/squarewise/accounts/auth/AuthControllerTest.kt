@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.accounts.auth
+
 import com.subhrodip.squarewise.accounts.auth.delivery.model.AuthEmailDeliveryResult
 import java.time.Duration
 import org.junit.jupiter.api.Assertions.assertNotNull

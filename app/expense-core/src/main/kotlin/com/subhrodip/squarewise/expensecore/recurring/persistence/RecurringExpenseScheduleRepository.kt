@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.expensecore.recurring.persistence
+
 import com.subhrodip.squarewise.expensecore.recurring.domain.RecurringExpenseSchedule
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Lock

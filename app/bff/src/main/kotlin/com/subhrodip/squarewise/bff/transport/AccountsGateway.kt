@@ -1,6 +1,7 @@
 @file:Suppress("CanConvertToMultiDollarString")
 
 package com.subhrodip.squarewise.bff.transport
+
 import com.subhrodip.squarewise.bff.transport.model.output.BffProfile
 import com.subhrodip.squarewise.bff.transport.model.auth.AccountsTokenResponse
 import com.subhrodip.squarewise.bff.transport.model.auth.BrowserLoginStartRequest

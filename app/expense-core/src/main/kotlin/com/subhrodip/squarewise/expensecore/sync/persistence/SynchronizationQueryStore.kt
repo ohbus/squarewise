@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.expensecore.sync.persistence
+
 import com.subhrodip.squarewise.expensecore.sync.domain.SyncPage
 
 /** Reader-side persistence port for bounded synchronization snapshots. */

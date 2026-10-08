@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.expensecore.groups.persistence.store
+
 import com.subhrodip.squarewise.expensecore.groups.domain.GroupAuditEntity
 /**
  * Writer-side audit port used by group mutation transactions.

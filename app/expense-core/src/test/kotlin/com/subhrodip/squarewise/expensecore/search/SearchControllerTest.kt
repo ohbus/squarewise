@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.expensecore.search
+
 import com.subhrodip.squarewise.db.routing.DbExecutionContext
 
 import com.subhrodip.squarewise.expensecore.search.api.SearchController

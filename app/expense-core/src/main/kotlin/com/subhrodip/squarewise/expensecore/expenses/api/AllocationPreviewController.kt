@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.expensecore.expenses.api
+
 import com.subhrodip.squarewise.expensecore.expenses.domain.AllocationCalculator
 import com.subhrodip.squarewise.expensecore.expenses.api.request.AllocationPreviewRequest
 import com.subhrodip.squarewise.expensecore.expenses.api.response.AllocationPreviewResponse

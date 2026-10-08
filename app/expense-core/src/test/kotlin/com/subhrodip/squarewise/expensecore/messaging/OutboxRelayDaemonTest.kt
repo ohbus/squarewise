@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.expensecore.messaging
+
 import com.subhrodip.squarewise.expensecore.messaging.config.OutboxMessagingConfiguration
 import com.subhrodip.squarewise.expensecore.messaging.config.OutboxRelayDaemon
 import com.subhrodip.squarewise.expensecore.messaging.config.OutboxRelayProperties

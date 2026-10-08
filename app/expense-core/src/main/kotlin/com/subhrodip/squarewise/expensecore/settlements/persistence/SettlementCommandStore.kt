@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.expensecore.settlements.persistence
+
 import com.subhrodip.squarewise.expensecore.settlements.domain.Settlement
 
 import java.util.UUID

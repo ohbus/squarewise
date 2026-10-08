@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.expensecore.expenses.persistence.store
+
 import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseRecord
 
 import java.util.UUID

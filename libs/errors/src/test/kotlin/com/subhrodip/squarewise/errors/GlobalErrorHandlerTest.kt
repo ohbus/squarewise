@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.errors
+
 import com.subhrodip.squarewise.errors.catalog.PlatformErrors
 import com.subhrodip.squarewise.errors.code.CategoryCode
 import com.subhrodip.squarewise.errors.exceptions.DomainValidationException

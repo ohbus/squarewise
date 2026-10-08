@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.db.config
+
 import com.subhrodip.squarewise.db.errors.DbPlatformException
 import com.subhrodip.squarewise.db.health.DbReaderState
 import com.subhrodip.squarewise.db.health.DbReaderHealth

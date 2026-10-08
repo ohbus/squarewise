@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.notifications.email
+
 import com.subhrodip.squarewise.notifications.email.delivery.opaqueRecipientId
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse

@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.expensecore.messaging
+
 import com.subhrodip.squarewise.expensecore.messaging.broker.BrokerMessage
 import com.subhrodip.squarewise.expensecore.messaging.broker.PublishResult
 import com.subhrodip.squarewise.expensecore.messaging.broker.RabbitBrokerPublisher

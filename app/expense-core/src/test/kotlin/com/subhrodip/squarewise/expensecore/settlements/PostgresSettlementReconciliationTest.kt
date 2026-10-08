@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.expensecore.settlements
+
 import com.subhrodip.squarewise.expensecore.settlements.domain.Settlement
 import com.subhrodip.squarewise.expensecore.settlements.persistence.JpaSettlementStore
 import com.subhrodip.squarewise.expensecore.groups.domain.GroupEntity

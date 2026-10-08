@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.expensecore.messaging.config
+
 import org.springframework.amqp.rabbit.core.RabbitTemplate
 import tools.jackson.databind.ObjectMapper
 import com.subhrodip.squarewise.expensecore.messaging.broker.BrokerPublisher

@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.expensecore.messaging.config
+
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Profile
 

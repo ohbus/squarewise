@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.expensecore.groups.api
+
 import java.util.UUID
 
 /** Public group representation returned by the Expense Core API. */

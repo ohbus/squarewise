@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.expensecore.settlements.service
+
 import com.subhrodip.squarewise.expensecore.settlements.domain.Settlement
 import com.subhrodip.squarewise.expensecore.settlements.domain.SuggestedSettlement
 import com.subhrodip.squarewise.expensecore.settlements.persistence.SettlementStore

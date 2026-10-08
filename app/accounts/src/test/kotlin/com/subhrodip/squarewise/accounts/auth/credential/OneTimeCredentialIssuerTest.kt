@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.accounts.auth.credential
+
 import org.junit.jupiter.api.Assertions.assertEquals
 
 import java.time.Duration

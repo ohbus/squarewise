@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.notifications.email.delivery
+
 import org.mockito.ArgumentMatchers.anyString
 
 import com.subhrodip.squarewise.notifications.email.security.AuthEmailEnvelopeProtector
