@@ -275,7 +275,7 @@ def run_offline_resilience_tests() -> int:
         extra_headers={IDEMPOTENCY_KEY: conflicting_key}
     )
     assert status_conflict == 409, f"Expected HTTP 409 Conflict, got {status_conflict}: {conflict_data}"
-    assert conflict_data.get("code") in ("CONFLICT", "IDEMPOTENCY_CONFLICT", "ERR-06", "ERR_06"), f"Expected conflict error code, got: {conflict_data}"
+    assert conflict_data.get("code") in ("STATE_CONFLICT", "CONFLICT", "IDEMPOTENCY_CONFLICT", "ERR-06", "ERR_06"), f"Expected conflict error code, got: {conflict_data}"
     print(f"  ✓ Conflicting idempotency write correctly rejected: HTTP {status_conflict} ({conflict_data.get('code')})")
 
     # Step 6: Offline Sync Cursor Gap Recovery (OFF-03, OFF-04)

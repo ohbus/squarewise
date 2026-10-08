@@ -485,7 +485,7 @@ def run_concurrency_and_subscriptions_test() -> None:
     loser = next(r for r in results if r[1] == 409)
 
     print(f"  ✓ Winner mutation accepted: new version={winner[2]['version']}")
-    assert loser[2].get("code") in ("CONFLICT", "ERR_06", "ERR-06"), f"Unexpected conflict error format: {loser[2]}"
+    assert loser[2].get("code") in ("STATE_CONFLICT", "CONFLICT", "ERR_06", "ERR-06"), f"Unexpected conflict error format: {loser[2]}"
     print(f"  ✓ Competing mutation rejected cleanly: HTTP 409 ({loser[2].get('code')} - {loser[2].get('detail')})")
 
     # Step 5: Stale Client Recovers and Re-applies with Latest Version

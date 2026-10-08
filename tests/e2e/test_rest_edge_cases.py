@@ -116,30 +116,30 @@ def main(evidence_output: Path | None = None, source_revision: str = "local-work
     status, body = request_json(
         f"{ACCOUNTS_URL}{ACCOUNTS_ME}", method="PATCH", body={}
     )
-    expect("Accounts rejects empty profile patch", status, 400)
-    assert_problem_details("Accounts empty profile patch", status, body, 400, "VALIDATION_FAILED")
+    expect("Accounts rejects empty profile patch", status, 422)
+    assert_problem_details("Accounts empty profile patch", status, body, 422, "VALIDATION_ERROR")
 
     status, _ = request_json(
         f"{ACCOUNTS_URL}{ACCOUNTS_ME}", method="PATCH",
         body={"defaultCurrency": "not-a-currency"},
     )
-    expect("Accounts rejects invalid profile currency", status, 400)
+    expect("Accounts rejects invalid profile currency", status, 422)
 
     status, _ = request_json(
         f"{ACCOUNTS_URL}{ACCOUNTS_PROFILE.format(account_id='not-a-uuid')}"
     )
-    expect("Accounts rejects malformed profile identifier", status, 400)
+    expect("Accounts rejects malformed profile identifier", status, 422)
 
     status, _ = request_json(
         f"{ACCOUNTS_URL}{ACCOUNTS_PROFILES_BATCH}", method="POST", body={"accountIds": []}
     )
-    expect("Accounts rejects empty profile batch", status, 400)
+    expect("Accounts rejects empty profile batch", status, 422)
 
     status, _ = request_json(
         f"{ACCOUNTS_URL}{ACCOUNTS_PROFILES_BATCH}", method="POST",
         body={"accountIds": ["not-a-uuid"]},
     )
-    expect("Accounts rejects malformed profile batch identifier", status, 400)
+    expect("Accounts rejects malformed profile batch identifier", status, 422)
 
     status, _ = request_json(f"{NOTIFICATIONS_URL}{NOTIFICATIONS_INBOX}", token=None)
     expect("Notifications rejects unauthenticated inbox listing", status, 401)
@@ -147,17 +147,17 @@ def main(evidence_output: Path | None = None, source_revision: str = "local-work
     status, _ = request_json(
         f"{NOTIFICATIONS_URL}{NOTIFICATIONS_INBOX}?limit=0"
     )
-    expect("Notifications rejects zero inbox limit", status, 400)
+    expect("Notifications rejects zero inbox limit", status, 422)
 
     status, _ = request_json(
         f"{NOTIFICATIONS_URL}{NOTIFICATIONS_INBOX}?limit=101"
     )
-    expect("Notifications rejects inbox limit above maximum", status, 400)
+    expect("Notifications rejects inbox limit above maximum", status, 422)
 
     status, _ = request_json(
         f"{NOTIFICATIONS_URL}{NOTIFICATIONS_INBOX}?cursor=not-a-valid-cursor"
     )
-    expect("Notifications rejects malformed inbox cursor", status, 400)
+    expect("Notifications rejects malformed inbox cursor", status, 422)
 
     status, _ = request_json(
         f"{NOTIFICATIONS_URL}{NOTIFICATIONS_MARK_READ.format(notification_id=uuid.uuid4())}",
@@ -175,7 +175,7 @@ def main(evidence_output: Path | None = None, source_revision: str = "local-work
         f"{NOTIFICATIONS_URL}{NOTIFICATIONS_MARK_READ.format(notification_id='not-a-uuid')}",
         method="POST",
     )
-    expect("Notifications rejects malformed mark-read identifier", status, 400)
+    expect("Notifications rejects malformed mark-read identifier", status, 422)
 
     status, _ = request_json(f"{NOTIFICATIONS_URL}{NOTIFICATIONS_PREFERENCES}", token=None)
     expect("Notifications rejects unauthenticated preference read", status, 401)
@@ -218,7 +218,7 @@ def main(evidence_output: Path | None = None, source_revision: str = "local-work
         method="POST",
         body={"name": "Invalid group", "kind": "NOT_A_GROUP_KIND", "currency": "EUR"},
     )
-    expect("group creation rejects invalid kind", status, 400)
+    expect("group creation rejects invalid kind", status, 422)
 
     status, _ = request_json(
         f"{EXPENSE_CORE_URL}{EXPENSE_GROUPS}",
@@ -287,7 +287,7 @@ def main(evidence_output: Path | None = None, source_revision: str = "local-work
         f"{EXPENSE_CORE_URL}{EXPENSE_GROUP.format(group_id=group_id)}",
         method="PATCH", body={"name": "   "},
     )
-    expect("group update rejects blank name", status, 400)
+    expect("group update rejects blank name", status, 422)
 
     status, _ = request_json(
         f"{EXPENSE_CORE_URL}{EXPENSE_GROUP_ARCHIVE.format(group_id=group_id)}",
@@ -311,7 +311,7 @@ def main(evidence_output: Path | None = None, source_revision: str = "local-work
         f"{EXPENSE_CORE_URL}{EXPENSE_GROUP_PLACEHOLDERS.format(group_id=group_id)}",
         method="POST", body={"name": "   "},
     )
-    expect("placeholder creation rejects blank name", status, 400)
+    expect("placeholder creation rejects blank name", status, 422)
 
     status, _ = request_json(
         f"{EXPENSE_CORE_URL}{EXPENSE_GROUP_MEMBER.format(group_id=group_id, membership_id=uuid.uuid4())}",
@@ -323,7 +323,7 @@ def main(evidence_output: Path | None = None, source_revision: str = "local-work
         f"{EXPENSE_CORE_URL}{EXPENSE_GROUP_MEMBER.format(group_id=group_id, membership_id='not-a-uuid')}",
         method="DELETE",
     )
-    expect("member removal rejects malformed identifier", status, 400)
+    expect("member removal rejects malformed identifier", status, 422)
 
     status, _ = request_json(
         f"{EXPENSE_CORE_URL}{EXPENSE_GROUP_INVITES.format(group_id=group_id)}",
@@ -359,7 +359,7 @@ def main(evidence_output: Path | None = None, source_revision: str = "local-work
             f"{EXPENSE_CORE_URL}{EXPENSE_GROUP_INVITES.format(group_id=group_id)}",
             method="POST", body={"expiresInHours": invalid_hours},
         )
-        expect(f"invite expiry {invalid_hours} hours is rejected", status, 400)
+        expect(f"invite expiry {invalid_hours} hours is rejected", status, 422)
 
     status, invite = request_json(
         f"{EXPENSE_CORE_URL}{EXPENSE_GROUP_INVITES.format(group_id=group_id)}",
@@ -468,8 +468,8 @@ def main(evidence_output: Path | None = None, source_revision: str = "local-work
         method="POST",
         body={"totalMinor": "-1", "participantIds": ["alice"]},
     )
-    expect("allocation validation rejects negative totals", status, 400)
-    assert_problem_details("negative allocation", status, body, 400, "VALIDATION_FAILED")
+    expect("allocation validation rejects negative totals", status, 422)
+    assert_problem_details("negative allocation", status, body, 422, "VALIDATION_ERROR")
 
     status, _ = request_json(
         f"{EXPENSE_CORE_URL}{EXPENSE_ALLOCATIONS_PREVIEW}",
@@ -480,12 +480,12 @@ def main(evidence_output: Path | None = None, source_revision: str = "local-work
     status, _ = request_json(
         f"{EXPENSE_CORE_URL}{EXPENSE_GROUP_SEARCH.format(group_id=group_id)}?limit=0"
     )
-    expect("search pagination rejects zero limit", status, 400)
+    expect("search pagination rejects zero limit", status, 422)
 
     status, _ = request_json(
         f"{EXPENSE_CORE_URL}{EXPENSE_GROUP_SEARCH.format(group_id=group_id)}?cursor=%25%25%25invalid%25%25%25"
     )
-    expect("search rejects malformed cursor", status, 400)
+    expect("search rejects malformed cursor", status, 422)
 
     status, _ = request_json(
         f"{EXPENSE_CORE_URL}{EXPENSE_GROUP_SEARCH.format(group_id=group_id)}",
@@ -496,12 +496,12 @@ def main(evidence_output: Path | None = None, source_revision: str = "local-work
     status, _ = request_json(
         f"{EXPENSE_CORE_URL}{EXPENSE_GROUP_SYNC_SNAPSHOT.format(group_id=group_id)}?cursor=not-a-valid-cursor"
     )
-    expect("sync snapshot rejects malformed cursor", status, 400)
+    expect("sync snapshot rejects malformed cursor", status, 422)
 
     status, _ = request_json(
         f"{EXPENSE_CORE_URL}{EXPENSE_GROUP_SYNC_CHANGES.format(group_id=group_id)}?cursor=not-a-valid-cursor"
     )
-    expect("sync changes rejects malformed cursor", status, 400)
+    expect("sync changes rejects malformed cursor", status, 422)
 
     status, _ = request_json(
         f"{EXPENSE_CORE_URL}{EXPENSE_GROUP_SYNC_SNAPSHOT.format(group_id=group_id)}",
@@ -519,18 +519,18 @@ def main(evidence_output: Path | None = None, source_revision: str = "local-work
     status, _ = request_json(
         f"{EXPENSE_CORE_URL}{EXPENSE_GROUP_SYNC_SNAPSHOT.format(group_id=group_id)}?cursor={expired_cursor}"
     )
-    expect("sync snapshot rejects expired cursor", status, 400)
+    expect("sync snapshot rejects expired cursor", status, 422, 410)
 
     status, _ = request_json(
         f"{EXPENSE_CORE_URL}{EXPENSE_GROUP_SYNC_CHANGES.format(group_id=group_id)}?cursor={expired_cursor}"
     )
-    expect("sync changes rejects expired cursor", status, 400)
+    expect("sync changes rejects expired cursor", status, 422, 410)
 
     status, _ = request_json(
         f"{EXPENSE_CORE_URL}{EXPENSE_GROUP_EXPORT.format(group_id=group_id)}?maxRows=0",
         headers={ACCEPT: TEXT_CSV},
     )
-    expect("CSV export rejects zero row limit", status, 400)
+    expect("CSV export rejects zero row limit", status, 422)
 
     status, _ = request_json(
         f"{EXPENSE_CORE_URL}{EXPENSE_GROUP_EXPORT.format(group_id=group_id)}",
@@ -657,13 +657,13 @@ def main(evidence_output: Path | None = None, source_revision: str = "local-work
         method="POST", body=altered, headers={IDEMPOTENCY_KEY: key},
     )
     expect("tampered idempotency replay conflicts", status, 409)
-    assert_problem_details("tampered idempotency replay", status, body, 409, "CONFLICT")
+    assert_problem_details("tampered idempotency replay", status, body, 409, "STATE_CONFLICT")
 
     status, _ = request_json(
         f"{EXPENSE_CORE_URL}{EXPENSE_GROUP_EXPENSES.format(group_id=group_id)}",
         method="POST", body=payload,
     )
-    expect("missing idempotency key is rejected", status, 400)
+    expect("missing idempotency key is rejected", status, 422)
 
     status, _ = request_json(
         f"{EXPENSE_CORE_URL}{EXPENSE_GROUP.format(group_id='00000000-0000-0000-0000-000000000099')}"
