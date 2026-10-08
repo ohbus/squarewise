@@ -141,33 +141,7 @@ class JpaExpenseStore(
             )
         )
 
-        val postings = mutableListOf<BalancePostingEntity>()
-        expense.payers.forEach { payer ->
-            postings.add(
-                BalancePostingEntity(
-                    postingId = UuidGenerator.next(),
-                    groupId = groupId,
-                    expenseId = expense.expenseId,
-                    participantId = payer.participantId,
-                    currency = expense.currency,
-                    amountMinor = payer.amountMinor,
-                    createdAt = expense.createdAt
-                )
-            )
-        }
-        expense.allocations.forEach { alloc ->
-            postings.add(
-                BalancePostingEntity(
-                    postingId = UuidGenerator.next(),
-                    groupId = groupId,
-                    expenseId = expense.expenseId,
-                    participantId = alloc.participantId,
-                    currency = expense.currency,
-                    amountMinor = -alloc.allocatedMinor,
-                    createdAt = expense.createdAt
-                )
-            )
-        }
+        val postings = toBalancePostings(groupId, expense.expenseId, expense.currency, expense.payers, expense.allocations, expense.createdAt)
         balancePostingRepository.saveAll(postings)
 
         val outboxPayload = mapOf<String, Any?>(
@@ -272,59 +246,9 @@ class JpaExpenseStore(
         groupRepository.save(group)
 
         val now = Instant.now()
+        reverseExpensePostings(groupId, expenseId, now)
 
-        // Reversal postings: find previous postings for this expense and invert their net sums
-        val previousPostings = balancePostingRepository.findByExpenseId(expenseId)
-        val activePostingSums = previousPostings
-            .groupBy { it.participantId to it.currency }
-            .mapValues { (_, list) -> list.sumOf { it.amountMinor } }
-
-        val reversalPostings = activePostingSums
-            .filter { (_, sum) -> sum != 0L }
-            .map { (key, sum) ->
-                val (participantId, currency) = key
-                BalancePostingEntity(
-                    postingId = UuidGenerator.next(),
-                    groupId = groupId,
-                    expenseId = expenseId,
-                    participantId = participantId,
-                    currency = currency,
-                    amountMinor = -sum,
-                    createdAt = now
-                )
-            }
-        if (reversalPostings.isNotEmpty()) {
-            balancePostingRepository.saveAll(reversalPostings)
-        }
-
-        // New postings
-        val newPostings = mutableListOf<BalancePostingEntity>()
-        update.payers.forEach { payer ->
-            newPostings.add(
-                BalancePostingEntity(
-                    postingId = UuidGenerator.next(),
-                    groupId = groupId,
-                    expenseId = expenseId,
-                    participantId = payer.participantId,
-                    currency = update.currency,
-                    amountMinor = payer.amountMinor,
-                    createdAt = now
-                )
-            )
-        }
-        update.allocations.forEach { alloc ->
-            newPostings.add(
-                BalancePostingEntity(
-                    postingId = UuidGenerator.next(),
-                    groupId = groupId,
-                    expenseId = expenseId,
-                    participantId = alloc.participantId,
-                    currency = update.currency,
-                    amountMinor = -alloc.allocatedMinor,
-                    createdAt = now
-                )
-            )
-        }
+        val newPostings = toBalancePostings(groupId, expenseId, update.currency, update.payers, update.allocations, now)
         balancePostingRepository.saveAll(newPostings)
 
         // Update entity state
@@ -426,30 +350,7 @@ class JpaExpenseStore(
         groupRepository.save(group)
 
         val now = Instant.now()
-
-        // Double-entry ledger reversal: reverse previous active balance postings
-        val previousPostings = balancePostingRepository.findByExpenseId(expenseId)
-        val activePostingSums = previousPostings
-            .groupBy { it.participantId to it.currency }
-            .mapValues { (_, list) -> list.sumOf { it.amountMinor } }
-
-        val reversalPostings = activePostingSums
-            .filter { (_, sum) -> sum != 0L }
-            .map { (key, sum) ->
-                val (participantId, currency) = key
-                BalancePostingEntity(
-                    postingId = UuidGenerator.next(),
-                    groupId = groupId,
-                    expenseId = expenseId,
-                    participantId = participantId,
-                    currency = currency,
-                    amountMinor = -sum,
-                    createdAt = now
-                )
-            }
-        if (reversalPostings.isNotEmpty()) {
-            balancePostingRepository.saveAll(reversalPostings)
-        }
+        reverseExpensePostings(groupId, expenseId, now)
 
         // Soft delete expense retaining attribution
         entity.deleted = true
@@ -519,4 +420,68 @@ class JpaExpenseStore(
             )
         }.sortedBy { it.participantId }
     }
+
+    private fun toBalancePostings(
+        groupId: UUID,
+        expenseId: UUID,
+        currency: String,
+        payers: List<com.subhrodip.squarewise.expensecore.expenses.domain.ExpensePayer>,
+        allocations: List<com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseAllocation>,
+        timestamp: Instant
+    ): List<BalancePostingEntity> {
+        val postings = mutableListOf<BalancePostingEntity>()
+        payers.forEach { payer ->
+            postings.add(
+                BalancePostingEntity(
+                    postingId = UuidGenerator.next(),
+                    groupId = groupId,
+                    expenseId = expenseId,
+                    participantId = payer.participantId,
+                    currency = currency,
+                    amountMinor = payer.amountMinor,
+                    createdAt = timestamp
+                )
+            )
+        }
+        allocations.forEach { alloc ->
+            postings.add(
+                BalancePostingEntity(
+                    postingId = UuidGenerator.next(),
+                    groupId = groupId,
+                    expenseId = expenseId,
+                    participantId = alloc.participantId,
+                    currency = currency,
+                    amountMinor = -alloc.allocatedMinor,
+                    createdAt = timestamp
+                )
+            )
+        }
+        return postings
+    }
+
+    private fun reverseExpensePostings(groupId: UUID, expenseId: UUID, timestamp: Instant) {
+        val previousPostings = balancePostingRepository.findByExpenseId(expenseId)
+        val activePostingSums = previousPostings
+            .groupBy { it.participantId to it.currency }
+            .mapValues { (_, list) -> list.sumOf { it.amountMinor } }
+
+        val reversalPostings = activePostingSums
+            .filter { (_, sum) -> sum != 0L }
+            .map { (key, sum) ->
+                val (participantId, currency) = key
+                BalancePostingEntity(
+                    postingId = UuidGenerator.next(),
+                    groupId = groupId,
+                    expenseId = expenseId,
+                    participantId = participantId,
+                    currency = currency,
+                    amountMinor = -sum,
+                    createdAt = timestamp
+                )
+            }
+        if (reversalPostings.isNotEmpty()) {
+            balancePostingRepository.saveAll(reversalPostings)
+        }
+    }
 }
+

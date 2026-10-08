@@ -4,6 +4,7 @@ import com.subhrodip.squarewise.security.errors.ServletProblemAccessDeniedHandle
 import com.subhrodip.squarewise.security.errors.ServletProblemAuthenticationEntryPoint
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.http.SessionCreationPolicy
+import org.springframework.security.web.SecurityFilterChain
 
 /** Applies the common fail-closed servlet security policy used by REST services. */
 object ServletSecurityConfiguration {
@@ -24,4 +25,20 @@ object ServletSecurityConfiguration {
         .oauth2ResourceServer {
             it.authenticationEntryPoint(ServletProblemAuthenticationEntryPoint()).jwt {}
         }
+
+    /**
+     * Builds standard fail-closed servlet security chain permitting unauthenticated
+     * access only to the specified health path and requiring authentication for all other requests.
+     *
+     * @param http servlet security builder to configure
+     * @param healthPath path pattern permitted without authentication
+     * @return built [SecurityFilterChain]
+     */
+    fun buildHealthPermitAllSecurityFilterChain(
+        http: HttpSecurity,
+        healthPath: String
+    ): SecurityFilterChain = applyCommon(http)
+        .authorizeHttpRequests { it.requestMatchers(healthPath).permitAll().anyRequest().authenticated() }
+        .build()
 }
+
