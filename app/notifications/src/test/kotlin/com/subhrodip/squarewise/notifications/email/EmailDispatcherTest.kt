@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.notifications.email
+
 import com.subhrodip.squarewise.notifications.email.config.EmailProperties
 import com.subhrodip.squarewise.notifications.email.delivery.EmailDeliveryOutcome
 import com.subhrodip.squarewise.notifications.email.delivery.EmailDispatcher

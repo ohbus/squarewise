@@ -1,4 +1,6 @@
 package com.subhrodip.squarewise.bff.graphql
+
+import com.subhrodip.squarewise.errors.code.CategoryCode
 import java.time.Duration
 
 import com.subhrodip.squarewise.bff.transport.ExpenseCoreGateway
@@ -65,7 +67,7 @@ class GroupGraphqlControllerTest {
             controller.groupChanged(" ", principal).blockFirst()
         }
 
-        assertEquals("VALIDATION_FAILED", error.definition.legacyCode)
+        assertEquals("VALIDATION_ERROR", error.definition.category.name)
     }
 
     @Test
@@ -74,7 +76,7 @@ class GroupGraphqlControllerTest {
             controller.groupChanged("group-1", null).blockFirst()
         }
 
-        assertEquals("UNAUTHENTICATED", error.definition.legacyCode)
+        assertEquals(CategoryCode.AUTHENTICATION_ERROR, error.definition.category)
     }
 
     @Test
@@ -351,7 +353,7 @@ class GroupGraphqlControllerTest {
             val error = assertThrows(SquarewiseException::class.java) {
                 boundedController.groupChanged(groupId, principal).blockFirst(Duration.ofMillis(100))
             }
-            assertEquals("RATE_LIMITED", error.definition.legacyCode)
+            assertEquals(CategoryCode.RATE_LIMIT_EXCEEDED, error.definition.category)
         } finally {
             first.dispose()
         }

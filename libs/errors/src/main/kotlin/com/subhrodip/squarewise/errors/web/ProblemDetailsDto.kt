@@ -16,5 +16,6 @@ data class ProblemDetailsDto(
     val timestamp: Instant = Instant.now(),
     val numericCode: String,
     val errorName: String,
+    val messageKey: String? = null,
     val violations: List<ViolationDto> = emptyList(),
 )

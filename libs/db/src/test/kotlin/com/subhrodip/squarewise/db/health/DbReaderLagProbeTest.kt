@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.db.health
+
 import org.mockito.ArgumentMatchers.anyString
 
 import com.subhrodip.squarewise.db.routing.DbWatermark

@@ -1,4 +1,6 @@
 package com.subhrodip.squarewise.accounts.auth.session
+
+import com.subhrodip.squarewise.errors.code.CategoryCode
 import java.time.Duration
 
 import com.subhrodip.squarewise.accounts.auth.identity.AccountIdentity
@@ -153,7 +155,7 @@ class TokenSessionServiceTest @Autowired constructor(
                 now = now.plusSeconds(20)
             )
         }
-        assertEquals("UNAUTHENTICATED", ex.definition.legacyCode)
+        assertEquals(CategoryCode.AUTHENTICATION_ERROR, ex.definition.category)
 
         // The whole family, including rotated, must now be revoked
         val rotatedSession = sessionRepository.findByRefreshTokenDigest(digest.digest(rotated.refreshToken))
@@ -185,7 +187,7 @@ class TokenSessionServiceTest @Autowired constructor(
             service.rotateSession(rawRefreshToken, "test", now.plusSeconds(1))
         }
 
-        assertEquals("UNAUTHENTICATED", ex.definition.legacyCode)
+        assertEquals(CategoryCode.AUTHENTICATION_ERROR, ex.definition.category)
     }
 
     /** Verifies a replacement-only refresh session is treated as token reuse. */
@@ -226,7 +228,7 @@ class TokenSessionServiceTest @Autowired constructor(
             service.rotateSession(rawRefreshToken, "test", now.plusSeconds(1))
         }
 
-        assertEquals("UNAUTHENTICATED", ex.definition.legacyCode)
+        assertEquals(CategoryCode.AUTHENTICATION_ERROR, ex.definition.category)
     }
 
     /** Verifies a legacy accountless refresh session fails closed without mutation. */
@@ -252,7 +254,7 @@ class TokenSessionServiceTest @Autowired constructor(
             service.rotateSession(rawRefreshToken, "legacy", now.plusSeconds(1))
         }
 
-        assertEquals("UNAUTHENTICATED", ex.definition.legacyCode)
+        assertEquals(CategoryCode.AUTHENTICATION_ERROR, ex.definition.category)
         assertEquals(null, sessionRepository.findById(sessionId).orElseThrow().revokedAt)
     }
 
@@ -419,7 +421,7 @@ class TokenSessionServiceTest @Autowired constructor(
             service.rotateSession(initial.refreshToken, "test", now.plusSeconds(1))
         }
 
-        assertEquals("UNAUTHENTICATED", ex.definition.legacyCode)
+        assertEquals(CategoryCode.AUTHENTICATION_ERROR, ex.definition.category)
         val stored = sessionRepository.findByRefreshTokenDigest(digest.digest(initial.refreshToken))
         assertNotNull(stored?.revokedAt)
     }
@@ -444,7 +446,7 @@ class TokenSessionServiceTest @Autowired constructor(
             )
         }
 
-        assertEquals("UNAUTHENTICATED", ex.definition.legacyCode)
+        assertEquals(CategoryCode.AUTHENTICATION_ERROR, ex.definition.category)
         assertNotNull(sessionRepository.findByRefreshTokenDigest(digest.digest(initial.refreshToken))?.revokedAt)
     }
 
@@ -465,7 +467,7 @@ class TokenSessionServiceTest @Autowired constructor(
             service.rotateSession(initial.refreshToken, "test", now.plusSeconds(1))
         }
 
-        assertEquals("UNAUTHENTICATED", ex.definition.legacyCode)
+        assertEquals(CategoryCode.AUTHENTICATION_ERROR, ex.definition.category)
         assertEquals(null, sessionRepository.findByRefreshTokenDigest(digest.digest(initial.refreshToken))?.revokedAt)
     }
 
@@ -486,7 +488,7 @@ class TokenSessionServiceTest @Autowired constructor(
             service.rotateSession(initial.refreshToken, "test", now.plusSeconds(1))
         }
 
-        assertEquals("UNAUTHENTICATED", ex.definition.legacyCode)
+        assertEquals(CategoryCode.AUTHENTICATION_ERROR, ex.definition.category)
         assertNotNull(sessionRepository.findByRefreshTokenDigest(digest.digest(initial.refreshToken))?.revokedAt)
     }
 

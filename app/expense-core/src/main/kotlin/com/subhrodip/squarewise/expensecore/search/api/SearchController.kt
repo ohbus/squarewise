@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.expensecore.search.api
+
 import com.subhrodip.squarewise.expensecore.groups.persistence.store.GroupStore
 import com.subhrodip.squarewise.expensecore.search.persistence.SearchStore
 import com.subhrodip.squarewise.expensecore.search.model.ExpenseSearch

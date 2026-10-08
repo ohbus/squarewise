@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.notifications.email
+
 import com.subhrodip.squarewise.notifications.email.security.AuthEmailEnvelopeProtector
 import java.nio.charset.StandardCharsets
 import java.security.SecureRandom

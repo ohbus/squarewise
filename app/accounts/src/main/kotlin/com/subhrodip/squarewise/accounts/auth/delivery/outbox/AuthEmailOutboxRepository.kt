@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.accounts.auth.delivery.outbox
+
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.repository.query.Param
 

@@ -15,34 +15,30 @@ failures to `application/problem+json` with this shape:
 
 ```json
 {
-  "type": "https://squarewise.example/problems",
-  "title": "Request validation failed",
-  "status": 400,
-  "code": "VALIDATION_FAILED",
+  "type": "https://squarewise.example/problems/request_validation_failed",
+  "title": "Validation failed",
+  "status": 422,
+  "code": "VALIDATION_ERROR",
+  "numericCode": "911101",
+  "errorName": "REQUEST_VALIDATION_FAILED",
+  "messageKey": "error.request.validation_failed",
   "requestId": "req_123",
-  "detail": "One or more fields are invalid",
-  "timestamp": "2026-09-17T19:00:00Z",
-  "violations": [{"field": "totalMinor", "message": "must match ..."}]
+  "detail": "One or more request parameters failed validation.",
+  "timestamp": "2026-10-08T14:00:00Z",
+  "violations": [{"field": "totalMinor", "message": "must be greater than 0", "messageKey": "validation.positive", "rejectedValue": -50}]
 }
 ```
 
-Clients branch on `code`, never free-text `detail`. The stable vocabulary is
-`VALIDATION_FAILED`, `UNAUTHENTICATED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`,
-`IDEMPOTENCY_CONFLICT`, `RATE_LIMITED`, and `INTERNAL_ERROR`. Unexpected errors
-retain details only in correlated server logs. GraphQL maps the same code into
-`errors[].extensions.code` and preserves the request ID.
+Clients branch on high-level category `code` (e.g. `VALIDATION_ERROR`, `BUSINESS_RULE_VIOLATION`, `NOT_FOUND`, `STATE_CONFLICT`, `RESOURCE_GONE`, `AUTHENTICATION_ERROR`, `AUTHORIZATION_ERROR`, `RATE_LIMIT_EXCEEDED`, `MALFORMED_REQUEST`, `INTERNAL_ERROR`), use `messageKey` for frontend internationalization (i18n), and use `errorName` / `numericCode` for exact domain identity, telemetry, and observability.
 
-The current local implementation emits `numericCode` and `errorName` with every
-governed Problem Details response, while `code` remains the symbolic v1 value.
-The production-effective date and client-adoption approval for this promotion remain
-external ERRC-29 evidence; local emission is not production rollout evidence.
+Generic HTTP 400 is strictly reserved for malformed request syntax / unparseable payloads (`REQUEST_BODY_MALFORMED`, `GRAPHQL_OPERATION_INVALID`). Semantic validations, Bean validation, and business rule violations use HTTP 422 (`Unprocessable Content`), while expired tokens and cursors use HTTP 410 (`Gone`).
 
 Rate-limit denials and fail-closed limiter-store decisions use HTTP 429 with the
-catalogued `RATE_LIMITED` code. The REST boundary includes a bounded
+catalogued `RATE_LIMIT_EXCEEDED` category. The REST boundary includes a bounded
 `Retry-After` value of 60 seconds for this code; limiter failures must not be
 translated into an application 5xx or an unstructured gateway error. The BFF
 uses the same catalog in GraphQL `errors[].extensions.code`: resolver/upstream
-429 responses and query depth/complexity rejections use `RATE_LIMITED`, while
+429 responses and query depth/complexity rejections use `RATE_LIMIT_EXCEEDED`, while
 other upstream 4xx responses retain their corresponding 4xx code.
 
 Request validation is mandatory on every command/query DTO. Domain invariants

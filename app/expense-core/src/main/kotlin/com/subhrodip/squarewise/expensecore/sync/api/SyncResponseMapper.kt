@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.expensecore.sync.api
+
 import com.subhrodip.squarewise.expensecore.sync.domain.SyncPage
 
 /** Maps synchronization domain pages to the REST response model. */

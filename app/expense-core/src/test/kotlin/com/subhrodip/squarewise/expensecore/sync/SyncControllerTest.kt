@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.expensecore.sync
+
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
@@ -52,11 +53,11 @@ class SyncControllerTest {
     @Test
     fun `rejects invalid cursor and limit`() {
         mvc.perform(get(ApiEndpoints.ExpenseCore.V1.groupSyncSnapshot(groupId)).with(user).param("cursor", "bad"))
-            .andExpect(status().isBadRequest)
+            .andExpect(status().isUnprocessableContent)
         mvc.perform(get(ApiEndpoints.ExpenseCore.V1.groupSyncSnapshot(groupId)).with(user).param("limit", "101"))
-            .andExpect(status().isBadRequest)
+            .andExpect(status().isUnprocessableContent)
         mvc.perform(get(ApiEndpoints.ExpenseCore.V1.groupSyncSnapshot(groupId)).with(user).param("limit", "0"))
-            .andExpect(status().isBadRequest)
+            .andExpect(status().isUnprocessableContent)
     }
 
     /** Verifies a blank authenticated subject cannot access synchronization data. */
@@ -79,7 +80,7 @@ class SyncControllerTest {
         store.append(otherGroup.toString(), "expense-1", "{}")
         val cursor = store.snapshot(otherGroup.toString(), null, 1).nextCursor!!
         mvc.perform(get(ApiEndpoints.ExpenseCore.V1.groupSyncChanges(groupId)).with(user).param("cursor", cursor))
-            .andExpect(status().isBadRequest)
+            .andExpect(status().isUnprocessableContent)
     }
 
     @Test
@@ -91,8 +92,8 @@ class SyncControllerTest {
         val expiredMvc = MockMvcBuilders.standaloneSetup(SyncController(expiredStore, memberships)).setControllerAdvice(GlobalErrorHandler()).build()
 
         expiredMvc.perform(get(ApiEndpoints.ExpenseCore.V1.groupSyncSnapshot(groupId)).with(user).param("cursor", cursor))
-            .andExpect(status().isBadRequest)
+            .andExpect(status().isUnprocessableContent)
         expiredMvc.perform(get(ApiEndpoints.ExpenseCore.V1.groupSyncChanges(groupId)).with(user).param("cursor", cursor))
-            .andExpect(status().isBadRequest)
+            .andExpect(status().isUnprocessableContent)
     }
 }

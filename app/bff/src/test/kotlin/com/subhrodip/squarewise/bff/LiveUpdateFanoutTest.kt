@@ -1,5 +1,7 @@
 package com.subhrodip.squarewise.bff
 
+import com.subhrodip.squarewise.errors.code.CategoryCode
+
 import com.subhrodip.squarewise.bff.transport.ExpenseCoreGateway
 import com.subhrodip.squarewise.bff.transport.AccountsGateway
 import com.subhrodip.squarewise.bff.messaging.model.BffEventEnvelope
@@ -41,7 +43,7 @@ class LiveUpdateFanoutTest {
         fanout.subscribe("user-1", "group-1")
 
         val error = assertThrows<SquarewiseException> { fanout.subscribe("user-1", "group-2") }
-        assertThat(error.definition.legacyCode).isEqualTo("RATE_LIMITED")
+        assertThat(error.definition.category).isEqualTo(CategoryCode.RATE_LIMIT_EXCEEDED)
     }
 
     @Test

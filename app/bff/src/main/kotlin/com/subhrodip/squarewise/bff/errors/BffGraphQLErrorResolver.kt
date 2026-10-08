@@ -1,6 +1,7 @@
 package com.subhrodip.squarewise.bff.errors
 
 import com.subhrodip.squarewise.errors.catalog.BffErrors
+import com.subhrodip.squarewise.errors.code.CategoryCode
 import com.subhrodip.squarewise.errors.code.ErrorDefinition
 import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
 import com.subhrodip.squarewise.errors.graphql.GraphQLExtensionsFormatter
@@ -23,11 +24,12 @@ class BffGraphQLErrorResolver {
             exception is TimeoutException -> BffErrors.UPSTREAM_TIMEOUT
             else -> BffErrors.GRAPHQL_AGGREGATION_FAILED
         }
+            val isRateLimit = definition.category == CategoryCode.RATE_LIMIT_EXCEEDED
             val extensions = buildMap<String, Any> {
                 putAll(GraphQLExtensionsFormatter.fromDefinition(definition, requestId))
-                if (definition.legacyCode == "RATE_LIMITED") put("retryAfterSeconds", 60)
+                if (isRateLimit) put("retryAfterSeconds", 60)
             }
-            val detail = if (definition.legacyCode == "RATE_LIMITED") "Rate limit exceeded" else definition.safeDetail
+            val detail = if (isRateLimit) "Rate limit exceeded" else definition.safeDetail
             return error(environment, detail, extensions, classification(definition))
     }
 

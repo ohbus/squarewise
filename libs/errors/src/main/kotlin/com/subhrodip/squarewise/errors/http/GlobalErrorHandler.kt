@@ -3,7 +3,9 @@
 package com.subhrodip.squarewise.errors.http
 
 import com.subhrodip.squarewise.errors.catalog.PlatformErrors
+import com.subhrodip.squarewise.errors.code.CategoryCode
 import com.subhrodip.squarewise.errors.code.ErrorDefinition
+import com.subhrodip.squarewise.errors.exceptions.DomainValidationException
 import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
 import com.subhrodip.squarewise.errors.request.RequestIdContext
 import com.subhrodip.squarewise.errors.web.ProblemDetailsDto
@@ -53,15 +55,20 @@ class GlobalErrorHandler(
     @ExceptionHandler(MethodArgumentNotValidException::class)
     fun validation(error: MethodArgumentNotValidException): ResponseEntity<ProblemDetailsDto> {
         val violations = error.bindingResult.fieldErrors.map {
-            FieldViolation(it.field, it.defaultMessage ?: "invalid value")
+            FieldViolation(
+                field = it.field,
+                message = it.defaultMessage ?: "invalid value",
+                messageKey = it.code?.let { code -> "validation.${code.lowercase()}" },
+                rejectedValue = sanitizeRejectedValue(it.field, it.rejectedValue)
+            )
         }
         val summary = violations.joinToString("; ") { "${it.field}: ${it.message}" }
         log.warn("Request validation failed [requestId={}]: {}", RequestIdContext.get(), summary)
         return problem(
             PlatformErrors.REQUEST_VALIDATION_FAILED,
-            HttpStatus.BAD_REQUEST,
-            "Request validation failed",
-            "One or more fields are invalid",
+            HttpStatus.UNPROCESSABLE_CONTENT,
+            "Validation failed",
+            "One or more request parameters failed validation.",
             violations
         )
     }
@@ -90,7 +97,7 @@ class GlobalErrorHandler(
         log.warn("Missing or invalid request parameter or header [requestId={}]: {}", RequestIdContext.get(), detail)
         return problem(
             PlatformErrors.REQUEST_VALUE_INVALID,
-            HttpStatus.BAD_REQUEST,
+            HttpStatus.UNPROCESSABLE_CONTENT,
             "Missing or invalid request parameter or header",
             detail
         )
@@ -106,7 +113,7 @@ class GlobalErrorHandler(
         )
         return problem(
             PlatformErrors.REQUEST_VALUE_INVALID,
-            HttpStatus.BAD_REQUEST,
+            HttpStatus.UNPROCESSABLE_CONTENT,
             "Type mismatch for parameter ${error.name}",
             error.message
         )
@@ -134,7 +141,7 @@ class GlobalErrorHandler(
         log.warn("Invalid request argument [requestId={}]: {}", RequestIdContext.get(), detail)
         return problem(
             PlatformErrors.REQUEST_VALUE_INVALID,
-            HttpStatus.BAD_REQUEST,
+            HttpStatus.UNPROCESSABLE_CONTENT,
             "Request validation failed",
             detail
         )
@@ -142,17 +149,28 @@ class GlobalErrorHandler(
 
 
 
-    /** Map catalog-governed failures while preserving the established v1 response shape. */
+    /** Map catalog-governed failures while preserving the established response shape and enriching diagnostics. */
     @ExceptionHandler(SquarewiseException::class)
     fun governedException(ex: SquarewiseException): ResponseEntity<ProblemDetailsDto> {
         val definition = ex.definition
         val status = HttpStatus.resolve(definition.httpStatus ?: 500) ?: HttpStatus.INTERNAL_SERVER_ERROR
+        val violations = if (ex is DomainValidationException) {
+            ex.violations
+        } else {
+            emptyList()
+        }
+        val detail = if (ex.message != null && ex.message != definition.errorName && !ex.message!!.startsWith(ex.javaClass.name)) {
+            ex.message!!
+        } else {
+            definition.safeDetail
+        }
         return problem(
             definition,
             status,
             title = definition.title,
-            detail = definition.safeDetail,
-            retryAfterSeconds = if (definition.legacyCode == "RATE_LIMITED") RATE_LIMIT_RETRY_AFTER_SECONDS else null,
+            detail = detail,
+            violations = violations,
+            retryAfterSeconds = if (definition.category == CategoryCode.RATE_LIMIT_EXCEEDED) RATE_LIMIT_RETRY_AFTER_SECONDS else null,
         )
     }
 
@@ -184,13 +202,23 @@ class GlobalErrorHandler(
                 status = status.value(),
                 detail = detail,
                 instance = "/errors/${definition.errorName.lowercase()}".take(256),
-                code = definition.legacyCode ?: definition.errorName,
+                code = definition.category.name,
                 requestId = RequestIdContext.get(),
                 source = serviceName,
                 numericCode = definition.numericCode.value,
                 errorName = definition.errorName,
-                violations = violations.map { ViolationDto(it.field, it.message) },
+                messageKey = definition.messageKey,
+                violations = violations.map { ViolationDto(it.field, it.message, it.messageKey, it.rejectedValue) },
             ))
+
+    private fun sanitizeRejectedValue(field: String, value: Any?): Any? {
+        if (value == null) return null
+        val lowerField = field.lowercase()
+        if (lowerField.contains("password") || lowerField.contains("token") || lowerField.contains("secret") || lowerField.contains("key")) {
+            return "[REDACTED]"
+        }
+        return value.toString().take(256)
+    }
 
     companion object {
         private const val RATE_LIMIT_RETRY_AFTER_SECONDS = 60L

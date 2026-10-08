@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.expensecore.groups.persistence.repository
+
 import com.subhrodip.squarewise.expensecore.groups.domain.GroupMembershipEntity
 import java.util.UUID
 import org.springframework.data.jpa.repository.JpaRepository

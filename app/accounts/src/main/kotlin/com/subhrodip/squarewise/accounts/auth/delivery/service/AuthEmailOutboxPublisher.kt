@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.accounts.auth.delivery.service
+
 import java.util.Date
 
 import com.subhrodip.squarewise.accounts.auth.delivery.model.AuthEmailPublishOutcome

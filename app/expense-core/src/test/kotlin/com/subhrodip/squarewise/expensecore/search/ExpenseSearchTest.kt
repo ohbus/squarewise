@@ -1,4 +1,6 @@
 package com.subhrodip.squarewise.expensecore.search
+
+import com.subhrodip.squarewise.errors.code.CategoryCode
 import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
 
 import com.subhrodip.squarewise.expensecore.search.model.ExpenseSearch
@@ -62,7 +64,7 @@ class ExpenseSearchTest {
         val error = assertThrows(SquarewiseException::class.java) {
             search.page(listOf(SearchExpense("1", "Dinner", "EUR", "100")), cursor = "%%%invalid%%%")
         }
-        assertEquals("VALIDATION_FAILED", error.definition.legacyCode)
+        assertEquals(CategoryCode.VALIDATION_ERROR, error.definition.category)
     }
 
     /** Verifies a syntactically valid cursor cannot decode to a blank continuation key. */
@@ -75,7 +77,7 @@ class ExpenseSearchTest {
             ExpenseSearch().page(listOf(SearchExpense("1", "Dinner", "EUR", "100")), cursor = blankCursor)
         }
 
-        assertEquals("VALIDATION_FAILED", error.definition.legacyCode)
+        assertEquals(CategoryCode.VALIDATION_ERROR, error.definition.category)
     }
 
     @Test
@@ -129,7 +131,7 @@ class ExpenseSearchTest {
     @Test
     fun `rejects unknown category`() {
         val err = assertThrows(SquarewiseException::class.java) { ExpenseCategory.fromKey("travel") }
-        assertEquals("VALIDATION_FAILED", err.definition.legacyCode)
+        assertEquals(CategoryCode.VALIDATION_ERROR, err.definition.category)
     }
 
     @Test
@@ -155,7 +157,7 @@ class ExpenseSearchTest {
             val error = assertThrows(SquarewiseException::class.java) {
                 decodeSearchCursor(value)
             }
-            assertEquals("VALIDATION_FAILED", error.definition.legacyCode)
+            assertEquals(CategoryCode.VALIDATION_ERROR, error.definition.category)
         }
     }
 }

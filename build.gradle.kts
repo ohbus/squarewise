@@ -33,6 +33,10 @@ subprojects {
     apply(plugin = "org.cyclonedx.bom")
     apply(plugin = "jacoco")
 
+    dependencyLocking {
+        lockAllConfigurations()
+    }
+
     tasks.withType<JacocoReport>().configureEach {
         reports {
             xml.required.set(true)
@@ -40,3 +44,8 @@ subprojects {
         }
     }
 }
+
+dependencyLocking {
+    lockAllConfigurations()
+}
+

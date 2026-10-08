@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.accounts.auth
+
 import com.subhrodip.squarewise.accounts.auth.delivery.model.AuthEmailDeliveryResult
 import java.time.Duration
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -150,13 +151,14 @@ class AuthControllerTest @Autowired constructor(
     }
 
     @Test
-    fun `startLogin returns 400 Bad Request on invalid email`() {
+    fun `startLogin returns 422 Unprocessable Content on invalid email`() {
         mvc.perform(
             post(ApiEndpoints.Accounts.V1.PATH_LOGIN_START)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"email\":\"not-an-email\"}")
         )
-            .andExpect(status().isBadRequest)
+            .andExpect(status().isUnprocessableContent)
+            .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
     }
 
     @Test
@@ -173,7 +175,7 @@ class AuthControllerTest @Autowired constructor(
             .andExpect(status().isTooManyRequests)
             .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
             .andExpect(header().string("Retry-After", "60"))
-            .andExpect(jsonPath("$.code").value("RATE_LIMITED"))
+            .andExpect(jsonPath("$.code").value("RATE_LIMIT_EXCEEDED"))
             .andExpect(jsonPath("$.status").value(429))
     }
 
@@ -259,7 +261,7 @@ class AuthControllerTest @Autowired constructor(
         )
             .andExpect(status().isTooManyRequests)
             .andExpect(header().string("Retry-After", "60"))
-            .andExpect(jsonPath("$.code").value("RATE_LIMITED"))
+            .andExpect(jsonPath("$.code").value("RATE_LIMIT_EXCEEDED"))
     }
 
     @Test

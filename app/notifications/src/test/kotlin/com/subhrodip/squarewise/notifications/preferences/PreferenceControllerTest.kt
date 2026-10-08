@@ -51,7 +51,7 @@ class PreferenceControllerTest {
     fun `rejects get preferences without authentication`() {
         mvc.perform(get(ApiEndpoints.Notifications.V1.PATH_PREFERENCES))
             .andExpect(status().isUnauthorized)
-            .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"))
+            .andExpect(jsonPath("$.code").value("AUTHENTICATION_ERROR"))
     }
 
     @Test
@@ -62,14 +62,14 @@ class PreferenceControllerTest {
                 .content("{\"emailEnabled\":false,\"pushEnabled\":true}")
         )
             .andExpect(status().isUnauthorized)
-            .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"))
+            .andExpect(jsonPath("$.code").value("AUTHENTICATION_ERROR"))
     }
 
     @Test
     fun `rejects get preferences with blank subject`() {
         mvc.perform(get(ApiEndpoints.Notifications.V1.PATH_PREFERENCES).with(blankUser))
             .andExpect(status().isUnauthorized)
-            .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"))
+            .andExpect(jsonPath("$.code").value("AUTHENTICATION_ERROR"))
     }
 
     @Test
@@ -81,6 +81,6 @@ class PreferenceControllerTest {
                 .content("{\"emailEnabled\":false,\"pushEnabled\":true}")
         )
             .andExpect(status().isUnauthorized)
-            .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"))
+            .andExpect(jsonPath("$.code").value("AUTHENTICATION_ERROR"))
     }
 }

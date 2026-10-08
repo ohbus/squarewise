@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.notifications.consumer.service
+
 import com.subhrodip.squarewise.notifications.consumer.model.NotificationConsumptionOutcome
 import com.subhrodip.squarewise.notifications.consumer.model.NotificationEvent
 import com.subhrodip.squarewise.notifications.consumer.persistence.ProcessedNotificationEventEntity

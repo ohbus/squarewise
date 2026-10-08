@@ -1,4 +1,6 @@
 package com.subhrodip.squarewise.expensecore.groups
+
+import com.subhrodip.squarewise.errors.code.CategoryCode
 import com.subhrodip.squarewise.expensecore.sync.persistence.SyncChangeRepository
 import java.util.UUID
 import org.junit.jupiter.api.assertThrows
@@ -153,7 +155,7 @@ class JpaGroupStoreTest @Autowired constructor(
         val err = assertThrows<SquarewiseException> {
             store.listMembers(group.groupId, "intruder")
         }
-        assertEquals("NOT_FOUND", err.definition.legacyCode)
+        assertEquals(CategoryCode.NOT_FOUND, err.definition.category)
     }
 
     /**
@@ -176,7 +178,7 @@ class JpaGroupStoreTest @Autowired constructor(
         val updateErr = assertThrows<SquarewiseException> {
             store.update(group.groupId, "stranger", UpdateGroupRequest("Nope"))
         }
-        assertEquals("NOT_FOUND", updateErr.definition.legacyCode)
+        assertEquals(CategoryCode.NOT_FOUND, updateErr.definition.category)
     }
 
     /**
@@ -271,14 +273,14 @@ class JpaGroupStoreTest @Autowired constructor(
         val nonMemberErr = assertThrows<SquarewiseException> {
             store.update(group.groupId, "unauthorized-subject", UpdateGroupRequest("Hacked Name"))
         }
-        assertEquals("NOT_FOUND", nonMemberErr.definition.legacyCode)
+        assertEquals(CategoryCode.NOT_FOUND, nonMemberErr.definition.category)
 
         // Missing group attempt
         val nonExistentId = UUID.randomUUID()
         val missingErr = assertThrows<SquarewiseException> {
             store.update(nonExistentId, "owner-side-effects", UpdateGroupRequest("Missing Group Name"))
         }
-        assertEquals("NOT_FOUND", missingErr.definition.legacyCode)
+        assertEquals(CategoryCode.NOT_FOUND, missingErr.definition.category)
 
         // Verify entity unchanged
         val refreshed = groupRepository.findById(group.groupId).orElseThrow()
@@ -314,13 +316,13 @@ class JpaGroupStoreTest @Autowired constructor(
         val archiveErr = assertThrows<SquarewiseException> {
             store.archive(group.groupId, "archive-owner")
         }
-        assertEquals("CONFLICT", archiveErr.definition.legacyCode)
+        assertEquals(CategoryCode.STATE_CONFLICT, archiveErr.definition.category)
 
         // Update name fails with 409 Conflict
         val updateErr = assertThrows<SquarewiseException> {
             store.update(group.groupId, "archive-owner", UpdateGroupRequest("New Name"))
         }
-        assertEquals("CONFLICT", updateErr.definition.legacyCode)
+        assertEquals(CategoryCode.STATE_CONFLICT, updateErr.definition.category)
     }
 
     /**
@@ -373,13 +375,13 @@ class JpaGroupStoreTest @Autowired constructor(
         val listErr = assertThrows<SquarewiseException> {
             store.listMembers(group.groupId, "member-to-remove")
         }
-        assertEquals("NOT_FOUND", listErr.definition.legacyCode)
+        assertEquals(CategoryCode.NOT_FOUND, listErr.definition.category)
 
         // Duplicate removal returns 409 Conflict
         val dupErr = assertThrows<SquarewiseException> {
             store.removeMember(group.groupId, "remove-owner", removeTarget.membershipId)
         }
-        assertEquals("CONFLICT", dupErr.definition.legacyCode)
+        assertEquals(CategoryCode.STATE_CONFLICT, dupErr.definition.category)
     }
 
     /**
@@ -395,7 +397,7 @@ class JpaGroupStoreTest @Autowired constructor(
         val claimErr = assertThrows<SquarewiseException> {
             store.claim(invite.token, "intruder")
         }
-        assertEquals("CONFLICT", claimErr.definition.legacyCode)
+        assertEquals(CategoryCode.STATE_CONFLICT, claimErr.definition.category)
 
         val audit = auditRepository.findAll().single { it.groupId == group.groupId && it.action == "invitation.revoked" }
         assertEquals("invitation.revoked", audit.action)
@@ -410,7 +412,7 @@ class JpaGroupStoreTest @Autowired constructor(
         val expiredError = assertThrows<SquarewiseException> {
             store.claim(expired.token, "expired-member")
         }
-        assertEquals("CONFLICT", expiredError.definition.legacyCode)
+        assertEquals(CategoryCode.STATE_CONFLICT, expiredError.definition.category)
         assertEquals(1, store.listMembers(group.groupId, "claim-owner").size)
 
         val invite = store.invite(group.groupId, "claim-owner", CreateInviteRequest(24))
@@ -425,7 +427,7 @@ class JpaGroupStoreTest @Autowired constructor(
         val competingSubjectError = assertThrows<SquarewiseException> {
             store.claim(invite.token, "competing-member")
         }
-        assertEquals("CONFLICT", competingSubjectError.definition.legacyCode)
+        assertEquals(CategoryCode.STATE_CONFLICT, competingSubjectError.definition.category)
         assertEquals(2, store.listMembers(group.groupId, "claim-owner").size)
         assertTrue(store.list("competing-member").isEmpty())
     }
@@ -442,7 +444,7 @@ class JpaGroupStoreTest @Autowired constructor(
             store.claim(invitation.token, "archived-invitee")
         }
 
-        assertEquals("CONFLICT", error.definition.legacyCode)
+        assertEquals(CategoryCode.STATE_CONFLICT, error.definition.category)
         assertEquals(revisionAfterArchive, groupRepository.findById(group.groupId).orElseThrow().revision)
         assertTrue(store.list("archived-invitee").isEmpty())
     }
@@ -468,7 +470,7 @@ class JpaGroupStoreTest @Autowired constructor(
             store.claim(invitation.token, "replacement-subject")
         }
 
-        assertEquals("CONFLICT", error.definition.legacyCode)
+        assertEquals(CategoryCode.STATE_CONFLICT, error.definition.category)
         assertEquals(revisionAfterRemoval, groupRepository.findById(group.groupId).orElseThrow().revision)
         assertTrue(store.list("replacement-subject").isEmpty())
     }
@@ -496,7 +498,7 @@ class JpaGroupStoreTest @Autowired constructor(
             store.claim(invitation.token, "new-subject")
         }
 
-        assertEquals("CONFLICT", error.definition.legacyCode)
+        assertEquals(CategoryCode.STATE_CONFLICT, error.definition.category)
         assertEquals(revisionBeforeClaim, groupRepository.findById(group.groupId).orElseThrow().revision)
         assertTrue(store.list("new-subject").isEmpty())
     }
@@ -515,7 +517,7 @@ class JpaGroupStoreTest @Autowired constructor(
         val listError = assertThrows<SquarewiseException> {
             store.listMembers(group.groupId, "archived-members-owner")
         }
-        assertEquals("NOT_FOUND", listError.definition.legacyCode)
+        assertEquals(CategoryCode.NOT_FOUND, listError.definition.category)
 
         val placeholderError = assertThrows<SquarewiseException> {
             store.addPlaceholder(
@@ -524,7 +526,7 @@ class JpaGroupStoreTest @Autowired constructor(
                 CreatePlaceholderRequest("No mutation")
             )
         }
-        assertEquals("CONFLICT", placeholderError.definition.legacyCode)
+        assertEquals(CategoryCode.STATE_CONFLICT, placeholderError.definition.category)
         assertEquals("ARCHIVED", groupRepository.findById(group.groupId).orElseThrow().status)
         assertEquals(auditCount, auditRepository.count())
         assertEquals(outboxCount, outboxRepository.count())
@@ -544,23 +546,23 @@ class JpaGroupStoreTest @Autowired constructor(
                 CreateInviteRequest(24, UUID.randomUUID())
             )
         }
-        assertEquals("CONFLICT", placeholderError.definition.legacyCode)
+        assertEquals(CategoryCode.STATE_CONFLICT, placeholderError.definition.category)
 
         val unknownToken = "a".repeat(64)
         val revokeError = assertThrows<SquarewiseException> {
             store.revokeInvite(group.groupId, "invalid-invite-owner", unknownToken)
         }
-        assertEquals("CONFLICT", revokeError.definition.legacyCode)
+        assertEquals(CategoryCode.STATE_CONFLICT, revokeError.definition.category)
 
         val malformedClaimError = assertThrows<SquarewiseException> {
             store.claim("not-a-token", "invitee")
         }
-        assertEquals("CONFLICT", malformedClaimError.definition.legacyCode)
+        assertEquals(CategoryCode.STATE_CONFLICT, malformedClaimError.definition.category)
 
         val unknownClaimError = assertThrows<SquarewiseException> {
             store.claim(unknownToken, "invitee")
         }
-        assertEquals("CONFLICT", unknownClaimError.definition.legacyCode)
+        assertEquals(CategoryCode.STATE_CONFLICT, unknownClaimError.definition.category)
         assertEquals(0L, groupRepository.findById(group.groupId).orElseThrow().revision)
         assertEquals(auditCount, auditRepository.count())
         assertEquals(outboxCount, outboxRepository.count())
@@ -580,7 +582,7 @@ class JpaGroupStoreTest @Autowired constructor(
             )
         }
 
-        assertEquals("CONFLICT", error.definition.legacyCode)
+        assertEquals(CategoryCode.STATE_CONFLICT, error.definition.category)
     }
 
     /** Verifies a placeholder already bound to a subject cannot receive a second targeted invite. */
@@ -604,7 +606,7 @@ class JpaGroupStoreTest @Autowired constructor(
             )
         }
 
-        assertEquals("CONFLICT", error.definition.legacyCode)
+        assertEquals(CategoryCode.STATE_CONFLICT, error.definition.category)
     }
 
     /** Verifies an invitation cannot target a placeholder that was removed after creation. */
@@ -626,7 +628,7 @@ class JpaGroupStoreTest @Autowired constructor(
             )
         }
 
-        assertEquals("CONFLICT", error.definition.legacyCode)
+        assertEquals(CategoryCode.STATE_CONFLICT, error.definition.category)
     }
 
     /** Verifies removing an unknown membership is rejected without changing the group revision or effects. */
@@ -640,7 +642,7 @@ class JpaGroupStoreTest @Autowired constructor(
             store.removeMember(group.groupId, "missing-member-owner", UUID.randomUUID())
         }
 
-        assertEquals("NOT_FOUND", error.definition.legacyCode)
+        assertEquals(CategoryCode.NOT_FOUND, error.definition.category)
         assertEquals(0L, groupRepository.findById(group.groupId).orElseThrow().revision)
         assertEquals(auditCount, auditRepository.count())
         assertEquals(outboxCount, outboxRepository.count())

@@ -1,7 +1,10 @@
 package com.subhrodip.squarewise.bff.errors
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.subhrodip.squarewise.errors.catalog.AccountsErrors
+import com.subhrodip.squarewise.errors.catalog.BffErrors
 import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
+import com.subhrodip.squarewise.errors.catalog.PlatformErrors
 import com.subhrodip.squarewise.errors.diagnostics.ResourceIdentifier
 import com.subhrodip.squarewise.errors.exceptions.EntityNotFoundException
 import com.subhrodip.squarewise.errors.web.ProblemDetailsDto
@@ -16,6 +19,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
+import org.springframework.graphql.execution.ErrorType
 import java.net.URI
 import java.time.Instant
 import java.util.concurrent.TimeoutException
@@ -62,12 +66,38 @@ class BffErrorResolverTest {
     @Test
     fun `local and timeout failures use governed definitions`() {
         val resolver = BffGraphQLErrorResolver()
-        val local = resolver.resolve(EntityNotFoundException(ResourceIdentifier("group")), environment, "request")
+        val local = resolver.resolve(EntityNotFoundException(ResourceIdentifier("group"), ExpenseErrors.GROUP_NOT_FOUND), environment, "request")
         val timeout = resolver.resolve(TimeoutException("network timeout"), environment, "request")
 
         assertEquals(ExpenseErrors.GROUP_NOT_FOUND.numericCode.value, local.extensions!!["numericCode"])
         assertEquals("UPSTREAM_TIMEOUT", timeout.extensions!!["errorName"])
         assertTrue(timeout.message.isNotBlank())
+
+        // Test fallback for arbitrary exception
+        val generic = resolver.resolve(IllegalStateException("arbitrary"), environment, "request")
+        assertEquals(BffErrors.GRAPHQL_AGGREGATION_FAILED.numericCode.value, generic.extensions!!["numericCode"])
+
+        // Test definition with UNAUTHENTICATED / FORBIDDEN / null httpStatus
+        val customAuthError = resolver.resolve(
+            BffDomainException(AccountsErrors.PROFILE_SUBJECT_INVALID),
+            environment,
+            "request"
+        )
+        assertEquals(ErrorType.UNAUTHORIZED, customAuthError.errorType)
+
+        val forbiddenError = resolver.resolve(
+            BffDomainException(AccountsErrors.FOREIGN_PROFILE_ACCESS_DENIED),
+            environment,
+            "request"
+        )
+        assertEquals(ErrorType.FORBIDDEN, forbiddenError.errorType)
+
+        val nullStatusError = resolver.resolve(
+            BffDomainException(PlatformErrors.PLATFORM_CONFIGURATION_INVALID),
+            environment,
+            "request"
+        )
+        assertEquals(ErrorType.INTERNAL_ERROR, nullStatusError.errorType)
     }
 
     @Test

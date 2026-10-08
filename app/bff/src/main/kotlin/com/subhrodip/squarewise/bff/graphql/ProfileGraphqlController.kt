@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.bff.graphql
+
 import com.subhrodip.squarewise.bff.transport.model.output.BffProfile
 
 import com.subhrodip.squarewise.bff.transport.AccountsGateway

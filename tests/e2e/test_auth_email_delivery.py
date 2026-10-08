@@ -103,7 +103,7 @@ def main(evidence_output: Path | None = None, source_revision: str = "local-work
         body={"credential": credential, "clientKind": "NATIVE"},
     )
     assert replay_status == 401, "verifyLogin must reject a replayed one-time credential"
-    assert_problem_details("replayed login credential", replay_status, replay_response, 401, "UNAUTHENTICATED")
+    assert_problem_details("replayed login credential", replay_status, replay_response, 401, "AUTHENTICATION_ERROR")
 
     verification_limit = int(os.environ.get("SQUAREWISE_AUTH_LOGIN_VERIFY_MAX_REQUESTS", "5"))
     invalid_credential = f"{credential}-invalid"
@@ -133,10 +133,10 @@ def main(evidence_output: Path | None = None, source_revision: str = "local-work
         verification_denial_status,
         verification_denial,
         429,
-        "RATE_LIMITED",
+        "RATE_LIMIT_EXCEEDED",
     )
-    assert verification_denial.get("code") == "RATE_LIMITED", (
-        "verification denial must retain the structured RATE_LIMITED error code"
+    assert verification_denial.get("code") == "RATE_LIMIT_EXCEEDED", (
+        "verification denial must retain the structured RATE_LIMIT_EXCEEDED error code"
     )
 
     logout_status, logout_response = request_json(

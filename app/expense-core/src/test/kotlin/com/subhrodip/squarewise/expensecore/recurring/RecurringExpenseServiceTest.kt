@@ -1,4 +1,6 @@
 package com.subhrodip.squarewise.expensecore.recurring
+
+import com.subhrodip.squarewise.errors.code.CategoryCode
 import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseAllocation
 import com.subhrodip.squarewise.expensecore.expenses.domain.ExpensePayer
 import com.subhrodip.squarewise.expensecore.expenses.persistence.store.ExpenseStore
@@ -287,12 +289,12 @@ class RecurringExpenseServiceTest @Autowired constructor(
         val pauseErr = assertThrows(SquarewiseException::class.java) {
             service.pauseSchedule(missingId)
         }
-        assertEquals("NOT_FOUND", pauseErr.definition.legacyCode)
+        assertEquals(CategoryCode.NOT_FOUND, pauseErr.definition.category)
 
         val resumeErr = assertThrows(SquarewiseException::class.java) {
             service.resumeSchedule(missingId)
         }
-        assertEquals("NOT_FOUND", resumeErr.definition.legacyCode)
+        assertEquals(CategoryCode.NOT_FOUND, resumeErr.definition.category)
     }
 
     @Test

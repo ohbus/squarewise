@@ -1,5 +1,7 @@
 package com.subhrodip.squarewise.accounts.auth.session
 
+import com.subhrodip.squarewise.errors.code.CategoryCode
+
 import com.subhrodip.squarewise.accounts.auth.credential.HmacCredentialDigest
 import com.subhrodip.squarewise.accounts.auth.identity.AccountIdentity
 import com.subhrodip.squarewise.accounts.auth.identity.AccountIdentityStore
@@ -69,7 +71,7 @@ class TokenSessionServiceRaceTest {
             service.rotateSession(rawRefreshToken, "browser", now.plusSeconds(1))
         }
 
-        assertEquals("UNAUTHENTICATED", exception.definition.legacyCode)
+        assertEquals(CategoryCode.AUTHENTICATION_ERROR, exception.definition.category)
         verify(repository).revokeFamily(session.familyId, now.plusSeconds(1))
         verifyNoInteractions(tokenProvider)
     }

@@ -31,7 +31,6 @@ class ProductionSecurityConfig(
     )
 
     @Bean
-    fun securityFilterChain(http: HttpSecurity): SecurityFilterChain = ServletSecurityConfiguration.applyCommon(http)
-        .authorizeHttpRequests { it.requestMatchers(ApiEndpoints.Operations.HEALTH).permitAll().anyRequest().authenticated() }
-        .build()
+    fun securityFilterChain(http: HttpSecurity): SecurityFilterChain =
+        ServletSecurityConfiguration.buildHealthPermitAllSecurityFilterChain(http, ApiEndpoints.Operations.HEALTH)
 }

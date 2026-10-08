@@ -9,21 +9,24 @@ kotlin { jvmToolchain(25) }
 dependencies {
     implementation(project(":libs:db"))
     implementation(project(":libs:security"))
-    implementation(libs.kotlin.reflect)
     implementation(project(":libs:errors"))
     implementation(project(":libs:ids"))
     implementation(libs.boot.actuator)
-    runtimeOnly(libs.micrometer.prometheus)
     implementation(libs.boot.amqp)
     implementation(libs.boot.validation)
     implementation(libs.boot.security)
     implementation(libs.boot.resource.server)
     implementation(libs.boot.data.jpa)
     implementation(libs.boot.data.redis)
+    implementation(libs.kotlin.reflect)
+
+    runtimeOnly(libs.micrometer.prometheus)
     runtimeOnly(libs.postgresql)
     runtimeOnly(libs.boot.flyway)
     runtimeOnly(libs.flyway.postgresql)
+
     testImplementation(libs.boot.test)
+
     testRuntimeOnly(libs.h2)
 }
 tasks.withType<Test> { useJUnitPlatform() }

@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.accounts.auth.credential
+
 import java.time.Duration
 
 import java.time.Instant

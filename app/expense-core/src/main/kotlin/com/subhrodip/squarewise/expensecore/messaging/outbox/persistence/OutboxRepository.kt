@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.expensecore.messaging.outbox.persistence
+
 import jakarta.persistence.LockModeType
 import java.util.UUID
 import org.springframework.data.jpa.repository.JpaRepository

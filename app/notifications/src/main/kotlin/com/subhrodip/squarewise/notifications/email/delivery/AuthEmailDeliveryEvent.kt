@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.notifications.email.delivery
+
 import java.time.Instant
 
 /** Broker-decoded protected authentication-email event. */

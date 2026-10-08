@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.accounts.auth.session
+
 import java.time.Duration
 
 import com.subhrodip.squarewise.accounts.auth.audit.SecurityAuditEvent

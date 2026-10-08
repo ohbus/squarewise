@@ -1,10 +1,5 @@
-# Authoritative Squarewise Six-Digit Error Catalog
-# Frozen and allocated under ERRC-04. Zero runtime reflection allowed.
-# Canonical format: DMLCEE (Domain, Module, Layer, Category, Sequence).
-
 - numericCode: '111101'
   errorName: PROFILE_REQUEST_INVALID
-  legacyCode: VALIDATION_FAILED
   domain: 1
   module: 1
   layer: 1
@@ -20,7 +15,7 @@
   transports:
   - REST
   - GRAPHQL
-  httpStatus: 400
+  httpStatus: 422
   graphqlClassification: BAD_REQUEST
   retryPolicy: NEVER
   severity: WARNING
@@ -31,7 +26,6 @@
   runbook: null
 - numericCode: '111102'
   errorName: TIMEZONE_INVALID
-  legacyCode: VALIDATION_FAILED
   domain: 1
   module: 1
   layer: 1
@@ -47,7 +41,7 @@
   transports:
   - REST
   - GRAPHQL
-  httpStatus: 400
+  httpStatus: 422
   graphqlClassification: BAD_REQUEST
   retryPolicy: NEVER
   severity: WARNING
@@ -58,7 +52,6 @@
   runbook: null
 - numericCode: '117101'
   errorName: PROFILE_SUBJECT_INVALID
-  legacyCode: UNAUTHENTICATED
   domain: 1
   module: 1
   layer: 7
@@ -85,7 +78,6 @@
   runbook: https://runbooks.squarewise.internal/accounts/authentication
 - numericCode: '117201'
   errorName: AUTHENTICATED_PROFILE_NOT_FOUND
-  legacyCode: NOT_FOUND
   domain: 1
   module: 1
   layer: 7
@@ -112,7 +104,6 @@
   runbook: https://runbooks.squarewise.internal/accounts/authentication
 - numericCode: '117202'
   errorName: FOREIGN_PROFILE_ACCESS_DENIED
-  legacyCode: FORBIDDEN
   domain: 1
   module: 1
   layer: 7
@@ -139,7 +130,6 @@
   runbook: null
 - numericCode: '117203'
   errorName: BATCH_LOOKUP_UNAUTHORIZED
-  legacyCode: FORBIDDEN
   domain: 1
   module: 1
   layer: 7
@@ -164,7 +154,6 @@
   runbook: null
 - numericCode: '127101'
   errorName: LOGIN_CODE_INVALID
-  legacyCode: UNAUTHENTICATED
   domain: 1
   module: 2
   layer: 7
@@ -189,7 +178,6 @@
   runbook: https://runbooks.squarewise.internal/accounts/authentication
 - numericCode: '127801'
   errorName: LOGIN_RATE_LIMITED
-  legacyCode: RATE_LIMITED
   domain: 1
   module: 2
   layer: 7
@@ -214,7 +202,6 @@
   runbook: docs/operations/runbooks/errors/auth-token-revoked.md
 - numericCode: '127802'
   errorName: LOGIN_LIMITER_UNAVAILABLE
-  legacyCode: RATE_LIMITED
   domain: 1
   module: 2
   layer: 7
@@ -239,7 +226,6 @@
   runbook: docs/operations/runbooks/errors/auth-token-revoked.md
 - numericCode: '137101'
   errorName: REFRESH_TOKEN_INVALID
-  legacyCode: UNAUTHENTICATED
   domain: 1
   module: 3
   layer: 7
@@ -264,7 +250,6 @@
   runbook: docs/operations/runbooks/errors/auth-token-revoked.md
 - numericCode: '137401'
   errorName: SESSION_EXPIRED
-  legacyCode: UNAUTHENTICATED
   domain: 1
   module: 3
   layer: 7
@@ -289,7 +274,6 @@
   runbook: https://runbooks.squarewise.internal/accounts/authentication
 - numericCode: '137402'
   errorName: SESSION_REVOKED
-  legacyCode: UNAUTHENTICATED
   domain: 1
   module: 3
   layer: 7
@@ -314,7 +298,6 @@
   runbook: https://runbooks.squarewise.internal/accounts/authentication
 - numericCode: '137403'
   errorName: REFRESH_REPLAY_DETECTED
-  legacyCode: UNAUTHENTICATED
   domain: 1
   module: 3
   layer: 7
@@ -339,7 +322,6 @@
   runbook: https://runbooks.squarewise.internal/accounts/authentication
 - numericCode: '137404'
   errorName: SESSION_SUBJECT_MISMATCH
-  legacyCode: UNAUTHENTICATED
   domain: 1
   module: 3
   layer: 7
@@ -364,7 +346,6 @@
   runbook: https://runbooks.squarewise.internal/accounts/authentication
 - numericCode: '137801'
   errorName: REFRESH_RATE_LIMITED
-  legacyCode: RATE_LIMITED
   domain: 1
   module: 3
   layer: 7
@@ -389,7 +370,6 @@
   runbook: docs/operations/runbooks/errors/auth-token-revoked.md
 - numericCode: '147401'
   errorName: ACCOUNT_DELETION_ALREADY_REQUESTED
-  legacyCode: CONFLICT
   domain: 1
   module: 4
   layer: 7
@@ -414,7 +394,6 @@
   runbook: null
 - numericCode: '147402'
   errorName: ACCOUNT_EXPORT_ALREADY_PENDING
-  legacyCode: CONFLICT
   domain: 1
   module: 4
   layer: 7
@@ -439,7 +418,6 @@
   runbook: null
 - numericCode: '157301'
   errorName: IDENTITY_ALREADY_LINKED
-  legacyCode: CONFLICT
   domain: 1
   module: 5
   layer: 7
@@ -464,7 +442,6 @@
   runbook: null
 - numericCode: '211101'
   errorName: GROUP_REQUEST_INVALID
-  legacyCode: VALIDATION_FAILED
   domain: 2
   module: 1
   layer: 1
@@ -480,7 +457,7 @@
   transports:
   - REST
   - GRAPHQL
-  httpStatus: 400
+  httpStatus: 422
   graphqlClassification: BAD_REQUEST
   retryPolicy: NEVER
   severity: WARNING
@@ -491,7 +468,6 @@
   runbook: null
 - numericCode: '213201'
   errorName: GROUP_NOT_FOUND
-  legacyCode: NOT_FOUND
   domain: 2
   module: 1
   layer: 3
@@ -518,7 +494,6 @@
   runbook: null
 - numericCode: '213301'
   errorName: GROUP_NAME_CONFLICT
-  legacyCode: CONFLICT
   domain: 2
   module: 1
   layer: 3
@@ -545,7 +520,6 @@
   runbook: null
 - numericCode: '213401'
   errorName: GROUP_ARCHIVED
-  legacyCode: CONFLICT
   domain: 2
   module: 1
   layer: 3
@@ -572,7 +546,6 @@
   runbook: null
 - numericCode: '217201'
   errorName: GROUP_ACCESS_HIDDEN
-  legacyCode: NOT_FOUND
   domain: 2
   module: 1
   layer: 7
@@ -599,7 +572,6 @@
   runbook: null
 - numericCode: '221201'
   errorName: INVITATION_NOT_FOUND
-  legacyCode: NOT_FOUND
   domain: 2
   module: 2
   layer: 1
@@ -626,7 +598,6 @@
   runbook: null
 - numericCode: '223201'
   errorName: MEMBER_NOT_FOUND
-  legacyCode: NOT_FOUND
   domain: 2
   module: 2
   layer: 3
@@ -653,7 +624,6 @@
   runbook: null
 - numericCode: '223202'
   errorName: PLACEHOLDER_NOT_FOUND
-  legacyCode: NOT_FOUND
   domain: 2
   module: 2
   layer: 3
@@ -680,7 +650,6 @@
   runbook: null
 - numericCode: '223401'
   errorName: INVITATION_EXPIRED
-  legacyCode: CONFLICT
   domain: 2
   module: 2
   layer: 3
@@ -696,7 +665,7 @@
   transports:
   - REST
   - GRAPHQL
-  httpStatus: 409
+  httpStatus: 410
   graphqlClassification: BAD_REQUEST
   retryPolicy: NEVER
   severity: WARNING
@@ -707,7 +676,6 @@
   runbook: null
 - numericCode: '223402'
   errorName: INVITATION_ALREADY_CLAIMED
-  legacyCode: CONFLICT
   domain: 2
   module: 2
   layer: 3
@@ -734,7 +702,6 @@
   runbook: null
 - numericCode: '223403'
   errorName: INVITATION_REVOKED
-  legacyCode: CONFLICT
   domain: 2
   module: 2
   layer: 3
@@ -761,7 +728,6 @@
   runbook: null
 - numericCode: '223404'
   errorName: MEMBER_ALREADY_REMOVED
-  legacyCode: CONFLICT
   domain: 2
   module: 2
   layer: 3
@@ -788,7 +754,6 @@
   runbook: null
 - numericCode: '223405'
   errorName: PLACEHOLDER_ALREADY_BOUND
-  legacyCode: CONFLICT
   domain: 2
   module: 2
   layer: 3
@@ -815,7 +780,6 @@
   runbook: null
 - numericCode: '231101'
   errorName: EXPENSE_REQUEST_INVALID
-  legacyCode: VALIDATION_FAILED
   domain: 2
   module: 3
   layer: 1
@@ -831,7 +795,7 @@
   transports:
   - REST
   - GRAPHQL
-  httpStatus: 400
+  httpStatus: 422
   graphqlClassification: BAD_REQUEST
   retryPolicy: NEVER
   severity: WARNING
@@ -842,7 +806,6 @@
   runbook: null
 - numericCode: '233201'
   errorName: EXPENSE_NOT_FOUND
-  legacyCode: NOT_FOUND
   domain: 2
   module: 3
   layer: 3
@@ -869,7 +832,6 @@
   runbook: null
 - numericCode: '233301'
   errorName: EXPENSE_VERSION_CONFLICT
-  legacyCode: CONFLICT
   domain: 2
   module: 3
   layer: 3
@@ -896,7 +858,6 @@
   runbook: https://runbooks.squarewise.internal/expense-core/concurrency
 - numericCode: '233302'
   errorName: EXPENSE_IDEMPOTENCY_CONFLICT
-  legacyCode: CONFLICT
   domain: 2
   module: 3
   layer: 3
@@ -923,7 +884,6 @@
   runbook: https://runbooks.squarewise.internal/expense-core/idempotency
 - numericCode: '233501'
   errorName: ALLOCATION_SUM_MISMATCH
-  legacyCode: VALIDATION_FAILED
   domain: 2
   module: 3
   layer: 3
@@ -940,7 +900,7 @@
   transports:
   - REST
   - GRAPHQL
-  httpStatus: 400
+  httpStatus: 422
   graphqlClassification: BAD_REQUEST
   retryPolicy: NEVER
   severity: WARNING
@@ -951,7 +911,6 @@
   runbook: null
 - numericCode: '233502'
   errorName: PARTICIPANT_SET_INVALID
-  legacyCode: VALIDATION_FAILED
   domain: 2
   module: 3
   layer: 3
@@ -967,7 +926,7 @@
   transports:
   - REST
   - GRAPHQL
-  httpStatus: 400
+  httpStatus: 422
   graphqlClassification: BAD_REQUEST
   retryPolicy: NEVER
   severity: WARNING
@@ -978,7 +937,6 @@
   runbook: null
 - numericCode: '233503'
   errorName: DUPLICATE_EXPENSE_REJECTED
-  legacyCode: CONFLICT
   domain: 2
   module: 3
   layer: 3
@@ -1006,7 +964,6 @@
   runbook: null
 - numericCode: '243201'
   errorName: SETTLEMENT_NOT_FOUND
-  legacyCode: NOT_FOUND
   domain: 2
   module: 4
   layer: 3
@@ -1033,7 +990,6 @@
   runbook: null
 - numericCode: '243301'
   errorName: SETTLEMENT_VERSION_CONFLICT
-  legacyCode: CONFLICT
   domain: 2
   module: 4
   layer: 3
@@ -1060,7 +1016,6 @@
   runbook: https://runbooks.squarewise.internal/expense-core/settlements
 - numericCode: '243401'
   errorName: SETTLEMENT_ALREADY_REVERSED
-  legacyCode: CONFLICT
   domain: 2
   module: 4
   layer: 3
@@ -1087,7 +1042,6 @@
   runbook: null
 - numericCode: '243501'
   errorName: INSUFFICIENT_BALANCE
-  legacyCode: VALIDATION_FAILED
   domain: 2
   module: 4
   layer: 3
@@ -1114,7 +1068,6 @@
   runbook: null
 - numericCode: '253201'
   errorName: SCHEDULE_NOT_FOUND
-  legacyCode: NOT_FOUND
   domain: 2
   module: 5
   layer: 3
@@ -1141,7 +1094,6 @@
   runbook: null
 - numericCode: '253301'
   errorName: SCHEDULE_VERSION_CONFLICT
-  legacyCode: CONFLICT
   domain: 2
   module: 5
   layer: 3
@@ -1168,7 +1120,6 @@
   runbook: docs/operations/runbooks/errors/recurrence-failure.md
 - numericCode: '253401'
   errorName: SCHEDULE_PAUSED
-  legacyCode: CONFLICT
   domain: 2
   module: 5
   layer: 3
@@ -1195,7 +1146,6 @@
   runbook: null
 - numericCode: '255601'
   errorName: OCCURRENCE_GENERATION_FAILED
-  legacyCode: INTERNAL_ERROR
   domain: 2
   module: 5
   layer: 5
@@ -1220,7 +1170,6 @@
   runbook: docs/operations/runbooks/errors/recurrence-failure.md
 - numericCode: '261101'
   errorName: SYNC_CURSOR_INVALID
-  legacyCode: VALIDATION_FAILED
   domain: 2
   module: 6
   layer: 1
@@ -1236,7 +1185,7 @@
   transports:
   - REST
   - GRAPHQL
-  httpStatus: 400
+  httpStatus: 422
   graphqlClassification: BAD_REQUEST
   retryPolicy: NEVER
   severity: WARNING
@@ -1247,7 +1196,6 @@
   runbook: null
 - numericCode: '261102'
   errorName: SYNC_CURSOR_EXPIRED
-  legacyCode: VALIDATION_FAILED
   domain: 2
   module: 6
   layer: 1
@@ -1263,7 +1211,7 @@
   transports:
   - REST
   - GRAPHQL
-  httpStatus: 400
+  httpStatus: 410
   graphqlClassification: BAD_REQUEST
   retryPolicy: RESYNC
   severity: WARNING
@@ -1274,7 +1222,6 @@
   runbook: https://runbooks.squarewise.internal/expense-core/sync-conflicts
 - numericCode: '263301'
   errorName: SYNC_REVISION_CONFLICT
-  legacyCode: CONFLICT
   domain: 2
   module: 6
   layer: 3
@@ -1301,7 +1248,6 @@
   runbook: https://runbooks.squarewise.internal/expense-core/sync-conflicts
 - numericCode: '271101'
   errorName: SEARCH_QUERY_INVALID
-  legacyCode: VALIDATION_FAILED
   domain: 2
   module: 7
   layer: 1
@@ -1317,7 +1263,7 @@
   transports:
   - REST
   - GRAPHQL
-  httpStatus: 400
+  httpStatus: 422
   graphqlClassification: BAD_REQUEST
   retryPolicy: NEVER
   severity: WARNING
@@ -1328,7 +1274,6 @@
   runbook: null
 - numericCode: '271102'
   errorName: EXPORT_REQUEST_INVALID
-  legacyCode: VALIDATION_FAILED
   domain: 2
   module: 7
   layer: 1
@@ -1343,7 +1288,7 @@
   operation: export-csv
   transports:
   - REST
-  httpStatus: 400
+  httpStatus: 422
   retryPolicy: NEVER
   severity: WARNING
   introducedIn: 1.0.0
@@ -1353,7 +1298,6 @@
   runbook: null
 - numericCode: '285701'
   errorName: OUTBOX_RELAY_PUBLISH_FAILED
-  legacyCode: INTERNAL_ERROR
   domain: 2
   module: 8
   layer: 5
@@ -1378,7 +1322,6 @@
   runbook: docs/operations/runbooks/errors/outbox-relay-failed.md
 - numericCode: '285601'
   errorName: OUTBOX_RECORD_CORRUPT
-  legacyCode: INTERNAL_ERROR
   domain: 2
   module: 8
   layer: 5
@@ -1403,7 +1346,6 @@
   runbook: docs/operations/runbooks/errors/outbox-corruption.md
 - numericCode: '311101'
   errorName: INBOX_CURSOR_INVALID
-  legacyCode: VALIDATION_FAILED
   domain: 3
   module: 1
   layer: 1
@@ -1418,7 +1360,7 @@
   operation: get-inbox
   transports:
   - REST
-  httpStatus: 400
+  httpStatus: 422
   retryPolicy: NEVER
   severity: WARNING
   introducedIn: 1.0.0
@@ -1428,7 +1370,6 @@
   runbook: null
 - numericCode: '311102'
   errorName: INBOX_LIMIT_OUT_OF_RANGE
-  legacyCode: VALIDATION_FAILED
   domain: 3
   module: 1
   layer: 1
@@ -1443,7 +1384,7 @@
   operation: get-inbox
   transports:
   - REST
-  httpStatus: 400
+  httpStatus: 422
   retryPolicy: NEVER
   severity: WARNING
   introducedIn: 1.0.0
@@ -1453,7 +1394,6 @@
   runbook: null
 - numericCode: '317201'
   errorName: INBOX_NOTIFICATION_NOT_FOUND
-  legacyCode: NOT_FOUND
   domain: 3
   module: 1
   layer: 7
@@ -1478,7 +1418,6 @@
   runbook: null
 - numericCode: '317202'
   errorName: INBOX_ACCESS_HIDDEN
-  legacyCode: NOT_FOUND
   domain: 3
   module: 1
   layer: 7
@@ -1503,7 +1442,6 @@
   runbook: null
 - numericCode: '325701'
   errorName: NOTIFICATION_DISPATCH_FAILED
-  legacyCode: INTERNAL_ERROR
   domain: 3
   module: 2
   layer: 5
@@ -1527,7 +1465,6 @@
   runbook: https://runbooks.squarewise.internal/notifications/dispatch-failures
 - numericCode: '325601'
   errorName: NOTIFICATION_PAYLOAD_CORRUPT
-  legacyCode: INTERNAL_ERROR
   domain: 3
   module: 2
   layer: 5
@@ -1551,7 +1488,6 @@
   runbook: docs/operations/runbooks/errors/notification-payload-corrupt.md
 - numericCode: '331101'
   errorName: NOTIFICATION_PREFERENCE_INVALID
-  legacyCode: VALIDATION_FAILED
   domain: 3
   module: 3
   layer: 1
@@ -1566,7 +1502,7 @@
   operation: update-preferences
   transports:
   - REST
-  httpStatus: 400
+  httpStatus: 422
   retryPolicy: NEVER
   severity: WARNING
   introducedIn: 1.0.0
@@ -1576,7 +1512,6 @@
   runbook: null
 - numericCode: '341101'
   errorName: EMAIL_RECIPIENT_REQUIRED
-  legacyCode: VALIDATION_FAILED
   domain: 3
   module: 4
   layer: 1
@@ -1592,7 +1527,7 @@
   transports:
   - REST
   - MESSAGING
-  httpStatus: 400
+  httpStatus: 422
   retryPolicy: NEVER
   severity: WARNING
   introducedIn: 1.0.0
@@ -1602,7 +1537,6 @@
   runbook: null
 - numericCode: '341102'
   errorName: EMAIL_TEMPLATE_INPUT_INVALID
-  legacyCode: VALIDATION_FAILED
   domain: 3
   module: 4
   layer: 1
@@ -1618,7 +1552,7 @@
   transports:
   - REST
   - MESSAGING
-  httpStatus: 400
+  httpStatus: 422
   retryPolicy: NEVER
   severity: WARNING
   introducedIn: 1.0.0
@@ -1628,7 +1562,6 @@
   runbook: null
 - numericCode: '345701'
   errorName: EMAIL_DISPATCH_FAILED
-  legacyCode: INTERNAL_ERROR
   domain: 3
   module: 4
   layer: 5
@@ -1652,7 +1585,6 @@
   runbook: https://runbooks.squarewise.internal/notifications/smtp-delivery
 - numericCode: '411101'
   errorName: GRAPHQL_INPUT_INVALID
-  legacyCode: VALIDATION_FAILED
   domain: 4
   module: 1
   layer: 1
@@ -1668,7 +1600,7 @@
   transports:
   - REST
   - GRAPHQL
-  httpStatus: 400
+  httpStatus: 422
   graphqlClassification: BAD_REQUEST
   retryPolicy: NEVER
   severity: WARNING
@@ -1679,7 +1611,6 @@
   runbook: null
 - numericCode: '411102'
   errorName: GRAPHQL_OPERATION_INVALID
-  legacyCode: VALIDATION_FAILED
   domain: 4
   module: 1
   layer: 1
@@ -1706,7 +1637,6 @@
   runbook: null
 - numericCode: '412901'
   errorName: GRAPHQL_AGGREGATION_FAILED
-  legacyCode: INTERNAL_ERROR
   domain: 4
   module: 1
   layer: 2
@@ -1733,7 +1663,6 @@
   runbook: null
 - numericCode: '426701'
   errorName: UPSTREAM_PROTOCOL_INVALID
-  legacyCode: INTERNAL_ERROR
   domain: 4
   module: 2
   layer: 6
@@ -1760,7 +1689,6 @@
   runbook: https://runbooks.squarewise.internal/bff/upstream-protocol
 - numericCode: '426702'
   errorName: UPSTREAM_RESPONSE_DECODE_FAILED
-  legacyCode: INTERNAL_ERROR
   domain: 4
   module: 2
   layer: 6
@@ -1787,7 +1715,6 @@
   runbook: null
 - numericCode: '426801'
   errorName: UPSTREAM_TIMEOUT
-  legacyCode: INTERNAL_ERROR
   domain: 4
   module: 2
   layer: 6
@@ -1814,7 +1741,6 @@
   runbook: docs/operations/runbooks/errors/upstream-timeout.md
 - numericCode: '426802'
   errorName: UPSTREAM_UNAVAILABLE
-  legacyCode: INTERNAL_ERROR
   domain: 4
   module: 2
   layer: 6
@@ -1841,7 +1767,6 @@
   runbook: docs/operations/runbooks/errors/upstream-timeout.md
 - numericCode: '426803'
   errorName: UPSTREAM_TLS_FAILED
-  legacyCode: INTERNAL_ERROR
   domain: 4
   module: 2
   layer: 6
@@ -1868,7 +1793,6 @@
   runbook: docs/operations/runbooks/errors/upstream-timeout.md
 - numericCode: '437801'
   errorName: SUBSCRIPTION_LIMIT_EXCEEDED
-  legacyCode: RATE_LIMITED
   domain: 4
   module: 3
   layer: 7
@@ -1896,7 +1820,6 @@
   runbook: docs/operations/runbooks/errors/upstream-timeout.md
 - numericCode: '437802'
   errorName: LIVE_UPDATE_UPSTREAM_UNAVAILABLE
-  legacyCode: INTERNAL_ERROR
   domain: 4
   module: 3
   layer: 7
@@ -1924,7 +1847,6 @@
   runbook: docs/operations/runbooks/errors/upstream-timeout.md
 - numericCode: '435701'
   errorName: LIVE_UPDATE_EVENT_INVALID
-  legacyCode: INTERNAL_ERROR
   domain: 4
   module: 3
   layer: 5
@@ -1952,7 +1874,6 @@
   runbook: null
 - numericCode: '911101'
   errorName: REQUEST_VALIDATION_FAILED
-  legacyCode: VALIDATION_FAILED
   domain: 9
   module: 1
   layer: 1
@@ -1967,7 +1888,7 @@
   operation: handle-validation
   transports:
   - REST
-  httpStatus: 400
+  httpStatus: 422
   retryPolicy: NEVER
   severity: WARNING
   introducedIn: 1.0.0
@@ -1977,7 +1898,6 @@
   runbook: null
 - numericCode: '911102'
   errorName: REQUEST_BODY_MALFORMED
-  legacyCode: VALIDATION_FAILED
   domain: 9
   module: 1
   layer: 1
@@ -2002,7 +1922,6 @@
   runbook: null
 - numericCode: '911103'
   errorName: REQUEST_VALUE_INVALID
-  legacyCode: VALIDATION_FAILED
   domain: 9
   module: 1
   layer: 1
@@ -2017,7 +1936,7 @@
   operation: bind-parameter
   transports:
   - REST
-  httpStatus: 400
+  httpStatus: 422
   retryPolicy: NEVER
   severity: WARNING
   introducedIn: 1.0.0
@@ -2027,7 +1946,6 @@
   runbook: null
 - numericCode: '911104'
   errorName: REQUEST_BODY_TOO_LARGE
-  legacyCode: VALIDATION_FAILED
   domain: 9
   module: 1
   layer: 1
@@ -2052,7 +1970,6 @@
   runbook: null
 - numericCode: '911105'
   errorName: MEDIA_TYPE_UNSUPPORTED
-  legacyCode: VALIDATION_FAILED
   domain: 9
   module: 1
   layer: 1
@@ -2077,7 +1994,6 @@
   runbook: null
 - numericCode: '911106'
   errorName: METHOD_NOT_ALLOWED
-  legacyCode: VALIDATION_FAILED
   domain: 9
   module: 1
   layer: 1
@@ -2102,7 +2018,6 @@
   runbook: null
 - numericCode: '911107'
   errorName: REPRESENTATION_NOT_ACCEPTABLE
-  legacyCode: VALIDATION_FAILED
   domain: 9
   module: 1
   layer: 1
@@ -2127,7 +2042,6 @@
   runbook: null
 - numericCode: '919201'
   errorName: RESOURCE_NOT_FOUND
-  legacyCode: NOT_FOUND
   domain: 9
   module: 1
   layer: 9
@@ -2152,7 +2066,6 @@
   runbook: null
 - numericCode: '919301'
   errorName: RESOURCE_CONFLICT
-  legacyCode: CONFLICT
   domain: 9
   module: 1
   layer: 9
@@ -2177,7 +2090,6 @@
   runbook: null
 - numericCode: '919901'
   errorName: UNEXPECTED_INTERNAL_ERROR
-  legacyCode: INTERNAL_ERROR
   domain: 9
   module: 1
   layer: 9
@@ -2203,7 +2115,6 @@
   runbook: docs/operations/runbooks/errors/unexpected-internal-error.md
 - numericCode: '919902'
   errorName: RESPONSE_SERIALIZATION_FAILED
-  legacyCode: INTERNAL_ERROR
   domain: 9
   module: 1
   layer: 9
@@ -2229,7 +2140,6 @@
   runbook: null
 - numericCode: '927101'
   errorName: AUTHENTICATION_REQUIRED
-  legacyCode: UNAUTHENTICATED
   domain: 9
   module: 2
   layer: 7
@@ -2254,7 +2164,6 @@
   runbook: https://runbooks.squarewise.internal/platform/authentication
 - numericCode: '927501'
   errorName: ACCESS_DENIED
-  legacyCode: FORBIDDEN
   domain: 9
   module: 2
   layer: 7
@@ -2279,7 +2188,6 @@
   runbook: null
 - numericCode: '927502'
   errorName: CSRF_REJECTED
-  legacyCode: FORBIDDEN
   domain: 9
   module: 2
   layer: 7
@@ -2304,7 +2212,6 @@
   runbook: null
 - numericCode: '927503'
   errorName: ORIGIN_REJECTED
-  legacyCode: FORBIDDEN
   domain: 9
   module: 2
   layer: 7
@@ -2329,7 +2236,6 @@
   runbook: null
 - numericCode: '927801'
   errorName: SECURITY_RATE_LIMITED
-  legacyCode: RATE_LIMITED
   domain: 9
   module: 2
   layer: 7
@@ -2354,7 +2260,6 @@
   runbook: docs/operations/runbooks/errors/auth-token-revoked.md
 - numericCode: '934801'
   errorName: DATABASE_UNAVAILABLE
-  legacyCode: INTERNAL_ERROR
   domain: 9
   module: 3
   layer: 4
@@ -2380,7 +2285,6 @@
   runbook: docs/operations/runbooks/errors/db-pool-exhausted.md
 - numericCode: '934802'
   errorName: DATABASE_OPERATION_TIMEOUT
-  legacyCode: INTERNAL_ERROR
   domain: 9
   module: 3
   layer: 4
@@ -2406,7 +2310,6 @@
   runbook: docs/operations/runbooks/errors/db-pool-exhausted.md
 - numericCode: '934601'
   errorName: DATABASE_DATA_INCONSISTENT
-  legacyCode: INTERNAL_ERROR
   domain: 9
   module: 3
   layer: 4
@@ -2432,7 +2335,6 @@
   runbook: docs/operations/runbooks/errors/db-pool-exhausted.md
 - numericCode: '945701'
   errorName: MESSAGE_PUBLISH_FAILED
-  legacyCode: INTERNAL_ERROR
   domain: 9
   module: 4
   layer: 5
@@ -2456,7 +2358,6 @@
   runbook: docs/operations/runbooks/errors/outbox-relay-failed.md
 - numericCode: '945801'
   errorName: BROKER_UNAVAILABLE
-  legacyCode: INTERNAL_ERROR
   domain: 9
   module: 4
   layer: 5
@@ -2480,7 +2381,6 @@
   runbook: docs/operations/runbooks/errors/broker-unavailable.md
 - numericCode: '945702'
   errorName: MESSAGE_ENVELOPE_INVALID
-  legacyCode: INTERNAL_ERROR
   domain: 9
   module: 4
   layer: 5
@@ -2505,7 +2405,6 @@
   runbook: null
 - numericCode: '948901'
   errorName: PLATFORM_CONFIGURATION_INVALID
-  legacyCode: INTERNAL_ERROR
   domain: 9
   module: 4
   layer: 8
@@ -2529,7 +2428,6 @@
   runbook: docs/operations/runbooks/errors/platform-configuration.md
 - numericCode: '958901'
   errorName: OBSERVABILITY_PIPELINE_FAILED
-  legacyCode: INTERNAL_ERROR
   domain: 9
   module: 5
   layer: 8
@@ -2553,7 +2451,6 @@
   runbook: null
 - numericCode: '968901'
   errorName: IDENTIFIER_GENERATION_FAILED
-  legacyCode: INTERNAL_ERROR
   domain: 9
   module: 6
   layer: 8

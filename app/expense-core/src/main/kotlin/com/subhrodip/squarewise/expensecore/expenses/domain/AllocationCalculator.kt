@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.expensecore.expenses.domain
+
 import com.subhrodip.squarewise.expensecore.expenses.api.request.AllocationItemDto
 
 import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException

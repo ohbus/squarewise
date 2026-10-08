@@ -58,15 +58,16 @@ class GraphQlExceptionResolverTest {
     @Test
     fun `maps every upstream status and uses internal default for unknown status`() {
         val expected = mapOf(
-            400 to "VALIDATION_FAILED",
-            401 to "UNAUTHENTICATED",
-            403 to "FORBIDDEN",
+            400 to "VALIDATION_ERROR",
+            401 to "AUTHENTICATION_ERROR",
+            403 to "AUTHORIZATION_ERROR",
             404 to "NOT_FOUND",
-            409 to "CONFLICT",
-            422 to "VALIDATION_FAILED",
-            429 to "RATE_LIMITED",
+            409 to "STATE_CONFLICT",
+            422 to "VALIDATION_ERROR",
+            429 to "RATE_LIMIT_EXCEEDED",
             500 to "INTERNAL_ERROR",
-            503 to "INTERNAL_ERROR"
+            503 to "INTERNAL_ERROR",
+            504 to "INTERNAL_ERROR"
         )
 
         expected.forEach { (status, code) ->
@@ -80,7 +81,7 @@ class GraphQlExceptionResolverTest {
     @Test
     fun `maps argument and unknown failures to safe validation and internal errors`() {
         val argumentError = resolver.resolve(IllegalArgumentException("secret detail"), environment)
-        assertEquals("VALIDATION_FAILED", argumentError.extensions?.get("code"))
+        assertEquals("VALIDATION_ERROR", argumentError.extensions?.get("code"))
         assertEquals(ErrorType.BAD_REQUEST, argumentError.errorType)
         assertEquals(BffErrors.GRAPHQL_INPUT_INVALID.safeDetail, argumentError.message)
 
@@ -91,7 +92,7 @@ class GraphQlExceptionResolverTest {
     }
 
     private fun expectedGraphQlCode(definition: ErrorDefinition): String =
-        definition.legacyCode ?: definition.errorName
+        definition.category.name
 
     private fun expectedClassification(definition: ErrorDefinition): ErrorType = when (definition.httpStatus) {
         401 -> ErrorType.UNAUTHORIZED

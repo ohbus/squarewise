@@ -1,6 +1,10 @@
 package com.subhrodip.squarewise.errors
+
 import com.subhrodip.squarewise.errors.catalog.PlatformErrors
+import com.subhrodip.squarewise.errors.code.CategoryCode
+import com.subhrodip.squarewise.errors.exceptions.DomainValidationException
 import com.subhrodip.squarewise.errors.exceptions.PlatformDomainException
+import com.subhrodip.squarewise.errors.http.FieldViolation
 import com.subhrodip.squarewise.errors.http.GlobalErrorHandler
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -35,10 +39,10 @@ class GlobalErrorHandlerTest {
         )
 
         assertEquals(HttpStatus.NOT_FOUND, response.statusCode)
-        assertEquals("NOT_FOUND", response.body?.code)
+        assertEquals(CategoryCode.NOT_FOUND.name, response.body?.code)
         assertEquals("919201", response.body?.numericCode)
         assertEquals("RESOURCE_NOT_FOUND", response.body?.errorName)
-        assertEquals("The requested API resource or route does not exist.", response.body?.detail)
+        assertEquals("Group 123 not found", response.body?.detail)
     }
 
     @Test
@@ -48,15 +52,56 @@ class GlobalErrorHandlerTest {
         )
 
         assertEquals(HttpStatus.TOO_MANY_REQUESTS, response.statusCode)
-        assertEquals("RATE_LIMITED", response.body?.code)
+        assertEquals(CategoryCode.RATE_LIMIT_EXCEEDED.name, response.body?.code)
         assertEquals("60", response.headers.getFirst("Retry-After"))
     }
 
     @Test
-    fun `illegalArgument maps to BAD_REQUEST and VALIDATION_FAILED`() {
+    fun `governedException falls back to safeDetail when message is errorName or starts with className`() {
+        val whenErrorName = handler.governedException(
+            PlatformDomainException(PlatformErrors.RESOURCE_NOT_FOUND, "RESOURCE_NOT_FOUND")
+        )
+        assertEquals(PlatformErrors.RESOURCE_NOT_FOUND.safeDetail, whenErrorName.body?.detail)
+
+        val whenClassName = handler.governedException(
+            PlatformDomainException(PlatformErrors.RESOURCE_NOT_FOUND, PlatformDomainException::class.java.name + ": details")
+        )
+        assertEquals(PlatformErrors.RESOURCE_NOT_FOUND.safeDetail, whenClassName.body?.detail)
+
+        val whenNullMessage = handler.governedException(
+            PlatformDomainException(PlatformErrors.RESOURCE_NOT_FOUND, null)
+        )
+        assertEquals(PlatformErrors.RESOURCE_NOT_FOUND.safeDetail, whenNullMessage.body?.detail)
+
+        val whenNullHttpStatus = handler.governedException(
+            PlatformDomainException(PlatformErrors.BROKER_UNAVAILABLE)
+        )
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, whenNullHttpStatus.statusCode)
+    }
+
+    @Test
+    fun `governedException preserves domain violations`() {
+        val violations = listOf(
+            FieldViolation("user.amount", "Too small", "validation.min", 10),
+            FieldViolation("user.currency", "Invalid currency", "validation.currency", "XYZ"),
+        )
+        val response = handler.governedException(
+            DomainValidationException(violations)
+        )
+
+        assertEquals(422, response.statusCode.value())
+        assertEquals(2, response.body?.violations?.size)
+        assertEquals("user.amount", response.body?.violations?.get(0)?.field)
+        assertEquals(10, response.body?.violations?.get(0)?.rejectedValue)
+        assertEquals("user.currency", response.body?.violations?.get(1)?.field)
+        assertEquals("XYZ", response.body?.violations?.get(1)?.rejectedValue)
+    }
+
+    @Test
+    fun `illegalArgument maps to 422 and VALIDATION_ERROR`() {
         val response = handler.illegalArgument(IllegalArgumentException("Invalid parameter"))
-        assertEquals(HttpStatus.BAD_REQUEST, response.statusCode)
-        assertEquals("VALIDATION_FAILED", response.body?.code)
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, response.statusCode)
+        assertEquals(CategoryCode.VALIDATION_ERROR.name, response.body?.code)
         assertEquals("Invalid parameter", response.body?.detail)
     }
 
@@ -64,14 +109,14 @@ class GlobalErrorHandlerTest {
     fun `optimisticLock maps to CONFLICT`() {
         val response = handler.optimisticLock(OptimisticLockingFailureException("Version mismatch"))
         assertEquals(HttpStatus.CONFLICT, response.statusCode)
-        assertEquals("CONFLICT", response.body?.code)
+        assertEquals(CategoryCode.STATE_CONFLICT.name, response.body?.code)
     }
 
     @Test
     fun `unexpected exception maps to 500 and INTERNAL_ERROR`() {
         val response = handler.unexpected(RuntimeException("Database connection dropped"))
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.statusCode)
-        assertEquals("INTERNAL_ERROR", response.body?.code)
+        assertEquals(CategoryCode.INTERNAL_ERROR.name, response.body?.code)
     }
 
     /** Verifies the content-negotiation failure intentionally has no RFC 7807 body. */
@@ -86,16 +131,30 @@ class GlobalErrorHandlerTest {
     /** Verifies field-level validation messages and the safe default message branch. */
     @Test
     fun `validation maps field violations`() {
+        val longText = "a".repeat(300)
         val binding = BeanPropertyBindingResult(Any(), "request")
         binding.addError(FieldError("request", "amount", "bad", false, null, null, null))
         binding.addError(FieldError("request", "currency", "bad", false, null, null, "invalid currency"))
+        binding.addError(FieldError("request", "password", "secret123", false, null, null, "too short"))
+        binding.addError(FieldError("request", "token", "tok456", false, null, null, "invalid token"))
+        binding.addError(FieldError("request", "secret_field", "sec789", false, null, null, "invalid secret"))
+        binding.addError(FieldError("request", "key", "key999", false, null, null, "invalid key"))
+        binding.addError(FieldError("request", "description", longText, false, null, null, "too long"))
+        binding.addError(FieldError("request", "optionalField", null, false, null, null, "missing"))
 
         val response = handler.validation(MethodArgumentNotValidException(sampleParameter(), binding))
 
-        assertEquals(HttpStatus.BAD_REQUEST, response.statusCode)
-        assertEquals(2, response.body?.violations?.size)
-        assertEquals("amount", response.body?.violations?.first()?.field)
-        assertEquals("invalid currency", response.body?.violations?.last()?.message)
+        assertEquals(422, response.statusCode.value())
+        assertEquals(CategoryCode.VALIDATION_ERROR.name, response.body?.code)
+        assertEquals(8, response.body?.violations?.size)
+        assertEquals("amount", response.body?.violations?.get(0)?.field)
+        assertEquals("invalid currency", response.body?.violations?.get(1)?.message)
+        assertEquals("[REDACTED]", response.body?.violations?.get(2)?.rejectedValue)
+        assertEquals("[REDACTED]", response.body?.violations?.get(3)?.rejectedValue)
+        assertEquals("[REDACTED]", response.body?.violations?.get(4)?.rejectedValue)
+        assertEquals("[REDACTED]", response.body?.violations?.get(5)?.rejectedValue)
+        assertEquals(256, (response.body?.violations?.get(6)?.rejectedValue as String).length)
+        assertEquals(null, response.body?.violations?.get(7)?.rejectedValue)
     }
 
     /** Verifies malformed-body detail precedence for root causes and empty messages. */
@@ -153,7 +212,7 @@ class GlobalErrorHandlerTest {
         assertEquals("missing header", binding.body?.detail)
         assertEquals("Invalid request binding", bindingFallback.body?.detail)
         assertEquals("Type mismatch for parameter page", mismatch.body?.title)
-        assertEquals(HttpStatus.BAD_REQUEST, mismatch.statusCode)
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, mismatch.statusCode)
         assertEquals("Type mismatch for parameter page", unknownType.body?.title)
         assertEquals("Resource was updated by another transaction", lockFallback.body?.detail)
         assertEquals("Invalid request", argumentFallback.body?.detail)

@@ -1,5 +1,7 @@
 package com.subhrodip.squarewise.accounts.profile
 
+import com.subhrodip.squarewise.errors.code.CategoryCode
+
 import com.subhrodip.squarewise.accounts.profile.service.ProfileRules
 
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -19,10 +21,10 @@ class ProfileRulesTest {
         val ex = assertThrows(SquarewiseException::class.java) {
             ProfileRules.requireSubject("alice with spaces")
         }
-        assertEquals("UNAUTHENTICATED", ex.definition.legacyCode)
+        assertEquals(CategoryCode.AUTHENTICATION_ERROR, ex.definition.category)
         val ex2 = assertThrows(SquarewiseException::class.java) {
             ProfileRules.requireTimezone("not/a-zone")
         }
-        assertEquals("VALIDATION_FAILED", ex2.definition.legacyCode)
+        assertEquals(CategoryCode.VALIDATION_ERROR, ex2.definition.category)
     }
 }

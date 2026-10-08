@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.expensecore.groups.api
+
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Size
 

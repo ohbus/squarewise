@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.accounts.auth.login
+
 import com.subhrodip.squarewise.accounts.auth.delivery.model.AuthEmailTemplate
 
 import com.subhrodip.squarewise.accounts.auth.audit.SecurityAuditEvent

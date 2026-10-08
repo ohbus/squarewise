@@ -1,4 +1,6 @@
 package com.subhrodip.squarewise.expensecore.settlements
+
+import com.subhrodip.squarewise.errors.code.CategoryCode
 import com.subhrodip.squarewise.expensecore.settlements.domain.Settlement
 import com.subhrodip.squarewise.expensecore.settlements.domain.SettlementStatus
 import com.subhrodip.squarewise.expensecore.settlements.persistence.JpaSettlementStore
@@ -64,7 +66,7 @@ class JpaSettlementStoreTest @Autowired constructor(
         val error = assertThrows(SquarewiseException::class.java) {
             store.reverse(UUID.randomUUID(), settlement.id, "wrong group")
         }
-        assertEquals("NOT_FOUND", error.definition.legacyCode)
+        assertEquals(CategoryCode.NOT_FOUND, error.definition.category)
     }
 
     /** Verifies an active group still returns not-found when the settlement row is absent. */
@@ -77,7 +79,7 @@ class JpaSettlementStoreTest @Autowired constructor(
             store.reverse(groupId, UUID.randomUUID(), "missing")
         }
 
-        assertEquals("NOT_FOUND", error.definition.legacyCode)
+        assertEquals(CategoryCode.NOT_FOUND, error.definition.category)
     }
 
     /** Verifies settlement replay compares every financial identity dimension before returning an existing row. */
@@ -99,7 +101,7 @@ class JpaSettlementStoreTest @Autowired constructor(
             val error = assertThrows(SquarewiseException::class.java) {
                 store.record(groupId, conflicting)
             }
-            assertEquals("CONFLICT", error.definition.legacyCode)
+            assertEquals(CategoryCode.STATE_CONFLICT, error.definition.category)
         }
         assertEquals(2, balancePostingRepository.findBySettlementId(settlement.id).size)
     }
@@ -110,7 +112,7 @@ class JpaSettlementStoreTest @Autowired constructor(
         val missingGroupError = assertThrows(SquarewiseException::class.java) {
             store.record(UUID.randomUUID(), Settlement(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), 100, "EUR"))
         }
-        assertEquals("NOT_FOUND", missingGroupError.definition.legacyCode)
+        assertEquals(CategoryCode.NOT_FOUND, missingGroupError.definition.category)
 
         val archivedGroupId = UUID.randomUUID()
         groupRepository.save(GroupEntity(archivedGroupId, "Archived group", "HOUSEHOLD", "EUR", status = "ARCHIVED"))
@@ -118,11 +120,11 @@ class JpaSettlementStoreTest @Autowired constructor(
         val archivedRecordError = assertThrows(SquarewiseException::class.java) {
             store.record(archivedGroupId, archivedSettlement)
         }
-        assertEquals("CONFLICT", archivedRecordError.definition.legacyCode)
+        assertEquals(CategoryCode.STATE_CONFLICT, archivedRecordError.definition.category)
         val archivedReverseError = assertThrows(SquarewiseException::class.java) {
             store.reverse(archivedGroupId, archivedSettlement.id, "archived")
         }
-        assertEquals("CONFLICT", archivedReverseError.definition.legacyCode)
+        assertEquals(CategoryCode.STATE_CONFLICT, archivedReverseError.definition.category)
         assertEquals(0, balancePostingRepository.findBySettlementId(archivedSettlement.id).size)
     }
 }

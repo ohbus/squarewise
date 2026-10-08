@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.expensecore.groups.persistence.repository
+
 import com.subhrodip.squarewise.expensecore.groups.domain.GroupInvitationEntity
 import java.time.Instant
 import java.util.UUID

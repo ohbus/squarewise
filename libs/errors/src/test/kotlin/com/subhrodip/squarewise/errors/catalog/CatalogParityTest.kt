@@ -1,5 +1,9 @@
 package com.subhrodip.squarewise.errors.catalog
 
+import com.subhrodip.squarewise.errors.code.DisclosurePolicy
+import com.subhrodip.squarewise.errors.code.ErrorCode
+import com.subhrodip.squarewise.errors.code.ErrorSeverity
+import com.subhrodip.squarewise.errors.code.RetryPolicy
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -8,8 +12,8 @@ class CatalogParityTest {
     @Test
     fun `compiled catalogs match authoritative identities`() {
         val expected = listOf(
-            Expected("111101", "PROFILE_REQUEST_INVALID", "Invalid profile request", 400),
-            Expected("111102", "TIMEZONE_INVALID", "Invalid timezone", 400),
+            Expected("111101", "PROFILE_REQUEST_INVALID", "Invalid profile request", 422),
+            Expected("111102", "TIMEZONE_INVALID", "Invalid timezone", 422),
             Expected("117101", "PROFILE_SUBJECT_INVALID", "Invalid authenticated subject", 401),
             Expected("117201", "AUTHENTICATED_PROFILE_NOT_FOUND", "Profile not found", 404),
             Expected("117202", "FOREIGN_PROFILE_ACCESS_DENIED", "Access denied", 403),
@@ -26,7 +30,7 @@ class CatalogParityTest {
             Expected("147401", "ACCOUNT_DELETION_ALREADY_REQUESTED", "Account deletion in progress", 409),
             Expected("147402", "ACCOUNT_EXPORT_ALREADY_PENDING", "Account export in progress", 409),
             Expected("157301", "IDENTITY_ALREADY_LINKED", "Identity already linked", 409),
-            Expected("211101", "GROUP_REQUEST_INVALID", "Invalid group request", 400),
+            Expected("211101", "GROUP_REQUEST_INVALID", "Invalid group request", 422),
             Expected("213201", "GROUP_NOT_FOUND", "Group not found", 404),
             Expected("213301", "GROUP_NAME_CONFLICT", "Group name conflict", 409),
             Expected("213401", "GROUP_ARCHIVED", "Group is archived", 409),
@@ -34,17 +38,17 @@ class CatalogParityTest {
             Expected("221201", "INVITATION_NOT_FOUND", "Invitation not found", 404),
             Expected("223201", "MEMBER_NOT_FOUND", "Group member not found", 404),
             Expected("223202", "PLACEHOLDER_NOT_FOUND", "Placeholder member not found", 404),
-            Expected("223401", "INVITATION_EXPIRED", "Invitation expired", 409),
+            Expected("223401", "INVITATION_EXPIRED", "Invitation expired", 410),
             Expected("223402", "INVITATION_ALREADY_CLAIMED", "Invitation already claimed", 409),
             Expected("223403", "INVITATION_REVOKED", "Invitation revoked", 409),
             Expected("223404", "MEMBER_ALREADY_REMOVED", "Member already removed", 409),
             Expected("223405", "PLACEHOLDER_ALREADY_BOUND", "Placeholder already bound", 409),
-            Expected("231101", "EXPENSE_REQUEST_INVALID", "Invalid expense request", 400),
+            Expected("231101", "EXPENSE_REQUEST_INVALID", "Invalid expense request", 422),
             Expected("233201", "EXPENSE_NOT_FOUND", "Expense not found", 404),
             Expected("233301", "EXPENSE_VERSION_CONFLICT", "Expense version conflict", 409),
             Expected("233302", "EXPENSE_IDEMPOTENCY_CONFLICT", "Idempotency key conflict", 409),
-            Expected("233501", "ALLOCATION_SUM_MISMATCH", "Allocation sum mismatch", 400),
-            Expected("233502", "PARTICIPANT_SET_INVALID", "Invalid participant set", 400),
+            Expected("233501", "ALLOCATION_SUM_MISMATCH", "Allocation sum mismatch", 422),
+            Expected("233502", "PARTICIPANT_SET_INVALID", "Invalid participant set", 422),
             Expected("233503", "DUPLICATE_EXPENSE_REJECTED", "Duplicate expense rejected", 409),
             Expected("243201", "SETTLEMENT_NOT_FOUND", "Settlement not found", 404),
             Expected("243301", "SETTLEMENT_VERSION_CONFLICT", "Settlement version conflict", 409),
@@ -54,24 +58,24 @@ class CatalogParityTest {
             Expected("253301", "SCHEDULE_VERSION_CONFLICT", "Schedule version conflict", 409),
             Expected("253401", "SCHEDULE_PAUSED", "Schedule is paused", 409),
             Expected("255601", "OCCURRENCE_GENERATION_FAILED", "Occurrence generation failed", null),
-            Expected("261101", "SYNC_CURSOR_INVALID", "Invalid sync cursor", 400),
-            Expected("261102", "SYNC_CURSOR_EXPIRED", "Sync cursor expired", 400),
+            Expected("261101", "SYNC_CURSOR_INVALID", "Invalid sync cursor", 422),
+            Expected("261102", "SYNC_CURSOR_EXPIRED", "Sync cursor expired", 410),
             Expected("263301", "SYNC_REVISION_CONFLICT", "Sync revision conflict", 409),
-            Expected("271101", "SEARCH_QUERY_INVALID", "Invalid search query", 400),
-            Expected("271102", "EXPORT_REQUEST_INVALID", "Invalid export request", 400),
+            Expected("271101", "SEARCH_QUERY_INVALID", "Invalid search query", 422),
+            Expected("271102", "EXPORT_REQUEST_INVALID", "Invalid export request", 422),
             Expected("285701", "OUTBOX_RELAY_PUBLISH_FAILED", "Outbox relay publish failed", null),
             Expected("285601", "OUTBOX_RECORD_CORRUPT", "Corrupt outbox record", null),
-            Expected("311101", "INBOX_CURSOR_INVALID", "Invalid inbox cursor", 400),
-            Expected("311102", "INBOX_LIMIT_OUT_OF_RANGE", "Inbox limit out of range", 400),
+            Expected("311101", "INBOX_CURSOR_INVALID", "Invalid inbox cursor", 422),
+            Expected("311102", "INBOX_LIMIT_OUT_OF_RANGE", "Inbox limit out of range", 422),
             Expected("317201", "INBOX_NOTIFICATION_NOT_FOUND", "Notification not found", 404),
             Expected("317202", "INBOX_ACCESS_HIDDEN", "Notification not found", 404),
             Expected("325701", "NOTIFICATION_DISPATCH_FAILED", "Notification dispatch failed", null),
             Expected("325601", "NOTIFICATION_PAYLOAD_CORRUPT", "Corrupt notification payload", null),
-            Expected("331101", "NOTIFICATION_PREFERENCE_INVALID", "Invalid notification preference", 400),
-            Expected("341101", "EMAIL_RECIPIENT_REQUIRED", "Email recipient required", 400),
-            Expected("341102", "EMAIL_TEMPLATE_INPUT_INVALID", "Invalid email template input", 400),
+            Expected("331101", "NOTIFICATION_PREFERENCE_INVALID", "Invalid notification preference", 422),
+            Expected("341101", "EMAIL_RECIPIENT_REQUIRED", "Email recipient required", 422),
+            Expected("341102", "EMAIL_TEMPLATE_INPUT_INVALID", "Invalid email template input", 422),
             Expected("345701", "EMAIL_DISPATCH_FAILED", "Email dispatch failed", null),
-            Expected("411101", "GRAPHQL_INPUT_INVALID", "Invalid GraphQL input", 400),
+            Expected("411101", "GRAPHQL_INPUT_INVALID", "Invalid GraphQL input", 422),
             Expected("411102", "GRAPHQL_OPERATION_INVALID", "Invalid GraphQL operation", 400),
             Expected("412901", "GRAPHQL_AGGREGATION_FAILED", "GraphQL aggregation failed", 500),
             Expected("426701", "UPSTREAM_PROTOCOL_INVALID", "Invalid upstream response", 502),
@@ -82,9 +86,9 @@ class CatalogParityTest {
             Expected("437801", "SUBSCRIPTION_LIMIT_EXCEEDED", "Subscription limit exceeded", 429),
             Expected("437802", "LIVE_UPDATE_UPSTREAM_UNAVAILABLE", "Live update service unavailable", 503),
             Expected("435701", "LIVE_UPDATE_EVENT_INVALID", "Invalid live update event", 500),
-            Expected("911101", "REQUEST_VALIDATION_FAILED", "Validation failed", 400),
+            Expected("911101", "REQUEST_VALIDATION_FAILED", "Validation failed", 422),
             Expected("911102", "REQUEST_BODY_MALFORMED", "Malformed request body", 400),
-            Expected("911103", "REQUEST_VALUE_INVALID", "Invalid request parameter", 400),
+            Expected("911103", "REQUEST_VALUE_INVALID", "Invalid request parameter", 422),
             Expected("911104", "REQUEST_BODY_TOO_LARGE", "Request payload too large", 413),
             Expected("911105", "MEDIA_TYPE_UNSUPPORTED", "Unsupported media type", 415),
             Expected("911106", "METHOD_NOT_ALLOWED", "Method not allowed", 405),
@@ -115,6 +119,28 @@ class CatalogParityTest {
             assertEquals(record.title, actual.title)
             assertEquals(record.httpStatus, actual.httpStatus)
         }
+    }
+
+    @Test
+    fun `ErrorCatalog find and contains operate correctly`() {
+        val first = ErrorCatalog.all.first()
+        assertEquals(first, ErrorCatalog.find(first.numericCode.value))
+        assertEquals(true, ErrorCatalog.contains(first))
+
+        assertEquals(null, ErrorCatalog.find("000000"))
+        val unregistered = SimpleErrorDefinition(
+            numericCode = ErrorCode("999999"),
+            errorName = "UNREGISTERED",
+            title = "Unregistered",
+            safeDetail = "Unregistered",
+            messageKey = "unregistered",
+            httpStatus = 500,
+            graphqlClassification = null,
+            retryPolicy = RetryPolicy.NEVER,
+            severity = ErrorSeverity.ERROR,
+            disclosure = DisclosurePolicy.PUBLIC,
+        )
+        assertEquals(false, ErrorCatalog.contains(unregistered))
     }
 
     private data class Expected(val numericCode: String, val errorName: String, val title: String, val httpStatus: Int?)

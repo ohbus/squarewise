@@ -258,7 +258,7 @@ class JpaGroupStore(
         val group = groups.findForMembershipUpdate(invitation.groupId) ?: notFound()
         checkActiveGroup(group)
 
-        if (invitation.placeholderId != null) {
+        return if (invitation.placeholderId != null) {
             val placeholder = memberships.findByMembershipIdAndGroupId(invitation.placeholderId!!, group.groupId)
                 ?: conflict("Placeholder not found")
             if (placeholder.status != "ACTIVE" || placeholder.subject != null) {
@@ -281,7 +281,7 @@ class JpaGroupStore(
                 "revision" to saved.revision
             )
             recordMutation(group.groupId, subject, "invitation.claimed", saved.revision, payload, claimedAt, "invitation.claimed.v1")
-            return saved.toResponse()
+            saved.toResponse()
         } else {
             if (memberships.existsByGroupIdAndSubjectAndStatus(group.groupId, subject, "ACTIVE")) {
                 return group.toResponse()
@@ -300,7 +300,7 @@ class JpaGroupStore(
                 "revision" to saved.revision
             )
             recordMutation(group.groupId, subject, "invitation.claimed", saved.revision, payload, claimedAt, "invitation.claimed.v1")
-            return saved.toResponse()
+            saved.toResponse()
         }
     }
 

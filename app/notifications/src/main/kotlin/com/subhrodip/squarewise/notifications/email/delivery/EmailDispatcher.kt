@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.notifications.email.delivery
+
 import com.subhrodip.squarewise.notifications.email.config.EmailProperties
 import com.subhrodip.squarewise.notifications.email.smtp.JavaMailSender
 import com.subhrodip.squarewise.notifications.email.smtp.MailSendException
@@ -20,19 +21,9 @@ class EmailDispatcher(
 
     fun dispatch(recipient: String, subject: String, body: String): EmailDeliveryOutcome {
         val recipientId = opaqueRecipientId(recipient)
-        if (!properties.enabled) {
-            log.info("Email dispatch disabled; skipping recipientId={}", recipientId)
-            return EmailDeliveryOutcome.SKIPPED
-        }
-
-        if (!isValidEmail(recipient)) {
-            log.warn("Invalid email address for recipientId={}", recipientId)
-            return EmailDeliveryOutcome.PERMANENT_FAILURE
-        }
-
-        if (subject.isBlank()) {
-            log.warn("Email subject cannot be blank")
-            return EmailDeliveryOutcome.PERMANENT_FAILURE
+        val initialValidation = validateDispatch(recipient, subject, recipientId)
+        if (initialValidation != null) {
+            return initialValidation
         }
 
         val message = SimpleMailMessage().apply {
@@ -49,33 +40,61 @@ class EmailDispatcher(
                 log.info("Successfully dispatched email to recipientId={} on attempt {}", recipientId, attempt)
                 return EmailDeliveryOutcome.DELIVERED
             } catch (e: Exception) {
-                if (isPermanentFailure(e)) {
-                    log.warn("Permanent email delivery failure for recipientId={}, errorClass={}", recipientId, e::class.simpleName)
-                    return EmailDeliveryOutcome.PERMANENT_FAILURE
+                val failureOutcome = handleAttemptFailure(e, recipientId, attempt, maxAttempts)
+                if (failureOutcome != null) {
+                    return failureOutcome
                 }
-
-                if (isTransientFailure(e)) {
-                    log.warn("Transient email delivery failure for recipientId={} (attempt {}/{})", recipientId, attempt, maxAttempts)
-                    if (attempt < maxAttempts) {
-                        if (properties.retryDelayMs > 0) {
-                            try {
-                                Thread.sleep(properties.retryDelayMs)
-                            } catch (ie: InterruptedException) {
-                                Thread.currentThread().interrupt()
-                                return EmailDeliveryOutcome.RETRYABLE_FAILURE
-                            }
-                        }
-                        continue
-                    }
-                    return EmailDeliveryOutcome.RETRYABLE_FAILURE
-                }
-
-                log.error("Non-retryable email delivery failure for recipientId={}, errorClass={}", recipientId, e::class.simpleName)
-                return EmailDeliveryOutcome.PERMANENT_FAILURE
             }
         }
 
         return EmailDeliveryOutcome.RETRYABLE_FAILURE
+    }
+
+    private fun validateDispatch(recipient: String, subject: String, recipientId: String): EmailDeliveryOutcome? {
+        if (!properties.enabled) {
+            log.info("Email dispatch disabled; skipping recipientId={}", recipientId)
+            return EmailDeliveryOutcome.SKIPPED
+        }
+        if (!isValidEmail(recipient)) {
+            log.warn("Invalid email address for recipientId={}", recipientId)
+            return EmailDeliveryOutcome.PERMANENT_FAILURE
+        }
+        if (subject.isBlank()) {
+            log.warn("Email subject cannot be blank")
+            return EmailDeliveryOutcome.PERMANENT_FAILURE
+        }
+        return null
+    }
+
+    private fun handleAttemptFailure(
+        e: Exception,
+        recipientId: String,
+        attempt: Int,
+        maxAttempts: Int
+    ): EmailDeliveryOutcome? {
+        if (isPermanentFailure(e)) {
+            log.warn("Permanent email delivery failure for recipientId={}, errorClass={}", recipientId, e::class.simpleName)
+            return EmailDeliveryOutcome.PERMANENT_FAILURE
+        }
+
+        if (isTransientFailure(e)) {
+            log.warn("Transient email delivery failure for recipientId={} (attempt {}/{})", recipientId, attempt, maxAttempts)
+            if (attempt < maxAttempts) {
+                if (properties.retryDelayMs > 0) {
+                    try {
+                        Thread.sleep(properties.retryDelayMs)
+                    } catch (_: InterruptedException) {
+                        Thread.currentThread().interrupt()
+                        return EmailDeliveryOutcome.RETRYABLE_FAILURE
+                    }
+                }
+                return null
+            }
+            return EmailDeliveryOutcome.RETRYABLE_FAILURE
+        }
+
+        log.error("Non-retryable email delivery failure for recipientId={}, errorClass={}", recipientId, e::class.simpleName)
+        return EmailDeliveryOutcome.PERMANENT_FAILURE
     }
 
     fun send(recipient: String, subject: String, body: String): EmailDeliveryOutcome =

@@ -1,6 +1,7 @@
 @file:Suppress("CanConvertToMultiDollarString")
 
 package com.subhrodip.squarewise.expensecore.messaging.config
+
 import com.subhrodip.squarewise.expensecore.messaging.outbox.service.OutboxPublisher
 import com.subhrodip.squarewise.expensecore.messaging.outbox.model.PublishBatchResult
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty

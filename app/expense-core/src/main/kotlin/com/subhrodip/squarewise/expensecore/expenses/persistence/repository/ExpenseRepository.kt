@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.expensecore.expenses.persistence.repository
+
 import org.springframework.data.jpa.repository.Query
 import com.subhrodip.squarewise.expensecore.expenses.persistence.entity.ExpenseEntity
 

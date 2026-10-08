@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.expensecore.recurring.service
+
 import com.subhrodip.squarewise.expensecore.expenses.domain.AllocationCalculator
 import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseAllocation
 import com.subhrodip.squarewise.expensecore.expenses.domain.ExpensePayer
@@ -49,32 +50,7 @@ class RecurringExpenseService(
 
     @Transactional
     override fun createSchedule(groupId: UUID, request: CreateRecurringScheduleRequest): RecurringExpenseSchedule {
-        require(request.description.isNotBlank()) { "description must not be blank" }
-        require(request.amountMinor > 0) { "amountMinor must be positive" }
-        require(request.currency.matches(Regex("^[A-Z]{3}$"))) { "currency must be 3 uppercase letters" }
-        require(request.dayOfMonth == null || request.dayOfMonth in 1..31) {
-            "dayOfMonth must be between 1 and 31"
-        }
-        require(request.frequency == RecurrenceFrequency.MONTHLY || request.dayOfMonth == null) {
-            "dayOfMonth is only supported for monthly schedules"
-        }
-        if (request.endDate != null) {
-            require(!request.endDate.isBefore(request.startDate)) {
-                "endDate must not be before startDate"
-            }
-        }
-        if (request.payers != null) {
-            require(request.payers.isNotEmpty()) { "payers must not be empty if provided" }
-            require(request.payers.sumOf { it.amountMinor } == request.amountMinor) {
-                "sum of payer amounts must equal schedule amount"
-            }
-        }
-        if (request.allocations != null) {
-            require(request.allocations.isNotEmpty()) { "allocations must not be empty if provided" }
-            require(request.allocations.sumOf { it.allocatedMinor } == request.amountMinor) {
-                "sum of allocation amounts must equal schedule amount"
-            }
-        }
+        validateSchedule(request)
 
         if (!groupRepository.existsById(groupId)) {
             throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group $groupId not found")
@@ -117,32 +93,7 @@ class RecurringExpenseService(
             throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Schedule $scheduleId not in group $groupId")
         }
 
-        require(request.description.isNotBlank()) { "description must not be blank" }
-        require(request.amountMinor > 0) { "amountMinor must be positive" }
-        require(request.currency.matches(Regex("^[A-Z]{3}$"))) { "currency must be 3 uppercase letters" }
-        require(request.dayOfMonth == null || request.dayOfMonth in 1..31) {
-            "dayOfMonth must be between 1 and 31"
-        }
-        require(request.frequency == RecurrenceFrequency.MONTHLY || request.dayOfMonth == null) {
-            "dayOfMonth is only supported for monthly schedules"
-        }
-        if (request.endDate != null) {
-            require(!request.endDate.isBefore(request.startDate)) {
-                "endDate must not be before startDate"
-            }
-        }
-        if (request.payers != null) {
-            require(request.payers.isNotEmpty()) { "payers must not be empty if provided" }
-            require(request.payers.sumOf { it.amountMinor } == request.amountMinor) {
-                "sum of payer amounts must equal schedule amount"
-            }
-        }
-        if (request.allocations != null) {
-            require(request.allocations.isNotEmpty()) { "allocations must not be empty if provided" }
-            require(request.allocations.sumOf { it.allocatedMinor } == request.amountMinor) {
-                "sum of allocation amounts must equal schedule amount"
-            }
-        }
+        validateSchedule(request)
 
         schedule.description = request.description.trim()
         schedule.amountMinor = request.amountMinor
@@ -233,7 +184,7 @@ class RecurringExpenseService(
 
             if (!alreadyExists) {
                 try {
-                    val expenseRecord = buildExpenseRecord(schedule, occurrenceDate, occurrenceId, members)
+                    val expenseRecord = buildExpenseRecord(schedule, occurrenceId, members)
                     expenseStore.create(schedule.groupId, expenseRecord, occurrenceId.toString())
 
                     val occurrence = RecurringExpenseOccurrence(
@@ -301,7 +252,6 @@ class RecurringExpenseService(
 
     private fun buildExpenseRecord(
         schedule: RecurringExpenseSchedule,
-        occurrenceDate: LocalDate,
         occurrenceId: UUID,
         members: List<UUID>
     ): ExpenseRecord {
@@ -352,7 +302,6 @@ class RecurringExpenseService(
 
         return rows.map { row ->
             val subject = row[0] as String
-            val membershipId = row[1] as UUID
             try {
                 UUID.fromString(subject)
             } catch (_: IllegalArgumentException) {
@@ -360,4 +309,75 @@ class RecurringExpenseService(
             }
         }
     }
+
+    private fun validateSchedule(request: CreateRecurringScheduleRequest) {
+        validateScheduleValues(
+            description = request.description,
+            amountMinor = request.amountMinor,
+            currency = request.currency,
+            frequency = request.frequency,
+            dayOfMonth = request.dayOfMonth,
+            startDate = request.startDate,
+            endDate = request.endDate
+        )
+        validateCustomSpecifications(request.amountMinor, request.payers, request.allocations)
+    }
+
+    private fun validateSchedule(request: UpdateRecurringScheduleRequest) {
+        validateScheduleValues(
+            description = request.description,
+            amountMinor = request.amountMinor,
+            currency = request.currency,
+            frequency = request.frequency,
+            dayOfMonth = request.dayOfMonth,
+            startDate = request.startDate,
+            endDate = request.endDate
+        )
+        validateCustomSpecifications(request.amountMinor, request.payers, request.allocations)
+    }
+
+    private fun validateScheduleValues(
+        description: String,
+        amountMinor: Long,
+        currency: String,
+        frequency: RecurrenceFrequency,
+        dayOfMonth: Int?,
+        startDate: LocalDate,
+        endDate: LocalDate?
+    ) {
+        require(description.isNotBlank()) { "description must not be blank" }
+        require(amountMinor > 0) { "amountMinor must be positive" }
+        require(currency.matches(Regex("^[A-Z]{3}$"))) { "currency must be 3 uppercase letters" }
+        require(dayOfMonth == null || dayOfMonth in 1..31) {
+            "dayOfMonth must be between 1 and 31"
+        }
+        require(frequency == RecurrenceFrequency.MONTHLY || dayOfMonth == null) {
+            "dayOfMonth is only supported for monthly schedules"
+        }
+        if (endDate != null) {
+            require(!endDate.isBefore(startDate)) {
+                "endDate must not be before startDate"
+            }
+        }
+    }
+
+    private fun validateCustomSpecifications(
+        amountMinor: Long,
+        payers: List<ExpensePayer>?,
+        allocations: List<ExpenseAllocation>?
+    ) {
+        if (payers != null) {
+            require(payers.isNotEmpty()) { "payers must not be empty if provided" }
+            require(payers.sumOf { it.amountMinor } == amountMinor) {
+                "sum of payer amounts must equal schedule amount"
+            }
+        }
+        if (allocations != null) {
+            require(allocations.isNotEmpty()) { "allocations must not be empty if provided" }
+            require(allocations.sumOf { it.allocatedMinor } == amountMinor) {
+                "sum of allocation amounts must equal schedule amount"
+            }
+        }
+    }
 }
+

@@ -1,6 +1,7 @@
 @file:Suppress("CanConvertToMultiDollarString")
 
 package com.subhrodip.squarewise.notifications.email.delivery
+
 import com.rabbitmq.client.Channel
 import com.subhrodip.squarewise.notifications.consumer.transport.InvalidEnvelopeException
 import com.subhrodip.squarewise.errors.async.AsyncContext

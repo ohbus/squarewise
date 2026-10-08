@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.expensecore.sync.persistence
+
 import com.subhrodip.squarewise.expensecore.sync.domain.InvalidSyncCursorException
 import com.subhrodip.squarewise.expensecore.sync.domain.SyncChange
 import com.subhrodip.squarewise.expensecore.sync.domain.SyncCursor

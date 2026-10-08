@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.accounts.profile
+
 import com.subhrodip.squarewise.db.routing.DbExecutionContext
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeEach
@@ -109,8 +110,8 @@ class ProfileControllerTest {
     @Test
     fun `rejects empty patch`() {
         mvc.perform(patch(ApiEndpoints.Accounts.V1.PATH_ME).with(alice).contentType(MediaType.APPLICATION_JSON).content("{}"))
-            .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+            .andExpect(status().isUnprocessableContent)
+            .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
     }
 
     @Test
@@ -144,14 +145,14 @@ class ProfileControllerTest {
     fun `rejects export request without authentication`() {
         mvc.perform(post(ApiEndpoints.Accounts.V1.PATH_ME_EXPORT_REQUEST))
             .andExpect(status().isUnauthorized)
-            .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"))
+            .andExpect(jsonPath("$.code").value("AUTHENTICATION_ERROR"))
     }
 
     @Test
     fun `rejects export request listing without authentication`() {
         mvc.perform(get(ApiEndpoints.Accounts.V1.PATH_ME_EXPORT_REQUESTS))
             .andExpect(status().isUnauthorized)
-            .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"))
+            .andExpect(jsonPath("$.code").value("AUTHENTICATION_ERROR"))
     }
 
     @Test
@@ -162,7 +163,7 @@ class ProfileControllerTest {
         }
         mvc.perform(post(ApiEndpoints.Accounts.V1.PATH_ME_EXPORT_REQUEST).with(invalidUser))
             .andExpect(status().isUnauthorized)
-            .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"))
+            .andExpect(jsonPath("$.code").value("AUTHENTICATION_ERROR"))
     }
 
     @Test
@@ -173,7 +174,7 @@ class ProfileControllerTest {
         }
         mvc.perform(get(ApiEndpoints.Accounts.V1.PATH_ME_EXPORT_REQUESTS).with(invalidUser))
             .andExpect(status().isUnauthorized)
-            .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"))
+            .andExpect(jsonPath("$.code").value("AUTHENTICATION_ERROR"))
     }
 
     @Test
@@ -193,7 +194,7 @@ class ProfileControllerTest {
 
         mvc.perform(get(ApiEndpoints.Accounts.V1.profileById(bobId)).with(alice))
             .andExpect(status().isForbidden)
-            .andExpect(jsonPath("$.code").value("FORBIDDEN"))
+            .andExpect(jsonPath("$.code").value("AUTHORIZATION_ERROR"))
             .andExpect(jsonPath("$.detail").value("Access denied to foreign profile"))
     }
 
@@ -201,7 +202,7 @@ class ProfileControllerTest {
     fun `rejects profile lookup by account id without authentication with 401 unauthorized`() {
         mvc.perform(get(ApiEndpoints.Accounts.V1.profileById(aliceId)))
             .andExpect(status().isUnauthorized)
-            .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"))
+            .andExpect(jsonPath("$.code").value("AUTHENTICATION_ERROR"))
     }
 
     @Test
@@ -306,7 +307,7 @@ class ProfileControllerTest {
                 .content(requestBody)
         )
             .andExpect(status().isForbidden)
-            .andExpect(jsonPath("$.code").value("FORBIDDEN"))
+            .andExpect(jsonPath("$.code").value("AUTHORIZATION_ERROR"))
             .andExpect(jsonPath("$.detail").value("Batch profile lookup requires internal workload authority"))
     }
 
@@ -319,7 +320,7 @@ class ProfileControllerTest {
                 .content(requestBody)
         )
             .andExpect(status().isUnauthorized)
-            .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"))
+            .andExpect(jsonPath("$.code").value("AUTHENTICATION_ERROR"))
     }
 
     @Test
@@ -347,8 +348,8 @@ class ProfileControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"accountIds\": []}")
         )
-            .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+            .andExpect(status().isUnprocessableContent)
+            .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
     }
 
     @Test
@@ -373,8 +374,8 @@ class ProfileControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"accountIds\":[$accountIds]}")
         )
-            .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+            .andExpect(status().isUnprocessableContent)
+            .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
     }
 
     /** Verifies duplicate requested IDs produce one profile rather than duplicated response rows. */

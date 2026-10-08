@@ -66,11 +66,6 @@
           "pattern": "^[A-Z][A-Z0-9_]*$",
           "description": "Globally unique immutable SCREAMING_SNAKE_CASE symbolic name."
         },
-        "legacyCode": {
-          "type": ["string", "null"],
-          "pattern": "^[A-Z0-9_]+$",
-          "description": "Explicit current v1 symbolic code when one exists; null otherwise."
-        },
         "domain": {
           "type": "integer",
           "enum": [1, 2, 3, 4, 9],

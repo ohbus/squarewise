@@ -127,8 +127,27 @@ class RequestIdContextAndFilterTest {
         try {
             MDC.put(RequestIdContext.MDC_KEY, "mdc-request-7")
             assertEquals("mdc-request-7", RequestIdContext.get())
+            assertEquals("mdc-request-7", RequestIdContext.getOrGenerate())
         } finally {
             MDC.remove(RequestIdContext.MDC_KEY)
         }
+    }
+
+    @Test
+    fun `getOrGenerate returns bound context when active or generates fresh id when missing`() {
+        RequestIdContext.with("explicit-id-99") {
+            assertEquals("explicit-id-99", RequestIdContext.getOrGenerate())
+        }
+
+        val generated = RequestIdContext.getOrGenerate()
+        assertTrue(generated.matches(Regex("[0-9a-f-]{36}")))
+    }
+
+    @Test
+    fun `RequestIdGenerator produces valid uuid`() {
+        val id1 = RequestIdGenerator.next()
+        val id2 = RequestIdGenerator.next()
+        assertNotEquals(id1, id2)
+        assertEquals(7, id1.version())
     }
 }

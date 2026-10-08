@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test;
 /** Verifies the JVM bean getters used by Spring/Jackson at the BFF boundary. */
 class BffJavaBeanCompatibilityTest {
     @Test
-    void transport_models_expose_their_wire_getters() {
+    void core_transport_models_expose_their_wire_getters() {
         BffMoney money = new BffMoney("EUR", "100");
         BffAllocation allocation = new BffAllocation("member", money);
         BffBalance balance = new BffBalance("member", money);
@@ -52,7 +52,10 @@ class BffJavaBeanCompatibilityTest {
         assertEquals("group", upstream.getGroupId());
         assertEquals("Trip", upstream.getName());
         assertEquals(4, upstream.getRevision());
+    }
 
+    @Test
+    void auth_transport_models_expose_their_wire_getters() {
         BrowserLoginStartRequest start = new BrowserLoginStartRequest("alice@example.test", "EMAIL");
         BrowserLoginStartResponse response = new BrowserLoginStartResponse("ACCEPTED", 5L);
         BrowserLoginVerifyRequest verify = new BrowserLoginVerifyRequest("credential");

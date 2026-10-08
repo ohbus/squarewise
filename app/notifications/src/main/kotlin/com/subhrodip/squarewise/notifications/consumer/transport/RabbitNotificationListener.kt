@@ -1,6 +1,7 @@
 @file:Suppress("CanConvertToMultiDollarString")
 
 package com.subhrodip.squarewise.notifications.consumer.transport
+
 import com.subhrodip.squarewise.notifications.consumer.model.NotificationEvent
 import com.subhrodip.squarewise.notifications.consumer.service.NotificationConsumer
 import com.subhrodip.squarewise.errors.async.AsyncContext

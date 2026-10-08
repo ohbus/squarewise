@@ -5,6 +5,7 @@
   "code": "NOT_FOUND",
   "numericCode": "213201",
   "errorName": "GROUP_NOT_FOUND",
+  "messageKey": "error.groups.not_found",
   "source": "squarewise-expense-core",
   "requestId": "00000000-0000-0000-0000-000000000002",
   "detail": "The requested group was not found.",

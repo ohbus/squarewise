@@ -17,7 +17,7 @@ abstract class SquarewiseException protected constructor(
     messageOverride: String? = null,
 ) : RuntimeException(messageOverride ?: definition.errorName, cause) {
     init {
-        require(ErrorCatalog.all.any { it === definition }) {
+        require(ErrorCatalog.contains(definition)) {
             "SquarewiseException requires a compiled catalog definition"
         }
     }

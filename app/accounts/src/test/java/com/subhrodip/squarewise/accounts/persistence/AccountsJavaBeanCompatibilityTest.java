@@ -20,14 +20,12 @@ class AccountsJavaBeanCompatibilityTest {
     private static final Instant NOW = Instant.parse("2026-10-03T00:00:00Z");
 
     @Test
-    void persistence_entities_expose_jpa_getters_and_setters() {
+    void auth_entities_expose_jpa_getters_and_setters() {
         UUID accountId = UUID.randomUUID();
         UUID sessionId = UUID.randomUUID();
         UUID familyId = UUID.randomUUID();
         UUID identityId = UUID.randomUUID();
         UUID credentialId = UUID.randomUUID();
-        UUID outboxId = UUID.randomUUID();
-        UUID eventId = UUID.randomUUID();
         byte[] digest = new byte[] {1, 2, 3};
 
         AccountIdentityEntity identity = new AccountIdentityEntity(identityId, accountId, "issuer", "subject", "a@example.test", true, "ACTIVE", NOW, NOW);
@@ -56,6 +54,13 @@ class AccountsJavaBeanCompatibilityTest {
         assertEquals(familyId, session.getFamilyId());
         assertEquals("BROWSER", session.getClientKind());
         assertEquals(NOW, session.getRevokedAt());
+    }
+
+    @Test
+    void outbox_and_profile_entities_expose_jpa_getters_and_setters() {
+        UUID accountId = UUID.randomUUID();
+        UUID outboxId = UUID.randomUUID();
+        UUID eventId = UUID.randomUUID();
 
         AuthEmailOutboxEntity outbox = new AuthEmailOutboxEntity(outboxId, eventId, "a@example.test", "LOGIN_LINK", "encrypted", NOW, NOW, NOW, 0, "PENDING");
         outbox.setAttempts(3);

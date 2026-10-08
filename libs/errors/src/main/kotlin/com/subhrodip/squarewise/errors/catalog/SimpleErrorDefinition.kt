@@ -15,7 +15,6 @@ import com.subhrodip.squarewise.errors.code.RetryPolicy
 data class SimpleErrorDefinition(
     override val numericCode: ErrorCode,
     override val errorName: String,
-    override val legacyCode: String?,
     override val title: String,
     override val safeDetail: String,
     override val messageKey: String,

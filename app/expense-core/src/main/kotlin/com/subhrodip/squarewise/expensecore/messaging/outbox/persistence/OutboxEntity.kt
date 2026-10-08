@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.expensecore.messaging.outbox.persistence
+
 import com.subhrodip.squarewise.expensecore.messaging.outbox.model.OutboxStatus
 import jakarta.persistence.Column
 import jakarta.persistence.Entity

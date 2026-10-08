@@ -104,4 +104,31 @@ class AsyncExecutionTemplateTest {
             MessageDispositionStrategy.decide(BffErrors.UPSTREAM_TIMEOUT, 1, CancellationException())
         }
     }
+
+    @Test
+    fun `MessageDispositionStrategy branches are correctly resolved`() {
+        // IllegalArgumentException -> DEAD_LETTERED
+        assertEquals(
+            MessageDisposition.DEAD_LETTERED,
+            MessageDispositionStrategy.decide(BffErrors.UPSTREAM_TIMEOUT, 1, IllegalArgumentException("bad arg"))
+        )
+
+        // RETRY_AFTER with attemptCount < 3 -> NACK_REQUEUE
+        assertEquals(
+            MessageDisposition.NACK_REQUEUE,
+            MessageDispositionStrategy.decide(BffErrors.UPSTREAM_TIMEOUT, 2, RuntimeException("retryable"))
+        )
+
+        // RETRY_AFTER with attemptCount >= 3 -> DEAD_LETTERED
+        assertEquals(
+            MessageDisposition.DEAD_LETTERED,
+            MessageDispositionStrategy.decide(BffErrors.UPSTREAM_TIMEOUT, 3, RuntimeException("retry limit reached"))
+        )
+
+        // Non RETRY_AFTER -> DEAD_LETTERED
+        assertEquals(
+            MessageDisposition.DEAD_LETTERED,
+            MessageDispositionStrategy.decide(ExpenseErrors.GROUP_NOT_FOUND, 1, RuntimeException("not retryable"))
+        )
+    }
 }

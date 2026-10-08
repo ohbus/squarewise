@@ -1,5 +1,6 @@
 package com.subhrodip.squarewise.bff.graphql
 
+import com.subhrodip.squarewise.errors.code.CategoryCode
 import graphql.ExecutionResult
 import graphql.GraphQLError
 import graphql.GraphqlErrorBuilder
@@ -21,16 +22,16 @@ class GraphQlLimitErrorInstrumentation : SimplePerformantInstrumentation() {
             if (error.extensions?.containsKey("code") == true) {
                 error
             } else {
-                val code = if (isQueryLimitError(error)) "RATE_LIMITED" else "VALIDATION_FAILED"
+                val category = if (isQueryLimitError(error)) CategoryCode.RATE_LIMIT_EXCEEDED else CategoryCode.VALIDATION_ERROR
                 GraphqlErrorBuilder.newError()
-                    .message(if (code == "RATE_LIMITED") "GraphQL query limit exceeded" else "GraphQL request is invalid")
+                    .message(if (category == CategoryCode.RATE_LIMIT_EXCEEDED) "GraphQL query limit exceeded" else "GraphQL request is invalid")
                     .errorType(error.errorType)
                     .locations(error.locations)
                     .extensions(
                         buildMap<String, Any> {
-                            put("code", code)
+                            put("code", category.name)
                             put("requestId", UUID.randomUUID().toString())
-                            if (code == "RATE_LIMITED") put("retryAfterSeconds", 60)
+                            if (category == CategoryCode.RATE_LIMIT_EXCEEDED) put("retryAfterSeconds", 60)
                         }
                     )
                     .build()

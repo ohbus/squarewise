@@ -19,7 +19,7 @@ class StaticErrorPageFilter(
             response.status = 500
             response.contentType = "application/problem+json"
             response.writer.write(
-                """{"type":"https://squarewise.example/problems/unexpected_internal_error","title":"${PlatformErrors.UNEXPECTED_INTERNAL_ERROR.title}","status":500,"detail":"${PlatformErrors.UNEXPECTED_INTERNAL_ERROR.safeDetail}","instance":"/errors/unexpected_internal_error","code":"INTERNAL_ERROR","numericCode":"${PlatformErrors.UNEXPECTED_INTERNAL_ERROR.numericCode.value}","errorName":"${PlatformErrors.UNEXPECTED_INTERNAL_ERROR.errorName}","requestId":"${RequestIdContext.get()}","source":"servlet"}"""
+                """{"type":"https://squarewise.example/problems/unexpected_internal_error","title":"${PlatformErrors.UNEXPECTED_INTERNAL_ERROR.title}","status":500,"detail":"${PlatformErrors.UNEXPECTED_INTERNAL_ERROR.safeDetail}","instance":"/errors/unexpected_internal_error","code":"INTERNAL_ERROR","numericCode":"${PlatformErrors.UNEXPECTED_INTERNAL_ERROR.numericCode.value}","errorName":"${PlatformErrors.UNEXPECTED_INTERNAL_ERROR.errorName}","messageKey":"${PlatformErrors.UNEXPECTED_INTERNAL_ERROR.messageKey}","requestId":"${RequestIdContext.get()}","source":"servlet"}"""
             )
         }
     }

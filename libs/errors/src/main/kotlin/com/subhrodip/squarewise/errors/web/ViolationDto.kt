@@ -4,4 +4,6 @@ package com.subhrodip.squarewise.errors.web
 data class ViolationDto(
     val field: String,
     val message: String,
+    val messageKey: String? = null,
+    val rejectedValue: Any? = null,
 )

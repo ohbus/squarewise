@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.expensecore.groups.api
+
 import com.fasterxml.jackson.annotation.JsonProperty
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min

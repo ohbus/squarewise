@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.expensecore.search.persistence
+
 import com.subhrodip.squarewise.expensecore.expenses.persistence.repository.ExpenseRepository
 import com.subhrodip.squarewise.expensecore.search.api.SearchQuery
 import com.subhrodip.squarewise.expensecore.search.model.ExpenseSearch

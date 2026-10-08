@@ -1,4 +1,6 @@
 package com.subhrodip.squarewise.notifications.inbox
+
+import com.subhrodip.squarewise.errors.code.CategoryCode
 import com.subhrodip.squarewise.db.routing.DbExecutionContext
 import java.util.Base64
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -79,7 +81,7 @@ class InboxControllerTest {
         val err = assertThrows(SquarewiseException::class.java) {
             testInbox.page("alice", "bad", 10)
         }
-        assertEquals("VALIDATION_FAILED", err.definition.legacyCode)
+        assertEquals(CategoryCode.VALIDATION_ERROR, err.definition.category)
     }
 
     @Test
@@ -117,7 +119,7 @@ class InboxControllerTest {
     fun `rejects unauthenticated inbox listing`() {
         mvc.perform(get(ApiEndpoints.Notifications.V1.PATH_INBOX))
             .andExpect(status().isUnauthorized)
-            .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"))
+            .andExpect(jsonPath("$.code").value("AUTHENTICATION_ERROR"))
     }
 
     @Test
@@ -126,7 +128,7 @@ class InboxControllerTest {
 
         mvc.perform(get(ApiEndpoints.Notifications.V1.PATH_INBOX).with(blankSubject))
             .andExpect(status().isUnauthorized)
-            .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"))
+            .andExpect(jsonPath("$.code").value("AUTHENTICATION_ERROR"))
     }
 
     @Test
@@ -135,14 +137,14 @@ class InboxControllerTest {
 
         mvc.perform(post(ApiEndpoints.Notifications.V1.inboxMarkRead(UUID.randomUUID())).with(blankSubject))
             .andExpect(status().isUnauthorized)
-            .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"))
+            .andExpect(jsonPath("$.code").value("AUTHENTICATION_ERROR"))
     }
 
     @Test
     fun `rejects invalid inbox page limits with the validation application code`() {
         mvc.perform(get(ApiEndpoints.Notifications.V1.PATH_INBOX).with(user).param("limit", "0"))
-            .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+            .andExpect(status().isUnprocessableContent)
+            .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
     }
 
     @Test
@@ -151,7 +153,7 @@ class InboxControllerTest {
             controller.list(Principal { "alice" }, null, 101)
         }
 
-        assertEquals("VALIDATION_FAILED", error.definition.legacyCode)
+        assertEquals(CategoryCode.VALIDATION_ERROR, error.definition.category)
     }
 
     @Test
@@ -160,8 +162,8 @@ class InboxControllerTest {
             get(ApiEndpoints.Notifications.V1.PATH_INBOX)
                 .with(user)
                 .param("cursor", "not-a-valid-cursor")
-        ).andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+        ).andExpect(status().isUnprocessableContent)
+            .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
     }
 
     @Test
