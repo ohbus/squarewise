@@ -135,11 +135,18 @@ def main(evidence_output: Path | None = None, source_revision: str = "local-work
     )
     expect("Accounts rejects empty profile batch", status, 422)
 
-    status, _ = request_json(
+    status, body = request_json(
         f"{ACCOUNTS_URL}{ACCOUNTS_PROFILES_BATCH}", method="POST",
         body={"accountIds": ["not-a-uuid"]},
     )
-    expect("Accounts rejects malformed profile batch identifier", status, 422)
+    expect("Accounts rejects malformed profile batch identifier", status, 400, 422)
+    assert_problem_details(
+        "Accounts malformed profile batch identifier",
+        status,
+        body,
+        status,
+        "MALFORMED_REQUEST" if status == 400 else "VALIDATION_ERROR",
+    )
 
     status, _ = request_json(f"{NOTIFICATIONS_URL}{NOTIFICATIONS_INBOX}", token=None)
     expect("Notifications rejects unauthenticated inbox listing", status, 401)
