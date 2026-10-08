@@ -1,4 +1,6 @@
 package com.subhrodip.squarewise.accounts.auth.login
+
+import com.subhrodip.squarewise.errors.code.CategoryCode
 import java.time.Duration
 
 import com.subhrodip.squarewise.accounts.auth.credential.HmacCredentialDigest
@@ -105,7 +107,7 @@ class LoginVerificationServiceTest @Autowired constructor(
         val ex = assertThrows(SquarewiseException::class.java) {
             service.verify(issued.plaintext, "NATIVE", null, now.plusSeconds(2))
         }
-        assertEquals("UNAUTHENTICATED", ex.definition.legacyCode)
+        assertEquals(CategoryCode.AUTHENTICATION_ERROR, ex.definition.category)
     }
 
     @Test
@@ -158,7 +160,7 @@ class LoginVerificationServiceTest @Autowired constructor(
             failingService.verify("credential", "NATIVE", null, Instant.now())
         }
 
-        assertEquals("RATE_LIMITED", exception.definition.legacyCode)
+        assertEquals(CategoryCode.RATE_LIMIT_EXCEEDED, exception.definition.category)
     }
 
     @Test
@@ -182,6 +184,6 @@ class LoginVerificationServiceTest @Autowired constructor(
             deniedService.verify("credential", "NATIVE", null, Instant.now())
         }
 
-        assertEquals("RATE_LIMITED", exception.definition.legacyCode)
+        assertEquals(CategoryCode.RATE_LIMIT_EXCEEDED, exception.definition.category)
     }
 }

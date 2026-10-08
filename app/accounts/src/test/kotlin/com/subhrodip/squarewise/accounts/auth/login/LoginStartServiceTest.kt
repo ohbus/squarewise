@@ -1,4 +1,6 @@
 package com.subhrodip.squarewise.accounts.auth.login
+
+import com.subhrodip.squarewise.errors.code.CategoryCode
 import org.mockito.ArgumentMatchers.any
 
 import com.subhrodip.squarewise.accounts.auth.abuse.LoginRateLimitService
@@ -140,7 +142,7 @@ class LoginStartServiceTest {
             service.start("user@example.com", "network", LoginCredentialService.CredentialKind.LINK, now)
         }
 
-        assertEquals("RATE_LIMITED", exception.definition.legacyCode)
+        assertEquals(CategoryCode.RATE_LIMIT_EXCEEDED, exception.definition.category)
         verify(credentialService, never()).issue(
             "user@example.com",
             LoginCredentialService.CredentialKind.LINK,
@@ -158,7 +160,7 @@ class LoginStartServiceTest {
             service.start("user@example.com", "network", LoginCredentialService.CredentialKind.LINK, now)
         }
 
-        assertEquals("RATE_LIMITED", exception.definition.legacyCode)
+        assertEquals(CategoryCode.RATE_LIMIT_EXCEEDED, exception.definition.category)
         verify(credentialService, never()).issue(
             "user@example.com",
             LoginCredentialService.CredentialKind.LINK,

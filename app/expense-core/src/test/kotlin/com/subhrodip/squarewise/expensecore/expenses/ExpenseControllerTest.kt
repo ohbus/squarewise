@@ -1,4 +1,6 @@
 package com.subhrodip.squarewise.expensecore.expenses
+
+import com.subhrodip.squarewise.errors.code.CategoryCode
 import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
 import com.subhrodip.squarewise.expensecore.expenses.api.ExpenseController
 import com.subhrodip.squarewise.expensecore.expenses.api.request.AllocationInputDto
@@ -72,12 +74,12 @@ class ExpenseControllerTest {
         val missing = assertThrows<SquarewiseException> {
             controller.getBalances(UUID.randomUUID(), null)
         }
-        assertEquals("UNAUTHENTICATED", missing.definition.legacyCode)
+        assertEquals(CategoryCode.AUTHENTICATION_ERROR, missing.definition.category)
 
         val blank = assertThrows<SquarewiseException> {
             controller.getBalances(UUID.randomUUID(), Principal { "   " })
         }
-        assertEquals("UNAUTHENTICATED", blank.definition.legacyCode)
+        assertEquals(CategoryCode.AUTHENTICATION_ERROR, blank.definition.category)
     }
 
     /** Verifies every financial mutation rejects a missing principal before validation or persistence. */
@@ -105,22 +107,22 @@ class ExpenseControllerTest {
         )
 
         assertEquals(
-            "UNAUTHENTICATED",
+            CategoryCode.AUTHENTICATION_ERROR,
             assertThrows<SquarewiseException> {
                 controller.createExpense(groupId, "unauthenticated-create", createRequest, null)
-            }.definition.legacyCode
+            }.definition.category
         )
         assertEquals(
-            "UNAUTHENTICATED",
+            CategoryCode.AUTHENTICATION_ERROR,
             assertThrows<SquarewiseException> {
                 controller.updateExpense(groupId, expenseId, updateRequest, null)
-            }.definition.legacyCode
+            }.definition.category
         )
         assertEquals(
-            "UNAUTHENTICATED",
+            CategoryCode.AUTHENTICATION_ERROR,
             assertThrows<SquarewiseException> {
                 controller.deleteExpense(groupId, expenseId, null, null)
-            }.definition.legacyCode
+            }.definition.category
         )
     }
 
@@ -147,10 +149,10 @@ class ExpenseControllerTest {
         )
 
         assertEquals(
-            "VALIDATION_FAILED",
+            CategoryCode.VALIDATION_ERROR,
             assertThrows<SquarewiseException> {
                 controller.createExpense(groupId, "overflow-create", request, Principal { "test-user" })
-            }.definition.legacyCode
+            }.definition.category
         )
 
         val update = UpdateExpenseRequest(
@@ -161,10 +163,10 @@ class ExpenseControllerTest {
             allocation = request.allocation
         )
         assertEquals(
-            "VALIDATION_FAILED",
+            CategoryCode.VALIDATION_ERROR,
             assertThrows<SquarewiseException> {
                 controller.updateExpense(groupId, expenseId, update, Principal { "test-user" })
-            }.definition.legacyCode
+            }.definition.category
         )
     }
 
@@ -376,7 +378,7 @@ class ExpenseControllerTest {
                 .header(ApiEndpoints.Headers.IDEMPOTENCY_KEY, "idemp-key-test-mismatch")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json)
-        ).andExpect(status().isBadRequest)
+        ).andExpect(status().isUnprocessableEntity)
     }
 
     @Test
@@ -406,7 +408,7 @@ class ExpenseControllerTest {
             post(ApiEndpoints.ExpenseCore.V1.groupExpenses(groupId))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json)
-        ).andExpect(status().isBadRequest)
+        ).andExpect(status().isUnprocessableEntity)
     }
 
     @Test
@@ -559,7 +561,7 @@ class ExpenseControllerTest {
             val error = assertThrows<SquarewiseException> {
                 controller.updateExpense(groupId, expenseId, request, principal)
             }
-            assertEquals("VALIDATION_FAILED", error.definition.legacyCode)
+            assertEquals(CategoryCode.VALIDATION_ERROR, error.definition.category)
         }
     }
 
@@ -592,7 +594,7 @@ class ExpenseControllerTest {
             val error = assertThrows<SquarewiseException> {
                 controller.createExpense(groupId, "create-validation-$index", request, principal)
             }
-            assertEquals("VALIDATION_FAILED", error.definition.legacyCode)
+            assertEquals(CategoryCode.VALIDATION_ERROR, error.definition.category)
         }
     }
 
@@ -617,7 +619,7 @@ class ExpenseControllerTest {
             controller.createExpense(groupId, "category-boundary", request, Principal { "test-user" })
         }
 
-        assertEquals("VALIDATION_FAILED", error.definition.legacyCode)
+        assertEquals(CategoryCode.VALIDATION_ERROR, error.definition.category)
     }
 
     /** Verifies blank categories use the documented neutral category on create and update. */
@@ -724,12 +726,12 @@ class ExpenseControllerTest {
         val groupId = UUID.randomUUID()
 
         mvc.perform(get(ApiEndpoints.ExpenseCore.V1.groupExpenses(groupId)).param("limit", "0"))
-            .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+            .andExpect(status().isUnprocessableEntity)
+            .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
 
         mvc.perform(get(ApiEndpoints.ExpenseCore.V1.groupExpenses(groupId)).param("limit", "101"))
-            .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+            .andExpect(status().isUnprocessableEntity)
+            .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
     }
 
     @Test
@@ -748,7 +750,7 @@ class ExpenseControllerTest {
                 .header(ApiEndpoints.Headers.IDEMPOTENCY_KEY, "x".repeat(201))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json)
-        ).andExpect(status().isBadRequest)
+        ).andExpect(status().isUnprocessableEntity)
     }
 
     @Test
@@ -767,7 +769,7 @@ class ExpenseControllerTest {
                 .header(ApiEndpoints.Headers.IDEMPOTENCY_KEY, "bounded-category")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json)
-        ).andExpect(status().isBadRequest)
+        ).andExpect(status().isUnprocessableEntity)
     }
 
     @Test
@@ -788,7 +790,7 @@ class ExpenseControllerTest {
                 .header(ApiEndpoints.Headers.IDEMPOTENCY_KEY, "bounded-participants")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json)
-        ).andExpect(status().isBadRequest)
+        ).andExpect(status().isUnprocessableEntity)
     }
 
     /** Verifies the allocation-side participant limit is enforced independently of payer count. */
@@ -815,7 +817,7 @@ class ExpenseControllerTest {
                 Principal { "test-user" }
             )
         }
-        assertEquals("VALIDATION_FAILED", error.definition.legacyCode)
+        assertEquals(CategoryCode.VALIDATION_ERROR, error.definition.category)
     }
 
     /** Verifies simultaneous oversized payer and allocation collections fail at the shared bound. */
@@ -843,6 +845,6 @@ class ExpenseControllerTest {
                 Principal { "test-user" }
             )
         }
-        assertEquals("VALIDATION_FAILED", error.definition.legacyCode)
+        assertEquals(CategoryCode.VALIDATION_ERROR, error.definition.category)
     }
 }

@@ -1,4 +1,6 @@
 package com.subhrodip.squarewise.expensecore.expenses
+
+import com.subhrodip.squarewise.errors.code.CategoryCode
 import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseAllocation
 import com.subhrodip.squarewise.expensecore.expenses.domain.ExpensePayer
 
@@ -57,7 +59,7 @@ class ExpenseValidatorTest {
             val error = assertThrows(SquarewiseException::class.java) {
                 ExpenseValidator.validatePayers(listOf(payer), "EUR", "contributors")
             }
-            assertEquals("VALIDATION_FAILED", error.definition.legacyCode)
+            assertEquals(CategoryCode.VALIDATION_ERROR, error.definition.category)
             assertEquals(true, error.message?.contains("contributors"))
             assertEquals(true, error.message?.contains(expectedMessage))
         }
@@ -96,7 +98,7 @@ class ExpenseValidatorTest {
         val error = assertThrows(SquarewiseException::class.java) {
             ExpenseValidator.parseAndValidateAmount(value, field)
         }
-        assertEquals("VALIDATION_FAILED", error.definition.legacyCode)
+        assertEquals(CategoryCode.VALIDATION_ERROR, error.definition.category)
         assertEquals(true, error.message?.contains(field))
         assertEquals(true, error.message?.contains(expectedMessage))
     }

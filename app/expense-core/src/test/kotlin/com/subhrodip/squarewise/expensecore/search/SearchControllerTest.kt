@@ -148,8 +148,8 @@ class SearchControllerTest {
                 .with(alice)
                 .param("limit", "0")
         )
-            .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+            .andExpect(status().isUnprocessableEntity)
+            .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
     }
 
     @Test
@@ -161,8 +161,8 @@ class SearchControllerTest {
                 .with(alice)
                 .param("cursor", "%%%invalid%%")
         )
-            .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+            .andExpect(status().isUnprocessableEntity)
+            .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
     }
 
     @Test
@@ -238,8 +238,8 @@ class SearchControllerTest {
                 .with(alice)
                 .param("maxRows", "2")
         )
-            .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+            .andExpect(status().isUnprocessableEntity)
+            .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
     }
 
     @Test
@@ -251,8 +251,8 @@ class SearchControllerTest {
                 .with(alice)
                 .param("maxRows", "0")
         )
-            .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+            .andExpect(status().isUnprocessableEntity)
+            .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
     }
 
     @Test

@@ -1,4 +1,6 @@
 package com.subhrodip.squarewise.bff.graphql
+
+import com.subhrodip.squarewise.errors.code.CategoryCode
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.verifyNoInteractions
 
@@ -204,7 +206,7 @@ class GraphqlHttpTransportTest {
             .expectStatus().isOk
             .expectBody()
             .jsonPath("$.errors").isArray
-            .jsonPath("$.errors[0].extensions.code").isEqualTo("VALIDATION_FAILED")
+            .jsonPath("$.errors[0].extensions.code").isEqualTo("VALIDATION_ERROR")
             .jsonPath("$.data").doesNotExist()
     }
 
@@ -378,7 +380,7 @@ class GraphqlHttpTransportTest {
             .exchange()
             .expectStatus().isOk
             .expectBody()
-            .jsonPath("$.errors[0].extensions.code").isEqualTo("RATE_LIMITED")
+            .jsonPath("$.errors[0].extensions.code").isEqualTo(CategoryCode.RATE_LIMIT_EXCEEDED.name)
             .jsonPath("$.errors[0].extensions.retryAfterSeconds").isEqualTo(60)
             .jsonPath("$.errors[0].extensions.requestId").isNotEmpty
             .jsonPath("$.errors[0].message").isEqualTo("Rate limit exceeded")
@@ -533,7 +535,7 @@ class GraphqlHttpTransportTest {
             .expectStatus().isOk
             .expectBody()
             .jsonPath("$.errors").isArray
-            .jsonPath("$.errors[0].extensions.code").isEqualTo("RATE_LIMITED")
+            .jsonPath("$.errors[0].extensions.code").isEqualTo(CategoryCode.RATE_LIMIT_EXCEEDED.name)
             .jsonPath("$.data").doesNotExist()
 
         verifyNoInteractions(accountsGateway, expenseCoreGateway)

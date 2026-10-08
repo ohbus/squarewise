@@ -1,4 +1,6 @@
 package com.subhrodip.squarewise.expensecore.expenses
+
+import com.subhrodip.squarewise.errors.code.CategoryCode
 import com.subhrodip.squarewise.expensecore.expenses.api.AllocationPreviewController
 import com.subhrodip.squarewise.expensecore.expenses.api.request.AllocationPreviewRequest
 import com.subhrodip.squarewise.expensecore.expenses.domain.AllocationCalculator
@@ -46,8 +48,8 @@ class AllocationPreviewControllerTest {
             post(ApiEndpoints.ExpenseCore.V1.PATH_ALLOCATION_PREVIEW)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""{"totalMinor":"100","participantIds":[]}""")
-        ).andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+        ).andExpect(status().isUnprocessableEntity)
+            .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
             .andExpect(jsonPath("$.requestId").value("missing-request-id"))
     }
 
@@ -77,7 +79,7 @@ class AllocationPreviewControllerTest {
             )
         }
 
-        assertEquals("VALIDATION_FAILED", error.definition.legacyCode)
+        assertEquals(CategoryCode.VALIDATION_ERROR, error.definition.category)
         assertEquals("participant IDs must be unique", error.message)
     }
 }

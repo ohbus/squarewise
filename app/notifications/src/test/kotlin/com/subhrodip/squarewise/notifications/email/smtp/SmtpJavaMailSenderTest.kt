@@ -1,4 +1,6 @@
 package com.subhrodip.squarewise.notifications.email.smtp
+
+import com.subhrodip.squarewise.errors.code.CategoryCode
 import java.io.BufferedReader
 import java.io.InputStream
 import java.io.InputStreamReader
@@ -94,7 +96,7 @@ class SmtpJavaMailSenderTest {
             SmtpJavaMailSender(properties).send(SimpleMailMessage(subject = "subject"))
         }
 
-        assertEquals("VALIDATION_FAILED", error.definition.legacyCode)
+        assertEquals(CategoryCode.VALIDATION_ERROR, error.definition.category)
     }
 
     /** Verifies non-SMTP socket failures are normalized as delivery failures. */

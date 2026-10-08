@@ -62,7 +62,7 @@ class BffErrorResolverTest {
     @Test
     fun `local and timeout failures use governed definitions`() {
         val resolver = BffGraphQLErrorResolver()
-        val local = resolver.resolve(EntityNotFoundException(ResourceIdentifier("group")), environment, "request")
+        val local = resolver.resolve(EntityNotFoundException(ResourceIdentifier("group"), ExpenseErrors.GROUP_NOT_FOUND), environment, "request")
         val timeout = resolver.resolve(TimeoutException("network timeout"), environment, "request")
 
         assertEquals(ExpenseErrors.GROUP_NOT_FOUND.numericCode.value, local.extensions!!["numericCode"])

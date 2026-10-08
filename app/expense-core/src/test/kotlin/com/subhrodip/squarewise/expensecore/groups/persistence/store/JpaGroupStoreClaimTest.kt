@@ -1,5 +1,7 @@
 package com.subhrodip.squarewise.expensecore.groups.persistence.store
 
+import com.subhrodip.squarewise.errors.code.CategoryCode
+
 import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
 import com.subhrodip.squarewise.expensecore.groups.domain.GroupEntity
 import com.subhrodip.squarewise.expensecore.groups.domain.GroupInvitationEntity
@@ -45,7 +47,7 @@ class JpaGroupStoreClaimTest {
             store.claim(token, "invitee")
         }
 
-        assertEquals("NOT_FOUND", error.definition.legacyCode)
+        assertEquals(CategoryCode.NOT_FOUND, error.definition.category)
     }
 
     @Test
@@ -62,7 +64,7 @@ class JpaGroupStoreClaimTest {
             store.claim(token, "invitee")
         }
 
-        assertEquals("CONFLICT", error.definition.legacyCode)
+        assertEquals(CategoryCode.STATE_CONFLICT, error.definition.category)
     }
 
     /** Verifies a normal invitation race fails before creating a membership or side effects. */
@@ -80,7 +82,7 @@ class JpaGroupStoreClaimTest {
             store.claim(token, "invitee")
         }
 
-        assertEquals("CONFLICT", error.definition.legacyCode)
+        assertEquals(CategoryCode.STATE_CONFLICT, error.definition.category)
     }
 
     /** Verifies a targeted placeholder race fails before binding the placeholder. */
@@ -106,7 +108,7 @@ class JpaGroupStoreClaimTest {
             store.claim(token, "invitee")
         }
 
-        assertEquals("CONFLICT", error.definition.legacyCode)
+        assertEquals(CategoryCode.STATE_CONFLICT, error.definition.category)
     }
 
     @Test
@@ -124,7 +126,7 @@ class JpaGroupStoreClaimTest {
             store.revokeInvite(groupId, "owner", token)
         }
 
-        assertEquals("CONFLICT", error.definition.legacyCode)
+        assertEquals(CategoryCode.STATE_CONFLICT, error.definition.category)
     }
 
     @Test
@@ -138,7 +140,7 @@ class JpaGroupStoreClaimTest {
             store.claim(token, "invitee")
         }
 
-        assertEquals("CONFLICT", error.definition.legacyCode)
+        assertEquals(CategoryCode.STATE_CONFLICT, error.definition.category)
     }
 
     @Test
@@ -162,7 +164,7 @@ class JpaGroupStoreClaimTest {
             store.claim(token, "invitee")
         }
 
-        assertEquals("CONFLICT", error.definition.legacyCode)
+        assertEquals(CategoryCode.STATE_CONFLICT, error.definition.category)
     }
 
     @Test
@@ -175,7 +177,7 @@ class JpaGroupStoreClaimTest {
             store.update(groupId, "outsider", UpdateGroupRequest("Renamed"))
         }
 
-        assertEquals("NOT_FOUND", error.definition.legacyCode)
+        assertEquals(CategoryCode.NOT_FOUND, error.definition.category)
     }
 
     private fun invitation(token: String, groupId: UUID, placeholderId: UUID? = null): GroupInvitationEntity =

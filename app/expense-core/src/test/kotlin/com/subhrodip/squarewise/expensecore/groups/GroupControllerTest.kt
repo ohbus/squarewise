@@ -56,8 +56,8 @@ class GroupControllerTest {
     fun `rejects invalid group request`() {
         val result = mvc.perform(post(ApiEndpoints.ExpenseCore.V1.PATH_GROUPS).with(alice).contentType(MediaType.APPLICATION_JSON)
             .content("{\"name\":\"\",\"kind\":\"INVALID\",\"currency\":\"eur\"}"))
-            .andExpect(status().isBadRequest).andReturn()
-        assertEquals("VALIDATION_FAILED", result.response.getContentAsString().let { body ->
+            .andExpect(status().isUnprocessableEntity).andReturn()
+        assertEquals("VALIDATION_ERROR", result.response.getContentAsString().let { body ->
             Regex("\\\"code\\\":\\\"([^\\\"]+)\\\"").find(body)!!.groupValues[1]
         })
     }
@@ -231,7 +231,7 @@ class GroupControllerTest {
                 .content("{\"name\":\"ignored\"}")
         )
             .andExpect(status().isConflict)
-            .andExpect(jsonPath("$.code").value("CONFLICT"))
+            .andExpect(jsonPath("$.code").value("STATE_CONFLICT"))
     }
 
     /** Verifies the controlled member-fanout fault returns the documented upstream error. */

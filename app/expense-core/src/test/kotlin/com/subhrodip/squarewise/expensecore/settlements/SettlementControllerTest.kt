@@ -41,9 +41,11 @@ class SettlementControllerTest {
 
     @Test
     fun `rejects non numeric amount`() {
-        mvc.perform(post(ApiEndpoints.ExpenseCore.V1.groupSettlements(UUID.randomUUID())).contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(post(ApiEndpoints.ExpenseCore.V1.groupSettlements(UUID.randomUUID())).with(user)
+            .header(ApiEndpoints.Headers.IDEMPOTENCY_KEY, "settlement-key-0001")
+            .contentType(MediaType.APPLICATION_JSON)
             .content("{\"fromParticipantId\":\"${UUID.randomUUID()}\",\"toParticipantId\":\"${UUID.randomUUID()}\",\"amountMinor\":\"x\",\"currency\":\"EUR\"}"))
-            .andExpect(status().isBadRequest)
+            .andExpect(status().isUnprocessableEntity)
     }
 
     @Test
@@ -110,7 +112,7 @@ class SettlementControllerTest {
         mvc.perform(
             get(ApiEndpoints.ExpenseCore.V1.groupSettlementSuggestions(UUID.randomUUID()))
         ).andExpect(status().isUnauthorized)
-            .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"))
+            .andExpect(jsonPath("$.code").value("AUTHENTICATION_ERROR"))
     }
 
     /** Verifies that a principal with no usable subject cannot cross the settlement boundary. */
@@ -121,7 +123,7 @@ class SettlementControllerTest {
         mvc.perform(
             get(ApiEndpoints.ExpenseCore.V1.groupSettlementSuggestions(UUID.randomUUID())).with(blankSubject)
         ).andExpect(status().isUnauthorized)
-            .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"))
+            .andExpect(jsonPath("$.code").value("AUTHENTICATION_ERROR"))
     }
 
     /** Verifies recording, reversal, and reversal replay through the public REST boundary. */
@@ -193,12 +195,12 @@ class SettlementControllerTest {
         mvc.perform(post(ApiEndpoints.ExpenseCore.V1.groupSettlements(groupId)).with(user).header(ApiEndpoints.Headers.IDEMPOTENCY_KEY, "invalid-key-0001")
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"fromParticipantId\":\"$participant\",\"toParticipantId\":\"$participant\",\"amountMinor\":\"100\",\"currency\":\"EUR\"}"))
-            .andExpect(status().isBadRequest)
+            .andExpect(status().isUnprocessableEntity)
 
         mvc.perform(post(ApiEndpoints.ExpenseCore.V1.groupSettlements(groupId)).with(user).header(ApiEndpoints.Headers.IDEMPOTENCY_KEY, "invalid-key-0002")
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"fromParticipantId\":\"${UUID.randomUUID()}\",\"toParticipantId\":\"${UUID.randomUUID()}\",\"amountMinor\":\"0\",\"currency\":\"EUR\"}"))
-            .andExpect(status().isBadRequest)
+            .andExpect(status().isUnprocessableEntity)
 
         mvc.perform(post(ApiEndpoints.ExpenseCore.V1.groupSettlementReversal(groupId, UUID.randomUUID())).with(user)
             .contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"unknown\"}"))

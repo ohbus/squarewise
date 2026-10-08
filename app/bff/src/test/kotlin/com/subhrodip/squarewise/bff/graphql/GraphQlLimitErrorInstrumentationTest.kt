@@ -1,5 +1,6 @@
 package com.subhrodip.squarewise.bff.graphql
 
+import com.subhrodip.squarewise.errors.code.CategoryCode
 import graphql.GraphqlErrorBuilder
 import graphql.ExecutionResultImpl
 import graphql.execution.instrumentation.parameters.InstrumentationExecutionParameters
@@ -18,7 +19,7 @@ class GraphQlLimitErrorInstrumentationTest {
         listOf("Maximum query complexity exceeded", "Maximum query depth exceeded").forEach { message ->
             val result = instrument(message)
 
-            assertEquals("RATE_LIMITED", result.errors.single().extensions?.get("code"))
+            assertEquals(CategoryCode.RATE_LIMIT_EXCEEDED.name, result.errors.single().extensions?.get("code"))
             assertEquals(60, result.errors.single().extensions?.get("retryAfterSeconds"))
             assertNotNull(result.errors.single().extensions?.get("requestId"))
         }
@@ -29,7 +30,7 @@ class GraphQlLimitErrorInstrumentationTest {
         val result = instrument("Field cannot be selected")
         val error = result.errors.single()
 
-        assertEquals("VALIDATION_FAILED", error.extensions?.get("code"))
+        assertEquals(CategoryCode.VALIDATION_ERROR.name, error.extensions?.get("code"))
         assertEquals("GraphQL request is invalid", error.message)
         assertNotNull(error.extensions?.get("requestId"))
     }

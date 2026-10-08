@@ -1,4 +1,6 @@
 package com.subhrodip.squarewise.expensecore.recurring
+
+import com.subhrodip.squarewise.errors.code.CategoryCode
 import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
 import org.junit.jupiter.api.assertThrows
 import com.subhrodip.squarewise.expensecore.expenses.api.request.MoneyDto
@@ -169,12 +171,12 @@ class RecurringExpenseControllerTest @Autowired constructor(
         val createErr = assertThrows<SquarewiseException> {
             controller.createSchedule(randomGroup, createRequest, alice)
         }
-        assertEquals("NOT_FOUND", createErr.definition.legacyCode)
+        assertEquals(CategoryCode.NOT_FOUND, createErr.definition.category)
 
         val getErr = assertThrows<SquarewiseException> {
             controller.getSchedule(randomGroup, randomSchedule, alice)
         }
-        assertEquals("NOT_FOUND", getErr.definition.legacyCode)
+        assertEquals(CategoryCode.NOT_FOUND, getErr.definition.category)
     }
 
     /** Verifies schedule lookup, pause, and resume reject missing and foreign schedules. */
@@ -203,7 +205,7 @@ class RecurringExpenseControllerTest @Autowired constructor(
             { controller.resumeSchedule(otherGroup.groupId, schedule.scheduleId, alice) }
         ).forEach { operation ->
             val error = assertThrows<SquarewiseException> { operation() }
-            assertEquals("NOT_FOUND", error.definition.legacyCode)
+            assertEquals(CategoryCode.NOT_FOUND, error.definition.category)
         }
     }
 
@@ -222,18 +224,18 @@ class RecurringExpenseControllerTest @Autowired constructor(
             val error = assertThrows<SquarewiseException> {
                 controller.createSchedule(group.groupId, validRequest.copy(amount = MoneyDto("EUR", amount)), alice)
             }
-            assertEquals("VALIDATION_FAILED", error.definition.legacyCode)
+            assertEquals(CategoryCode.VALIDATION_ERROR, error.definition.category)
         }
 
         val blankSubject = assertThrows<SquarewiseException> {
             controller.createSchedule(group.groupId, validRequest, Principal { "   " })
         }
-        assertEquals("UNAUTHENTICATED", blankSubject.definition.legacyCode)
+        assertEquals(CategoryCode.AUTHENTICATION_ERROR, blankSubject.definition.category)
 
         val nonMember = assertThrows<SquarewiseException> {
             controller.createSchedule(group.groupId, validRequest, Principal { "bob" })
         }
-        assertEquals("NOT_FOUND", nonMember.definition.legacyCode)
+        assertEquals(CategoryCode.NOT_FOUND, nonMember.definition.category)
     }
 
     @Test
@@ -249,6 +251,6 @@ class RecurringExpenseControllerTest @Autowired constructor(
         val error = assertThrows<SquarewiseException> {
             controller.createSchedule(group.groupId, request, null)
         }
-        assertEquals("UNAUTHENTICATED", error.definition.legacyCode)
+        assertEquals(CategoryCode.AUTHENTICATION_ERROR, error.definition.category)
     }
 }

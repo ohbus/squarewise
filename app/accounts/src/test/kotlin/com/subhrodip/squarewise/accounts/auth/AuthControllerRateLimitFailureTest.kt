@@ -1,5 +1,7 @@
 package com.subhrodip.squarewise.accounts.auth
 
+import com.subhrodip.squarewise.errors.code.CategoryCode
+
 import com.subhrodip.squarewise.accounts.auth.abuse.ClientAddressResolver
 import com.subhrodip.squarewise.accounts.auth.abuse.RateLimitStoreUnavailableException
 import com.subhrodip.squarewise.accounts.auth.abuse.RefreshRateLimitService
@@ -46,7 +48,7 @@ class AuthControllerRateLimitFailureTest {
             controller.refreshToken(RefreshTokenRequest("opaque-refresh-token"), request)
         }
 
-        assertEquals("RATE_LIMITED", error.definition.legacyCode)
+        assertEquals(CategoryCode.RATE_LIMIT_EXCEEDED, error.definition.category)
         assertEquals("LOGIN_LIMITER_UNAVAILABLE", error.message)
     }
 }
