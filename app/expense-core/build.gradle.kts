@@ -9,11 +9,9 @@ kotlin { jvmToolchain(25) }
 dependencies {
     implementation(project(":libs:db"))
     implementation(project(":libs:security"))
-    implementation(libs.kotlin.reflect)
     implementation(project(":libs:errors"))
     implementation(project(":libs:ids"))
     implementation(libs.boot.actuator)
-    runtimeOnly(libs.micrometer.prometheus)
     implementation(libs.boot.web)
     implementation(libs.boot.validation)
     implementation(libs.boot.security)
@@ -21,11 +19,16 @@ dependencies {
     implementation(libs.boot.data.jpa)
     implementation(libs.boot.amqp)
     implementation(libs.boot.flyway)
+    implementation(libs.kotlin.reflect)
+    implementation(libs.kotlinx.coroutines.core)
+
+    runtimeOnly(libs.micrometer.prometheus)
     runtimeOnly(libs.flyway.postgresql)
     runtimeOnly(libs.postgresql)
-    implementation(libs.kotlinx.coroutines.core)
-    testRuntimeOnly(libs.h2)
+
     testImplementation(libs.boot.test)
+
+    testRuntimeOnly(libs.h2)
 }
 tasks.withType<Test> { useJUnitPlatform() }
 base { archivesName.set("squarewise-expense-core") }

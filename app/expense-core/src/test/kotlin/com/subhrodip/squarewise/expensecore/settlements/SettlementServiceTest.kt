@@ -1,4 +1,5 @@
 package com.subhrodip.squarewise.expensecore.settlements
+import com.subhrodip.squarewise.expensecore.settlements.domain.Settlement
 import com.subhrodip.squarewise.expensecore.settlements.domain.SettlementStatus
 import com.subhrodip.squarewise.expensecore.settlements.persistence.InMemorySettlementStore
 import com.subhrodip.squarewise.expensecore.settlements.service.SettlementService
@@ -29,10 +30,10 @@ class SettlementServiceTest {
         val groupId = UUID.randomUUID()
         val from = UUID.randomUUID()
         val to = UUID.randomUUID()
-        service.record(groupId, UUID.randomUUID(), from, to, 1250, "EUR", "actor-1", "settlement-key-0001")
+        service.record(groupId, from, to, 1250, "EUR", "actor-1", "settlement-key-0001")
 
         assertThrows(SquarewiseException::class.java) {
-            service.record(groupId, UUID.randomUUID(), from, to, 1300, "EUR", "actor-1", "settlement-key-0001")
+            service.record(groupId, from, to, 1300, "EUR", "actor-1", "settlement-key-0001")
         }
     }
 
@@ -43,8 +44,8 @@ class SettlementServiceTest {
         val from = UUID.randomUUID()
         val to = UUID.randomUUID()
 
-        val first = service.record(groupId, UUID.randomUUID(), from, to, 1250, "EUR", "actor-1", "settlement-key-0001")
-        val replay = service.record(groupId, UUID.randomUUID(), from, to, 1250, "EUR", "actor-1", "settlement-key-0001")
+        val first = service.record(groupId, from, to, 1250, "EUR", "actor-1", "settlement-key-0001")
+        val replay = service.record(groupId, from, to, 1250, "EUR", "actor-1", "settlement-key-0001")
 
         assertEquals(first.id, replay.id)
         assertEquals(first, replay)
@@ -64,19 +65,19 @@ class SettlementServiceTest {
             service.record(groupId, UUID.randomUUID(), participant, other, 0, "EUR")
         }
         assertThrows(IllegalArgumentException::class.java) {
-            service.record(groupId, UUID.randomUUID(), participant, other, 1, "EUR", " ", "settlement-key-0001")
+            service.record(groupId, participant, other, 1, "EUR", " ", "settlement-key-0001")
         }
         assertThrows(IllegalArgumentException::class.java) {
-            service.record(groupId, UUID.randomUUID(), participant, other, 1, "EUR", "actor-1", "short")
+            service.record(groupId, participant, other, 1, "EUR", "actor-1", "short")
         }
         assertThrows(IllegalArgumentException::class.java) {
-            service.record(groupId, UUID.randomUUID(), participant, other, 1, "EUR", "actor-1", "x".repeat(201))
+            service.record(groupId, participant, other, 1, "EUR", "actor-1", "x".repeat(201))
         }
         assertThrows(IllegalArgumentException::class.java) {
-            service.record(groupId, UUID.randomUUID(), participant, other, 1, "EUR", "actor-1", null)
+            service.record(groupId, Settlement(UUID.randomUUID(), participant, other, 1, "EUR"), "actor-1", null)
         }
         assertThrows(IllegalArgumentException::class.java) {
-            service.record(groupId, UUID.randomUUID(), participant, other, 1, "EUR", null, "settlement-key-0001")
+            service.record(groupId, Settlement(UUID.randomUUID(), participant, other, 1, "EUR"), null, "settlement-key-0001")
         }
     }
 

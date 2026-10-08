@@ -6,7 +6,7 @@ import com.subhrodip.squarewise.security.ratelimit.RateLimitPolicyIds
 import com.subhrodip.squarewise.security.ratelimit.RateLimiter
 
 /** Contract for distributed notification delivery admission decisions. */
-interface DeliveryRateLimiter {
+fun interface DeliveryRateLimiter {
     /** Returns whether the subject remains within the configured delivery limit. */
     fun allow(subject: String): Boolean
 }

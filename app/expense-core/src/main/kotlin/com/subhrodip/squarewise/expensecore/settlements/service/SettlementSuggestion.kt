@@ -21,58 +21,75 @@ class SettlementSuggestionEngine(private val expenseStore: ExpenseStore) {
         val results = mutableListOf<SuggestedSettlement>()
 
         for ((currency, items) in byCurrency) {
-            val netByParticipant = mutableMapOf<UUID, Long>()
-            for (item in items) {
-                val participantId = UUID.fromString(item.participantId)
-                val minor = item.amount.minor.toLong()
-                netByParticipant[participantId] = FinancialArithmetic.add(netByParticipant[participantId] ?: 0L, minor)
-            }
+            results.addAll(calculateSuggestionsForCurrency(currency, items))
+        }
 
-            val debtorComparator = compareBy<Debtor> { it.balance }.thenBy { it.participantId }
-            val creditorComparator = compareByDescending<Creditor> { it.balance }.thenBy { it.participantId }
+        return results
+    }
 
-            val debtors = PriorityQueue(debtorComparator)
-            val creditors = PriorityQueue(creditorComparator)
+    private fun calculateSuggestionsForCurrency(
+        currency: String,
+        items: List<GroupBalanceItem>
+    ): List<SuggestedSettlement> {
+        val netByParticipant = mutableMapOf<UUID, Long>()
+        for (item in items) {
+            val participantId = UUID.fromString(item.participantId)
+            val minor = item.amount.minor.toLong()
+            netByParticipant[participantId] = FinancialArithmetic.add(netByParticipant[participantId] ?: 0L, minor)
+        }
 
-            for ((participantId, balance) in netByParticipant) {
-                if (balance < 0) {
-                    debtors.add(Debtor(participantId, balance))
-                } else if (balance > 0) {
-                    creditors.add(Creditor(participantId, balance))
-                }
-            }
+        val debtorComparator = compareBy<Debtor> { it.balance }.thenBy { it.participantId }
+        val creditorComparator = compareByDescending<Creditor> { it.balance }.thenBy { it.participantId }
 
-            while (debtors.isNotEmpty() && creditors.isNotEmpty()) {
-                val debtor = debtors.poll()
-                val creditor = creditors.poll()
+        val debtors = PriorityQueue(debtorComparator)
+        val creditors = PriorityQueue(creditorComparator)
 
-                val debtorDebt = FinancialArithmetic.negate(debtor.balance)
-                val creditorCredit = creditor.balance
-                val transferAmount = minOf(debtorDebt, creditorCredit)
-
-                if (transferAmount > 0) {
-                    results.add(
-                        SuggestedSettlement(
-                            fromParticipantId = debtor.participantId,
-                            toParticipantId = creditor.participantId,
-                            amountMinor = transferAmount,
-                            currency = currency
-                        )
-                    )
-                }
-
-                val remainingDebtorBalance = debtor.balance + transferAmount
-                val remainingCreditorBalance = creditor.balance - transferAmount
-
-                if (remainingDebtorBalance < 0) {
-                    debtors.add(Debtor(debtor.participantId, remainingDebtorBalance))
-                }
-                if (remainingCreditorBalance > 0) {
-                    creditors.add(Creditor(creditor.participantId, remainingCreditorBalance))
-                }
+        for ((participantId, balance) in netByParticipant) {
+            if (balance < 0) {
+                debtors.add(Debtor(participantId, balance))
+            } else if (balance > 0) {
+                creditors.add(Creditor(participantId, balance))
             }
         }
 
+        return matchDebtorsAndCreditors(currency, debtors, creditors)
+    }
+
+    private fun matchDebtorsAndCreditors(
+        currency: String,
+        debtors: PriorityQueue<Debtor>,
+        creditors: PriorityQueue<Creditor>
+    ): List<SuggestedSettlement> {
+        val results = mutableListOf<SuggestedSettlement>()
+        while (debtors.isNotEmpty() && creditors.isNotEmpty()) {
+            val debtor = debtors.poll()
+            val creditor = creditors.poll()
+
+            val debtorDebt = FinancialArithmetic.negate(debtor.balance)
+            val creditorCredit = creditor.balance
+            val transferAmount = minOf(debtorDebt, creditorCredit)
+
+            if (transferAmount > 0) {
+                results.add(
+                    SuggestedSettlement(
+                        fromParticipantId = debtor.participantId,
+                        toParticipantId = creditor.participantId,
+                        amountMinor = transferAmount,
+                        currency = currency
+                    )
+                )
+            }
+
+            val remainingDebtorBalance = debtor.balance + transferAmount
+            val remainingCreditorBalance = creditor.balance - transferAmount
+
+            if (remainingDebtorBalance < 0) {
+                debtors.add(Debtor(debtor.participantId, remainingDebtorBalance))
+            }
+            if (remainingCreditorBalance > 0) {
+                creditors.add(Creditor(creditor.participantId, remainingCreditorBalance))
+            }
+        }
         return results
     }
 

@@ -21,7 +21,17 @@ class GraphQlScalarConfiguration {
 
     @Bean
     fun runtimeWiringConfigurer(): RuntimeWiringConfigurer {
-        val moneyMinorScalar = GraphQLScalarType.newScalar()
+        val moneyMinorScalar = buildMoneyMinorScalar()
+        val dateTimeScalar = buildDateTimeScalar()
+
+        return RuntimeWiringConfigurer { wiringBuilder ->
+            wiringBuilder.scalar(moneyMinorScalar)
+            wiringBuilder.scalar(dateTimeScalar)
+        }
+    }
+
+    private fun buildMoneyMinorScalar(): GraphQLScalarType =
+        GraphQLScalarType.newScalar()
             .name("MoneyMinor")
             .description("String-backed integer minor unit representation")
             .coercing(object : Coercing<String, String> {
@@ -58,7 +68,8 @@ class GraphQlScalarConfiguration {
             })
             .build()
 
-        val dateTimeScalar = GraphQLScalarType.newScalar()
+    private fun buildDateTimeScalar(): GraphQLScalarType =
+        GraphQLScalarType.newScalar()
             .name("DateTime")
             .description("ISO-8601 DateTime scalar")
             .coercing(object : Coercing<String, String> {
@@ -95,10 +106,4 @@ class GraphQlScalarConfiguration {
                 }
             })
             .build()
-
-        return RuntimeWiringConfigurer { wiringBuilder ->
-            wiringBuilder.scalar(moneyMinorScalar)
-            wiringBuilder.scalar(dateTimeScalar)
-        }
-    }
 }

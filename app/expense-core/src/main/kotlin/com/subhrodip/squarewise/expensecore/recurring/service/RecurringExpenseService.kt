@@ -233,7 +233,7 @@ class RecurringExpenseService(
 
             if (!alreadyExists) {
                 try {
-                    val expenseRecord = buildExpenseRecord(schedule, occurrenceDate, occurrenceId, members)
+                    val expenseRecord = buildExpenseRecord(schedule, occurrenceId, members)
                     expenseStore.create(schedule.groupId, expenseRecord, occurrenceId.toString())
 
                     val occurrence = RecurringExpenseOccurrence(
@@ -301,7 +301,6 @@ class RecurringExpenseService(
 
     private fun buildExpenseRecord(
         schedule: RecurringExpenseSchedule,
-        occurrenceDate: LocalDate,
         occurrenceId: UUID,
         members: List<UUID>
     ): ExpenseRecord {
@@ -352,7 +351,6 @@ class RecurringExpenseService(
 
         return rows.map { row ->
             val subject = row[0] as String
-            val membershipId = row[1] as UUID
             try {
                 UUID.fromString(subject)
             } catch (_: IllegalArgumentException) {

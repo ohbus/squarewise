@@ -9,7 +9,7 @@ import java.util.UUID
  * by an internal cryptographic signer (RFC 7519 / Nimbus) or an external OIDC provider
  * (such as Keycloak, Auth0, or Okta token exchange).
  */
-interface IdentityProviderPort {
+fun interface IdentityProviderPort {
     /**
      * Issues an access token for the given authenticated subject.
      *

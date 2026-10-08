@@ -17,7 +17,6 @@ dependencies {
     }
     implementation(libs.boot.actuator)
     implementation(libs.boot.validation)
-    runtimeOnly(libs.micrometer.prometheus)
     implementation(libs.boot.security)
     implementation(libs.boot.resource.server)
     implementation(libs.boot.graphql)
@@ -26,6 +25,9 @@ dependencies {
     implementation(libs.boot.webclient)
     implementation(libs.jackson.databind)
     implementation(libs.kotlin.reflect)
+
+    runtimeOnly(libs.micrometer.prometheus)
+
     testImplementation(libs.boot.test)
     testImplementation(kotlin("test"))
 }

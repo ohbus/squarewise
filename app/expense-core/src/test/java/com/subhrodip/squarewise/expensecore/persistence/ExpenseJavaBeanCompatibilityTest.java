@@ -29,7 +29,7 @@ class ExpenseJavaBeanCompatibilityTest {
     private static final Instant NOW = Instant.parse("2026-10-03T00:00:00Z");
 
     @Test
-    void persistence_entities_expose_jpa_getters_and_setters() {
+    void expense_entities_expose_jpa_getters_and_setters() {
         UUID groupId = UUID.randomUUID();
         UUID expenseId = UUID.randomUUID();
         UUID participantId = UUID.randomUUID();
@@ -77,6 +77,12 @@ class ExpenseJavaBeanCompatibilityTest {
         assertEquals(expense, allocation.getExpense());
         assertEquals(participantId, allocation.getParticipantId());
         assertEquals(1200, allocation.getAllocatedMinor());
+    }
+
+    @Test
+    void group_and_settlement_entities_expose_jpa_getters_and_setters() {
+        UUID groupId = UUID.randomUUID();
+        UUID participantId = UUID.randomUUID();
 
         GroupEntity group = new GroupEntity();
         group.setGroupId(groupId);
@@ -144,6 +150,13 @@ class ExpenseJavaBeanCompatibilityTest {
         assertEquals(participantId, settlement.getFromParticipantId());
         assertEquals(400, settlement.getAmountMinor());
         assertEquals(SettlementStatus.RECORDED, settlement.getStatus());
+    }
+
+    @Test
+    void sync_and_posting_entities_expose_jpa_getters_and_setters() {
+        UUID groupId = UUID.randomUUID();
+        UUID expenseId = UUID.randomUUID();
+        UUID participantId = UUID.randomUUID();
 
         UUID changeId = UUID.randomUUID();
         SyncChangeEntity change = new SyncChangeEntity();
@@ -175,6 +188,12 @@ class ExpenseJavaBeanCompatibilityTest {
         assertEquals(expenseId, posting.getExpenseId());
         assertEquals(participantId, posting.getParticipantId());
         assertEquals(-400, posting.getAmountMinor());
+    }
+
+    @Test
+    void outbox_and_recurring_entities_expose_jpa_getters_and_setters() {
+        UUID groupId = UUID.randomUUID();
+        UUID expenseId = UUID.randomUUID();
 
         OutboxEntity outbox = new OutboxEntity();
         outbox.setEventId(UUID.randomUUID());
