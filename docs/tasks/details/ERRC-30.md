@@ -42,19 +42,20 @@ Decommission and delete internal legacy error enum structures (`com.subhrodip.sq
 
 ## Technical Requirements & Deliverables
 
-1. **Delete Legacy Error Enums & Deprecated Classes**:
-   - Safely remove `enum class ErrorCode { ERR_01, ERR_02, ... }`.
-   - Safely remove legacy constructors: `ApplicationException(ErrorCode, String)`.
-   - Remove legacy translation mappers.
-2. **Derive v1 Public `code` from Catalog**:
-   - Ensure `ProblemDetailsDto.code` is populated directly via `definition.legacyCode ?: definition.errorName`.
-3. **Retire Old Validator Gate**:
-   - `tools/errors/validate_six_digit_catalog.py` is the authoritative current
-     catalog gate wired into `make contracts`.
-   - Retain `tools/errors/validate_catalog.py` only for immutable legacy/lifecycle
-     fixtures and shared schema assertions; it is not an active six-digit gate.
-4. **Repository-Wide Clean Sweep**:
-   - Verify zero occurrences of `ERR_01` through `ERR_12` in production code.
+1. **Delete Legacy Error Infrastructure & Attributes**:
+   - Delete `legacyCode` attribute from `ErrorDefinition`, `SimpleErrorDefinition`, schemas, and catalogs.
+   - Decommission legacy transitional mapping shims and `legacyErrorDefinition` schema defs.
+2. **Promote `code` to ErrorCategory & Add `messageKey`**:
+   - `ProblemDetailsDto.code` represents the canonical `ErrorCategory` enum string (`VALIDATION_ERROR`, `BUSINESS_RULE_VIOLATION`, `NOT_FOUND`, etc.).
+   - `ProblemDetailsDto.messageKey` is emitted for frontend internationalization (i18n).
+   - Rich `violations` structure emits field, message, `messageKey`, and `rejectedValue`.
+3. **HTTP 400-Series Alignment**:
+   - HTTP 400 reserved strictly for unparseable syntax (`REQUEST_BODY_MALFORMED`, `GRAPHQL_OPERATION_INVALID`).
+   - HTTP 422 used for semantic validations (`REQUEST_VALIDATION_FAILED`, `ALLOCATION_SUM_MISMATCH`, etc.).
+   - HTTP 410 used for expired resources (`SYNC_CURSOR_EXPIRED`, `INVITATION_EXPIRED`).
+4. **Zero-Reflection & High-Performance Propagation**:
+   - Hot path uses precompiled static singleton definitions and $O(1)$ set identity verification.
+   - Bounded custom exceptions provide sensible defaults while supporting definition injection.
 
 ## Acceptance Criteria
 
