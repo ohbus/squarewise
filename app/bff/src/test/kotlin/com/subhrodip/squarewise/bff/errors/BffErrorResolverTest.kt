@@ -1,8 +1,10 @@
 package com.subhrodip.squarewise.bff.errors
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.subhrodip.squarewise.errors.catalog.AccountsErrors
 import com.subhrodip.squarewise.errors.catalog.BffErrors
 import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
+import com.subhrodip.squarewise.errors.catalog.PlatformErrors
 import com.subhrodip.squarewise.errors.diagnostics.ResourceIdentifier
 import com.subhrodip.squarewise.errors.exceptions.EntityNotFoundException
 import com.subhrodip.squarewise.errors.web.ProblemDetailsDto
@@ -17,6 +19,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
+import org.springframework.graphql.execution.ErrorType
 import java.net.URI
 import java.time.Instant
 import java.util.concurrent.TimeoutException
@@ -76,25 +79,25 @@ class BffErrorResolverTest {
 
         // Test definition with UNAUTHENTICATED / FORBIDDEN / null httpStatus
         val customAuthError = resolver.resolve(
-            BffDomainException(com.subhrodip.squarewise.errors.catalog.AccountsErrors.PROFILE_SUBJECT_INVALID),
+            BffDomainException(AccountsErrors.PROFILE_SUBJECT_INVALID),
             environment,
             "request"
         )
-        assertEquals(org.springframework.graphql.execution.ErrorType.UNAUTHORIZED, customAuthError.errorType)
+        assertEquals(ErrorType.UNAUTHORIZED, customAuthError.errorType)
 
         val forbiddenError = resolver.resolve(
-            BffDomainException(com.subhrodip.squarewise.errors.catalog.AccountsErrors.FOREIGN_PROFILE_ACCESS_DENIED),
+            BffDomainException(AccountsErrors.FOREIGN_PROFILE_ACCESS_DENIED),
             environment,
             "request"
         )
-        assertEquals(org.springframework.graphql.execution.ErrorType.FORBIDDEN, forbiddenError.errorType)
+        assertEquals(ErrorType.FORBIDDEN, forbiddenError.errorType)
 
         val nullStatusError = resolver.resolve(
-            BffDomainException(com.subhrodip.squarewise.errors.catalog.PlatformErrors.PLATFORM_CONFIGURATION_INVALID),
+            BffDomainException(PlatformErrors.PLATFORM_CONFIGURATION_INVALID),
             environment,
             "request"
         )
-        assertEquals(org.springframework.graphql.execution.ErrorType.INTERNAL_ERROR, nullStatusError.errorType)
+        assertEquals(ErrorType.INTERNAL_ERROR, nullStatusError.errorType)
     }
 
     @Test

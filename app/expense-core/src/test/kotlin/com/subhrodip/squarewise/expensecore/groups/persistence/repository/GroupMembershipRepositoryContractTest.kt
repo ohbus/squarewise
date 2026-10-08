@@ -1,13 +1,18 @@
 package com.subhrodip.squarewise.expensecore.groups.persistence.repository
 
+import com.subhrodip.squarewise.expensecore.groups.domain.GroupMembershipEntity
+import java.util.Optional
 import java.util.UUID
+import java.util.function.Function
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito.CALLS_REAL_METHODS
-import org.mockito.Mockito.mock
-import org.mockito.Mockito.verify
-import org.mockito.Mockito.`when`
+import org.springframework.data.domain.Example
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.PageImpl
+import org.springframework.data.domain.Pageable
+import org.springframework.data.domain.Sort
+import org.springframework.data.repository.query.FluentQuery.FetchableFluentQuery
 
 /** Verifies repository convenience methods consistently constrain queries to active members. */
 class GroupMembershipRepositoryContractTest {
@@ -25,50 +30,50 @@ class GroupMembershipRepositoryContractTest {
                 return true
             }
 
-            override fun findAllBySubjectAndStatusOrderByMembershipId(subject: String, status: String): List<com.subhrodip.squarewise.expensecore.groups.domain.GroupMembershipEntity> {
+            override fun findAllBySubjectAndStatusOrderByMembershipId(subject: String, status: String): List<GroupMembershipEntity> {
                 findAllCalledWith = Pair(subject, status)
                 return emptyList()
             }
 
-            override fun findByGroupIdAndStatus(groupId: UUID, status: String): List<com.subhrodip.squarewise.expensecore.groups.domain.GroupMembershipEntity> {
+            override fun findByGroupIdAndStatus(groupId: UUID, status: String): List<GroupMembershipEntity> {
                 findByGroupCalledWith = Pair(groupId, status)
                 return emptyList()
             }
 
-            override fun findByMembershipIdAndGroupId(membershipId: UUID, groupId: UUID): com.subhrodip.squarewise.expensecore.groups.domain.GroupMembershipEntity? = null
-            override fun findByGroupIdAndSubjectAndStatus(groupId: UUID, subject: String, status: String): com.subhrodip.squarewise.expensecore.groups.domain.GroupMembershipEntity? = null
+            override fun findByMembershipIdAndGroupId(membershipId: UUID, groupId: UUID): GroupMembershipEntity? = null
+            override fun findByGroupIdAndSubjectAndStatus(groupId: UUID, subject: String, status: String): GroupMembershipEntity? = null
 
             // JpaRepository unneeded stubs
-            override fun <S : com.subhrodip.squarewise.expensecore.groups.domain.GroupMembershipEntity> save(entity: S): S = entity
-            override fun <S : com.subhrodip.squarewise.expensecore.groups.domain.GroupMembershipEntity> saveAll(entities: Iterable<S>): List<S> = entities.toList()
-            override fun findById(id: UUID): java.util.Optional<com.subhrodip.squarewise.expensecore.groups.domain.GroupMembershipEntity> = java.util.Optional.empty()
+            override fun <S : GroupMembershipEntity> save(entity: S): S = entity
+            override fun <S : GroupMembershipEntity> saveAll(entities: Iterable<S>): List<S> = entities.toList()
+            override fun findById(id: UUID): Optional<GroupMembershipEntity> = Optional.empty()
             override fun existsById(id: UUID): Boolean = false
-            override fun findAll(): List<com.subhrodip.squarewise.expensecore.groups.domain.GroupMembershipEntity> = emptyList()
-            override fun findAllById(ids: Iterable<UUID>): List<com.subhrodip.squarewise.expensecore.groups.domain.GroupMembershipEntity> = emptyList()
+            override fun findAll(): List<GroupMembershipEntity> = emptyList()
+            override fun findAllById(ids: Iterable<UUID>): List<GroupMembershipEntity> = emptyList()
             override fun count(): Long = 0
             override fun deleteById(id: UUID) {}
-            override fun delete(entity: com.subhrodip.squarewise.expensecore.groups.domain.GroupMembershipEntity) {}
+            override fun delete(entity: GroupMembershipEntity) {}
             override fun deleteAllById(ids: Iterable<UUID>) {}
-            override fun deleteAll(entities: Iterable<com.subhrodip.squarewise.expensecore.groups.domain.GroupMembershipEntity>) {}
+            override fun deleteAll(entities: Iterable<GroupMembershipEntity>) {}
             override fun deleteAll() {}
             override fun flush() {}
-            override fun <S : com.subhrodip.squarewise.expensecore.groups.domain.GroupMembershipEntity> saveAndFlush(entity: S): S = entity
-            override fun <S : com.subhrodip.squarewise.expensecore.groups.domain.GroupMembershipEntity> saveAllAndFlush(entities: Iterable<S>): List<S> = entities.toList()
-            override fun deleteAllInBatch(entities: Iterable<com.subhrodip.squarewise.expensecore.groups.domain.GroupMembershipEntity>) {}
+            override fun <S : GroupMembershipEntity> saveAndFlush(entity: S): S = entity
+            override fun <S : GroupMembershipEntity> saveAllAndFlush(entities: Iterable<S>): List<S> = entities.toList()
+            override fun deleteAllInBatch(entities: Iterable<GroupMembershipEntity>) {}
             override fun deleteAllByIdInBatch(ids: Iterable<UUID>) {}
             override fun deleteAllInBatch() {}
-            override fun getOne(id: UUID): com.subhrodip.squarewise.expensecore.groups.domain.GroupMembershipEntity = throw UnsupportedOperationException()
-            override fun getById(id: UUID): com.subhrodip.squarewise.expensecore.groups.domain.GroupMembershipEntity = throw UnsupportedOperationException()
-            override fun getReferenceById(id: UUID): com.subhrodip.squarewise.expensecore.groups.domain.GroupMembershipEntity = throw UnsupportedOperationException()
-            override fun <S : com.subhrodip.squarewise.expensecore.groups.domain.GroupMembershipEntity> findAll(example: org.springframework.data.domain.Example<S>): List<S> = emptyList()
-            override fun <S : com.subhrodip.squarewise.expensecore.groups.domain.GroupMembershipEntity> findAll(example: org.springframework.data.domain.Example<S>, sort: org.springframework.data.domain.Sort): List<S> = emptyList()
-            override fun <S : com.subhrodip.squarewise.expensecore.groups.domain.GroupMembershipEntity> findAll(example: org.springframework.data.domain.Example<S>, pageable: org.springframework.data.domain.Pageable): org.springframework.data.domain.Page<S> = org.springframework.data.domain.PageImpl(emptyList())
-            override fun <S : com.subhrodip.squarewise.expensecore.groups.domain.GroupMembershipEntity> count(example: org.springframework.data.domain.Example<S>): Long = 0
-            override fun <S : com.subhrodip.squarewise.expensecore.groups.domain.GroupMembershipEntity> exists(example: org.springframework.data.domain.Example<S>): Boolean = false
-            override fun <S : com.subhrodip.squarewise.expensecore.groups.domain.GroupMembershipEntity> findOne(example: org.springframework.data.domain.Example<S>): java.util.Optional<S> = java.util.Optional.empty()
-            override fun <S : com.subhrodip.squarewise.expensecore.groups.domain.GroupMembershipEntity, R : Any?> findBy(example: org.springframework.data.domain.Example<S>, queryFunction: java.util.function.Function<org.springframework.data.repository.query.FluentQuery.FetchableFluentQuery<S>, R>): R = throw UnsupportedOperationException()
-            override fun findAll(sort: org.springframework.data.domain.Sort): List<com.subhrodip.squarewise.expensecore.groups.domain.GroupMembershipEntity> = emptyList()
-            override fun findAll(pageable: org.springframework.data.domain.Pageable): org.springframework.data.domain.Page<com.subhrodip.squarewise.expensecore.groups.domain.GroupMembershipEntity> = org.springframework.data.domain.PageImpl(emptyList())
+            override fun getOne(id: UUID): GroupMembershipEntity = throw UnsupportedOperationException()
+            override fun getById(id: UUID): GroupMembershipEntity = throw UnsupportedOperationException()
+            override fun getReferenceById(id: UUID): GroupMembershipEntity = throw UnsupportedOperationException()
+            override fun <S : GroupMembershipEntity> findAll(example: Example<S>): List<S> = emptyList()
+            override fun <S : GroupMembershipEntity> findAll(example: Example<S>, sort: Sort): List<S> = emptyList()
+            override fun <S : GroupMembershipEntity> findAll(example: Example<S>, pageable: Pageable): Page<S> = PageImpl(emptyList())
+            override fun <S : GroupMembershipEntity> count(example: Example<S>): Long = 0
+            override fun <S : GroupMembershipEntity> exists(example: Example<S>): Boolean = false
+            override fun <S : GroupMembershipEntity> findOne(example: Example<S>): Optional<S> = Optional.empty()
+            override fun <S : GroupMembershipEntity, R : Any?> findBy(example: Example<S>, queryFunction: Function<FetchableFluentQuery<S>, R>): R = throw UnsupportedOperationException()
+            override fun findAll(sort: Sort): List<GroupMembershipEntity> = emptyList()
+            override fun findAll(pageable: Pageable): Page<GroupMembershipEntity> = PageImpl(emptyList())
         }
 
         assertTrue(stub.existsByGroupIdAndSubject(groupId, subject))

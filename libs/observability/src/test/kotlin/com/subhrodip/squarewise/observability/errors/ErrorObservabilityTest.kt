@@ -1,12 +1,24 @@
 package com.subhrodip.squarewise.observability.errors
 
 import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
+import com.subhrodip.squarewise.errors.catalog.PlatformErrors
+import com.subhrodip.squarewise.errors.catalog.SimpleErrorDefinition
+import com.subhrodip.squarewise.errors.code.DisclosurePolicy
+import com.subhrodip.squarewise.errors.code.ErrorCode
+import com.subhrodip.squarewise.errors.code.ErrorSeverity
+import com.subhrodip.squarewise.errors.code.RetryPolicy
+import com.subhrodip.squarewise.errors.diagnostics.ErrorDiagnostics
 import com.subhrodip.squarewise.errors.observability.ErrorTraceSpan
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
+import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers.anyString
+import org.mockito.ArgumentMatchers.eq
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
 import org.slf4j.Logger
@@ -20,9 +32,9 @@ class ErrorObservabilityTest {
         val cause = IllegalStateException("secret")
 
         adapter.logError(cause, ExpenseErrors.GROUP_NOT_FOUND, "request-1")
-        verify(logger).warn(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any())
+        verify(logger).warn(anyString(), any(), any(), any())
         adapter.logError(cause, ExpenseErrors.OUTBOX_RELAY_PUBLISH_FAILED, "request-1")
-        verify(logger).error(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq(cause))
+        verify(logger).error(anyString(), any(), any(), any(), eq(cause))
     }
 
     @Test
@@ -52,34 +64,34 @@ class ErrorObservabilityTest {
     fun `default ErrorLogger constructor creates instance and logs INFO severity`() {
         val adapter = ErrorLogger()
         // verify calling logError with an INFO definition works without error
-        adapter.logError(RuntimeException("info"), com.subhrodip.squarewise.errors.catalog.PlatformErrors.RESOURCE_NOT_FOUND, "req-info")
+        adapter.logError(RuntimeException("info"), PlatformErrors.RESOURCE_NOT_FOUND, "req-info")
     }
 
     @Test
     fun `ErrorLogger logs INFO severity to mock logger`() {
         val logger = mock(Logger::class.java)
         val adapter = ErrorLogger(logger)
-        val infoDefinition = com.subhrodip.squarewise.errors.catalog.SimpleErrorDefinition(
-            numericCode = com.subhrodip.squarewise.errors.code.ErrorCode("111101"),
+        val infoDefinition = SimpleErrorDefinition(
+            numericCode = ErrorCode("111101"),
             errorName = "INFO_ERROR",
             title = "Info Error",
             safeDetail = "Info safe detail",
             messageKey = "info.error",
             httpStatus = 200,
             graphqlClassification = null,
-            retryPolicy = com.subhrodip.squarewise.errors.code.RetryPolicy.NEVER,
-            severity = com.subhrodip.squarewise.errors.code.ErrorSeverity.INFO,
-            disclosure = com.subhrodip.squarewise.errors.code.DisclosurePolicy.PUBLIC,
+            retryPolicy = RetryPolicy.NEVER,
+            severity = ErrorSeverity.INFO,
+            disclosure = DisclosurePolicy.PUBLIC,
         )
         adapter.logError(RuntimeException("test"), infoDefinition, "req-1")
-        verify(logger).info(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any())
+        verify(logger).info(anyString(), any(), any(), any())
     }
 
     @Test
     fun `ErrorMetricsRecorder handles null httpStatus`() {
         val registry = SimpleMeterRegistry()
         val recorder = ErrorMetricsRecorder(registry)
-        recorder.record(com.subhrodip.squarewise.errors.catalog.PlatformErrors.BROKER_UNAVAILABLE)
+        recorder.record(PlatformErrors.BROKER_UNAVAILABLE)
         assertEquals(1.0, registry.get("squarewise_errors_total").tag("status", "none").counter().count())
     }
 
@@ -88,20 +100,20 @@ class ErrorObservabilityTest {
         val registry = SimpleMeterRegistry()
         val recorder = ErrorMetricsRecorder(registry)
 
-        val ex = org.junit.jupiter.api.assertThrows<ObservabilityPlatformException> {
+        val ex = assertThrows<ObservabilityPlatformException> {
             for (i in 1..1001) {
                 val seq = String.format("%02d", (i % 99) + 1)
-                val def = com.subhrodip.squarewise.errors.catalog.SimpleErrorDefinition(
-                    numericCode = com.subhrodip.squarewise.errors.code.ErrorCode("1111$seq"),
+                val def = SimpleErrorDefinition(
+                    numericCode = ErrorCode("1111$seq"),
                     errorName = "ERROR_$i",
                     title = "Error $i",
                     safeDetail = "Detail",
                     messageKey = "error.$i",
                     httpStatus = 500,
                     graphqlClassification = "INTERNAL",
-                    retryPolicy = com.subhrodip.squarewise.errors.code.RetryPolicy.NEVER,
-                    severity = com.subhrodip.squarewise.errors.code.ErrorSeverity.ERROR,
-                    disclosure = com.subhrodip.squarewise.errors.code.DisclosurePolicy.PUBLIC,
+                    retryPolicy = RetryPolicy.NEVER,
+                    severity = ErrorSeverity.ERROR,
+                    disclosure = DisclosurePolicy.PUBLIC,
                 )
                 recorder.record(def)
             }
@@ -111,24 +123,24 @@ class ErrorObservabilityTest {
 
     @Test
     fun `ObservabilityPlatformException constructors`() {
-        val defaultEx = ObservabilityPlatformException(com.subhrodip.squarewise.errors.catalog.PlatformErrors.OBSERVABILITY_PIPELINE_FAILED)
+        val defaultEx = ObservabilityPlatformException(PlatformErrors.OBSERVABILITY_PIPELINE_FAILED)
         assertEquals("OBSERVABILITY_PIPELINE_FAILED", defaultEx.message)
         assertEquals(null, defaultEx.cause)
-        assertEquals(com.subhrodip.squarewise.errors.diagnostics.ErrorDiagnostics.EMPTY, defaultEx.diagnostics)
+        assertEquals(ErrorDiagnostics.EMPTY, defaultEx.diagnostics)
 
         val cause = RuntimeException("obs root")
-        val diag = object : com.subhrodip.squarewise.errors.diagnostics.ErrorDiagnostics {
+        val diag = object : ErrorDiagnostics {
             override val entries = mapOf("metric" to "failed")
         }
         val fullEx = ObservabilityPlatformException(
-            com.subhrodip.squarewise.errors.catalog.PlatformErrors.OBSERVABILITY_PIPELINE_FAILED,
+            PlatformErrors.OBSERVABILITY_PIPELINE_FAILED,
             "custom msg",
             cause,
             diag
         )
         assertEquals("custom msg", fullEx.message)
-        org.junit.jupiter.api.Assertions.assertSame(cause, fullEx.cause)
-        org.junit.jupiter.api.Assertions.assertSame(diag, fullEx.diagnostics)
+        assertSame(cause, fullEx.cause)
+        assertSame(diag, fullEx.diagnostics)
     }
 
     private class RecordingSpan : ErrorTraceSpan {

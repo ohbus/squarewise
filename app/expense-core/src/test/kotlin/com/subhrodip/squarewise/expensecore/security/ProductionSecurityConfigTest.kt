@@ -13,6 +13,10 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.oauth2.jwt.JwtDecoder
 import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import org.springframework.context.ApplicationContext
+import com.nimbusds.jose.jwk.gen.RSAKeyGenerator
+import com.sun.net.httpserver.HttpServer
+import java.net.InetSocketAddress
+import java.nio.charset.StandardCharsets
 
 /** Verifies Expense Core constructs its provider-backed JWT decoder from configuration. */
 class ProductionSecurityConfigTest {
@@ -50,11 +54,11 @@ class ProductionSecurityConfigTest {
     /** Verifies jwtDecoder builds successfully against a discovering issuer. */
     @Test
     fun `constructs functional jwt decoder with valid issuer discovery`() {
-        val rsaJwk = com.nimbusds.jose.jwk.gen.RSAKeyGenerator(2048).keyID("k1").generate()
-        val server = com.sun.net.httpserver.HttpServer.create(java.net.InetSocketAddress(0), 0)
+        val rsaJwk = RSAKeyGenerator(2048).keyID("k1").generate()
+        val server = HttpServer.create(InetSocketAddress(0), 0)
         val issuer = "http://127.0.0.1:${server.address.port}"
-        val metadata = """{"issuer":"$issuer","jwks_uri":"$issuer/jwks"}""".toByteArray(java.nio.charset.StandardCharsets.UTF_8)
-        val jwks = "{\"keys\":[${rsaJwk.toPublicJWK().toJSONString()}]}".toByteArray(java.nio.charset.StandardCharsets.UTF_8)
+        val metadata = """{"issuer":"$issuer","jwks_uri":"$issuer/jwks"}""".toByteArray(StandardCharsets.UTF_8)
+        val jwks = "{\"keys\":[${rsaJwk.toPublicJWK().toJSONString()}]}".toByteArray(StandardCharsets.UTF_8)
         server.createContext("/.well-known/openid-configuration") { exchange ->
             exchange.responseHeaders.set("Content-Type", "application/json")
             exchange.sendResponseHeaders(200, metadata.size.toLong())

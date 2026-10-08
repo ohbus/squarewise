@@ -1,5 +1,9 @@
 package com.subhrodip.squarewise.errors.catalog
 
+import com.subhrodip.squarewise.errors.code.DisclosurePolicy
+import com.subhrodip.squarewise.errors.code.ErrorCode
+import com.subhrodip.squarewise.errors.code.ErrorSeverity
+import com.subhrodip.squarewise.errors.code.RetryPolicy
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -125,16 +129,16 @@ class CatalogParityTest {
 
         assertEquals(null, ErrorCatalog.find("000000"))
         val unregistered = SimpleErrorDefinition(
-            numericCode = com.subhrodip.squarewise.errors.code.ErrorCode("999999"),
+            numericCode = ErrorCode("999999"),
             errorName = "UNREGISTERED",
             title = "Unregistered",
             safeDetail = "Unregistered",
             messageKey = "unregistered",
             httpStatus = 500,
             graphqlClassification = null,
-            retryPolicy = com.subhrodip.squarewise.errors.code.RetryPolicy.NEVER,
-            severity = com.subhrodip.squarewise.errors.code.ErrorSeverity.ERROR,
-            disclosure = com.subhrodip.squarewise.errors.code.DisclosurePolicy.PUBLIC,
+            retryPolicy = RetryPolicy.NEVER,
+            severity = ErrorSeverity.ERROR,
+            disclosure = DisclosurePolicy.PUBLIC,
         )
         assertEquals(false, ErrorCatalog.contains(unregistered))
     }
