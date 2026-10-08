@@ -27,9 +27,6 @@ data class DbOperationPolicy(
         if (readerEligible && consistency == ReadConsistency.STRONG) {
             invalid("Strong queries must use the writer")
         }
-        if (kind == DbOperationKind.COMMAND && readerEligible) {
-            invalid("Commands cannot use a reader")
-        }
     }
 
     private fun invalid(detail: String): Nothing = throw DbPlatformException(

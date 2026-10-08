@@ -66,7 +66,8 @@ class GraphQlExceptionResolverTest {
             422 to "VALIDATION_ERROR",
             429 to "RATE_LIMIT_EXCEEDED",
             500 to "INTERNAL_ERROR",
-            503 to "INTERNAL_ERROR"
+            503 to "INTERNAL_ERROR",
+            504 to "INTERNAL_ERROR"
         )
 
         expected.forEach { (status, code) ->

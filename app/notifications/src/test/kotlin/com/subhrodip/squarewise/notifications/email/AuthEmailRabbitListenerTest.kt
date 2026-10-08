@@ -16,6 +16,8 @@ import org.springframework.amqp.core.Message
 import org.springframework.amqp.core.MessageProperties
 import tools.jackson.databind.ObjectMapper
 import com.subhrodip.squarewise.notifications.email.delivery.EmailDeliveryOutcome
+import com.subhrodip.squarewise.errors.async.AsyncExecutionTemplate
+import org.mockito.Mockito.`when`
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.times
 
@@ -253,6 +255,25 @@ class AuthEmailRabbitListenerTest {
             )
 
         listener.onMessage(message(validEvent(), 31L, redelivered = false), null)
+    }
+
+    @Test
+    fun `respects x-attempt header and redelivered fallback`() {
+        val channel = TestChannel()
+        val msgWithHeader = Message(
+            validEvent().toByteArray(StandardCharsets.UTF_8),
+            MessageProperties().apply {
+                deliveryTag = 40L
+                setHeader("x-attempt", 2)
+            }
+        )
+        listener.onMessage(msgWithHeader, channel)
+        assertEquals(40L, channel.ackedTag)
+
+        val channel2 = TestChannel()
+        val redeliveredMsg = message(validEvent(), 41L, redelivered = true)
+        listener.onMessage(redeliveredMsg, channel2)
+        assertEquals(41L, channel2.ackedTag)
     }
 
     private fun fieldValue(field: String): String = when (field) {

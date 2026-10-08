@@ -48,6 +48,89 @@ class ErrorObservabilityTest {
         assertTrue(span.failed)
     }
 
+    @Test
+    fun `default ErrorLogger constructor creates instance and logs INFO severity`() {
+        val adapter = ErrorLogger()
+        // verify calling logError with an INFO definition works without error
+        adapter.logError(RuntimeException("info"), com.subhrodip.squarewise.errors.catalog.PlatformErrors.RESOURCE_NOT_FOUND, "req-info")
+    }
+
+    @Test
+    fun `ErrorLogger logs INFO severity to mock logger`() {
+        val logger = mock(Logger::class.java)
+        val adapter = ErrorLogger(logger)
+        val infoDefinition = com.subhrodip.squarewise.errors.catalog.SimpleErrorDefinition(
+            numericCode = com.subhrodip.squarewise.errors.code.ErrorCode("111101"),
+            errorName = "INFO_ERROR",
+            title = "Info Error",
+            safeDetail = "Info safe detail",
+            messageKey = "info.error",
+            httpStatus = 200,
+            graphqlClassification = null,
+            retryPolicy = com.subhrodip.squarewise.errors.code.RetryPolicy.NEVER,
+            severity = com.subhrodip.squarewise.errors.code.ErrorSeverity.INFO,
+            disclosure = com.subhrodip.squarewise.errors.code.DisclosurePolicy.PUBLIC,
+        )
+        adapter.logError(RuntimeException("test"), infoDefinition, "req-1")
+        verify(logger).info(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any())
+    }
+
+    @Test
+    fun `ErrorMetricsRecorder handles null httpStatus`() {
+        val registry = SimpleMeterRegistry()
+        val recorder = ErrorMetricsRecorder(registry)
+        recorder.record(com.subhrodip.squarewise.errors.catalog.PlatformErrors.BROKER_UNAVAILABLE)
+        assertEquals(1.0, registry.get("squarewise_errors_total").tag("status", "none").counter().count())
+    }
+
+    @Test
+    fun `ErrorMetricsRecorder throws ObservabilityPlatformException when dimension budget exceeded`() {
+        val registry = SimpleMeterRegistry()
+        val recorder = ErrorMetricsRecorder(registry)
+
+        val ex = org.junit.jupiter.api.assertThrows<ObservabilityPlatformException> {
+            for (i in 1..1001) {
+                val seq = String.format("%02d", (i % 99) + 1)
+                val def = com.subhrodip.squarewise.errors.catalog.SimpleErrorDefinition(
+                    numericCode = com.subhrodip.squarewise.errors.code.ErrorCode("1111$seq"),
+                    errorName = "ERROR_$i",
+                    title = "Error $i",
+                    safeDetail = "Detail",
+                    messageKey = "error.$i",
+                    httpStatus = 500,
+                    graphqlClassification = "INTERNAL",
+                    retryPolicy = com.subhrodip.squarewise.errors.code.RetryPolicy.NEVER,
+                    severity = com.subhrodip.squarewise.errors.code.ErrorSeverity.ERROR,
+                    disclosure = com.subhrodip.squarewise.errors.code.DisclosurePolicy.PUBLIC,
+                )
+                recorder.record(def)
+            }
+        }
+        assertEquals("error metric dimension budget exceeded", ex.message)
+    }
+
+    @Test
+    fun `ObservabilityPlatformException constructors`() {
+        val defaultEx = ObservabilityPlatformException(com.subhrodip.squarewise.errors.catalog.PlatformErrors.OBSERVABILITY_PIPELINE_FAILED)
+        assertEquals("OBSERVABILITY_PIPELINE_FAILED", defaultEx.message)
+        assertEquals(null, defaultEx.cause)
+        assertEquals(com.subhrodip.squarewise.errors.diagnostics.ErrorDiagnostics.EMPTY, defaultEx.diagnostics)
+
+        val cause = RuntimeException("obs root")
+        val diag = object : com.subhrodip.squarewise.errors.diagnostics.ErrorDiagnostics {
+            override val entries = mapOf("metric" to "failed")
+        }
+        val fullEx = ObservabilityPlatformException(
+            com.subhrodip.squarewise.errors.catalog.PlatformErrors.OBSERVABILITY_PIPELINE_FAILED,
+            "custom msg",
+            cause,
+            diag
+        )
+        assertEquals("custom msg", fullEx.message)
+        org.junit.jupiter.api.Assertions.assertSame(cause, fullEx.cause)
+        org.junit.jupiter.api.Assertions.assertSame(diag, fullEx.diagnostics)
+    }
+
     private class RecordingSpan : ErrorTraceSpan {
         val attributes: MutableMap<String, String> = linkedMapOf()
         var failed: Boolean = false

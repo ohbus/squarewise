@@ -1,6 +1,7 @@
 package com.subhrodip.squarewise.bff.errors
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.subhrodip.squarewise.errors.catalog.BffErrors
 import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
 import com.subhrodip.squarewise.errors.diagnostics.ResourceIdentifier
 import com.subhrodip.squarewise.errors.exceptions.EntityNotFoundException
@@ -68,6 +69,32 @@ class BffErrorResolverTest {
         assertEquals(ExpenseErrors.GROUP_NOT_FOUND.numericCode.value, local.extensions!!["numericCode"])
         assertEquals("UPSTREAM_TIMEOUT", timeout.extensions!!["errorName"])
         assertTrue(timeout.message.isNotBlank())
+
+        // Test fallback for arbitrary exception
+        val generic = resolver.resolve(IllegalStateException("arbitrary"), environment, "request")
+        assertEquals(BffErrors.GRAPHQL_AGGREGATION_FAILED.numericCode.value, generic.extensions!!["numericCode"])
+
+        // Test definition with UNAUTHENTICATED / FORBIDDEN / null httpStatus
+        val customAuthError = resolver.resolve(
+            BffDomainException(com.subhrodip.squarewise.errors.catalog.AccountsErrors.PROFILE_SUBJECT_INVALID),
+            environment,
+            "request"
+        )
+        assertEquals(org.springframework.graphql.execution.ErrorType.UNAUTHORIZED, customAuthError.errorType)
+
+        val forbiddenError = resolver.resolve(
+            BffDomainException(com.subhrodip.squarewise.errors.catalog.AccountsErrors.FOREIGN_PROFILE_ACCESS_DENIED),
+            environment,
+            "request"
+        )
+        assertEquals(org.springframework.graphql.execution.ErrorType.FORBIDDEN, forbiddenError.errorType)
+
+        val nullStatusError = resolver.resolve(
+            BffDomainException(com.subhrodip.squarewise.errors.catalog.PlatformErrors.PLATFORM_CONFIGURATION_INVALID),
+            environment,
+            "request"
+        )
+        assertEquals(org.springframework.graphql.execution.ErrorType.INTERNAL_ERROR, nullStatusError.errorType)
     }
 
     @Test

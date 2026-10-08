@@ -117,5 +117,27 @@ class CatalogParityTest {
         }
     }
 
+    @Test
+    fun `ErrorCatalog find and contains operate correctly`() {
+        val first = ErrorCatalog.all.first()
+        assertEquals(first, ErrorCatalog.find(first.numericCode.value))
+        assertEquals(true, ErrorCatalog.contains(first))
+
+        assertEquals(null, ErrorCatalog.find("000000"))
+        val unregistered = SimpleErrorDefinition(
+            numericCode = com.subhrodip.squarewise.errors.code.ErrorCode("999999"),
+            errorName = "UNREGISTERED",
+            title = "Unregistered",
+            safeDetail = "Unregistered",
+            messageKey = "unregistered",
+            httpStatus = 500,
+            graphqlClassification = null,
+            retryPolicy = com.subhrodip.squarewise.errors.code.RetryPolicy.NEVER,
+            severity = com.subhrodip.squarewise.errors.code.ErrorSeverity.ERROR,
+            disclosure = com.subhrodip.squarewise.errors.code.DisclosurePolicy.PUBLIC,
+        )
+        assertEquals(false, ErrorCatalog.contains(unregistered))
+    }
+
     private data class Expected(val numericCode: String, val errorName: String, val title: String, val httpStatus: Int?)
 }
