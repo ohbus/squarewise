@@ -160,4 +160,15 @@ class ExpenseSearchTest {
             assertEquals(CategoryCode.VALIDATION_ERROR, error.definition.category)
         }
     }
+
+    @Test
+    fun `exports datasets larger than MAX_LIMIT without overflow when maxRows allows`() {
+        val largeData = (1..1500).map { i ->
+            SearchExpense("exp-$i", "Item $i", "EUR", "100")
+        }
+        val csv = ExpenseSearch().csv(largeData, maxRows = 2000)
+        val lines = csv.trim().lines()
+        assertEquals(1501, lines.size) // header + 1500 items
+        assertEquals("expenseId,description,currency,amountMinor,category", lines.first())
+    }
 }

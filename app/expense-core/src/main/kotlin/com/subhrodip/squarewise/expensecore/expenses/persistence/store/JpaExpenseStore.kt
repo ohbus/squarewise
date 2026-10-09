@@ -418,7 +418,7 @@ class JpaExpenseStore(
                 participantId = participantId,
                 amount = MoneyDto(currency, sum.toString())
             )
-        }.sortedBy { it.participantId }
+        }.sortedWith(compareBy<GroupBalanceItem> { it.participantId }.thenBy { it.amount.currency })
     }
 
     private fun toBalancePostings(

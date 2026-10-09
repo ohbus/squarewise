@@ -862,4 +862,75 @@ class JpaExpenseStoreTest @Autowired constructor(
         assertEquals(revisionAfterDelete, groupRepository.findById(group.groupId).orElseThrow().revision)
         assertEquals(2, balancePostingRepository.findByExpenseId(expenseId).size)
     }
+
+    /** Verifies balances are ordered deterministically by participantId ascending then currency ascending. */
+    @Test
+    fun `balances returns deterministically sorted balances by participantId and currency`() {
+        val group = groupStore.create("alice", CreateGroupRequest("Multi-currency Balances", "TRIP", "EUR"))
+        val aliceId = UUID.randomUUID()
+        val bobId = UUID.randomUUID()
+
+        // Create USD expense
+        val usdExpense = ExpenseRecord(
+            expenseId = UUID.randomUUID(),
+            groupId = group.groupId,
+            description = "USD lunch",
+            category = "food",
+            currency = "USD",
+            amountMinor = 2000,
+            version = 1,
+            allocationMode = "EXACT",
+            createdAt = Instant.now(),
+            payers = listOf(ExpensePayer(aliceId, 2000)),
+            allocations = listOf(ExpenseAllocation(bobId, 2000))
+        )
+        expenseStore.create(group.groupId, usdExpense, "idemp-usd-1")
+
+        // Create EUR expense
+        val eurExpense = ExpenseRecord(
+            expenseId = UUID.randomUUID(),
+            groupId = group.groupId,
+            description = "EUR dinner",
+            category = "food",
+            currency = "EUR",
+            amountMinor = 1000,
+            version = 1,
+            allocationMode = "EXACT",
+            createdAt = Instant.now(),
+            payers = listOf(ExpensePayer(aliceId, 1000)),
+            allocations = listOf(ExpenseAllocation(bobId, 1000))
+        )
+        expenseStore.create(group.groupId, eurExpense, "idemp-eur-1")
+
+        // Create GBP expense
+        val gbpExpense = ExpenseRecord(
+            expenseId = UUID.randomUUID(),
+            groupId = group.groupId,
+            description = "GBP tea",
+            category = "food",
+            currency = "GBP",
+            amountMinor = 500,
+            version = 1,
+            allocationMode = "EXACT",
+            createdAt = Instant.now(),
+            payers = listOf(ExpensePayer(aliceId, 500)),
+            allocations = listOf(ExpenseAllocation(bobId, 500))
+        )
+        expenseStore.create(group.groupId, gbpExpense, "idemp-gbp-1")
+
+        val balances = expenseStore.balances(group.groupId)
+        assertEquals(6, balances.size)
+
+        // Verify ordering: participantId ascending, then currency ascending
+        for (i in 0 until balances.size - 1) {
+            val current = balances[i]
+            val next = balances[i + 1]
+            val participantCmp = current.participantId.compareTo(next.participantId)
+            if (participantCmp == 0) {
+                assertTrue(current.amount.currency <= next.amount.currency, "Currencies for same participant must be sorted ascending")
+            } else {
+                assertTrue(participantCmp < 0, "Participants must be sorted ascending")
+            }
+        }
+    }
 }

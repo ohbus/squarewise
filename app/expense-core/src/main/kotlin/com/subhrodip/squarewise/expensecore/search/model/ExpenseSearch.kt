@@ -91,11 +91,19 @@ class ExpenseSearch {
         maxRows: Int = MAX_EXPORT_ROWS
     ): String {
         require(maxRows in 1..MAX_EXPORT_ROWS)
-        val page = page(expenses, query, currency, category, limit = minOf(maxRows, MAX_LIMIT))
-        require(!page.hasMore) { "Export exceeds the maximum row limit" }
+        val normalized = query.trim().lowercase()
+        val normalizedCurrency = currency?.trim()?.uppercase()?.also { require(it.matches(Regex("[A-Z]{3}"))) }
+        val normalizedCategory = category?.let(ExpenseCategory::fromKey)
+        val matches = expenses.asSequence()
+            .filter { normalized.isEmpty() || it.description.lowercase().contains(normalized) }
+            .filter { normalizedCurrency == null || it.currency.uppercase() == normalizedCurrency }
+            .filter { normalizedCategory == null || it.category == normalizedCategory }
+            .sortedBy { it.expenseId }
+            .toList()
+        require(matches.size <= maxRows) { "Export exceeds the maximum row limit" }
         return buildString {
             appendLine("expenseId,description,currency,amountMinor,category")
-            page.expenses.forEach { expense ->
+            matches.forEach { expense ->
                 appendLine(listOf(expense.expenseId, expense.description, expense.currency, expense.amountMinor, expense.category.key)
                     .joinToString(",", transform = ::csvCell))
             }

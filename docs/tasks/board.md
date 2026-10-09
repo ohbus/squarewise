@@ -214,7 +214,7 @@ This workstream manages the six-digit `DM-L-C-EE` domain/module error-code stand
 | [CORE-29](details/CORE-29.md) | core | done | Multi-currency settlement ledger persistence, Flyway migration, and replay validation |
 | [CORE-30](details/CORE-30.md) | core | done | Financial arithmetic hardening and allocation duplicate validation |
 | [CORE-31](details/CORE-31.md) | core | todo | Recurring schedule participant membership identity and currency validation hardening |
-| [CORE-32](details/CORE-32.md) | core | todo | Multi-currency balance deterministic sorting and CSV export pagination bounds |
+| [CORE-32](details/CORE-32.md) | core | done | Multi-currency balance deterministic sorting and CSV export pagination bounds |
 | [CORE-33](details/CORE-33.md) | quality | todo | Multi-currency end-to-end integration and zero-sum property testing suite |
 
 | ID | Owner | Status | Deliverable |
@@ -342,5 +342,5 @@ This workstream manages the six-digit `DM-L-C-EE` domain/module error-code stand
 | CORE-29 | core | done | Multi-currency settlement ledger persistence, Flyway migration, and replay validation |
 | CORE-30 | core | done | Financial arithmetic hardening and allocation duplicate validation |
 | CORE-31 | core | todo | Recurring schedule participant membership identity and currency validation hardening |
-| CORE-32 | core | todo | Multi-currency balance deterministic sorting and CSV export pagination bounds |
+| CORE-32 | core | done | Multi-currency balance deterministic sorting and CSV export pagination bounds |
 | CORE-33 | quality | todo | Multi-currency end-to-end integration and zero-sum property testing suite |

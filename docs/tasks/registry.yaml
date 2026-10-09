@@ -3796,7 +3796,7 @@
       "parent_id": "MILESTONE-PRODUCT",
       "title": "Multi-currency balance deterministic sorting and CSV export pagination bounds",
       "phase": "implementation",
-      "status": "todo",
+      "status": "done",
       "owner_role": "core",
       "owner_agent": "/root/reporting_agent",
       "depends_on": [
@@ -3820,7 +3820,11 @@
         "make contracts",
         "git diff --check"
       ],
-      "evidence": [],
+      "evidence": [
+        "Updated JpaExpenseStore.balances to sort deterministically by participantId ascending then currency ascending (AUD-08).",
+        "Updated ExpenseSearch.csv to filter matching records directly without 1000-row page capping, supporting up to MAX_EXPORT_ROWS (10000) (AUD-09).",
+        "Added unit and integration test coverage in ExpenseSearchTest and JpaExpenseStoreTest; all tests passed cleanly."
+      ],
       "reviewer": "/root",
       "blocker": null
     },

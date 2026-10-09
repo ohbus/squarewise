@@ -36,3 +36,13 @@ Remediate non-deterministic multi-currency balance sorting and CSV export row li
 - `./gradlew :app:expense-core:test --tests "com.subhrodip.squarewise.expensecore.search.*" --no-daemon`
 - `make contracts`
 - `git diff --check`
+
+## Implementation Notes & Evidence
+
+- **AUD-08 Remediation**: In `JpaExpenseStore.balances`, replaced `.sortedBy { it.participantId }` with `.sortedWith(compareBy<GroupBalanceItem> { it.participantId }.thenBy { it.amount.currency })`. Guarantees stable and deterministic ordering when a participant has balances across multiple currencies.
+- **AUD-09 Remediation**: In `ExpenseSearch.csv`, removed the internal delegating call to `page()` with `minOf(maxRows, MAX_LIMIT)` which improperly capped exports to 1,000 items. Matching expenses are now filtered directly against `maxRows` (up to `MAX_EXPORT_ROWS` = 10,000).
+- **Evidence**:
+  - `JpaExpenseStoreTest` verifies deterministic participant and currency ordering across multi-currency expenses.
+  - `ExpenseSearchTest` verifies exporting 1,500 items succeeds without overflow exceptions.
+  - `./gradlew :app:expense-core:test --tests "com.subhrodip.squarewise.expensecore.search.*" --tests "com.subhrodip.squarewise.expensecore.expenses.JpaExpenseStoreTest" --no-daemon` passed cleanly.
+  - `make contracts` and `git diff --check` passed cleanly.
