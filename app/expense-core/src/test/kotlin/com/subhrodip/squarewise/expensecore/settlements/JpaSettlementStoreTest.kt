@@ -9,6 +9,7 @@ import com.subhrodip.squarewise.expensecore.groups.domain.GroupEntity
 import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupRepository
 
 import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
+import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
 import java.util.UUID
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -80,6 +81,8 @@ class JpaSettlementStoreTest @Autowired constructor(
         }
 
         assertEquals(CategoryCode.NOT_FOUND, error.definition.category)
+        assertEquals(ExpenseErrors.SETTLEMENT_NOT_FOUND.numericCode, error.definition.numericCode)
+        assertEquals(ExpenseErrors.SETTLEMENT_NOT_FOUND.errorName, error.definition.errorName)
     }
 
     /** Verifies settlement replay compares every financial identity dimension before returning an existing row. */
@@ -103,6 +106,8 @@ class JpaSettlementStoreTest @Autowired constructor(
                 store.record(groupId, conflicting)
             }
             assertEquals(CategoryCode.STATE_CONFLICT, error.definition.category)
+            assertEquals(ExpenseErrors.EXPENSE_IDEMPOTENCY_CONFLICT.numericCode, error.definition.numericCode)
+            assertEquals(ExpenseErrors.EXPENSE_IDEMPOTENCY_CONFLICT.errorName, error.definition.errorName)
         }
         assertEquals(2, balancePostingRepository.findBySettlementId(settlement.id).size)
     }
@@ -157,10 +162,13 @@ class JpaSettlementStoreTest @Autowired constructor(
             store.record(archivedGroupId, archivedSettlement)
         }
         assertEquals(CategoryCode.STATE_CONFLICT, archivedRecordError.definition.category)
+        assertEquals(ExpenseErrors.GROUP_ARCHIVED.numericCode, archivedRecordError.definition.numericCode)
+
         val archivedReverseError = assertThrows(SquarewiseException::class.java) {
             store.reverse(archivedGroupId, archivedSettlement.id, "archived")
         }
         assertEquals(CategoryCode.STATE_CONFLICT, archivedReverseError.definition.category)
+        assertEquals(ExpenseErrors.GROUP_ARCHIVED.numericCode, archivedReverseError.definition.numericCode)
         assertEquals(0, balancePostingRepository.findBySettlementId(archivedSettlement.id).size)
     }
 }

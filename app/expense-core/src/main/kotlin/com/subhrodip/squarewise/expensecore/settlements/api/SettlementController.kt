@@ -28,8 +28,7 @@ import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
 @RequestMapping(ApiEndpoints.ExpenseCore.V1.PATH_GROUP_SETTLEMENTS)
 class SettlementController(
     private val service: SettlementService,
-    private val membershipRepository: GroupMembershipRepository,
-    private val suggestionEngine: SettlementSuggestionEngine? = null
+    private val membershipRepository: GroupMembershipRepository
 ) {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -47,7 +46,7 @@ class SettlementController(
     @GetMapping(ApiEndpoints.ExpenseCore.V1.SETTLEMENT_SUGGESTIONS_RELATIVE_SUBPATH)
     fun getSuggestions(@PathVariable groupId: UUID, principal: Principal?): List<SuggestedSettlement> {
         ensureMembership(groupId, principal)
-        return suggestionEngine?.suggestSettlements(groupId) ?: service.suggestions(groupId)
+        return service.suggestions(groupId)
     }
 
     private fun ensureMembership(groupId: UUID, principal: Principal?) {

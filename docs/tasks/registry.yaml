@@ -3863,6 +3863,118 @@
       "blocker": null
     },
     {
+      "id": "CORE-34",
+      "parent_id": "MILESTONE-PRODUCT",
+      "title": "Align JpaSettlementStore error catalog codes and eliminate redundant reversal queries",
+      "phase": "quality",
+      "status": "done",
+      "owner_role": "core",
+      "owner_agent": "/root/settlement_agent",
+      "depends_on": [
+        "CORE-29"
+      ],
+      "owned_paths": [
+        "app/expense-core/src/main/kotlin/com/subhrodip/squarewise/expensecore/settlements/persistence/JpaSettlementStore.kt",
+        "app/expense-core/src/test/kotlin/com/subhrodip/squarewise/expensecore/settlements/JpaSettlementStoreTest.kt",
+        "docs/tasks/details/CORE-34.md"
+      ],
+      "specification": "docs/tasks/details/CORE-34.md",
+      "acceptance_criteria": [
+        "JpaSettlementStore.record throws EXPENSE_IDEMPOTENCY_CONFLICT (233302) on parameter conflict.",
+        "JpaSettlementStore.reverse throws SETTLEMENT_NOT_FOUND (243201) when settlement does not exist.",
+        "JpaSettlementStore.checkActiveGroup throws GROUP_ARCHIVED (213401) when group is archived.",
+        "reverse() queries groupRepository at most once per execution.",
+        "All unit tests pass cleanly."
+      ],
+      "validation_commands": [
+        "./gradlew :app:expense-core:test --tests \"com.subhrodip.squarewise.expensecore.settlements.JpaSettlementStoreTest\" --no-daemon",
+        "./gradlew :app:expense-core:test --no-daemon",
+        "python3 tools/contracts/validate.py",
+        "git diff --check"
+      ],
+      "evidence": [
+        "Verified JpaSettlementStore with targeted unit tests in JpaSettlementStoreTest passing 100%.",
+        "Verified full expense-core test suite passing cleanly with zero regressions."
+      ],
+      "reviewer": "/root",
+      "blocker": null
+    },
+    {
+      "id": "CORE-35",
+      "parent_id": "MILESTONE-PRODUCT",
+      "title": "Streamline SettlementSuggestionEngine injection and eliminate legacy unauthenticated service overloads",
+      "phase": "quality",
+      "status": "done",
+      "owner_role": "core",
+      "owner_agent": "/root/settlement_agent",
+      "depends_on": [
+        "CORE-34"
+      ],
+      "owned_paths": [
+        "app/expense-core/src/main/kotlin/com/subhrodip/squarewise/expensecore/settlements/service/SettlementService.kt",
+        "app/expense-core/src/main/kotlin/com/subhrodip/squarewise/expensecore/settlements/api/SettlementController.kt",
+        "app/expense-core/src/test/kotlin/com/subhrodip/squarewise/expensecore/settlements/SettlementServiceTest.kt",
+        "app/expense-core/src/test/kotlin/com/subhrodip/squarewise/expensecore/settlements/SettlementControllerTest.kt",
+        "docs/tasks/details/CORE-35.md"
+      ],
+      "specification": "docs/tasks/details/CORE-35.md",
+      "acceptance_criteria": [
+        "SettlementService takes non-null SettlementSuggestionEngine and delegates suggestions directly.",
+        "SettlementController delegates suggestion calculation directly to SettlementService without duplicate injection.",
+        "SettlementService.record provides a clean canonical authenticated method.",
+        "All settlement tests pass cleanly."
+      ],
+      "validation_commands": [
+        "./gradlew :app:expense-core:test --tests \"com.subhrodip.squarewise.expensecore.settlements.SettlementServiceTest\" --no-daemon",
+        "./gradlew :app:expense-core:test --tests \"com.subhrodip.squarewise.expensecore.settlements.SettlementControllerTest\" --no-daemon",
+        "./gradlew :app:expense-core:test --no-daemon",
+        "python3 tools/contracts/validate.py",
+        "git diff --check"
+      ],
+      "evidence": [
+        "Injected non-null SettlementSuggestionEngine into SettlementService constructor.",
+        "Removed redundant suggestionEngine dependency from SettlementController.",
+        "SettlementServiceTest and SettlementControllerTest pass cleanly."
+      ],
+      "reviewer": "/root",
+      "blocker": null
+    },
+    {
+      "id": "CORE-36",
+      "parent_id": "MILESTONE-PRODUCT",
+      "title": "Consolidate settlement persistence port interfaces and eliminate redundant interface layer",
+      "phase": "quality",
+      "status": "done",
+      "owner_role": "core",
+      "owner_agent": "/root/settlement_agent",
+      "depends_on": [
+        "CORE-35"
+      ],
+      "owned_paths": [
+        "app/expense-core/src/main/kotlin/com/subhrodip/squarewise/expensecore/settlements/persistence/SettlementStore.kt",
+        "app/expense-core/src/main/kotlin/com/subhrodip/squarewise/expensecore/settlements/persistence/SettlementCommandStore.kt",
+        "docs/tasks/details/CORE-36.md"
+      ],
+      "specification": "docs/tasks/details/CORE-36.md",
+      "acceptance_criteria": [
+        "SettlementStore directly defines record and reverse contracts.",
+        "SettlementCommandStore.kt is removed with zero broken references.",
+        "All tests in :app:expense-core:test pass without regression."
+      ],
+      "validation_commands": [
+        "./gradlew :app:expense-core:compileKotlin --no-daemon",
+        "./gradlew :app:expense-core:test --no-daemon",
+        "python3 tools/contracts/validate.py",
+        "git diff --check"
+      ],
+      "evidence": [
+        "Consolidated SettlementStore port with full KDoc, removed SettlementCommandStore.kt.",
+        "Verified all tests compile and pass cleanly across the entire workspace."
+      ],
+      "reviewer": "/root",
+      "blocker": null
+    },
+    {
       "id": "FND-08",
       "parent_id": "MILESTONE-SCAFFOLD",
       "title": "Refactor domain ports, in-memory stores, and consumer services into dedicated files",

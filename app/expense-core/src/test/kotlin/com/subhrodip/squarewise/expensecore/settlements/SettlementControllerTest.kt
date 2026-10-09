@@ -35,7 +35,7 @@ class SettlementControllerTest {
     ) { _, method, args ->
         if (method.name.startsWith("existsByGroupIdAndSubject")) args?.getOrNull(1) == "test-user" else null
     } as GroupMembershipRepository
-    private val controller = SettlementController(service, memberships, suggestionEngine)
+    private val controller = SettlementController(service, memberships)
     private val mvc = MockMvcBuilders.standaloneSetup(controller)
         .setControllerAdvice(GlobalErrorHandler()).build()
     private val user = RequestPostProcessor { request -> request.userPrincipal = Principal { "test-user" }; request }
@@ -86,17 +86,6 @@ class SettlementControllerTest {
             .andExpect(jsonPath("$.length()").value(0))
     }
 
-    /** Verifies the controller's optional-engine fallback remains an empty successful response. */
-    @Test
-    fun `uses service fallback when settlement suggestion engine is absent`() {
-        val fallbackController = SettlementController(service, memberships)
-        val fallbackMvc = MockMvcBuilders.standaloneSetup(fallbackController)
-            .setControllerAdvice(GlobalErrorHandler()).build()
-
-        fallbackMvc.perform(get(ApiEndpoints.ExpenseCore.V1.groupSettlementSuggestions(UUID.randomUUID())).with(user))
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$.length()").value(0))
-    }
 
     @Test
     fun `hides settlement suggestions from non-members`() {

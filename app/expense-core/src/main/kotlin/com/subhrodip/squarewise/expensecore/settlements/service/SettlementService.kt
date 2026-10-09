@@ -11,10 +11,16 @@ import org.springframework.stereotype.Service
 @Service
 class SettlementService(
     private val store: SettlementStore,
-    private val suggestionEngine: SettlementSuggestionEngine? = null
+    private val suggestionEngine: SettlementSuggestionEngine
 ) {
     /**
      * Records a financial settlement payment encapsulated as a [Settlement] model.
+     *
+     * @param groupId the unique identifier of the owning group
+     * @param settlement the domain settlement payload
+     * @param actorSubject the authenticated identity performing the action
+     * @param idempotencyKey the client-provided idempotency key for durable replay protection
+     * @return the recorded domain settlement
      */
     fun record(
         groupId: UUID,
@@ -81,13 +87,17 @@ class SettlementService(
         return store.record(groupId, Settlement(durableId, from, to, amountMinor, currency))
     }
 
-
-
+    /**
+     * Reverses a recorded settlement atomically.
+     */
     fun reverse(groupId: UUID, id: UUID, reason: String): Settlement {
         require(reason.isNotBlank()) { "Reversal reason is required" }
         return store.reverse(groupId, id, reason)
     }
 
+    /**
+     * Calculates suggested settlement transfers that clear debts for the given group.
+     */
     fun suggestions(groupId: UUID): List<SuggestedSettlement> =
-        suggestionEngine?.suggestSettlements(groupId) ?: emptyList()
+        suggestionEngine.suggestSettlements(groupId)
 }

@@ -216,6 +216,9 @@ This workstream manages the six-digit `DM-L-C-EE` domain/module error-code stand
 | [CORE-31](details/CORE-31.md) | core | done | Recurring schedule participant membership identity and currency validation hardening |
 | [CORE-32](details/CORE-32.md) | core | done | Multi-currency balance deterministic sorting and CSV export pagination bounds |
 | [CORE-33](details/CORE-33.md) | quality | done | Multi-currency end-to-end integration and zero-sum property testing suite |
+| [CORE-34](details/CORE-34.md) | core | done | Align JpaSettlementStore error catalog codes and eliminate redundant reversal queries |
+| [CORE-35](details/CORE-35.md) | core | done | Streamline SettlementSuggestionEngine injection and eliminate legacy unauthenticated service overloads |
+| [CORE-36](details/CORE-36.md) | core | done | Consolidate settlement persistence port interfaces and eliminate redundant interface layer |
 
 | ID | Owner | Status | Deliverable |
 | --- | --- | --- | --- |

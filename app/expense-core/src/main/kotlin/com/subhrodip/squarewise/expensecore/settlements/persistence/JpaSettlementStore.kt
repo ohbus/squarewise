@@ -47,7 +47,7 @@ class JpaSettlementStore(
                 existing.amountMinor != settlement.amountMinor ||
                 existing.currency != settlement.currency
             ) {
-                throw ExpenseDomainException(ExpenseErrors.GROUP_NAME_CONFLICT, "Idempotency key was already used with a different settlement")
+                throw ExpenseDomainException(ExpenseErrors.EXPENSE_IDEMPOTENCY_CONFLICT, "Idempotency key was already used with a different settlement")
             }
             return existing.toDomain()
         }
@@ -82,13 +82,13 @@ class JpaSettlementStore(
      * @param settlementId the UUID of the settlement to reverse
      * @param reason explanation for the reversal
      * @return the updated domain settlement with REVERSED status
-     * @throws ExpenseDomainException with [ExpenseErrors.GROUP_NOT_FOUND] if the settlement cannot be found
+     * @throws ExpenseDomainException with [ExpenseErrors.SETTLEMENT_NOT_FOUND] if the settlement cannot be found
      */
     @Transactional
     override fun reverse(groupId: UUID, settlementId: UUID, reason: String): Settlement {
         checkActiveGroup(groupId)
         val entity = repository.findForUpdate(settlementId, groupId)
-            ?: throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Settlement not found")
+            ?: throw ExpenseDomainException(ExpenseErrors.SETTLEMENT_NOT_FOUND, "Settlement $settlementId not found")
         if (entity.status == SettlementStatus.REVERSED) return entity.toDomain()
         entity.status = SettlementStatus.REVERSED
         entity.reversalReason = reason
@@ -110,7 +110,7 @@ class JpaSettlementStore(
 
     private fun checkActiveGroup(groupId: UUID) = groupRepository.findById(groupId).orElse(null)?.also { group ->
         if (group.status == "ARCHIVED") {
-            throw ExpenseDomainException(ExpenseErrors.GROUP_NAME_CONFLICT, "Group is archived")
+            throw ExpenseDomainException(ExpenseErrors.GROUP_ARCHIVED, "Group is archived")
         }
     } ?: throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group $groupId not found")
 }
