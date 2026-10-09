@@ -38,3 +38,12 @@ Remediate allocation item deduplication and arithmetic integer overflow vulnerab
 - `./gradlew :app:expense-core:test --tests "com.subhrodip.squarewise.expensecore.expenses.*" --no-daemon`
 - `make contracts`
 - `git diff --check`
+
+## Implementation Notes & Evidence
+
+- **AUD-03 Remediation**: In `AllocationCalculator.calculate`, added strict uniqueness guard on `items.map { it.participantId }` before map association and mode dispatch. Rejects duplicate participant IDs across `EQUAL`, `EXACT`, `PERCENT_BASIS_POINTS`, and `WEIGHTED_SHARES` with `IllegalArgumentException("participant IDs must be unique")`, which `ExpenseController` wraps into `ExpenseDomainException(ExpenseErrors.EXPENSE_REQUEST_INVALID)`.
+- **AUD-05 Remediation**: In `ExpenseValidator.validatePayers`, enforced participant uniqueness across `payers` with `ExpenseDomainException(ExpenseErrors.EXPENSE_REQUEST_INVALID)` and replaced raw addition with `FinancialArithmetic.add(sum, pAmount)` to catch `Long` two's complement overflow.
+- **Evidence**:
+  - `./gradlew :app:expense-core:test --tests "com.subhrodip.squarewise.expensecore.expenses.*" --no-daemon` passed cleanly.
+  - `make contracts` verified valid JSON, valid GraphQL, 257 valid tasks, 45 operations, 99 six-digit error catalog records.
+  - `git diff --check` reported zero trailing whitespace or format issues.

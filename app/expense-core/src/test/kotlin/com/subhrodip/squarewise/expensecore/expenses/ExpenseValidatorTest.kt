@@ -102,4 +102,30 @@ class ExpenseValidatorTest {
         assertEquals(true, error.message?.contains(field))
         assertEquals(true, error.message?.contains(expectedMessage))
     }
+
+    @Test
+    fun `rejects duplicate payer participant IDs`() {
+        val duplicatePayers = listOf(
+            PayerDto(alice.toString(), MoneyDto("EUR", "50")),
+            PayerDto(alice.toString(), MoneyDto("EUR", "50"))
+        )
+        val error = assertThrows(SquarewiseException::class.java) {
+            ExpenseValidator.validatePayers(duplicatePayers, "EUR")
+        }
+        assertEquals(CategoryCode.VALIDATION_ERROR, error.definition.category)
+        assertEquals(true, error.message?.contains("participant IDs must be unique"))
+    }
+
+    @Test
+    fun `rejects payer amounts that cause 64-bit integer overflow`() {
+        val overflowingPayers = listOf(
+            PayerDto(alice.toString(), MoneyDto("EUR", Long.MAX_VALUE.toString())),
+            PayerDto(bob.toString(), MoneyDto("EUR", "1"))
+        )
+        val error = assertThrows(SquarewiseException::class.java) {
+            ExpenseValidator.validatePayers(overflowingPayers, "EUR")
+        }
+        assertEquals(CategoryCode.VALIDATION_ERROR, error.definition.category)
+        assertEquals(true, error.message?.contains("exceeds maximum allowed value"))
+    }
 }

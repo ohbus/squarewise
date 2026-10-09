@@ -3720,7 +3720,7 @@
       "parent_id": "MILESTONE-PRODUCT",
       "title": "Financial arithmetic hardening and allocation duplicate validation",
       "phase": "implementation",
-      "status": "todo",
+      "status": "done",
       "owner_role": "core",
       "owner_agent": "/root/allocation_agent",
       "depends_on": [
@@ -3744,7 +3744,11 @@
         "make contracts",
         "git diff --check"
       ],
-      "evidence": [],
+      "evidence": [
+        "Added participant ID uniqueness validation across all allocation modes in AllocationCalculator.calculate (AUD-03).",
+        "Added participant uniqueness validation and FinancialArithmetic.add overflow checking in ExpenseValidator.validatePayers (AUD-05).",
+        "AllocationCalculatorTest and ExpenseValidatorTest expanded with duplicate participant and overflow coverage; all expense core unit tests passed."
+      ],
       "reviewer": "/root",
       "blocker": null
     },

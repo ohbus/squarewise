@@ -212,7 +212,7 @@ This workstream manages the six-digit `DM-L-C-EE` domain/module error-code stand
 | ID | Owner | Status | Deliverable |
 | --- | --- | --- | --- |
 | [CORE-29](details/CORE-29.md) | core | todo | Multi-currency settlement ledger persistence, Flyway migration, and replay validation |
-| [CORE-30](details/CORE-30.md) | core | todo | Financial arithmetic hardening and allocation duplicate validation |
+| [CORE-30](details/CORE-30.md) | core | done | Financial arithmetic hardening and allocation duplicate validation |
 | [CORE-31](details/CORE-31.md) | core | todo | Recurring schedule participant membership identity and currency validation hardening |
 | [CORE-32](details/CORE-32.md) | core | todo | Multi-currency balance deterministic sorting and CSV export pagination bounds |
 | [CORE-33](details/CORE-33.md) | quality | todo | Multi-currency end-to-end integration and zero-sum property testing suite |
@@ -340,7 +340,7 @@ This workstream manages the six-digit `DM-L-C-EE` domain/module error-code stand
 | DOC-26 | coordinator | done | Reconcile local smoke-demo delivery evidence and Bruno API collection |
 | SEC-02 | coordinator | done | Implement and verify whole security audit remediation (H-1, H-2, M-1 to M-5, L-1 to L-6) |
 | CORE-29 | core | todo | Multi-currency settlement ledger persistence, Flyway migration, and replay validation |
-| CORE-30 | core | todo | Financial arithmetic hardening and allocation duplicate validation |
+| CORE-30 | core | done | Financial arithmetic hardening and allocation duplicate validation |
 | CORE-31 | core | todo | Recurring schedule participant membership identity and currency validation hardening |
 | CORE-32 | core | todo | Multi-currency balance deterministic sorting and CSV export pagination bounds |
 | CORE-33 | quality | todo | Multi-currency end-to-end integration and zero-sum property testing suite |

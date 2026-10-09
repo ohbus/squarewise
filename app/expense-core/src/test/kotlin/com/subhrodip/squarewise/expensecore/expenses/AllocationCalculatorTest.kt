@@ -215,4 +215,19 @@ class AllocationCalculatorTest {
             assertEquals(equal, AllocationCalculator.exact(total, equal))
         }
     }
+
+    @Test
+    fun `calculate rejects duplicate participant IDs across all allocation modes`() {
+        val duplicateItems = listOf(
+            AllocationItemDto("alice", "50"),
+            AllocationItemDto("alice", "50")
+        )
+
+        listOf("EQUAL", "EXACT", "PERCENT_BASIS_POINTS", "WEIGHTED_SHARES").forEach { mode ->
+            val ex = assertThrows(IllegalArgumentException::class.java) {
+                AllocationCalculator.calculate(mode, 100L, duplicateItems)
+            }
+            assertTrue(ex.message?.contains("participant IDs must be unique") == true, "Mode $mode should reject duplicates")
+        }
+    }
 }

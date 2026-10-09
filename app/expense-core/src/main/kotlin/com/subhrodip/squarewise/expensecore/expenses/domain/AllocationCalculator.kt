@@ -57,12 +57,33 @@ object AllocationCalculator {
         return floors
     }
 
+    /**
+     * Calculates participant allocations for a given mode and total minor units.
+     * Enforces strict uniqueness of participant IDs before map association to prevent
+     * silent allocation loss.
+     *
+     * @param mode Allocation split mode (EQUAL, EXACT, PERCENT_BASIS_POINTS, WEIGHTED_SHARES)
+     * @param totalMinor Total expense amount in integer minor units
+     * @param items List of allocation item DTOs containing participant IDs and allocation values
+     * @return Map of participant ID to allocated minor units
+     */
     fun calculate(mode: String, totalMinor: Long, items: List<AllocationItemDto>): Map<String, Long> {
+        val participantIds = items.map { it.participantId }
+        require(participantIds.distinct().size == participantIds.size) { "participant IDs must be unique" }
         return when (mode.uppercase()) {
-            "EQUAL" -> equal(totalMinor, items.map { it.participantId })
-            "EXACT" -> exact(totalMinor, items.associate { it.participantId to it.value.toLong() })
-            "PERCENT_BASIS_POINTS" -> percentage(totalMinor, items.associate { it.participantId to it.value.toLong() })
-            "WEIGHTED_SHARES" -> weightedShares(totalMinor, items.associate { it.participantId to it.value.toLong() })
+            "EQUAL" -> equal(totalMinor, participantIds)
+            "EXACT" -> exact(totalMinor, items.associate {
+                val value = it.value.toLongOrNull() ?: throw IllegalArgumentException("allocation value must be a valid integer")
+                it.participantId to value
+            })
+            "PERCENT_BASIS_POINTS" -> percentage(totalMinor, items.associate {
+                val value = it.value.toLongOrNull() ?: throw IllegalArgumentException("allocation value must be a valid integer")
+                it.participantId to value
+            })
+            "WEIGHTED_SHARES" -> weightedShares(totalMinor, items.associate {
+                val value = it.value.toLongOrNull() ?: throw IllegalArgumentException("allocation value must be a valid integer")
+                it.participantId to value
+            })
             else -> throw ExpenseDomainException(ExpenseErrors.EXPENSE_REQUEST_INVALID, "Unsupported allocation mode: $mode")
         }
     }
