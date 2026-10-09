@@ -19,17 +19,19 @@ Conversely, **the core proportional splitting algorithms ([`AllocationCalculator
 
 ## Findings Matrix
 
-| Ref | Domain / Area | Finding | Severity | RFC / Standard Impact |
-|---|---|---|:---:|---|
-| **AUD-01** | Multi-Currency Settlements | `settlements` table & store drop request currency, hardcoding `group.currency` | **CRITICAL** | Violates ISO 4217, Zero-Sum Multi-Currency Ledger |
-| **AUD-02** | Multi-Currency Settlements | Settlement idempotency check ignores currency mutations | **HIGH** | Violates RFC 9110 Idempotency Semantics |
-| **AUD-03** | Allocation Splits | Silent deduplication of duplicate participant IDs in `EXACT`, `PERCENT_BASIS_POINTS`, and `WEIGHTED_SHARES` | **HIGH** | Violates RFC 9457 Validation Errors, Silent Data Loss |
-| **AUD-04** | Recurring Ledger | Recurring worker creates expenses with hashed auth subjects instead of membership IDs | **HIGH** | Corrupts Double-Entry Participant Identity Model |
-| **AUD-05** | Input Arithmetic | Unchecked `Long` addition in `ExpenseValidator.validatePayers` | **MEDIUM** | Violates Safe 64-bit Integer Bounds (Two's Complement Wrap) |
-| **AUD-06** | Recurring Expenses | Negative payer/allocation amounts permitted in recurring custom specifications | **MEDIUM** | Invariant Violation (Positive Ledger Postings) |
-| **AUD-07** | Recurring Multi-Currency | Recurring schedules ignore custom payer and allocation currencies | **MEDIUM** | Violates ISO 4217 Currency Integrity |
-| **AUD-08** | Multi-Currency Balances | Participant balance list sort order across currencies is non-deterministic | **LOW** | Violates Deterministic API Guarantees |
-| **AUD-09** | Reporting & Export | CSV export row limit check fails on valid queries due to internal page capping | **LOW** | Violates RFC 4180 / OpenAPI Query Bounds |
+| Ref | Domain / Area | Finding | Severity | RFC / Standard Impact | Remediation Status |
+|---|---|---|:---:|---|:---:|
+| **AUD-01** | Multi-Currency Settlements | `settlements` table & store drop request currency, hardcoding `group.currency` | **CRITICAL** | Violates ISO 4217, Zero-Sum Multi-Currency Ledger | **RESOLVED & VERIFIED** ([`CORE-29`](file:///Users/smohanta/scm/subho/pennywise/docs/tasks/details/CORE-29.md)) |
+| **AUD-02** | Multi-Currency Settlements | Settlement idempotency check ignores currency mutations | **HIGH** | Violates RFC 9110 Idempotency Semantics | **RESOLVED & VERIFIED** ([`CORE-29`](file:///Users/smohanta/scm/subho/pennywise/docs/tasks/details/CORE-29.md)) |
+| **AUD-03** | Allocation Splits | Silent deduplication of duplicate participant IDs in `EXACT`, `PERCENT_BASIS_POINTS`, and `WEIGHTED_SHARES` | **HIGH** | Violates RFC 9457 Validation Errors, Silent Data Loss | **RESOLVED & VERIFIED** ([`CORE-30`](file:///Users/smohanta/scm/subho/pennywise/docs/tasks/details/CORE-30.md)) |
+| **AUD-04** | Recurring Ledger | Recurring worker creates expenses with hashed auth subjects instead of membership IDs | **HIGH** | Corrupts Double-Entry Participant Identity Model | **RESOLVED & VERIFIED** ([`CORE-31`](file:///Users/smohanta/scm/subho/pennywise/docs/tasks/details/CORE-31.md)) |
+| **AUD-05** | Input Arithmetic | Unchecked `Long` addition in `ExpenseValidator.validatePayers` | **MEDIUM** | Violates Safe 64-bit Integer Bounds (Two's Complement Wrap) | **RESOLVED & VERIFIED** ([`CORE-30`](file:///Users/smohanta/scm/subho/pennywise/docs/tasks/details/CORE-30.md)) |
+| **AUD-06** | Recurring Expenses | Negative payer/allocation amounts permitted in recurring custom specifications | **MEDIUM** | Invariant Violation (Positive Ledger Postings) | **RESOLVED & VERIFIED** ([`CORE-31`](file:///Users/smohanta/scm/subho/pennywise/docs/tasks/details/CORE-31.md)) |
+| **AUD-07** | Recurring Multi-Currency | Recurring schedules ignore custom payer and allocation currencies | **MEDIUM** | Violates ISO 4217 Currency Integrity | **RESOLVED & VERIFIED** ([`CORE-31`](file:///Users/smohanta/scm/subho/pennywise/docs/tasks/details/CORE-31.md)) |
+| **AUD-08** | Multi-Currency Balances | Participant balance list sort order across currencies is non-deterministic | **LOW** | Violates Deterministic API Guarantees | **RESOLVED & VERIFIED** ([`CORE-32`](file:///Users/smohanta/scm/subho/pennywise/docs/tasks/details/CORE-32.md)) |
+| **AUD-09** | Reporting & Export | CSV export row limit check fails on valid queries due to internal page capping | **LOW** | Violates RFC 4180 / OpenAPI Query Bounds | **RESOLVED & VERIFIED** ([`CORE-32`](file:///Users/smohanta/scm/subho/pennywise/docs/tasks/details/CORE-32.md)) |
+| **AUD-10** | Universal Invariant | Universal mandatory ISO 4217 currency invariant verification across all persistence entities | **CRITICAL** | Zero-sum ledger isolation per currency | **RESOLVED & VERIFIED** ([`CORE-29`](file:///Users/smohanta/scm/subho/pennywise/docs/tasks/details/CORE-29.md) / [`CORE-33`](file:///Users/smohanta/scm/subho/pennywise/docs/tasks/details/CORE-33.md)) |
+
 
 ---
 
@@ -446,17 +448,36 @@ Per repository architectural standards ([`docs/product/mvp.md:23`](file:///Users
 
 ---
 
-## Action Plan & Roadmap
+---
 
-1. **Step 1: Database Migration**:
-   - Add Flyway script `V11__add_settlement_currency.sql`.
-   - Update `SettlementEntity` and `JpaSettlementStore` to persist and verify `settlement.currency`.
-2. **Step 2: Participant Identity Fix**:
-   - Correct JPQL query in `RecurringExpenseService.getGroupMembers` to read `m.membershipId`.
-3. **Step 3: Validation & Arithmetic Hardening**:
-   - Add uniqueness check for allocation participant IDs in `AllocationCalculator.calculate`.
-   - Use `FinancialArithmetic.add` in `ExpenseValidator.validatePayers`.
-   - Enforce positive bounds and currency match in `RecurringExpenseController`.
-4. **Step 4: Regression Tests**:
-   - Add multi-currency integration test covering group settlement recording and balance resolution in distinct currencies.
-   - Add property-based tests verifying zero-sum invariant across multi-currency groups.
+## Completed Remediation & Verification Evidence
+
+All identified audit findings (**`AUD-01` through `AUD-10`**) have been fully resolved, verified, and merged into the active release milestone:
+
+1. **Step 1: Multi-Currency Settlement Persistence (`AUD-01`, `AUD-02`, `AUD-10`)**:
+   - Implemented via [`CORE-29`](file:///Users/smohanta/scm/subho/pennywise/docs/tasks/details/CORE-29.md) in commit `9491c96d`.
+   - Flyway migration `V12__add_settlement_currency.sql` adds `currency VARCHAR(3) NOT NULL` to table `settlements`.
+   - `SettlementEntity` and `JpaSettlementStore` persist transaction currency and record postings against transaction currency instead of group default currency.
+   - Idempotency replays reject conflicting currency mutations with `STATE_CONFLICT`.
+
+2. **Step 2: Arithmetic Hardening & Allocation Participant Uniqueness (`AUD-03`, `AUD-05`)**:
+   - Implemented via [`CORE-30`](file:///Users/smohanta/scm/subho/pennywise/docs/tasks/details/CORE-30.md) in commit `c5c8f917`.
+   - `AllocationCalculator.calculate` rejects duplicate participant IDs across all split modes (`EQUAL`, `EXACT`, `PERCENT_BASIS_POINTS`, `WEIGHTED_SHARES`).
+   - `ExpenseValidator.validatePayers` enforces unique payer IDs and overflow-safe addition via `FinancialArithmetic.add`.
+
+3. **Step 3: Recurring Membership Identity & Custom Specification Validation (`AUD-04`, `AUD-06`, `AUD-07`)**:
+   - Implemented via [`CORE-31`](file:///Users/smohanta/scm/subho/pennywise/docs/tasks/details/CORE-31.md) in commit `ec55bd13`.
+   - `RecurringExpenseService.getGroupMembers` queries active `m.membershipId` UUIDs directly from `GroupMembershipEntity` instead of synthetic subject hashing.
+   - `RecurringExpenseService.validateCustomSpecifications` enforces strictly positive amounts (`amountMinor > 0`).
+   - `RecurringExpenseController.validateCurrencyMatch` enforces matching currency across schedule, payers, and allocations.
+
+4. **Step 4: Deterministic Balance Ordering & Uncapped CSV Export (`AUD-08`, `AUD-09`)**:
+   - Implemented via [`CORE-32`](file:///Users/smohanta/scm/subho/pennywise/docs/tasks/details/CORE-32.md) in commit `3db5cd4e`.
+   - `JpaExpenseStore.balances` sorts deterministically by participant ID ascending, then currency ascending.
+   - `ExpenseSearch.csv` queries directly with `maxRows` bound (up to 10,000) bypassing the 1,000-row page cap.
+
+5. **Step 5: Multi-Currency End-to-End Integration & Zero-Sum Property Suite (`CORE-33`)**:
+   - Implemented via [`CORE-33`](file:///Users/smohanta/scm/subho/pennywise/docs/tasks/details/CORE-33.md) in commit `6d222fd8`.
+   - `PostgresMultiCurrencyLedgerTest` tests complete multi-currency lifecycle (`EUR`, `USD`, `GBP`), suggestions, and settlements against the 4 reconciliation queries in [`docs/operations/ledger-reconciliation.md`](file:///Users/smohanta/scm/subho/pennywise/docs/operations/ledger-reconciliation.md) yielding 0 discrepancies.
+   - `MultiCurrencyZeroSumPropertyTest` proves 100% zero-sum ledger conservation over 500+ randomized multi-currency mutations.
+   - Test suite coverage in `expense-core`: **99.41% line coverage**, **97.39% instruction coverage**, **95.55% branch coverage** across 318 passing tests.
