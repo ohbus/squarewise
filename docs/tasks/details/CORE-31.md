@@ -38,3 +38,21 @@ Remediate recurring schedule entity identity mismatch, negative amounts, and unv
 - `./gradlew :app:expense-core:test --tests "com.subhrodip.squarewise.expensecore.recurring.*" --no-daemon`
 - `make contracts`
 - `git diff --check`
+
+## Status
+
+done
+
+## Implementation notes
+
+- Replaced synthetic subject hashing in `RecurringExpenseService.getGroupMembers` with direct query for active `GroupMembershipEntity.membershipId`.
+- Added custom payer and allocation positivity checks (`amountMinor > 0` and `allocatedMinor > 0`) in `RecurringExpenseService.validateCustomSpecifications`.
+- Enforced uniform currency validation across schedule amount, payers, and allocations in `RecurringExpenseController.validateCurrencyMatch`.
+- Updated test suites in `RecurringExpenseServiceTest` and `RecurringExpenseControllerTest` to assert against actual member UUIDs and verify error handling for currency mismatches and non-positive amounts.
+
+## Verification evidence
+
+- Ran `./gradlew :app:expense-core:test --tests "com.subhrodip.squarewise.expensecore.recurring.*" --no-daemon`: BUILD SUCCESSFUL (all 34 tests passed).
+- Ran `make contracts`: all 257 tasks, schemas, and public surfaces valid.
+- Ran `git diff --check`: clean, no whitespace errors.
+

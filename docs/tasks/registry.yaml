@@ -3763,7 +3763,7 @@
       "parent_id": "MILESTONE-PRODUCT",
       "title": "Recurring schedule participant membership identity and currency validation hardening",
       "phase": "implementation",
-      "status": "todo",
+      "status": "done",
       "owner_role": "core",
       "owner_agent": "/root/recurring_agent",
       "depends_on": [

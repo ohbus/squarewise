@@ -46,6 +46,7 @@ class RecurringExpenseController(
     ): RecurringScheduleResponse {
         verifyGroupAndMembership(groupId, principal)
         val amountMinor = parseAmount(request.amount.minor)
+        validateCurrencyMatch(request.amount.currency, request.payers, request.allocations)
 
         val domainPayers = request.payers?.map {
             ExpensePayer(
@@ -108,6 +109,7 @@ class RecurringExpenseController(
     ): RecurringScheduleResponse {
         verifyGroupAndMembership(groupId, principal)
         val amountMinor = parseAmount(request.amount.minor)
+        validateCurrencyMatch(request.amount.currency, request.payers, request.allocations)
 
         val domainPayers = request.payers?.map {
             ExpensePayer(
@@ -175,6 +177,23 @@ class RecurringExpenseController(
             ?: throw ExpenseDomainException(PlatformErrors.AUTHENTICATION_REQUIRED, "Authenticated subject is required")
         if (!membershipRepository.existsByGroupIdAndSubject(groupId, subject)) {
             throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group $groupId not found")
+        }
+    }
+
+    private fun validateCurrencyMatch(
+        expectedCurrency: String,
+        payers: List<ExpensePayerDto>?,
+        allocations: List<ExpenseAllocationItemDto>?
+    ) {
+        payers?.forEach {
+            if (it.amount.currency != expectedCurrency) {
+                throw ExpenseDomainException(ExpenseErrors.EXPENSE_REQUEST_INVALID, "Payer currency must match schedule currency")
+            }
+        }
+        allocations?.forEach {
+            if (it.amount.currency != expectedCurrency) {
+                throw ExpenseDomainException(ExpenseErrors.EXPENSE_REQUEST_INVALID, "Allocation currency must match schedule currency")
+            }
         }
     }
 

@@ -192,8 +192,9 @@ class RecurringExpenseServiceTest @Autowired constructor(
         val group = groupStore.create("alice", CreateGroupRequest("One-sided updates", "HOUSEHOLD", "EUR"))
         val invite = groupStore.invite(group.groupId, "alice", CreateInviteRequest(24))
         groupStore.claim(invite.token, "bob")
-        val aliceId = UUID.nameUUIDFromBytes("alice".toByteArray(StandardCharsets.UTF_8))
-        val bobId = UUID.nameUUIDFromBytes("bob".toByteArray(StandardCharsets.UTF_8))
+        val members = groupStore.listMembers(group.groupId, "alice")
+        val aliceId = members.first { it.subject == "alice" }.membershipId
+        val bobId = members.first { it.subject == "bob" }.membershipId
         val startDate = LocalDate.of(2026, 9, 1)
 
         val allocationOnly = service.createSchedule(
@@ -573,8 +574,9 @@ class RecurringExpenseServiceTest @Autowired constructor(
         val invite = groupStore.invite(group.groupId, "alice", CreateInviteRequest(24))
         groupStore.claim(invite.token, "bob")
 
-        val aliceId = UUID.nameUUIDFromBytes("alice".toByteArray(StandardCharsets.UTF_8))
-        val bobId = UUID.nameUUIDFromBytes("bob".toByteArray(StandardCharsets.UTF_8))
+        val members = groupStore.listMembers(group.groupId, "alice")
+        val aliceId = members.first { it.subject == "alice" }.membershipId
+        val bobId = members.first { it.subject == "bob" }.membershipId
         val startDate = LocalDate.of(2026, 9, 1)
 
         val schedule = service.createSchedule(
@@ -609,8 +611,9 @@ class RecurringExpenseServiceTest @Autowired constructor(
         val invite = groupStore.invite(group.groupId, "alice", CreateInviteRequest(24))
         groupStore.claim(invite.token, "bob")
 
-        val aliceId = UUID.nameUUIDFromBytes("alice".toByteArray(StandardCharsets.UTF_8))
-        val bobId = UUID.nameUUIDFromBytes("bob".toByteArray(StandardCharsets.UTF_8))
+        val members = groupStore.listMembers(group.groupId, "alice")
+        val aliceId = members.first { it.subject == "alice" }.membershipId
+        val bobId = members.first { it.subject == "bob" }.membershipId
         val startDate = LocalDate.of(2026, 9, 1)
 
         val payersOnly = service.createSchedule(
@@ -888,6 +891,7 @@ class RecurringExpenseServiceTest @Autowired constructor(
     fun `generates recurring allocations for legacy non-UUID subjects`() {
         val legacySubject = "legacy-user"
         val group = groupStore.create(legacySubject, CreateGroupRequest("Legacy members", "HOUSEHOLD", "EUR"))
+        val member = groupStore.listMembers(group.groupId, legacySubject).single()
         val startDate = LocalDate.of(2026, 10, 1)
         val schedule = service.createSchedule(
             group.groupId,
@@ -904,14 +908,14 @@ class RecurringExpenseServiceTest @Autowired constructor(
 
         val expenseId = service.getOccurrences(schedule.scheduleId).single().expenseId
         val expense = expenseStore.findById(expenseId!!)
-        val expectedParticipant = UUID.nameUUIDFromBytes(legacySubject.toByteArray(StandardCharsets.UTF_8))
-        assertEquals(listOf(expectedParticipant), expense?.allocations?.map { it.participantId })
+        assertEquals(listOf(member.membershipId), expense?.allocations?.map { it.participantId })
     }
 
     @Test
     fun `preserves UUID-shaped member subjects when generating recurring allocations`() {
         val memberId = UUID.randomUUID()
         val group = groupStore.create(memberId.toString(), CreateGroupRequest("UUID members", "HOUSEHOLD", "EUR"))
+        val member = groupStore.listMembers(group.groupId, memberId.toString()).single()
         val startDate = LocalDate.of(2026, 11, 1)
         val schedule = service.createSchedule(
             group.groupId,
@@ -928,6 +932,6 @@ class RecurringExpenseServiceTest @Autowired constructor(
 
         val expenseId = service.getOccurrences(schedule.scheduleId).single().expenseId
         val expense = expenseStore.findById(expenseId!!)
-        assertEquals(listOf(memberId), expense?.allocations?.map { it.participantId })
+        assertEquals(listOf(member.membershipId), expense?.allocations?.map { it.participantId })
     }
 }

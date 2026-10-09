@@ -295,19 +295,10 @@ class RecurringExpenseService(
     }
 
     private fun getGroupMembers(groupId: UUID): List<UUID> {
-        val rows = entityManager.createQuery(
-            "SELECT m.subject, m.membershipId FROM GroupMembershipEntity m WHERE m.groupId = :groupId ORDER BY m.membershipId ASC",
-            Array<Any>::class.java
+        return entityManager.createQuery(
+            "SELECT m.membershipId FROM GroupMembershipEntity m WHERE m.groupId = :groupId AND m.status = 'ACTIVE' ORDER BY m.membershipId ASC",
+            UUID::class.java
         ).setParameter("groupId", groupId).resultList
-
-        return rows.map { row ->
-            val subject = row[0] as String
-            try {
-                UUID.fromString(subject)
-            } catch (_: IllegalArgumentException) {
-                UUID.nameUUIDFromBytes(subject.toByteArray(StandardCharsets.UTF_8))
-            }
-        }
     }
 
     private fun validateSchedule(request: CreateRecurringScheduleRequest) {
@@ -368,12 +359,14 @@ class RecurringExpenseService(
     ) {
         if (payers != null) {
             require(payers.isNotEmpty()) { "payers must not be empty if provided" }
+            require(payers.all { it.amountMinor > 0 }) { "all payer amounts must be positive" }
             require(payers.sumOf { it.amountMinor } == amountMinor) {
                 "sum of payer amounts must equal schedule amount"
             }
         }
         if (allocations != null) {
             require(allocations.isNotEmpty()) { "allocations must not be empty if provided" }
+            require(allocations.all { it.allocatedMinor > 0 }) { "all allocation amounts must be positive" }
             require(allocations.sumOf { it.allocatedMinor } == amountMinor) {
                 "sum of allocation amounts must equal schedule amount"
             }
