@@ -4,6 +4,7 @@ import com.subhrodip.squarewise.expensecore.settlements.domain.Settlement
 import com.subhrodip.squarewise.expensecore.settlements.domain.SettlementStatus
 import com.subhrodip.squarewise.expensecore.settlements.persistence.InMemorySettlementStore
 import com.subhrodip.squarewise.expensecore.settlements.service.SettlementService
+import com.subhrodip.squarewise.expensecore.settlements.service.SettlementSuggestionEngine
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -93,5 +94,37 @@ class SettlementServiceTest {
             service.reverse(UUID.randomUUID(), UUID.randomUUID(), " ")
         }
         assertTrue(service.suggestions(UUID.randomUUID()).isEmpty())
+    }
+
+    @Test
+    fun `records settlement via entity overload without idempotency and with idempotency`() {
+        val store = InMemorySettlementStore()
+        val service = SettlementService(store)
+        val groupId = UUID.randomUUID()
+        val from = UUID.randomUUID()
+        val to = UUID.randomUUID()
+        val settlement = Settlement(UUID.randomUUID(), from, to, 1000L, "USD")
+
+        // Overload 1: actorSubject == null && idempotencyKey == null
+        val direct = service.record(groupId, settlement)
+        assertEquals(SettlementStatus.RECORDED, direct.status)
+        assertEquals(settlement.id, direct.id)
+        assertEquals("USD", direct.currency)
+
+        // Overload 2: actorSubject != null && idempotencyKey != null
+        val idempotent = service.record(groupId, settlement, "actor-user", "settlement-key-0002")
+        assertEquals(SettlementStatus.RECORDED, idempotent.status)
+        assertEquals("USD", idempotent.currency)
+    }
+
+    @Test
+    fun `delegates suggestions to suggestionEngine when present`() {
+        val expenseStore = com.subhrodip.squarewise.expensecore.expenses.persistence.store.InMemoryExpenseStore()
+        val engine = SettlementSuggestionEngine(expenseStore)
+        val service = SettlementService(InMemorySettlementStore(), engine)
+        val groupId = UUID.randomUUID()
+
+        val suggestions = service.suggestions(groupId)
+        assertTrue(suggestions.isEmpty())
     }
 }

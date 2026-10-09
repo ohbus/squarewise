@@ -647,4 +647,45 @@ class JpaGroupStoreTest @Autowired constructor(
         assertEquals(auditCount, auditRepository.count())
         assertEquals(outboxCount, outboxRepository.count())
     }
+
+    @Test
+    fun `rejects claim with malformed token not found or already revoked`() {
+        val group = store.create("invite-owner", CreateGroupRequest("Invite Group", "HOUSEHOLD", "EUR"))
+        val invite = store.invite(group.groupId, "invite-owner", CreateInviteRequest(24))
+
+        // Malformed token format
+        val malformedError = assertThrows<SquarewiseException> {
+            store.claim("invalid-token-short", "user1")
+        }
+        assertEquals(CategoryCode.STATE_CONFLICT, malformedError.definition.category)
+
+        // Non-existent token (valid shape)
+        val notFoundError = assertThrows<SquarewiseException> {
+            store.claim("a".repeat(43), "user1")
+        }
+        assertEquals(CategoryCode.STATE_CONFLICT, notFoundError.definition.category)
+
+        // Revoked invite
+        store.revokeInvite(group.groupId, "invite-owner", invite.token)
+        val revokedError = assertThrows<SquarewiseException> {
+            store.claim(invite.token, "user1")
+        }
+        assertEquals(CategoryCode.STATE_CONFLICT, revokedError.definition.category)
+    }
+
+    @Test
+    fun `rejects placeholder claim if placeholder is missing or already bound`() {
+        val group = store.create("placeholder-owner", CreateGroupRequest("Placeholder Group", "HOUSEHOLD", "EUR"))
+        val placeholder = store.addPlaceholder(group.groupId, "placeholder-owner", CreatePlaceholderRequest("Bob"))
+        val invite = store.invite(group.groupId, "placeholder-owner", CreateInviteRequest(24, placeholder.membershipId))
+
+        // First claim succeeds
+        val claimed = store.claim(invite.token, "bob-subject")
+        assertNotNull(claimed)
+
+        // Generate second invite targeting same placeholder
+        assertThrows<SquarewiseException> {
+            store.invite(group.groupId, "placeholder-owner", CreateInviteRequest(24, placeholder.membershipId))
+        }
+    }
 }

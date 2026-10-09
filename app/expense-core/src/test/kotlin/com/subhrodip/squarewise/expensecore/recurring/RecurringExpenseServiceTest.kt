@@ -429,7 +429,7 @@ class RecurringExpenseServiceTest @Autowired constructor(
     @Test
     fun `pauses schedule and emits outbox notification on invalid membership`() {
         val group = groupStore.create("alice", CreateGroupRequest("Private Flat", "HOUSEHOLD", "EUR"))
-        val aliceId = UUID.nameUUIDFromBytes("alice".toByteArray(StandardCharsets.UTF_8))
+        val aliceId = groupStore.listMembers(group.groupId, "alice").first().membershipId
         val nonMemberId = UUID.randomUUID()
         val startDate = LocalDate.of(2026, 9, 1)
 
