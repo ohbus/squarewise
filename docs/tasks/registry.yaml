@@ -3681,6 +3681,174 @@
       "blocker": null
     },
     {
+      "id": "CORE-29",
+      "parent_id": "MILESTONE-PRODUCT",
+      "title": "Multi-currency settlement ledger persistence, Flyway migration, and replay validation",
+      "phase": "implementation",
+      "status": "todo",
+      "owner_role": "core",
+      "owner_agent": "/root/settlement_agent",
+      "depends_on": [
+        "CORE-27"
+      ],
+      "owned_paths": [
+        "app/expense-core/src/main/resources/db/migration/V11__add_settlement_currency.sql",
+        "app/expense-core/src/main/kotlin/com/subhrodip/squarewise/expensecore/settlements/",
+        "app/expense-core/src/test/kotlin/com/subhrodip/squarewise/expensecore/settlements/",
+        "docs/operations/ledger-reconciliation.md",
+        "docs/tasks/details/CORE-29.md"
+      ],
+      "specification": "docs/tasks/details/CORE-29.md",
+      "acceptance_criteria": [
+        "V11__add_settlement_currency.sql adds currency VARCHAR(3) NOT NULL and backfills existing rows.",
+        "SettlementEntity and JpaSettlementStore map and persist caller-specified currency without group.currency fallback.",
+        "Settlements in non-default currencies post ledger entries in settlement currency.",
+        "Replaying same idempotency key with altered currency returns HTTP 409 Conflict.",
+        "Reversing multi-currency settlement creates compensating postings in settlement currency."
+      ],
+      "validation_commands": [
+        "./gradlew :app:expense-core:test --tests \"com.subhrodip.squarewise.expensecore.settlements.*\" --no-daemon",
+        "make contracts",
+        "git diff --check"
+      ],
+      "evidence": [],
+      "reviewer": "/root",
+      "blocker": null
+    },
+    {
+      "id": "CORE-30",
+      "parent_id": "MILESTONE-PRODUCT",
+      "title": "Financial arithmetic hardening and allocation duplicate validation",
+      "phase": "implementation",
+      "status": "todo",
+      "owner_role": "core",
+      "owner_agent": "/root/allocation_agent",
+      "depends_on": [
+        "CORE-27"
+      ],
+      "owned_paths": [
+        "app/expense-core/src/main/kotlin/com/subhrodip/squarewise/expensecore/expenses/domain/AllocationCalculator.kt",
+        "app/expense-core/src/main/kotlin/com/subhrodip/squarewise/expensecore/expenses/service/ExpenseValidator.kt",
+        "app/expense-core/src/test/kotlin/com/subhrodip/squarewise/expensecore/expenses/",
+        "docs/tasks/details/CORE-30.md"
+      ],
+      "specification": "docs/tasks/details/CORE-30.md",
+      "acceptance_criteria": [
+        "Duplicate participantId in allocation items across EXACT, PERCENT_BASIS_POINTS, and WEIGHTED_SHARES throws EXPENSE_REQUEST_INVALID.",
+        "Payer sum validation uses FinancialArithmetic.add and detects 64-bit signed integer overflow.",
+        "Duplicate payer participant IDs in request throws EXPENSE_REQUEST_INVALID.",
+        "AllocationCalculatorTest and ExpenseValidatorTest pass without regression."
+      ],
+      "validation_commands": [
+        "./gradlew :app:expense-core:test --tests \"com.subhrodip.squarewise.expensecore.expenses.*\" --no-daemon",
+        "make contracts",
+        "git diff --check"
+      ],
+      "evidence": [],
+      "reviewer": "/root",
+      "blocker": null
+    },
+    {
+      "id": "CORE-31",
+      "parent_id": "MILESTONE-PRODUCT",
+      "title": "Recurring schedule participant membership identity and currency validation hardening",
+      "phase": "implementation",
+      "status": "todo",
+      "owner_role": "core",
+      "owner_agent": "/root/recurring_agent",
+      "depends_on": [
+        "CORE-28",
+        "CORE-29"
+      ],
+      "owned_paths": [
+        "app/expense-core/src/main/kotlin/com/subhrodip/squarewise/expensecore/recurring/",
+        "app/expense-core/src/test/kotlin/com/subhrodip/squarewise/expensecore/recurring/",
+        "docs/tasks/details/CORE-31.md"
+      ],
+      "specification": "docs/tasks/details/CORE-31.md",
+      "acceptance_criteria": [
+        "RecurringExpenseService.getGroupMembers selects and maps actual membershipId UUIDs rather than auth subject hashes.",
+        "Recurring occurrences create balance postings referencing actual group members.",
+        "Creating recurring schedules with payer/allocation currencies mismatching schedule currency is rejected.",
+        "Creating recurring schedules with negative or zero custom payer/allocation amounts is rejected."
+      ],
+      "validation_commands": [
+        "./gradlew :app:expense-core:test --tests \"com.subhrodip.squarewise.expensecore.recurring.*\" --no-daemon",
+        "make contracts",
+        "git diff --check"
+      ],
+      "evidence": [],
+      "reviewer": "/root",
+      "blocker": null
+    },
+    {
+      "id": "CORE-32",
+      "parent_id": "MILESTONE-PRODUCT",
+      "title": "Multi-currency balance deterministic sorting and CSV export pagination bounds",
+      "phase": "implementation",
+      "status": "todo",
+      "owner_role": "core",
+      "owner_agent": "/root/reporting_agent",
+      "depends_on": [
+        "CORE-27",
+        "DB-07"
+      ],
+      "owned_paths": [
+        "app/expense-core/src/main/kotlin/com/subhrodip/squarewise/expensecore/expenses/persistence/store/JpaExpenseStore.kt",
+        "app/expense-core/src/main/kotlin/com/subhrodip/squarewise/expensecore/search/model/ExpenseSearch.kt",
+        "app/expense-core/src/test/kotlin/com/subhrodip/squarewise/expensecore/search/",
+        "docs/tasks/details/CORE-32.md"
+      ],
+      "specification": "docs/tasks/details/CORE-32.md",
+      "acceptance_criteria": [
+        "JpaExpenseStore.balances orders deterministically by participantId then currency ascending.",
+        "ExpenseSearch.csv exports datasets between 1001 and 10000 items without false overflow exception when maxRows allows.",
+        "Search and balance unit tests pass cleanly."
+      ],
+      "validation_commands": [
+        "./gradlew :app:expense-core:test --tests \"com.subhrodip.squarewise.expensecore.search.*\" --no-daemon",
+        "make contracts",
+        "git diff --check"
+      ],
+      "evidence": [],
+      "reviewer": "/root",
+      "blocker": null
+    },
+    {
+      "id": "CORE-33",
+      "parent_id": "MILESTONE-PRODUCT",
+      "title": "Multi-currency end-to-end integration and zero-sum property testing suite",
+      "phase": "quality",
+      "status": "todo",
+      "owner_role": "quality",
+      "owner_agent": "/root/qa_agent",
+      "depends_on": [
+        "CORE-29",
+        "CORE-30",
+        "CORE-31",
+        "CORE-32"
+      ],
+      "owned_paths": [
+        "app/expense-core/src/test/kotlin/com/subhrodip/squarewise/expensecore/settlements/",
+        "app/expense-core/src/test/kotlin/com/subhrodip/squarewise/expensecore/expenses/",
+        "docs/tasks/details/CORE-33.md"
+      ],
+      "specification": "docs/tasks/details/CORE-33.md",
+      "acceptance_criteria": [
+        "PostgresMultiCurrencyLedgerTest verifies multi-currency lifecycle across EUR, USD, and GBP.",
+        "Ledger reconciliation queries confirm zero-sum balance and 100% coverage across currencies.",
+        "Property-based test verifies zero-sum ledger invariant over 500+ randomized multi-currency operations."
+      ],
+      "validation_commands": [
+        "./gradlew :app:expense-core:test --no-daemon",
+        "make contracts",
+        "git diff --check"
+      ],
+      "evidence": [],
+      "reviewer": "/root",
+      "blocker": null
+    },
+    {
       "id": "FND-08",
       "parent_id": "MILESTONE-SCAFFOLD",
       "title": "Refactor domain ports, in-memory stores, and consumer services into dedicated files",
