@@ -45,3 +45,19 @@ Build an automated regression and property-testing suite validating the complete
 - `./gradlew :app:expense-core:test --no-daemon`
 - `make contracts`
 - `git diff --check`
+
+## Status
+
+done
+
+## Implementation notes
+
+- Implemented `PostgresMultiCurrencyLedgerTest` verifying the multi-currency lifecycle (`EUR`, `USD`, `GBP`), mixed split modes (`EQUAL`, `EXACT`, `PERCENT_BASIS_POINTS`, `WEIGHTED_SHARES`), isolated currency balance streams, suggestion calculation, and settlement recording and reversal conforming to all queries in `docs/operations/ledger-reconciliation.md`.
+- Implemented `MultiCurrencyZeroSumPropertyTest` exercising randomized multi-currency mutations across multiple participants, currencies, split modes, settlements, reversals, and deletions, asserting universal $\sum \text{postings} == 0$ per `(group_id, currency)`.
+
+## Verification evidence
+
+- Ran `./gradlew :app:expense-core:test --no-daemon`: BUILD SUCCESSFUL (all test classes passed).
+- Ran `make contracts`: all 257 tasks, schemas, and public surfaces valid.
+- Ran `git diff --check`: clean, no whitespace errors.
+

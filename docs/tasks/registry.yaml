@@ -3833,7 +3833,7 @@
       "parent_id": "MILESTONE-PRODUCT",
       "title": "Multi-currency end-to-end integration and zero-sum property testing suite",
       "phase": "quality",
-      "status": "todo",
+      "status": "done",
       "owner_role": "quality",
       "owner_agent": "/root/qa_agent",
       "depends_on": [
