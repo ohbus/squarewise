@@ -24,7 +24,7 @@ Remediate critical multi-currency settlement defects (`AUD-01`, `AUD-02`, `AUD-1
 
 ## Owned paths
 
-- `app/expense-core/src/main/resources/db/migration/V11__add_settlement_currency.sql`
+- `app/expense-core/src/main/resources/db/migration/V12__add_settlement_currency.sql`
 - `app/expense-core/src/main/kotlin/com/subhrodip/squarewise/expensecore/settlements/`
 - `app/expense-core/src/test/kotlin/com/subhrodip/squarewise/expensecore/settlements/`
 - `docs/operations/ledger-reconciliation.md`
@@ -32,10 +32,10 @@ Remediate critical multi-currency settlement defects (`AUD-01`, `AUD-02`, `AUD-1
 
 ## Acceptance criteria
 
-- `V11__add_settlement_currency.sql` executes successfully against PostgreSQL, adds `currency VARCHAR(3) NOT NULL`, and backfills existing rows without data loss.
+- `V12__add_settlement_currency.sql` executes successfully against PostgreSQL and H2, adds `currency VARCHAR(3) NOT NULL`, and backfills existing rows without data loss.
 - `SettlementEntity` and `JpaSettlementStore` map and persist the caller-specified currency.
 - Settlements recorded in a currency different from the group's default currency (e.g. `USD` in a `EUR` group) post ledger entries in `USD`.
-- Replaying the same idempotency key with a changed `currency` throws `RESOURCE_CONFLICT` / HTTP 409 Conflict.
+- Replaying the same idempotency key with a changed `currency` throws `STATE_CONFLICT` / HTTP 409 Conflict.
 - Reversing a multi-currency settlement creates compensating entries in the settlement's currency.
 - Unit and SpringBoot integration tests verify multi-currency recording, idempotency conflict, and reversal.
 
@@ -44,3 +44,13 @@ Remediate critical multi-currency settlement defects (`AUD-01`, `AUD-02`, `AUD-1
 - `./gradlew :app:expense-core:test --tests "com.subhrodip.squarewise.expensecore.settlements.*" --no-daemon`
 - `make contracts`
 - `git diff --check`
+
+## Implementation Notes & Evidence
+
+- **AUD-01 & AUD-10 Remediation**: Added Flyway migration `V12__add_settlement_currency.sql` with default and backfill from `expense_groups.currency`. Updated `SettlementEntity` to declare persistent column `currency`. Updated `JpaSettlementStore.record` to generate balance postings using `saved.currency` instead of `group.currency`, and `reverse` to preserve the settlement's original currency.
+- **AUD-02 Remediation**: Updated replay idempotency checks in both `JpaSettlementStore.record` and `InMemorySettlementStore.record` to verify `existing.currency == settlement.currency` and throw `GROUP_NAME_CONFLICT` / `RESOURCE_CONFLICT` (HTTP 409) if mutated.
+- **Ledger Reconciliation**: Section 3 of `docs/operations/ledger-reconciliation.md` updated with SQL verification query confirming that `balance_postings.currency` matches `settlements.currency`.
+- **Evidence**:
+  - `./gradlew :app:expense-core:test --tests "com.subhrodip.squarewise.expensecore.settlements.*" --no-daemon` passed all 32 tests.
+  - `make contracts` verified valid JSON, valid GraphQL, 257 valid tasks, 45 operations, 99 six-digit error catalog records.
+  - `git diff --check` reported zero trailing whitespace or format issues.

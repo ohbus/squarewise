@@ -36,6 +36,9 @@ class SettlementServiceTest {
         assertThrows(SquarewiseException::class.java) {
             service.record(groupId, from, to, 1300, "EUR", "actor-1", "settlement-key-0001")
         }
+        assertThrows(SquarewiseException::class.java) {
+            service.record(groupId, from, to, 1250, "USD", "actor-1", "settlement-key-0001")
+        }
     }
 
     @Test

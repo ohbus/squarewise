@@ -22,7 +22,8 @@ class InMemorySettlementStore : SettlementStore {
         if (existing != null) {
             if (existing.fromParticipantId != settlement.fromParticipantId ||
                 existing.toParticipantId != settlement.toParticipantId ||
-                existing.amountMinor != settlement.amountMinor
+                existing.amountMinor != settlement.amountMinor ||
+                existing.currency != settlement.currency
             ) {
                 throw ExpenseDomainException(PlatformErrors.RESOURCE_CONFLICT, "Idempotency key was already used with a different settlement")
             }

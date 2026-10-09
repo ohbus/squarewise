@@ -50,6 +50,7 @@ class PersistenceEntityStateTest {
         assertEquals(from, settlement.fromParticipantId)
         assertEquals(to, settlement.toParticipantId)
         assertEquals(1250, settlement.amountMinor)
+        assertEquals("EUR", settlement.currency)
         assertEquals(SettlementStatus.REVERSED, settlement.status)
         assertEquals("Duplicate external payment", settlement.reversalReason)
         assertEquals("a".repeat(64), invitation.token)

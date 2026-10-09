@@ -85,6 +85,18 @@ For an audit report, compare the returned row count with the settlement count;
 they must be equal. The foreign keys on `balance_postings.expense_id` and
 `balance_postings.settlement_id` independently reject orphan references.
 
+Every settlement posting must also match the settlement's currency:
+
+```sql
+SELECT s.settlement_id, s.group_id, s.currency AS settlement_currency,
+       p.currency AS posting_currency
+FROM settlements s
+JOIN balance_postings p ON p.settlement_id = s.settlement_id
+WHERE p.currency <> s.currency;
+```
+
+Expected result: zero rows. Any mismatch indicates currency pollution between group and settlement streams.
+
 ## 4. Release evidence
 
 Record the database identifier, UTC execution time, migration version, query

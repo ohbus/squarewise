@@ -96,7 +96,8 @@ class JpaSettlementStoreTest @Autowired constructor(
         listOf(
             settlement.copy(fromParticipantId = UUID.randomUUID()),
             settlement.copy(toParticipantId = UUID.randomUUID()),
-            settlement.copy(amountMinor = 1_251)
+            settlement.copy(amountMinor = 1_251),
+            settlement.copy(currency = "USD")
         ).forEach { conflicting ->
             val error = assertThrows(SquarewiseException::class.java) {
                 store.record(groupId, conflicting)
@@ -104,6 +105,41 @@ class JpaSettlementStoreTest @Autowired constructor(
             assertEquals(CategoryCode.STATE_CONFLICT, error.definition.category)
         }
         assertEquals(2, balancePostingRepository.findBySettlementId(settlement.id).size)
+    }
+
+    /** Verifies settlements in non-default currencies persist and post in the settlement currency. */
+    @Test
+    fun `persists multi-currency settlement in non-default currency and creates postings in settlement currency`() {
+        val groupId = UUID.randomUUID()
+        groupRepository.save(GroupEntity(groupId, "Multi-currency group", "TRIP", "EUR"))
+        val from = UUID.randomUUID()
+        val to = UUID.randomUUID()
+        val usdSettlement = Settlement(
+            UUID.randomUUID(),
+            from,
+            to,
+            4_500,
+            "USD"
+        )
+
+        val recorded = store.record(groupId, usdSettlement)
+        assertEquals(SettlementStatus.RECORDED, recorded.status)
+        assertEquals("USD", recorded.currency)
+
+        val postings = balancePostingRepository.findBySettlementId(usdSettlement.id)
+        assertEquals(2, postings.size)
+        assertEquals(true, postings.all { it.currency == "USD" })
+        assertEquals(4_500L, postings.first { it.participantId == from }.amountMinor)
+        assertEquals(-4_500L, postings.first { it.participantId == to }.amountMinor)
+
+        val reversed = store.reverse(groupId, usdSettlement.id, "reversal test")
+        assertEquals(SettlementStatus.REVERSED, reversed.status)
+        assertEquals("USD", reversed.currency)
+
+        val allPostings = balancePostingRepository.findBySettlementId(usdSettlement.id)
+        assertEquals(4, allPostings.size)
+        assertEquals(true, allPostings.all { it.currency == "USD" })
+        assertEquals(0L, allPostings.sumOf { it.amountMinor })
     }
 
     /** Verifies missing and archived settlement mutations fail closed without creating ledger postings. */
