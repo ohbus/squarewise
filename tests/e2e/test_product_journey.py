@@ -17,6 +17,7 @@ Verifies the entire product lifecycle across all four microservices
 
 import base64
 import argparse
+import atexit
 import json
 import io
 import os
@@ -120,6 +121,17 @@ def graphql_query(
     return res.get("data", {})
 
 
+def graphql_error_name(response: Any) -> str:
+    """Return the canonical error identity from a GraphQL error envelope."""
+    errors = response.get("errors") if isinstance(response, dict) else None
+    if not isinstance(errors, list) or not errors or not isinstance(errors[0], dict):
+        raise AssertionError(f"GraphQL response did not contain an error: {response}")
+    extensions = errors[0].get("extensions")
+    if not isinstance(extensions, dict) or not isinstance(extensions.get("errorName"), str):
+        raise AssertionError(f"GraphQL error missing errorName: {response}")
+    return extensions["errorName"]
+
+
 def bootstrap_profile(url: str, bearer: str) -> tuple[int, Any]:
     """Read a profile while allowing the freshly started OIDC decoder to settle."""
     last_result: tuple[int, Any] = (503, {"error": "profile bootstrap did not run"})
@@ -175,6 +187,18 @@ def product_execution_operations(path: Path) -> list[ExecutionOperation]:
 
 def run_e2e_tests() -> int:
     """Run the product lifecycle journey with explicit UTF-8 console output."""
+    cleanup_group_id: str | None = None
+
+    def archive_test_group() -> None:
+        """Archive the generated group after success or a failed journey assertion."""
+        if cleanup_group_id:
+            request_json(
+                f"{EXPENSE_CORE_URL}/expense-core/v1/groups/{cleanup_group_id}/archive",
+                method="POST",
+                bearer=user_a,
+            )
+
+    atexit.register(archive_test_group)
     if isinstance(sys.stdout, io.TextIOWrapper):
         sys.stdout.reconfigure(encoding="utf-8")
     if isinstance(sys.stderr, io.TextIOWrapper):
@@ -429,6 +453,7 @@ def run_e2e_tests() -> int:
         bearer=user_a
     )
     group_id = create_res["createGroup"]["id"]
+    cleanup_group_id = group_id
     assert group_id, "Expected non-empty groupId"
     print(f"  ✓ Group created: id={group_id}, name='{group_name}'")
 
@@ -460,6 +485,12 @@ def run_e2e_tests() -> int:
     )
     print("  ✓ Expense Core listGroups and getGroup expose the owner-visible group")
 
+    protected_group_before = dict(group_response)
+    balances_before_status, balances_before = request_json(
+        f"{EXPENSE_CORE_URL}/expense-core/v1/groups/{group_id}/balances", bearer=user_a
+    )
+    assert balances_before_status == 200, f"Initial group balances failed: {balances_before}"
+
     outsider_update_status, outsider_update_response = request_json(
         f"{BASE_URL}/graphql",
         method="POST",
@@ -479,6 +510,20 @@ def run_e2e_tests() -> int:
         f"Unauthorized GraphQL update should return errors: {outsider_update_response}"
     )
     print("  ✓ GraphQL rejects non-member group update")
+
+    assert graphql_error_name(outsider_update_response) == "GROUP_ACCESS_HIDDEN"
+    after_update_status, after_update_group = request_json(
+        f"{EXPENSE_CORE_URL}/expense-core/v1/groups/{group_id}", bearer=user_a
+    )
+    after_update_balances_status, after_update_balances = request_json(
+        f"{EXPENSE_CORE_URL}/expense-core/v1/groups/{group_id}/balances", bearer=user_a
+    )
+    assert after_update_status == 200 and after_update_group == protected_group_before, (
+        f"Unauthorized update changed group state: before={protected_group_before}, after={after_update_group}"
+    )
+    assert after_update_balances_status == 200 and after_update_balances == balances_before, (
+        f"Unauthorized update changed balances: before={balances_before}, after={after_update_balances}"
+    )
 
     outsider_group_status, outsider_group_response = request_json(
         f"{BASE_URL}/graphql",
@@ -520,7 +565,8 @@ def run_e2e_tests() -> int:
             "query": (
                 f'mutation {{ recordRepayment(input: {{ groupId: "{group_id}", '
                 'fromParticipantId: "outsider", toParticipantId: "alice", '
-                'amount: { currency: "EUR", minor: "100" }, reason: "unauthorized" }) '
+                'amount: { currency: "EUR", minor: "100" }, reason: "unauthorized", '
+                'idempotencyKey: "unauthorized-repayment" }) '
                 "{ id } }"
             )
         },
@@ -535,6 +581,14 @@ def run_e2e_tests() -> int:
     )
     print("  ✓ GraphQL rejects non-member repayment recording")
 
+    assert graphql_error_name(outsider_repayment_response) == "GROUP_ACCESS_HIDDEN"
+    after_repayment_balances_status, after_repayment_balances = request_json(
+        f"{EXPENSE_CORE_URL}/expense-core/v1/groups/{group_id}/balances", bearer=user_a
+    )
+    assert after_repayment_balances_status == 200 and after_repayment_balances == balances_before, (
+        f"Unauthorized repayment changed balances: before={balances_before}, after={after_repayment_balances}"
+    )
+
     malformed_repayment_status, malformed_repayment_response = request_json(
         f"{BASE_URL}/graphql",
         method="POST",
@@ -542,7 +596,8 @@ def run_e2e_tests() -> int:
             "query": (
                 f'mutation {{ recordRepayment(input: {{ groupId: "{group_id}", '
                 'fromParticipantId: "alice", toParticipantId: "bob", '
-                'amount: { currency: "EUR", minor: "not-money" }, reason: "invalid" }) '
+                'amount: { currency: "EUR", minor: "not-money" }, reason: "invalid", '
+                'idempotencyKey: "malformed-repayment" }) '
                 "{ id } }"
             )
         },
@@ -832,7 +887,8 @@ def run_e2e_tests() -> int:
         "fromParticipantId": bob_id,
         "toParticipantId": alice_id,
         "amount": {"currency": "EUR", "minor": "5000"},
-        "reason": "Settling ski passes"
+        "reason": "Settling ski passes",
+        "idempotencyKey": f"repayment-e2e-{uuid.uuid4()}"
     }
     repay_res = graphql_query(record_repayment_mutation, variables={"input": repay_input}, bearer=user_b)
     settlement = repay_res["recordRepayment"]

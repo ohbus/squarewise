@@ -14,6 +14,8 @@ class ErrorHygieneScannerTest(unittest.TestCase):
             [
                 'throw RuntimeException("bad")',
                 'throw IllegalArgumentException("213201")',
+                'throw UnsupportedOperationException("bad")',
+                'class LegacyInputException(message: String) : IllegalStateException(message)',
                 'val type = Class.forName("Example")',
                 "catch (error: Throwable) {",
                 "val problem = ApiProblem(",
@@ -25,9 +27,11 @@ class ErrorHygieneScannerTest(unittest.TestCase):
                 Violation("Mock.kt", 1, "generic_throw"),
                 Violation("Mock.kt", 2, "generic_throw"),
                 Violation("Mock.kt", 2, "raw_numeric_code"),
-                Violation("Mock.kt", 3, "reflection_discovery"),
-                Violation("Mock.kt", 4, "catch_throwable"),
-                Violation("Mock.kt", 5, "direct_problem_constructor"),
+                Violation("Mock.kt", 3, "generic_throw"),
+                Violation("Mock.kt", 4, "generic_exception_subclass"),
+                Violation("Mock.kt", 5, "reflection_discovery"),
+                Violation("Mock.kt", 6, "catch_throwable"),
+                Violation("Mock.kt", 7, "direct_problem_constructor"),
             },
             scan_content("Mock.kt", content),
         )
@@ -41,10 +45,17 @@ class ErrorHygieneScannerTest(unittest.TestCase):
 
         self.assertEqual(set(), scan_content("Compliant.kt", content))
 
+    def test_scans_boundary_assertions_without_banning_private_invariants(self) -> None:
+        self.assertEqual(
+            {Violation("app/api/Mock.kt", 1, "boundary_assertion")},
+            scan_content("app/api/Mock.kt", "require(value.isValid())"),
+        )
+        self.assertEqual(set(), scan_content("app/domain/Mock.kt", "require(value.isValid())"))
+
     def test_baseline_allowlist_is_explicit_and_matches_source(self) -> None:
         allowlist = load_allowlist()
 
-        self.assertEqual(23, len(allowlist))
+        self.assertEqual(3, len(allowlist))
         self.assertTrue(all(item.file and item.line > 0 and item.violation_type for item in allowlist))
 
 

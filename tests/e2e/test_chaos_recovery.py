@@ -260,14 +260,35 @@ def run_chaos_recovery_tests() -> None:
 
     # Step 8: Verify Event Delivery into Downstream Notifications Inbox
     print("\n[Step 8] Verifying downstream event delivery in Notifications inbox...")
+    status_before, inbox_before = request_json(f"{NOTIFICATIONS_URL}/notifications/v1/inbox", bearer=user_a)
+    assert status_before == 200, f"Failed to read Alice's notification baseline: {inbox_before}"
+    existing_notification_ids = {
+        str(item.get("notificationId"))
+        for item in inbox_before.get("items", [])
+        if isinstance(item, dict) and item.get("notificationId")
+    }
     delivered = False
     for attempt in range(1, 10):
         status_inbox, inbox_data = request_json(f"{NOTIFICATIONS_URL}/notifications/v1/inbox", bearer=user_a)
         if status_inbox == 200 and inbox_data.get("items"):
             items = inbox_data["items"]
-            matching = [item for item in items if expense_id in str(item.get("notificationId")) or group_id in str(item.get("message"))]
+            matching = [
+                item for item in items
+                if item.get("notificationId") == expense_id
+                and item.get("notificationId") not in existing_notification_ids
+                and item.get("eventType") == "expense.created"
+            ]
             if matching:
                 print(f"  ✓ Notification confirmed in inbox: eventType={matching[0]['eventType']}, message='{matching[0]['message']}'")
+                status_bob_inbox, bob_inbox = request_json(
+                    f"{NOTIFICATIONS_URL}/notifications/v1/inbox", bearer=user_b
+                )
+                assert status_bob_inbox == 200, f"Failed to read Bob's notification inbox: {bob_inbox}"
+                assert all(
+                    item.get("notificationId") != expense_id
+                    for item in bob_inbox.get("items", [])
+                    if isinstance(item, dict)
+                ), "Expense notification was delivered to the wrong recipient"
                 delivered = True
                 break
         time.sleep(1)

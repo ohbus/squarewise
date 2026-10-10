@@ -210,7 +210,7 @@ e2e-auth-no-accounts: ## Prove authenticated resource reads do not call Accounts
 e2e-auth-query-latency: ## Measure authenticated query latency and SQL isolation
 	@$(UV_RUN) python tests/e2e/test_auth_query_latency.py
 
-e2e-live: ## Run the comprehensive multi-service product journey E2E test against live stack
+e2e-live: ## Run the comprehensive multi-service product journey E2E test against live stack (archives its generated group on exit)
 	@$(UV_RUN) python tests/e2e/test_product_journey.py $(E2E_PRODUCT_ARGS)
 
 e2e-offline: ## Run offline client simulation, sync cursor, and replay resilience tests

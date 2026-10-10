@@ -13,7 +13,13 @@ ROOT: Final[Path] = Path(__file__).resolve().parents[2]
 ALLOWLIST_PATH: Final[Path] = ROOT / "tools/qa/error_hygiene_allowlist.yaml"
 KOTLIN_ROOTS: Final[tuple[Path, ...]] = (ROOT / "app", ROOT / "libs")
 PATTERNS: Final[dict[str, re.Pattern[str]]] = {
-    "generic_throw": re.compile(r"\bthrow\s+(?:RuntimeException|Exception|Throwable|IllegalArgumentException)\s*\("),
+    "generic_throw": re.compile(
+        r"\bthrow\s+(?:RuntimeException|Exception|Throwable|IllegalArgumentException|IllegalStateException|UnsupportedOperationException|ResponseStatusException)\s*\("
+    ),
+    "generic_exception_subclass": re.compile(
+        r"^\s*(?:open\s+|abstract\s+)?class\s+\w+\s*\([^)]*\)\s*:\s*(?:RuntimeException|Exception|IllegalArgumentException|IllegalStateException)\b"
+    ),
+    "boundary_assertion": re.compile(r"(?<![\w.])(?:require|check|error)\s*\("),
     "raw_numeric_code": re.compile(r"\bthrow\b[^\n]*[\"']\d{6}[\"']"),
     "reflection_discovery": re.compile(r"\b(?:Class\.forName|ClassLoader\.getResource|Reflections|ServiceLoader\.load)\b"),
     "catch_throwable": re.compile(r"\bcatch\s*\([^)]*\bThrowable\b"),
@@ -52,8 +58,14 @@ def scan() -> set[Violation]:
 def scan_content(relative: str, content: str) -> set[Violation]:
     """Scan supplied Kotlin content, enabling deterministic unit tests."""
     violations: set[Violation] = set()
+    boundary_path = any(
+        segment in Path(relative).parts
+        for segment in ("api", "transport", "gateway", "web")
+    )
     for line_number, line in enumerate(content.splitlines(), 1):
         for violation_type, pattern in PATTERNS.items():
+            if violation_type == "boundary_assertion" and not boundary_path:
+                continue
             if pattern.search(line):
                 violations.add(Violation(relative, line_number, violation_type))
     return violations
