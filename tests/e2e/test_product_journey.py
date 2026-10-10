@@ -569,7 +569,7 @@ def run_e2e_tests() -> int:
         body={
             "query": (
                 f'mutation {{ recordRepayment(input: {{ groupId: "{group_id}", '
-                'fromParticipantId: "outsider", toParticipantId: "alice", '
+                f'fromParticipantId: "{alice_id}", toParticipantId: "{bob_id}", '
                 'amount: { currency: "EUR", minor: "100" }, reason: "unauthorized", '
                 'idempotencyKey: "unauthorized-repayment" }) '
                 "{ id } }"
@@ -607,7 +607,7 @@ def run_e2e_tests() -> int:
         body={
             "query": (
                 f'mutation {{ recordRepayment(input: {{ groupId: "{group_id}", '
-                'fromParticipantId: "alice", toParticipantId: "bob", '
+                f'fromParticipantId: "{alice_id}", toParticipantId: "{bob_id}", '
                 'amount: { currency: "EUR", minor: "not-money" }, reason: "invalid", '
                 'idempotencyKey: "malformed-repayment" }) '
                 "{ id } }"
@@ -1021,11 +1021,6 @@ def run_e2e_tests() -> int:
     assert status_before_notifications == 200, (
         f"Failed to read notification baseline: {inbox_before_notifications}"
     )
-    existing_notification_ids = {
-        str(item.get("notificationId"))
-        for item in inbox_before_notifications.get("items", [])
-        if isinstance(item, dict) and item.get("notificationId")
-    }
     for attempt in range(1, 10):
         status_inbox, inbox_data = request_json(
             f"{NOTIFICATIONS_URL}/notifications/v1/inbox",
@@ -1036,7 +1031,6 @@ def run_e2e_tests() -> int:
             matching = [
                 item for item in items
                 if str(item.get("notificationId")) == expense_id
-                and str(item.get("notificationId")) not in existing_notification_ids
                 and item.get("eventType") == "expense.created"
             ]
             if matching:

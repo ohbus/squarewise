@@ -1,6 +1,6 @@
-What this change does: This is a read-only audit of the current Pennywise working tree's exception paths, error catalog use, transport boundaries, and asynchronous failure handling. It covers production Kotlin under `app/` and `libs/`, the error-code contracts and ERRC task records, connected callers and tests, and the repository relationship map produced by Graphify. The tree already contains unrelated in-progress edits, so the findings describe the current filesystem and do not infer a clean baseline.
-
 # Exception and error-code compliance review
+
+What this change does: This is a read-only audit of the current Squarewise working tree's exception paths, error catalog use, transport boundaries, and asynchronous failure handling. It covers production Kotlin under `app/` and `libs/`, the error-code contracts and ERRC task records, connected callers and tests, and the repository relationship map produced by Graphify. The tree already contains unrelated in-progress edits, so the findings describe the current filesystem and do not infer a clean baseline.
 
 Date: 2026-10-10
 Scope: current working tree, including uncommitted files

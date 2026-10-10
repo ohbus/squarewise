@@ -38,6 +38,13 @@ class GraphQlLimitErrorInstrumentationTest {
     }
 
     @Test
+    fun `preserves the depth limit marker on graphql execution errors`() {
+        val result = execute(GraphQlDepthLimitInstrumentation(1), mapLimitErrors = false)
+
+        assertEquals("DEPTH", result.errors.single().extensions?.get("squarewiseLimit"))
+    }
+
+    @Test
     fun `maps unrelated execution failures to validation errors`() {
         val result = instrument("Field cannot be selected")
         val error = result.errors.single()
@@ -66,11 +73,6 @@ class GraphQlLimitErrorInstrumentationTest {
                 .errors(listOf(
                     GraphqlErrorBuilder.newError()
                         .message(message)
-                        .extensions(
-                            if (message.contains("complexity")) mapOf("squarewiseLimit" to "COMPLEXITY")
-                            else if (message.contains("depth")) mapOf("squarewiseLimit" to "DEPTH")
-                            else emptyMap()
-                        )
                         .build()
                 ))
                 .build(),
@@ -78,10 +80,14 @@ class GraphQlLimitErrorInstrumentationTest {
             null
         ).join()
 
-    private fun execute(limitInstrumentation: Instrumentation): ExecutionResult =
+    private fun execute(limitInstrumentation: Instrumentation, mapLimitErrors: Boolean = true): ExecutionResult =
         GraphQL.newGraphQL(schema())
             .instrumentation(
-                ChainedInstrumentation(listOf(limitInstrumentation, instrumentation))
+                if (mapLimitErrors) {
+                    ChainedInstrumentation(listOf(limitInstrumentation, instrumentation))
+                } else {
+                    limitInstrumentation
+                }
             )
             .build()
             .execute("{ root { value } }")

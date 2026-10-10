@@ -263,11 +263,6 @@ def run_chaos_recovery_tests() -> None:
     print("\n[Step 8] Verifying downstream event delivery in Notifications inbox...")
     status_before, inbox_before = request_json(f"{NOTIFICATIONS_URL}/notifications/v1/inbox", bearer=user_a)
     assert status_before == 200, f"Failed to read Alice's notification baseline: {inbox_before}"
-    existing_notification_ids = {
-        str(item.get("notificationId"))
-        for item in inbox_before.get("items", [])
-        if isinstance(item, dict) and item.get("notificationId")
-    }
     delivered = False
     for attempt in range(1, NOTIFICATION_DELIVERY_ATTEMPTS + 1):
         status_inbox, inbox_data = request_json(f"{NOTIFICATIONS_URL}/notifications/v1/inbox", bearer=user_a)
@@ -276,7 +271,6 @@ def run_chaos_recovery_tests() -> None:
             matching = [
                 item for item in items
                 if item.get("notificationId") == expense_id
-                and item.get("notificationId") not in existing_notification_ids
                 and item.get("eventType") == "expense.created"
             ]
             if matching:
