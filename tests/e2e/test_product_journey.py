@@ -192,11 +192,17 @@ def run_e2e_tests() -> int:
     def archive_test_group() -> None:
         """Archive the generated group after success or a failed journey assertion."""
         if cleanup_group_id:
-            request_json(
+            archive_status, archive_response = request_json(
                 f"{EXPENSE_CORE_URL}/expense-core/v1/groups/{cleanup_group_id}/archive",
                 method="POST",
                 bearer=user_a,
             )
+            if archive_status not in (200, 204):
+                print(
+                    f"WARNING: failed to archive E2E group {cleanup_group_id}: "
+                    f"HTTP {archive_status} ({archive_response})",
+                    file=sys.stderr,
+                )
 
     atexit.register(archive_test_group)
     if isinstance(sys.stdout, io.TextIOWrapper):
@@ -524,6 +530,7 @@ def run_e2e_tests() -> int:
     assert after_update_balances_status == 200 and after_update_balances == balances_before, (
         f"Unauthorized update changed balances: before={balances_before}, after={after_update_balances}"
     )
+    repayment_group_before = dict(after_update_group)
 
     outsider_group_status, outsider_group_response = request_json(
         f"{BASE_URL}/graphql",
@@ -582,8 +589,15 @@ def run_e2e_tests() -> int:
     print("  ✓ GraphQL rejects non-member repayment recording")
 
     assert graphql_error_name(outsider_repayment_response) == "GROUP_ACCESS_HIDDEN"
+    after_repayment_group_status, after_repayment_group = request_json(
+        f"{EXPENSE_CORE_URL}/expense-core/v1/groups/{group_id}", bearer=user_a
+    )
     after_repayment_balances_status, after_repayment_balances = request_json(
         f"{EXPENSE_CORE_URL}/expense-core/v1/groups/{group_id}/balances", bearer=user_a
+    )
+    assert after_repayment_group_status == 200 and after_repayment_group == repayment_group_before, (
+        f"Unauthorized repayment changed group state: before={repayment_group_before}, "
+        f"after={after_repayment_group}"
     )
     assert after_repayment_balances_status == 200 and after_repayment_balances == balances_before, (
         f"Unauthorized repayment changed balances: before={balances_before}, after={after_repayment_balances}"
@@ -1002,6 +1016,18 @@ def run_e2e_tests() -> int:
     print("\n[Step 11] Verifying Outbox Relay & Notifications Inbox...")
     # Allow background outbox daemon and rabbit listener a few seconds to deliver
     found_notification = False
+    status_before_notifications, inbox_before_notifications = request_json(
+        f"{NOTIFICATIONS_URL}/notifications/v1/inbox",
+        bearer=user_a,
+    )
+    assert status_before_notifications == 200, (
+        f"Failed to read notification baseline: {inbox_before_notifications}"
+    )
+    existing_notification_ids = {
+        str(item.get("notificationId"))
+        for item in inbox_before_notifications.get("items", [])
+        if isinstance(item, dict) and item.get("notificationId")
+    }
     for attempt in range(1, 10):
         status_inbox, inbox_data = request_json(
             f"{NOTIFICATIONS_URL}/notifications/v1/inbox",
@@ -1009,7 +1035,12 @@ def run_e2e_tests() -> int:
         )
         if status_inbox == 200 and inbox_data.get("items"):
             items = inbox_data["items"]
-            matching = [item for item in items if expense_id in str(item.get("notificationId")) or group_id in str(item.get("message"))]
+            matching = [
+                item for item in items
+                if str(item.get("notificationId")) == expense_id
+                and str(item.get("notificationId")) not in existing_notification_ids
+                and item.get("eventType") == "expense.created"
+            ]
             if matching:
                 print(f"  ✓ Verified event delivery to Notifications Inbox: eventType={matching[0]['eventType']}, message='{matching[0]['message']}'")
                 found_notification = True

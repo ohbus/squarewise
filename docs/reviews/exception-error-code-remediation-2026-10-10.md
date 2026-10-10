@@ -42,9 +42,9 @@ The later review comments were verified against the current files and fixed:
 2. The acceptance scenario is named `QA-GRAPHQL-HTTP-RESYNC` and documents that it is HTTP coverage. WebSocket handshake/subscription coverage remains in the dedicated E2E suites.
 3. Health probes require HTTP 200 and a JSON body with `status: UP`; 401, 404, and other sub-500 responses fail the probe.
 4. Chaos notification matching requires a new notification, `expense.created`, the expected expense/aggregate correlation, and the expected recipient inbox.
-5. Unauthorized update and repayment checks capture group state and balances before and after the request and assert `GROUP_ACCESS_HIDDEN`.
+5. Unauthorized update and repayment checks capture group name/revision and balances before and after each request and assert `GROUP_ACCESS_HIDDEN`.
 6. `--variant provider` now fails when any required wrong-issuer, expired, or invalid-subject fixture token is absent. The broader `all` mode retains its explicit available-fixture behavior.
-7. The product-journey run registers failure-safe cleanup and archives its generated group. Durable notification records are not deleted by the test.
+7. The product-journey run registers failure-safe cleanup and archives its generated group. Its notification assertion snapshots the inbox first and matches only the new generated expense notification with `expense.created`; durable notification records are intentionally not deleted by the test.
 8. Repository-owned `RepaymentInput` callers and seed data provide `idempotencyKey`, fixing the failing repayment mutation.
 
 The review comment for `InMemorySettlementStore` was checked and skipped: its replay-conflict path already throws `ExpenseErrors.EXPENSE_IDEMPOTENCY_CONFLICT`, and the settlement service test already asserts the numeric code and error name. No redundant edit was made.
