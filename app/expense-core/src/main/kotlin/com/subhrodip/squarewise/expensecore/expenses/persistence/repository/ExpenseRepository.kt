@@ -16,6 +16,14 @@ import org.springframework.stereotype.Repository
  */
 @Repository
 interface ExpenseRepository : JpaRepository<ExpenseEntity, UUID> {
+    /** Retrieves a page after the last expense ID in the stable descending feed. */
+    @Query("select e from ExpenseEntity e where e.groupId = :groupId and e.deleted = false and (:cursor is null or e.expenseId < :cursor) order by e.expenseId desc")
+    fun findActivePage(groupId: UUID, cursor: UUID?, pageable: Pageable): List<ExpenseEntity>
+
+    /** Retrieves a category-filtered page after the last expense ID in the stable feed. */
+    @Query("select e from ExpenseEntity e where e.groupId = :groupId and e.category = :category and e.deleted = false and (:cursor is null or e.expenseId < :cursor) order by e.expenseId desc")
+    fun findActiveCategoryPage(groupId: UUID, category: String, cursor: UUID?, pageable: Pageable): List<ExpenseEntity>
+
     /** Bounded scalar search projection for the reader-eligible search path. */
     @Query(
         value = """

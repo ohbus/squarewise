@@ -14,7 +14,7 @@ interface SettlementStore {
      * @param settlement the settlement domain model to record
      * @return the persisted or existing settlement domain model
      */
-    fun record(groupId: UUID, settlement: Settlement): Settlement
+    fun record(groupId: UUID, settlement: Settlement, actorSubject: String): Settlement
 
     /**
      * Atomically reverses a recorded settlement.
@@ -24,5 +24,5 @@ interface SettlementStore {
      * @param reason the human-readable explanation for reversal
      * @return the reversed settlement domain model
      */
-    fun reverse(groupId: UUID, settlementId: UUID, reason: String): Settlement
+    fun reverse(groupId: UUID, settlementId: UUID, reason: String, actorSubject: String): Settlement
 }

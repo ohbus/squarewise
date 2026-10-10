@@ -38,12 +38,15 @@ Refactor `SettlementService` and `SettlementController` to follow DRY, KISS, and
 
 ## Status
 
-planned
+done
 
 ## Implementation notes
 
-- To be completed.
+- Injected `SettlementSuggestionEngine` directly into `SettlementService` and removed duplicate controller injection.
+- Updated service-level suggestion coverage to verify delegation through a non-empty result.
+- Removed the unauthenticated `SettlementService.record` overloads and reconciled callers and tests to the canonical authenticated method.
 
 ## Verification evidence
 
-- (To be recorded upon completion)
+- `SettlementServiceTest` and `SettlementControllerTest` cover authenticated recording and suggestion delegation.
+- The canonical authenticated `record` API is now the only supported service entry point.

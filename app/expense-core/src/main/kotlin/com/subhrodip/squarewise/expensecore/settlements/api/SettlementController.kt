@@ -40,7 +40,7 @@ class SettlementController(
     @PostMapping(ApiEndpoints.ExpenseCore.V1.SETTLEMENT_REVERSAL_RELATIVE_SUBPATH)
     fun reverse(@PathVariable groupId: UUID, @PathVariable settlementId: UUID, @Valid @RequestBody request: ReverseSettlementRequest, principal: Principal?): Settlement {
         ensureMembership(groupId, principal)
-        return service.reverse(groupId, settlementId, request.reason)
+        return service.reverse(groupId, settlementId, request.reason, principal!!.name)
     }
 
     @GetMapping(ApiEndpoints.ExpenseCore.V1.SETTLEMENT_SUGGESTIONS_RELATIVE_SUBPATH)

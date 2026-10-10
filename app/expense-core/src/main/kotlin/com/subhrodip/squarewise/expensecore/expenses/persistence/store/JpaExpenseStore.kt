@@ -24,7 +24,6 @@ import java.time.Instant
 import java.util.UUID
 import java.security.MessageDigest
 import org.springframework.data.domain.PageRequest
-import org.springframework.data.domain.Sort
 import org.springframework.context.annotation.Primary
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -396,11 +395,16 @@ class JpaExpenseStore(
     @Transactional(readOnly = true)
     override fun list(groupId: UUID, category: String?, cursor: String?, limit: Int): List<ExpenseRecord> {
         val boundedLimit = limit.coerceIn(1, 100)
-        val page = PageRequest.of(0, boundedLimit, Sort.by(Sort.Direction.DESC, "createdAt"))
+        val after = cursor?.let {
+            runCatching { UUID.fromString(it) }.getOrElse {
+                throw ExpenseDomainException(ExpenseErrors.EXPENSE_REQUEST_INVALID, "Invalid expense cursor", it)
+            }
+        }
+        val page = PageRequest.of(0, boundedLimit)
         val entities = if (category != null) {
-            expenseRepository.findByGroupIdAndCategoryAndDeletedFalseOrderByCreatedAtDesc(groupId, category, page)
+            expenseRepository.findActiveCategoryPage(groupId, category, after, page)
         } else {
-            expenseRepository.findByGroupIdAndDeletedFalseOrderByCreatedAtDesc(groupId, page)
+            expenseRepository.findActivePage(groupId, after, page)
         }
         return entities.map { it.toRecord() }
     }

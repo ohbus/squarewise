@@ -136,11 +136,11 @@ class GraphqlHttpTransportTest {
         val settlement = BffSettlement("settlement-1", "alice", "bob", 500, "RECORDED", "EUR")
         `when`(expenseCoreGateway.createGroup(BffCreateGroup("Household", "HOUSEHOLD", "EUR"), null))
             .thenReturn(Mono.just(group))
-        `when`(expenseCoreGateway.recordRepayment("group-2", RepaymentInput("group-2", "alice", "bob", MoneyInput("EUR", "500"), "repaid"), null))
+        `when`(expenseCoreGateway.recordRepayment("group-2", RepaymentInput("group-2", "alice", "bob", MoneyInput("EUR", "500"), "repaid", "repayment-key-0001"), null))
             .thenReturn(Mono.just(settlement))
 
         client.post().uri(ApiEndpoints.Bff.GRAPHQL)
-            .bodyValue(mapOf("query" to "mutation { createGroup(input: { name: \"Household\", kind: HOUSEHOLD, currency: \"EUR\" }) { id name } recordRepayment(input: { groupId: \"group-2\", fromParticipantId: \"alice\", toParticipantId: \"bob\", amount: { currency: \"EUR\", minor: \"500\" }, reason: \"repaid\" }) { id status amount { minor currency } } }"))
+            .bodyValue(mapOf("query" to "mutation { createGroup(input: { name: \"Household\", kind: HOUSEHOLD, currency: \"EUR\" }) { id name } recordRepayment(input: { groupId: \"group-2\", fromParticipantId: \"alice\", toParticipantId: \"bob\", amount: { currency: \"EUR\", minor: \"500\" }, reason: \"repaid\", idempotencyKey: \"repayment-key-0001\" }) { id status amount { minor currency } } }"))
             .exchange()
             .expectStatus().isOk
             .expectBody()
@@ -512,13 +512,14 @@ class GraphqlHttpTransportTest {
             "alice",
             "bob",
             MoneyInput("EUR", "100"),
-            "conflict"
+            "conflict",
+            "repayment-key-0002"
         )
         `when`(expenseCoreGateway.recordRepayment("group-conflict", repaymentInput, null))
             .thenReturn(Mono.error(UpstreamServiceException(409, "private repayment conflict")))
         expectGraphqlError(
             query = "mutation { recordRepayment(input: { groupId: \"group-conflict\", fromParticipantId: \"alice\", " +
-                "toParticipantId: \"bob\", amount: { currency: \"EUR\", minor: \"100\" }, reason: \"conflict\" }) { id } }",
+                "toParticipantId: \"bob\", amount: { currency: \"EUR\", minor: \"100\" }, reason: \"conflict\", idempotencyKey: \"repayment-key-0002\" }) { id } }",
             privateDetail = "private repayment conflict"
         )
     }

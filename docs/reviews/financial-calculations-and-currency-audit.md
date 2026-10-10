@@ -110,7 +110,7 @@ In a multi-currency group (e.g. default currency `EUR`, with trip expenses in `U
 - **Double-Entry Ledger Invariant** ([`docs/operations/ledger-reconciliation.md`](file:///Users/smohanta/scm/subho/pennywise/docs/operations/ledger-reconciliation.md)): Every group/currency stream must net to zero. Posting settlements into the wrong currency introduces non-zero artifacts into both currencies.
 
 #### 5. Recommended Remediation
-1. **Flyway Migration** (`V11__add_settlement_currency.sql`):
+1. **Flyway Migration** (`V12__add_settlement_currency.sql`):
    ```sql
    ALTER TABLE settlements
        ADD COLUMN currency VARCHAR(3);

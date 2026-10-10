@@ -35,12 +35,15 @@ Consolidate single-implementation settlement persistence interfaces adhering to 
 
 ## Status
 
-planned
+done
 
 ## Implementation notes
 
-- To be completed.
+- Consolidated the settlement persistence contract in `SettlementStore` and removed the redundant `SettlementCommandStore` interface.
+- Updated the JPA adapter and in-memory test store to use the consolidated port.
 
 ## Verification evidence
 
-- (To be recorded upon completion)
+- `./gradlew :app:expense-core:test --no-daemon`: passed across the workspace.
+- `python3 tools/contracts/validate.py`: passed.
+- `git diff --check`: passed.

@@ -72,19 +72,18 @@ object AllocationCalculator {
         require(participantIds.distinct().size == participantIds.size) { "participant IDs must be unique" }
         return when (mode.uppercase()) {
             "EQUAL" -> equal(totalMinor, participantIds)
-            "EXACT" -> exact(totalMinor, items.associate {
-                val value = it.value.toLongOrNull() ?: throw IllegalArgumentException("allocation value must be a valid integer")
-                it.participantId to value
-            })
-            "PERCENT_BASIS_POINTS" -> percentage(totalMinor, items.associate {
-                val value = it.value.toLongOrNull() ?: throw IllegalArgumentException("allocation value must be a valid integer")
-                it.participantId to value
-            })
-            "WEIGHTED_SHARES" -> weightedShares(totalMinor, items.associate {
-                val value = it.value.toLongOrNull() ?: throw IllegalArgumentException("allocation value must be a valid integer")
-                it.participantId to value
-            })
+            "EXACT" -> exact(totalMinor, items.associate { it.participantId to parseAllocationValue(it.value) })
+            "PERCENT_BASIS_POINTS" -> percentage(totalMinor, items.associate { it.participantId to parseAllocationValue(it.value) })
+            "WEIGHTED_SHARES" -> weightedShares(totalMinor, items.associate { it.participantId to parseAllocationValue(it.value) })
             else -> throw ExpenseDomainException(ExpenseErrors.EXPENSE_REQUEST_INVALID, "Unsupported allocation mode: $mode")
         }
     }
+
+    private fun parseAllocationValue(rawValue: String): Long = rawValue.toLongOrNull() ?: throw IllegalArgumentException(
+        if (rawValue.isNotEmpty() && rawValue.all(Char::isDigit)) {
+            "allocation value must fit in a signed 64-bit integer"
+        } else {
+            "allocation value must be a valid integer"
+        }
+    )
 }

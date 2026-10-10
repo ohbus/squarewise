@@ -23,12 +23,14 @@ fun BrokerEnvelope.toNotificationEvent(): NotificationEvent {
     val notificationId = (payload["notificationId"] as? String)?.let {
         runCatching { UUID.fromString(it) }.getOrNull()
     } ?: aggregateId
-    val subject = (payload["subject"] as? String
-        ?: payload["recipient"] as? String
-        ?: payload["recipientId"] as? String
-        ?: payload["userId"] as? String)
-        ?.takeIf { it.isNotBlank() }
-        ?: groupId.toString()
+    val subject = listOfNotNull(
+        payload["subject"] as? String,
+        payload["changedBy"] as? String,
+        payload["recipient"] as? String,
+        payload["recipientId"] as? String,
+        payload["userId"] as? String
+    ).firstOrNull { it.isNotBlank() }
+        ?: throw InvalidEnvelopeException("Notification payload is missing a recipient subject")
     val message = (payload["message"] as? String ?: payload["description"] as? String)
         ?.takeIf { it.isNotBlank() }
         ?: "$eventType for group $groupId"

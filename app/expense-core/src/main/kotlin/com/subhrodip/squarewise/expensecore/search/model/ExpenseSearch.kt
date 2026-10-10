@@ -98,12 +98,13 @@ class ExpenseSearch {
             .filter { normalized.isEmpty() || it.description.lowercase().contains(normalized) }
             .filter { normalizedCurrency == null || it.currency.uppercase() == normalizedCurrency }
             .filter { normalizedCategory == null || it.category == normalizedCategory }
-            .sortedBy { it.expenseId }
+            .take(maxRows + 1)
             .toList()
         require(matches.size <= maxRows) { "Export exceeds the maximum row limit" }
+        val sortedMatches = matches.sortedBy { it.expenseId }
         return buildString {
             appendLine("expenseId,description,currency,amountMinor,category")
-            matches.forEach { expense ->
+            sortedMatches.forEach { expense ->
                 appendLine(listOf(expense.expenseId, expense.description, expense.currency, expense.amountMinor, expense.category.key)
                     .joinToString(",", transform = ::csvCell))
             }

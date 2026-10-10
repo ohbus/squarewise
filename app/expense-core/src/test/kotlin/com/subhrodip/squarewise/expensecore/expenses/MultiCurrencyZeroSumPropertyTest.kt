@@ -65,10 +65,18 @@ class MultiCurrencyZeroSumPropertyTest @Autowired constructor(
         val createdExpenseIds = mutableListOf<UUID>()
         val recordedSettlementIds = mutableListOf<UUID>()
 
-        // Execute 50 randomized operations
-        repeat(50) { opIndex ->
+        var reversalCount = 0
+        var deletionCount = 0
+        // Execute at least 500 actual mutations; guarded operations are excluded when no IDs exist.
+        repeat(500) { opIndex ->
             val currency = currencies[random.nextInt(currencies.size)]
-            val opType = if (createdExpenseIds.isEmpty()) 0 else random.nextInt(4)
+            val availableOperations = buildList {
+                add(0)
+                add(1)
+                if (recordedSettlementIds.isNotEmpty()) add(2)
+                if (createdExpenseIds.isNotEmpty()) add(3)
+            }
+            val opType = availableOperations[random.nextInt(availableOperations.size)]
 
             when (opType) {
                 0 -> { // Create expense
@@ -132,31 +140,36 @@ class MultiCurrencyZeroSumPropertyTest @Autowired constructor(
                             toParticipantId = to,
                             amountMinor = amount,
                             currency = currency
-                        )
+                        ),
+                        ownerSubject
                     )
                     recordedSettlementIds.add(settlementId)
                 }
                 2 -> { // Reverse existing settlement
                     if (recordedSettlementIds.isNotEmpty()) {
                         val toReverse = recordedSettlementIds.removeAt(random.nextInt(recordedSettlementIds.size))
-                        settlementStore.reverse(group.groupId, toReverse, "random-reversal-$opIndex")
+                        settlementStore.reverse(group.groupId, toReverse, "random-reversal-$opIndex", ownerSubject)
+                        reversalCount++
                     }
                 }
                 3 -> { // Delete existing expense
                     if (createdExpenseIds.isNotEmpty()) {
                         val toDelete = createdExpenseIds.removeAt(random.nextInt(createdExpenseIds.size))
-                        expenseStore.findById(toDelete)?.let { record ->
-                            expenseController.deleteExpense(
-                                groupId = group.groupId,
-                                expenseId = toDelete,
-                                version = record.version,
-                                principal = ownerPrincipal
-                            )
-                        }
+                        val record = requireNotNull(expenseStore.findById(toDelete))
+                        expenseController.deleteExpense(
+                            groupId = group.groupId,
+                            expenseId = toDelete,
+                            version = record.version,
+                            principal = ownerPrincipal
+                        )
+                        deletionCount++
                     }
                 }
             }
         }
+
+        assertTrue(reversalCount > 0, "randomized sequence must reverse at least one settlement")
+        assertTrue(deletionCount > 0, "randomized sequence must delete at least one expense")
 
         entityManager.flush()
 

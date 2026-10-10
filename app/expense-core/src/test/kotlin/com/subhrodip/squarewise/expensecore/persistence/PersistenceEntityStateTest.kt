@@ -29,7 +29,7 @@ class PersistenceEntityStateTest {
         val groupId = UUID.randomUUID()
         val from = UUID.randomUUID()
         val to = UUID.randomUUID()
-        val settlement = SettlementEntity(UUID.randomUUID(), groupId, from, to, 1250)
+        val settlement = SettlementEntity(UUID.randomUUID(), groupId, from, to, 1250, "EUR")
         settlement.status = SettlementStatus.REVERSED
         settlement.reversalReason = "Duplicate external payment"
 

@@ -150,6 +150,19 @@ class AllocationCalculatorTest {
         }
     }
 
+    @Test
+    fun `calculate distinguishes overflowing allocation values from malformed values`() {
+        val overflow = assertThrows(IllegalArgumentException::class.java) {
+            AllocationCalculator.calculate("EXACT", 1, listOf(AllocationItemDto("a", "9223372036854775808")))
+        }
+        assertTrue(overflow.message?.contains("64-bit") == true)
+
+        val malformed = assertThrows(IllegalArgumentException::class.java) {
+            AllocationCalculator.calculate("EXACT", 1, listOf(AllocationItemDto("a", "not-a-number")))
+        }
+        assertEquals("allocation value must be a valid integer", malformed.message)
+    }
+
     /**
      * Exercises the allocation invariants across small boundary totals and input permutations.
      * The algorithms must be deterministic, non-negative, and conserve every minor unit.

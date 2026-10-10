@@ -19,7 +19,7 @@ import org.springframework.stereotype.Service
  * be retried by the broker.
  *
  * When an event is APPLIED, email dispatch is triggered if allowed by recipient preferences.
- * Email dispatch errors are isolated and never cause inbox storage rollback.
+ * Email dispatch errors propagate so the broker can retry transient delivery failures.
  */
 @Service
 class NotificationEventConsumer(
@@ -51,41 +51,25 @@ class NotificationEventConsumer(
     }
 
     private fun dispatchEmailIfEnabled(event: NotificationEvent) {
-        try {
-            val recipientId = event.recipientId
-            val preferences = try {
-                preferenceStore.get(recipientId)
-            } catch (e: Exception) {
-                log.warn(
-                    "Failed to retrieve notification preferences for recipientId={}; suppressing delivery",
-                    opaqueRecipientId(recipientId),
-                    e
-                )
-                return
-            }
-
-            val emailEnabled = preferences.emailEnabled
-            if (!emailEnabled) {
-                log.info("Email notifications disabled for recipientId={}; skipping dispatch", opaqueRecipientId(recipientId))
-                return
-            }
-
-            val recipientEmail = resolveRecipientEmail(event)
-            if (!deliveryRateLimiter.allow(recipientId)) {
-                log.warn(
-                    "Email delivery rate limit reached for recipientId={}; suppressing delivery",
-                    opaqueRecipientId(recipientId)
-                )
-                return
-            }
-            val subject = "Notification: ${event.title}"
-            val body = event.body
-
-            val deliveryOutcome = emailDispatcher.send(recipientEmail, subject, body)
-            log.info("Email dispatch outcome for recipientId={} (notificationId={}): {}", opaqueRecipientId(recipientEmail), event.notificationId, deliveryOutcome)
-        } catch (t: Exception) {
-            log.error("Unexpected email delivery failure for notification {}, errorClass={}", event.notificationId, t::class.simpleName)
+        val recipientId = event.recipientId
+        val preferences = preferenceStore.get(recipientId) ?: return
+        if (!preferences.emailEnabled) {
+            log.info("Email notifications disabled for recipientId={}; skipping dispatch", opaqueRecipientId(recipientId))
+            return
         }
+        val recipientEmail = runCatching { resolveRecipientEmail(event) }.getOrElse {
+            log.warn("No verified email recipient for notification {}; suppressing delivery", event.notificationId)
+            return
+        }
+        if (!deliveryRateLimiter.allow(recipientId)) {
+            log.warn(
+                "Email delivery rate limit reached for recipientId={}; suppressing delivery",
+                opaqueRecipientId(recipientId)
+            )
+            return
+        }
+        val deliveryOutcome = emailDispatcher.send(recipientEmail, "Notification: ${event.title}", event.body)
+        log.info("Email dispatch outcome for recipientId={} (notificationId={}): {}", opaqueRecipientId(recipientEmail), event.notificationId, deliveryOutcome)
     }
 
     private fun resolveRecipientEmail(event: NotificationEvent): String {

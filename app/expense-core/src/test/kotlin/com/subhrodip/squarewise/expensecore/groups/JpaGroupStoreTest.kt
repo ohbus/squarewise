@@ -193,9 +193,9 @@ class JpaGroupStoreTest @Autowired constructor(
         val audit = auditRepository.findAll().single { it.groupId == group.groupId }
         val sync = syncRepository.findAll().single { it.groupId == group.groupId.toString() }
         val outbox = outboxRepository.findAll().single { it.groupId == group.groupId }
-        val expectedPayload = "{groupId=${group.groupId}, name=After, revision=1, changedBy=effect-owner}"
+        val expectedPayload = "{groupId=${group.groupId}, name=After, revision=1, subject=effect-owner, changedBy=effect-owner}"
         val expectedOutboxPayload = objectMapper.writeValueAsString(
-            mapOf("groupId" to group.groupId.toString(), "name" to "After", "revision" to 1, "changedBy" to "effect-owner")
+            mapOf("groupId" to group.groupId.toString(), "name" to "After", "revision" to 1, "subject" to "effect-owner", "changedBy" to "effect-owner")
         )
 
         assertEquals(1L, updated.revision)

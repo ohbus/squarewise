@@ -106,12 +106,12 @@ class NotificationEventConsumerUnitTest {
     }
 
     @Test
-    fun `isolates preference and dispatcher failures from applied inbox outcome`() {
+    fun `propagates preference and dispatcher failures for broker retry`() {
         val preferenceFailure = sampleEvent(subject = "preference-failure")
         doReturn(NotificationConsumptionOutcome.APPLIED).`when`(processor).process(preferenceFailure)
         doThrow(IllegalStateException("preference store unavailable")).`when`(preferenceStore)
             .get("preference-failure")
-        assertEquals(NotificationConsumptionOutcome.APPLIED, consumer.consume(preferenceFailure))
+        assertThrows(IllegalStateException::class.java) { consumer.consume(preferenceFailure) }
 
         val dispatchFailure = sampleEvent(subject = "dispatch@example.com")
         doReturn(NotificationConsumptionOutcome.APPLIED).`when`(processor).process(dispatchFailure)
@@ -121,11 +121,11 @@ class NotificationEventConsumerUnitTest {
         doThrow(IllegalStateException("smtp unavailable")).`when`(emailDispatcher)
             .send("dispatch@example.com", "Notification: expense.created", "Dinner was added")
 
-        assertEquals(NotificationConsumptionOutcome.APPLIED, consumer.consume(dispatchFailure))
+        assertThrows(IllegalStateException::class.java) { consumer.consume(dispatchFailure) }
     }
 
     @Test
-    fun `suppresses limiter store failure without dispatching`() {
+    fun `propagates limiter store failure for broker retry`() {
         val event = sampleEvent(subject = "rate-store@example.com")
         doReturn(NotificationConsumptionOutcome.APPLIED).`when`(processor).process(event)
         doReturn(NotificationPreferences(emailEnabled = true)).`when`(preferenceStore)
@@ -133,7 +133,7 @@ class NotificationEventConsumerUnitTest {
         doThrow(IllegalStateException("redis unavailable"))
             .`when`(deliveryRateLimiter).allow("rate-store@example.com")
 
-        assertEquals(NotificationConsumptionOutcome.APPLIED, consumer.consume(event))
+        assertThrows(IllegalStateException::class.java) { consumer.consume(event) }
         verify(emailDispatcher, never()).send(anyString(), anyString(), anyString())
     }
 

@@ -19,7 +19,6 @@ import com.subhrodip.squarewise.bff.transport.UpstreamServiceException
 import com.subhrodip.squarewise.bff.transport.BffGatewayFilters
 import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
 import java.time.Duration
-import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient
@@ -76,13 +75,26 @@ class ExpenseCoreGateway(
             .headers { headers -> bearer?.let { headers.setBearerAuth(it) } }.retrieve()
             .onStatus({ it.isError }) { response -> Mono.error(UpstreamServiceException(response.statusCode().value(), "Expense Core returned HTTP ${response.statusCode().value()}")) }
             .bodyToMono(BffBalancesResponse::class.java).map { it.balances }
-        val expensesMono = client.get().uri(ApiEndpoints.ExpenseCore.V1.PATH_GROUP_EXPENSES, groupId)
-            .headers { headers -> bearer?.let { headers.setBearerAuth(it) } }.retrieve()
-            .onStatus({ it.isError }) { response -> Mono.error(UpstreamServiceException(response.statusCode().value(), "Expense Core returned HTTP ${response.statusCode().value()}")) }
-            .bodyToFlux(UpstreamExpense::class.java).map { it.toBffExpense() }.collectList()
+        val expensesMono = listAllExpenses(groupId, bearer)
         return Mono.zip(groupMono, balancesMono, expensesMono, listMembers(groupId, bearer)).map { tuple ->
             tuple.t1.copy(balances = tuple.t2, expenses = tuple.t3, members = tuple.t4)
         }.timeout(timeout)
+    }
+
+    private fun listAllExpenses(groupId: String, bearer: String?, cursor: String? = null): Mono<List<BffExpense>> {
+        val page = client.get().uri { builder ->
+            builder.path(ApiEndpoints.ExpenseCore.V1.PATH_GROUP_EXPENSES)
+                .queryParam("limit", 100)
+                .apply { cursor?.let { queryParam("cursor", it) } }
+                .build(groupId)
+        }
+            .headers { headers -> bearer?.let { headers.setBearerAuth(it) } }.retrieve()
+            .onStatus({ it.isError }) { response -> Mono.error(UpstreamServiceException(response.statusCode().value(), "Expense Core returned HTTP ${response.statusCode().value()}")) }
+            .bodyToFlux(UpstreamExpense::class.java).map { it.toBffExpense() }.collectList()
+        return page.flatMap { expenses ->
+            if (expenses.size < 100) Mono.just(expenses)
+            else listAllExpenses(groupId, bearer, expenses.last().expenseId).map { expenses + it }
+        }
     }
 
     fun createExpense(groupId: String, input: CreateExpenseInput, idempotencyKey: String, bearer: String?): Mono<BffExpense> =
@@ -95,7 +107,7 @@ class ExpenseCoreGateway(
     fun recordRepayment(groupId: String, input: RepaymentInput, bearer: String?): Mono<BffSettlement> {
         val payload = mapOf("fromParticipantId" to input.fromParticipantId, "toParticipantId" to input.toParticipantId, "amountMinor" to input.amount.minor, "currency" to input.amount.currency)
         return client.post().uri(ApiEndpoints.ExpenseCore.V1.PATH_GROUP_SETTLEMENTS, groupId)
-            .header(ApiEndpoints.Headers.IDEMPOTENCY_KEY, UUID.randomUUID().toString())
+            .header(ApiEndpoints.Headers.IDEMPOTENCY_KEY, input.idempotencyKey)
             .headers { headers -> bearer?.let { headers.setBearerAuth(it) } }.bodyValue(payload).retrieve()
             .onStatus({ it.isError }) { response -> Mono.error(UpstreamServiceException(response.statusCode().value(), "Expense Core returned HTTP ${response.statusCode().value()}")) }
             .bodyToMono(UpstreamSettlement::class.java).map { it.toBffSettlement() }.timeout(timeout)

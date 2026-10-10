@@ -7,6 +7,8 @@ import com.subhrodip.squarewise.expensecore.settlements.persistence.JpaSettlemen
 import com.subhrodip.squarewise.expensecore.expenses.persistence.repository.BalancePostingRepository
 import com.subhrodip.squarewise.expensecore.groups.domain.GroupEntity
 import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupRepository
+import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupMembershipRepository
+import com.subhrodip.squarewise.expensecore.groups.domain.GroupMembershipEntity
 
 import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
 import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
@@ -23,49 +25,61 @@ import org.springframework.transaction.annotation.Transactional
 class JpaSettlementStoreTest @Autowired constructor(
     private val store: JpaSettlementStore,
     private val groupRepository: GroupRepository,
+    private val membershipRepository: GroupMembershipRepository,
     private val balancePostingRepository: BalancePostingRepository
 ) {
+    private fun seedGroup(groupId: UUID, from: UUID, to: UUID) {
+        groupRepository.save(GroupEntity(groupId, "Test group", "HOUSEHOLD", "EUR"))
+        membershipRepository.save(GroupMembershipEntity(UUID.randomUUID(), groupId, "test-actor"))
+        membershipRepository.save(GroupMembershipEntity(from, groupId, "from"))
+        membershipRepository.save(GroupMembershipEntity(to, groupId, "to"))
+    }
+
     @Test
     fun `persists and idempotently reverses a settlement in its group`() {
         val groupId = UUID.randomUUID()
-        groupRepository.save(GroupEntity(groupId, "Test group", "HOUSEHOLD", "EUR"))
+        val from = UUID.randomUUID()
+        val to = UUID.randomUUID()
+        seedGroup(groupId, from, to)
         val settlement = Settlement(
             UUID.randomUUID(),
-            UUID.randomUUID(),
-            UUID.randomUUID(),
+            from,
+            to,
             1_250,
             "EUR"
         )
 
-        assertEquals(SettlementStatus.RECORDED, store.record(groupId, settlement).status)
+        assertEquals(SettlementStatus.RECORDED, store.record(groupId, settlement, "test-actor").status)
         val recordedPostings = balancePostingRepository.findBySettlementId(settlement.id)
         assertEquals(2, recordedPostings.size)
         assertEquals(0L, recordedPostings.sumOf { it.amountMinor })
         assertEquals(1_250L, recordedPostings.first { it.participantId == settlement.fromParticipantId }.amountMinor)
         assertEquals(-1_250L, recordedPostings.first { it.participantId == settlement.toParticipantId }.amountMinor)
-        assertEquals(SettlementStatus.REVERSED, store.reverse(groupId, settlement.id, "duplicate").status)
+        assertEquals(SettlementStatus.REVERSED, store.reverse(groupId, settlement.id, "duplicate", "test-actor").status)
         val allPostings = balancePostingRepository.findBySettlementId(settlement.id)
         assertEquals(4, allPostings.size)
         assertEquals(0L, allPostings.sumOf { it.amountMinor })
-        assertEquals(SettlementStatus.REVERSED, store.reverse(groupId, settlement.id, "retry").status)
+        assertEquals(SettlementStatus.REVERSED, store.reverse(groupId, settlement.id, "retry", "test-actor").status)
         assertEquals(4, balancePostingRepository.findBySettlementId(settlement.id).size)
     }
 
     @Test
     fun `does not expose a settlement through another group`() {
         val groupId = UUID.randomUUID()
-        groupRepository.save(GroupEntity(groupId, "Test group", "HOUSEHOLD", "EUR"))
+        val from = UUID.randomUUID()
+        val to = UUID.randomUUID()
+        seedGroup(groupId, from, to)
         val settlement = Settlement(
             UUID.randomUUID(),
-            UUID.randomUUID(),
-            UUID.randomUUID(),
+            from,
+            to,
             1_250,
             "EUR"
         )
-        store.record(groupId, settlement)
+        store.record(groupId, settlement, "test-actor")
 
         val error = assertThrows(SquarewiseException::class.java) {
-            store.reverse(UUID.randomUUID(), settlement.id, "wrong group")
+            store.reverse(UUID.randomUUID(), settlement.id, "wrong group", "test-actor")
         }
         assertEquals(CategoryCode.NOT_FOUND, error.definition.category)
     }
@@ -75,9 +89,10 @@ class JpaSettlementStoreTest @Autowired constructor(
     fun `rejects reversal of a missing settlement in an active group`() {
         val groupId = UUID.randomUUID()
         groupRepository.save(GroupEntity(groupId, "Active group", "HOUSEHOLD", "EUR"))
+        membershipRepository.save(GroupMembershipEntity(UUID.randomUUID(), groupId, "test-actor"))
 
         val error = assertThrows(SquarewiseException::class.java) {
-            store.reverse(groupId, UUID.randomUUID(), "missing")
+            store.reverse(groupId, UUID.randomUUID(), "missing", "test-actor")
         }
 
         assertEquals(CategoryCode.NOT_FOUND, error.definition.category)
@@ -89,13 +104,13 @@ class JpaSettlementStoreTest @Autowired constructor(
     @Test
     fun `rejects conflicting settlement replays without additional postings`() {
         val groupId = UUID.randomUUID()
-        groupRepository.save(GroupEntity(groupId, "Replay group", "HOUSEHOLD", "EUR"))
         val from = UUID.randomUUID()
         val to = UUID.randomUUID()
+        seedGroup(groupId, from, to)
         val settlement = Settlement(UUID.randomUUID(), from, to, 1_250, "EUR", reason = "original")
-        store.record(groupId, settlement)
+        store.record(groupId, settlement, "test-actor")
 
-        assertEquals(settlement.id, store.record(groupId, settlement.copy(reason = "same identity")).id)
+        assertEquals(settlement.id, store.record(groupId, settlement.copy(reason = "same identity"), "test-actor").id)
         listOf(
             settlement.copy(fromParticipantId = UUID.randomUUID()),
             settlement.copy(toParticipantId = UUID.randomUUID()),
@@ -103,7 +118,7 @@ class JpaSettlementStoreTest @Autowired constructor(
             settlement.copy(currency = "USD")
         ).forEach { conflicting ->
             val error = assertThrows(SquarewiseException::class.java) {
-                store.record(groupId, conflicting)
+                store.record(groupId, conflicting, "test-actor")
             }
             assertEquals(CategoryCode.STATE_CONFLICT, error.definition.category)
             assertEquals(ExpenseErrors.EXPENSE_IDEMPOTENCY_CONFLICT.numericCode, error.definition.numericCode)
@@ -116,9 +131,9 @@ class JpaSettlementStoreTest @Autowired constructor(
     @Test
     fun `persists multi-currency settlement in non-default currency and creates postings in settlement currency`() {
         val groupId = UUID.randomUUID()
-        groupRepository.save(GroupEntity(groupId, "Multi-currency group", "TRIP", "EUR"))
         val from = UUID.randomUUID()
         val to = UUID.randomUUID()
+        seedGroup(groupId, from, to)
         val usdSettlement = Settlement(
             UUID.randomUUID(),
             from,
@@ -127,7 +142,7 @@ class JpaSettlementStoreTest @Autowired constructor(
             "USD"
         )
 
-        val recorded = store.record(groupId, usdSettlement)
+        val recorded = store.record(groupId, usdSettlement, "test-actor")
         assertEquals(SettlementStatus.RECORDED, recorded.status)
         assertEquals("USD", recorded.currency)
 
@@ -137,7 +152,7 @@ class JpaSettlementStoreTest @Autowired constructor(
         assertEquals(4_500L, postings.first { it.participantId == from }.amountMinor)
         assertEquals(-4_500L, postings.first { it.participantId == to }.amountMinor)
 
-        val reversed = store.reverse(groupId, usdSettlement.id, "reversal test")
+        val reversed = store.reverse(groupId, usdSettlement.id, "reversal test", "test-actor")
         assertEquals(SettlementStatus.REVERSED, reversed.status)
         assertEquals("USD", reversed.currency)
 
@@ -151,7 +166,7 @@ class JpaSettlementStoreTest @Autowired constructor(
     @Test
     fun `rejects settlement mutations for missing or archived groups`() {
         val missingGroupError = assertThrows(SquarewiseException::class.java) {
-            store.record(UUID.randomUUID(), Settlement(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), 100, "EUR"))
+            store.record(UUID.randomUUID(), Settlement(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), 100, "EUR"), "test-actor")
         }
         assertEquals(CategoryCode.NOT_FOUND, missingGroupError.definition.category)
 
@@ -159,13 +174,13 @@ class JpaSettlementStoreTest @Autowired constructor(
         groupRepository.save(GroupEntity(archivedGroupId, "Archived group", "HOUSEHOLD", "EUR", status = "ARCHIVED"))
         val archivedSettlement = Settlement(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), 100, "EUR")
         val archivedRecordError = assertThrows(SquarewiseException::class.java) {
-            store.record(archivedGroupId, archivedSettlement)
+            store.record(archivedGroupId, archivedSettlement, "test-actor")
         }
         assertEquals(CategoryCode.STATE_CONFLICT, archivedRecordError.definition.category)
         assertEquals(ExpenseErrors.GROUP_ARCHIVED.numericCode, archivedRecordError.definition.numericCode)
 
         val archivedReverseError = assertThrows(SquarewiseException::class.java) {
-            store.reverse(archivedGroupId, archivedSettlement.id, "archived")
+            store.reverse(archivedGroupId, archivedSettlement.id, "archived", "test-actor")
         }
         assertEquals(CategoryCode.STATE_CONFLICT, archivedReverseError.definition.category)
         assertEquals(ExpenseErrors.GROUP_ARCHIVED.numericCode, archivedReverseError.definition.numericCode)

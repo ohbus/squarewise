@@ -37,7 +37,7 @@ class SettlementEntity(
     @Column(name = "amount_minor", nullable = false)
     var amountMinor: Long,
     @Column(name = "currency", nullable = false, length = 3)
-    var currency: String = "EUR",
+    var currency: String,
     @Column(name = "reversal_reason", length = 240)
     var reversalReason: String? = null,
     @Enumerated(EnumType.STRING)

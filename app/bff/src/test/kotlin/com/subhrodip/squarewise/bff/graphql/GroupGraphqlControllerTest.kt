@@ -229,7 +229,8 @@ class GroupGraphqlControllerTest {
             fromParticipantId = fromId,
             toParticipantId = toId,
             amount = MoneyInput("EUR", "1000"),
-            reason = "Settling up lunch"
+            reason = "Settling up lunch",
+            idempotencyKey = "repayment-key-0001"
         )
         val expected = BffSettlement(
             id = settlementId,
@@ -258,7 +259,8 @@ class GroupGraphqlControllerTest {
             fromParticipantId = UUID.randomUUID().toString(),
             toParticipantId = UUID.randomUUID().toString(),
             amount = MoneyInput("EUR", "1000"),
-            reason = null
+            reason = null,
+            idempotencyKey = "repayment-key-0002"
         )
 
         val mono = controller.recordRepayment(input, principal)
@@ -322,7 +324,8 @@ class GroupGraphqlControllerTest {
             fromParticipantId = UUID.randomUUID().toString(),
             toParticipantId = UUID.randomUUID().toString(),
             amount = MoneyInput("EUR", "1000"),
-            reason = "Settling up lunch"
+            reason = "Settling up lunch",
+            idempotencyKey = "repayment-key-0003"
         )
         `when`(gateway.getGroup(groupId, "alice"))
             .thenReturn(Mono.just(BffGroup(groupId, "Trip", "TRIP", "1")))
@@ -436,7 +439,8 @@ class GroupGraphqlControllerTest {
             fromParticipantId = fromId,
             toParticipantId = toId,
             amount = MoneyInput("EUR", "1000"),
-            reason = "Settling up lunch"
+            reason = "Settling up lunch",
+            idempotencyKey = "repayment-key-0004"
         )
         val expected = BffSettlement(
             id = settlementId,

@@ -89,6 +89,20 @@ class ExpenseSearchTest {
         assertThrows(IllegalArgumentException::class.java) { search.csv(data, maxRows = 1) }
     }
 
+    @Test
+    fun `rejects oversized csv before consuming and sorting the remaining input`() {
+        val data = sequence {
+            yield(SearchExpense("3", "Third", "EUR", "100"))
+            yield(SearchExpense("1", "First", "EUR", "100"))
+            yield(SearchExpense("2", "Second", "EUR", "100"))
+            error("CSV export should stop after maxRows plus one matches")
+        }.asIterable()
+
+        assertThrows(IllegalArgumentException::class.java) {
+            ExpenseSearch().csv(data, maxRows = 2)
+        }
+    }
+
     /** Verifies CSV export rejects a non-positive row bound before reading expense data. */
     @Test
     fun `rejects non-positive csv row bounds`() {

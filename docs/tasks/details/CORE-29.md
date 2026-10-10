@@ -3,7 +3,7 @@
 ## Objective
 
 Remediate critical multi-currency settlement defects (`AUD-01`, `AUD-02`, `AUD-10`) identified in the financial audit:
-- Implement Flyway schema migration `V11__add_settlement_currency.sql` adding `currency VARCHAR(3) NOT NULL` to the `settlements` table, backfilling existing rows from their parent `expense_groups.currency`.
+- Implement Flyway schema migration `V12__add_settlement_currency.sql` adding `currency VARCHAR(3) NOT NULL` to the `settlements` table, backfilling existing rows from their parent `expense_groups.currency`.
 - Update `SettlementEntity` with `@Column(name = "currency", nullable = false, length = 3) var currency: String`.
 - Update `JpaSettlementStore` to persist the settlement's explicit currency into `SettlementEntity` and generate double-entry `BalancePostingEntity` rows using `settlement.currency` rather than `group.currency`.
 - Update settlement idempotency conflict validation in `JpaSettlementStore.record` to verify `existing.currency == settlement.currency` and throw `ExpenseDomainException(PlatformErrors.RESOURCE_CONFLICT)` on currency alteration.
@@ -47,7 +47,8 @@ Remediate critical multi-currency settlement defects (`AUD-01`, `AUD-02`, `AUD-1
 
 ## Implementation Notes & Evidence
 
-- **AUD-01 & AUD-10 Remediation**: Added Flyway migration `V12__add_settlement_currency.sql` with default and backfill from `expense_groups.currency`. Updated `SettlementEntity` to declare persistent column `currency`. Updated `JpaSettlementStore.record` to generate balance postings using `saved.currency` instead of `group.currency`, and `reverse` to preserve the settlement's original currency.
+- **AUD-01 & AUD-10 Remediation**: Added Flyway migration `V12__add_settlement_currency.sql` with orphan validation, default, and backfill from `expense_groups.currency`. Updated `SettlementEntity` to declare persistent column `currency`. Updated `JpaSettlementStore.record` to generate balance postings using `saved.currency` instead of `group.currency`, and `reverse` to preserve the settlement's original currency.
+- **Settlement integrity**: The write path locks the group, re-checks the actor's active membership, validates both participant memberships, and records revision, audit, sync, and outbox changes in the same transaction. Replay requests are serialized by the group lock before the settlement is inserted.
 - **AUD-02 Remediation**: Updated replay idempotency checks in both `JpaSettlementStore.record` and `InMemorySettlementStore.record` to verify `existing.currency == settlement.currency` and throw `GROUP_NAME_CONFLICT` / `RESOURCE_CONFLICT` (HTTP 409) if mutated.
 - **Ledger Reconciliation**: Section 3 of `docs/operations/ledger-reconciliation.md` updated with SQL verification query confirming that `balance_postings.currency` matches `settlements.currency`.
 - **Evidence**:

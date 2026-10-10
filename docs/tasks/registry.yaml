@@ -3787,7 +3787,10 @@
         "make contracts",
         "git diff --check"
       ],
-      "evidence": [],
+      "evidence": [
+        "Ran ./gradlew :app:expense-core:test --tests \"com.subhrodip.squarewise.expensecore.recurring.*\" --no-daemon with all 34 tests passing.",
+        "Ran make contracts and git diff --check successfully."
+      ],
       "reviewer": "/root",
       "blocker": null
     },
@@ -3858,7 +3861,10 @@
         "make contracts",
         "git diff --check"
       ],
-      "evidence": [],
+      "evidence": [
+        "Ran ./gradlew :app:expense-core:test --no-daemon with the multi-currency integration and zero-sum property tests passing.",
+        "Ran make contracts and git diff --check successfully."
+      ],
       "reviewer": "/root",
       "blocker": null
     },
@@ -3934,6 +3940,7 @@
       "evidence": [
         "Injected non-null SettlementSuggestionEngine into SettlementService constructor.",
         "Removed redundant suggestionEngine dependency from SettlementController.",
+        "Removed the unauthenticated SettlementService.record overloads and updated callers and tests to use the canonical authenticated method.",
         "SettlementServiceTest and SettlementControllerTest pass cleanly."
       ],
       "reviewer": "/root",

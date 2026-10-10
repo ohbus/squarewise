@@ -48,19 +48,6 @@ class RecurringExpenseController(
         val amountMinor = parseAmount(request.amount.minor)
         validateCurrencyMatch(request.amount.currency, request.payers, request.allocations)
 
-        val domainPayers = request.payers?.map {
-            ExpensePayer(
-                participantId = UUID.fromString(it.participantId),
-                amountMinor = parseAmount(it.amount.minor)
-            )
-        }
-        val domainAllocations = request.allocations?.map {
-            ExpenseAllocation(
-                participantId = UUID.fromString(it.participantId),
-                allocatedMinor = parseAmount(it.amount.minor)
-            )
-        }
-
         val domainRequest = CreateRecurringScheduleRequest(
             description = request.description,
             amountMinor = amountMinor,
@@ -69,8 +56,8 @@ class RecurringExpenseController(
             dayOfMonth = request.dayOfMonth,
             startDate = request.startDate,
             endDate = request.endDate,
-            payers = domainPayers,
-            allocations = domainAllocations
+            payers = toDomainPayers(request.payers),
+            allocations = toDomainAllocations(request.allocations)
         )
 
         return recurringService.createSchedule(groupId, domainRequest).toResponse()
@@ -92,11 +79,7 @@ class RecurringExpenseController(
         principal: Principal?
     ): RecurringScheduleResponse {
         verifyGroupAndMembership(groupId, principal)
-        val schedule = recurringService.getSchedule(scheduleId)
-            ?: throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Schedule $scheduleId not found")
-        if (schedule.groupId != groupId) {
-            throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Schedule $scheduleId not found in group $groupId")
-        }
+        val schedule = findScheduleInGroup(groupId, scheduleId)
         return schedule.toResponse()
     }
 
@@ -111,19 +94,6 @@ class RecurringExpenseController(
         val amountMinor = parseAmount(request.amount.minor)
         validateCurrencyMatch(request.amount.currency, request.payers, request.allocations)
 
-        val domainPayers = request.payers?.map {
-            ExpensePayer(
-                participantId = UUID.fromString(it.participantId),
-                amountMinor = parseAmount(it.amount.minor)
-            )
-        }
-        val domainAllocations = request.allocations?.map {
-            ExpenseAllocation(
-                participantId = UUID.fromString(it.participantId),
-                allocatedMinor = parseAmount(it.amount.minor)
-            )
-        }
-
         val domainRequest = UpdateRecurringScheduleRequest(
             description = request.description,
             amountMinor = amountMinor,
@@ -132,8 +102,8 @@ class RecurringExpenseController(
             dayOfMonth = request.dayOfMonth,
             startDate = request.startDate,
             endDate = request.endDate,
-            payers = domainPayers,
-            allocations = domainAllocations
+            payers = toDomainPayers(request.payers),
+            allocations = toDomainAllocations(request.allocations)
         )
 
         return recurringService.updateSchedule(groupId, scheduleId, domainRequest).toResponse()
@@ -146,11 +116,7 @@ class RecurringExpenseController(
         principal: Principal?
     ): RecurringScheduleResponse {
         verifyGroupAndMembership(groupId, principal)
-        val schedule = recurringService.getSchedule(scheduleId)
-            ?: throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Schedule $scheduleId not found")
-        if (schedule.groupId != groupId) {
-            throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Schedule $scheduleId not found in group $groupId")
-        }
+        findScheduleInGroup(groupId, scheduleId)
         return recurringService.pauseSchedule(scheduleId).toResponse()
     }
 
@@ -161,11 +127,7 @@ class RecurringExpenseController(
         principal: Principal?
     ): RecurringScheduleResponse {
         verifyGroupAndMembership(groupId, principal)
-        val schedule = recurringService.getSchedule(scheduleId)
-            ?: throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Schedule $scheduleId not found")
-        if (schedule.groupId != groupId) {
-            throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Schedule $scheduleId not found in group $groupId")
-        }
+        findScheduleInGroup(groupId, scheduleId)
         return recurringService.resumeSchedule(scheduleId).toResponse()
     }
 
@@ -179,6 +141,26 @@ class RecurringExpenseController(
             throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group $groupId not found")
         }
     }
+
+    /** Resolves a schedule only when it belongs to the requested group. */
+    private fun findScheduleInGroup(groupId: UUID, scheduleId: UUID) =
+        recurringService.getSchedule(scheduleId)?.let { schedule ->
+            if (schedule.groupId != groupId) {
+                throw ExpenseDomainException(
+                    ExpenseErrors.GROUP_NOT_FOUND,
+                    "Schedule $scheduleId not found in group $groupId"
+                )
+            }
+            schedule
+        } ?: throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Schedule $scheduleId not found")
+
+    /** Converts optional API payer entries to the service's money representation. */
+    private fun toDomainPayers(payers: List<ExpensePayerDto>?): List<ExpensePayer>? =
+        payers?.map { ExpensePayer(UUID.fromString(it.participantId), parseAmount(it.amount.minor)) }
+
+    /** Converts optional API allocation entries to the service's money representation. */
+    private fun toDomainAllocations(allocations: List<ExpenseAllocationItemDto>?): List<ExpenseAllocation>? =
+        allocations?.map { ExpenseAllocation(UUID.fromString(it.participantId), parseAmount(it.amount.minor)) }
 
     private fun validateCurrencyMatch(
         expectedCurrency: String,

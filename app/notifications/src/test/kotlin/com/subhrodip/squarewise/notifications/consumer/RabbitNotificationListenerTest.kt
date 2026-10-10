@@ -97,7 +97,7 @@ class RabbitNotificationListenerTest {
               "groupId": "$groupId",
               "groupRevision": 1,
               "occurredAt": "2026-09-17T20:05:00Z",
-              "payload": {}
+              "payload": {"subject":"alice@example.com"}
             }
         """.trimIndent()
 
@@ -139,7 +139,7 @@ class RabbitNotificationListenerTest {
               "groupId": "00000000-0000-7000-8000-000000000208",
               "groupRevision": 1,
               "occurredAt": "2026-09-17T20:00:00Z",
-              "payload": {}
+              "payload": {"subject":"alice@example.com"}
             }
         """.trimIndent()
 
@@ -174,7 +174,7 @@ class RabbitNotificationListenerTest {
               "groupId": "$groupId",
               "groupRevision": 5,
               "occurredAt": "2026-09-17T20:10:00Z",
-              "payload": {}
+              "payload": {"subject":"alice@example.com"}
             }
         """.trimIndent()
 
@@ -192,7 +192,7 @@ class RabbitNotificationListenerTest {
         val listener = RabbitNotificationListener(consumer, envelopeParser)
         val channel = TestChannel()
         val message = createMessage(
-            """{"eventId":"00000000-0000-7000-8000-000000000212","eventType":"expense.created","schemaVersion":1,"aggregateId":"00000000-0000-7000-8000-000000000213","groupId":"00000000-0000-7000-8000-000000000214","groupRevision":1,"occurredAt":"2026-09-17T20:00:00Z","payload":{}}""",
+            """{"eventId":"00000000-0000-7000-8000-000000000212","eventType":"expense.created","schemaVersion":1,"aggregateId":"00000000-0000-7000-8000-000000000213","groupId":"00000000-0000-7000-8000-000000000214","groupRevision":1,"occurredAt":"2026-09-17T20:00:00Z","payload":{"subject":"alice@example.com"}}""",
             78L,
             redelivered = true
         )

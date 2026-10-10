@@ -37,12 +37,16 @@ Remediate error code mismatches and redundant database SELECT queries in `JpaSet
 
 ## Status
 
-planned
+done
 
 ## Implementation notes
 
-- To be completed.
+- Updated settlement replay, archived-group, and missing-settlement failures to use the canonical Expense Core error definitions.
+- Removed the redundant active-group lookup from settlement reversal while preserving the transaction and validation invariants.
 
 ## Verification evidence
 
-- (To be recorded upon completion)
+- `./gradlew :app:expense-core:test --tests "com.subhrodip.squarewise.expensecore.settlements.JpaSettlementStoreTest" --no-daemon`: passed.
+- `./gradlew :app:expense-core:test --no-daemon`: passed with no regressions.
+- `python3 tools/contracts/validate.py`: passed.
+- `git diff --check`: passed.
