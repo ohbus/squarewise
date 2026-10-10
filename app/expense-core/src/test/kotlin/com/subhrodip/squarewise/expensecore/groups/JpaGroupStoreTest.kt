@@ -193,9 +193,9 @@ class JpaGroupStoreTest @Autowired constructor(
         val audit = auditRepository.findAll().single { it.groupId == group.groupId }
         val sync = syncRepository.findAll().single { it.groupId == group.groupId.toString() }
         val outbox = outboxRepository.findAll().single { it.groupId == group.groupId }
-        val expectedPayload = "{groupId=${group.groupId}, name=After, revision=1, changedBy=effect-owner}"
+        val expectedPayload = "{groupId=${group.groupId}, name=After, revision=1, subject=effect-owner, changedBy=effect-owner}"
         val expectedOutboxPayload = objectMapper.writeValueAsString(
-            mapOf("groupId" to group.groupId.toString(), "name" to "After", "revision" to 1, "changedBy" to "effect-owner")
+            mapOf("groupId" to group.groupId.toString(), "name" to "After", "revision" to 1, "subject" to "effect-owner", "changedBy" to "effect-owner")
         )
 
         assertEquals(1L, updated.revision)
@@ -273,7 +273,7 @@ class JpaGroupStoreTest @Autowired constructor(
         val nonMemberErr = assertThrows<SquarewiseException> {
             store.update(group.groupId, "unauthorized-subject", UpdateGroupRequest("Hacked Name"))
         }
-        assertEquals(CategoryCode.NOT_FOUND, nonMemberErr.definition.category)
+        assertEquals("GROUP_ACCESS_HIDDEN", nonMemberErr.definition.errorName)
 
         // Missing group attempt
         val nonExistentId = UUID.randomUUID()
@@ -646,5 +646,46 @@ class JpaGroupStoreTest @Autowired constructor(
         assertEquals(0L, groupRepository.findById(group.groupId).orElseThrow().revision)
         assertEquals(auditCount, auditRepository.count())
         assertEquals(outboxCount, outboxRepository.count())
+    }
+
+    @Test
+    fun `rejects claim with malformed token not found or already revoked`() {
+        val group = store.create("invite-owner", CreateGroupRequest("Invite Group", "HOUSEHOLD", "EUR"))
+        val invite = store.invite(group.groupId, "invite-owner", CreateInviteRequest(24))
+
+        // Malformed token format
+        val malformedError = assertThrows<SquarewiseException> {
+            store.claim("invalid-token-short", "user1")
+        }
+        assertEquals(CategoryCode.STATE_CONFLICT, malformedError.definition.category)
+
+        // Non-existent token (valid shape)
+        val notFoundError = assertThrows<SquarewiseException> {
+            store.claim("a".repeat(64), "user1")
+        }
+        assertEquals(CategoryCode.STATE_CONFLICT, notFoundError.definition.category)
+
+        // Revoked invite
+        store.revokeInvite(group.groupId, "invite-owner", invite.token)
+        val revokedError = assertThrows<SquarewiseException> {
+            store.claim(invite.token, "user1")
+        }
+        assertEquals(CategoryCode.STATE_CONFLICT, revokedError.definition.category)
+    }
+
+    @Test
+    fun `rejects placeholder claim if placeholder is missing or already bound`() {
+        val group = store.create("placeholder-owner", CreateGroupRequest("Placeholder Group", "HOUSEHOLD", "EUR"))
+        val placeholder = store.addPlaceholder(group.groupId, "placeholder-owner", CreatePlaceholderRequest("Bob"))
+        val invite = store.invite(group.groupId, "placeholder-owner", CreateInviteRequest(24, placeholder.membershipId))
+
+        // First claim succeeds
+        val claimed = store.claim(invite.token, "bob-subject")
+        assertNotNull(claimed)
+
+        // Generate second invite targeting same placeholder
+        assertThrows<SquarewiseException> {
+            store.invite(group.groupId, "placeholder-owner", CreateInviteRequest(24, placeholder.membershipId))
+        }
     }
 }

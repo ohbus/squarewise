@@ -18,6 +18,7 @@ import java.util.UUID
  * - [groupId] references the owning group for the settlement.
  * - [fromParticipantId] and [toParticipantId] represent the paying and receiving participants respectively.
  * - [amountMinor] represents the non-negative transfer amount in minor currency units (e.g. cents).
+ * - [currency] represents the ISO-4217 three-letter currency code in which the settlement was recorded.
  * - [status] tracks the lifecycle state (RECORDED or REVERSED).
  * - [reversalReason] documents why the settlement was reversed if status is REVERSED.
  */
@@ -35,6 +36,8 @@ class SettlementEntity(
     var toParticipantId: UUID,
     @Column(name = "amount_minor", nullable = false)
     var amountMinor: Long,
+    @Column(name = "currency", nullable = false, length = 3)
+    var currency: String,
     @Column(name = "reversal_reason", length = 240)
     var reversalReason: String? = null,
     @Enumerated(EnumType.STRING)

@@ -118,4 +118,15 @@ class BffErrorResolverTest {
         assertEquals("426701", exception.problem.numericCode)
         assertEquals("UPSTREAM_PROTOCOL_INVALID", exception.problem.errorName)
     }
+
+    @Test
+    fun `decoder falls back safely for malformed identity metadata`() {
+        val decoder = UpstreamProblemDecoder(ObjectMapper())
+        val exception = decoder.decode(502, "{not-json}", "x".repeat(129), "untrusted-source")
+
+        assertEquals("squarewise-bff", exception.problem.source)
+        assertEquals("unknown", exception.problem.requestId)
+        assertEquals(Instant.EPOCH, exception.problem.timestamp)
+        assertEquals("UPSTREAM_PROTOCOL_INVALID", exception.problem.errorName)
+    }
 }

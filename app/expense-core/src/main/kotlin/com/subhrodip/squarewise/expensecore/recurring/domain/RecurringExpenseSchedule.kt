@@ -69,4 +69,7 @@ class RecurringExpenseSchedule(
     @Version
     @Column(name = "version", nullable = false)
     var version: Long = 1
-)
+) {
+    @Column(name = "custom_specification", columnDefinition = "TEXT")
+    var customSpecification: String? = null
+}

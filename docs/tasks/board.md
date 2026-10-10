@@ -44,7 +44,7 @@ query classification, and evidence gates are complete.
 | ID | Owner | Status | Deliverable |
 | --- | --- | --- | --- |
 | QA-07 | coordinator | done | Contract-driven REST, GraphQL, WebSocket, negative-path, concurrency, recovery, and evidence matrix |
-| QA-08 | coordinator | done | Production-scale, deployment-resilience, security, and unresolved WebSocket protocol evidence |
+| QA-08 | coordinator | in_progress | Production-scale, deployment-resilience, security, and unresolved WebSocket protocol evidence |
 | QA-09 | coordinator | done | Optimized and parallelized E2E pipeline with artifact reuse |
 | QA-10 | coordinator | done | Repository-wide unit, integration, and E2E test gap audit and closure criteria |
 | OPS-25 | coordinator | done | Migrate Python tooling to pyproject.toml + uv sync + uv run |
@@ -112,9 +112,9 @@ query classification, and evidence gates are complete.
 | OPS-17 | coordinator | done | Stable error taxonomy and service/source attribution |
 | OPS-18 | coordinator | done | Micrometer and Prometheus metrics for all services |
 | OPS-19 | operations | done | Dashboards, alerts, SLOs, and runbooks baseline |
-| OPS-20 | platform | done | Reliability, security, and capacity release gates |
+| OPS-20 | platform | in_progress | Reliability, security, and capacity release gates |
 | OPS-21 | platform | done | Modular k6 load tests for high-value endpoints |
-| OPS-22 | platform | done | 1M-user capacity baseline and production readiness evidence |
+| OPS-22 | platform | in_progress | 1M-user capacity baseline and production readiness evidence |
 | OPS-23 | platform | done | Fixture-backed mutation capacity scenarios |
 
 ## Error reporting hardening workstream
@@ -206,6 +206,19 @@ This workstream manages the six-digit `DM-L-C-EE` domain/module error-code stand
 | [ERRC-29](details/ERRC-29.md) | contracts | in_progress | Promote `numericCode` and `errorName` to required fields after compatibility window |
 | [ERRC-30](details/ERRC-30.md) | coordinator | in_progress | Safely decommission legacy `ERR_XX` enums while retaining v1 response compatibility |
 | [ERRC-31](details/ERRC-31.md) | architecture | todo | Author architectural decision and prototype specifications for future API v2 |
+
+## Multi-currency financial ledger hardening milestone
+
+| ID | Owner | Status | Deliverable |
+| --- | --- | --- | --- |
+| [CORE-29](details/CORE-29.md) | core | done | Multi-currency settlement ledger persistence, Flyway migration, and replay validation |
+| [CORE-30](details/CORE-30.md) | core | done | Financial arithmetic hardening and allocation duplicate validation |
+| [CORE-31](details/CORE-31.md) | core | done | Recurring schedule participant membership identity and currency validation hardening |
+| [CORE-32](details/CORE-32.md) | core | done | Multi-currency balance deterministic sorting and CSV export pagination bounds |
+| [CORE-33](details/CORE-33.md) | quality | done | Multi-currency end-to-end integration and zero-sum property testing suite |
+| [CORE-34](details/CORE-34.md) | core | done | Align JpaSettlementStore error catalog codes and eliminate redundant reversal queries |
+| [CORE-35](details/CORE-35.md) | core | done | Streamline SettlementSuggestionEngine injection and eliminate legacy unauthenticated service overloads |
+| [CORE-36](details/CORE-36.md) | core | done | Consolidate settlement persistence port interfaces and eliminate redundant interface layer |
 
 | ID | Owner | Status | Deliverable |
 | --- | --- | --- | --- |
@@ -329,3 +342,8 @@ This workstream manages the six-digit `DM-L-C-EE` domain/module error-code stand
 | AUTH-09 | coordinator | in_progress | Implement distributed Redis rate limiting and request-path security controls |
 | DOC-26 | coordinator | done | Reconcile local smoke-demo delivery evidence and Bruno API collection |
 | SEC-02 | coordinator | done | Implement and verify whole security audit remediation (H-1, H-2, M-1 to M-5, L-1 to L-6) |
+| CORE-29 | core | done | Multi-currency settlement ledger persistence, Flyway migration, and replay validation |
+| CORE-30 | core | done | Financial arithmetic hardening and allocation duplicate validation |
+| CORE-31 | core | done | Recurring schedule participant membership identity and currency validation hardening |
+| CORE-32 | core | done | Multi-currency balance deterministic sorting and CSV export pagination bounds |
+| CORE-33 | quality | done | Multi-currency end-to-end integration and zero-sum property testing suite |

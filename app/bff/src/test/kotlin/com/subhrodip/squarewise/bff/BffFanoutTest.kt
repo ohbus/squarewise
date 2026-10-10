@@ -463,7 +463,7 @@ class BffFanoutTest {
         ).block()
         val settlement = gateway.recordRepayment(
             "g-1",
-            RepaymentInput("g-1", "p-1", "p-2", MoneyInput("EUR", "500"), null),
+            RepaymentInput("g-1", "p-1", "p-2", MoneyInput("EUR", "500"), null, "repayment-key-0001"),
             "token"
         ).block()
         val suggestions = gateway.getSettlementSuggestions("g-1", "token").block()
@@ -559,7 +559,7 @@ class BffFanoutTest {
         ).block()
         gateway.recordRepayment(
             "g-null",
-            RepaymentInput("g-null", "p-1", "p-2", MoneyInput("EUR", "1"), null),
+            RepaymentInput("g-null", "p-1", "p-2", MoneyInput("EUR", "1"), null, "repayment-key-0002"),
             null
         ).block()
         gateway.getSettlementSuggestions("g-null", null).block()

@@ -23,7 +23,7 @@ import time
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 import uuid
-from typing import Any
+from typing import Any, Final
 from tests.http_constants import APPLICATION_JSON, AUTHORIZATION, BEARER_PREFIX, CONTENT_TYPE
 
 BFF_URL = os.environ.get("SQUAREWISE_BFF_URL", "http://localhost:28080")
@@ -33,6 +33,7 @@ NOTIFICATIONS_URL = os.environ.get("SQUAREWISE_NOTIFICATIONS_URL", "http://local
 EXPENSE_CORE_CONTAINER = os.environ.get("SQUAREWISE_EXPENSE_CORE_CONTAINER", "local-expense-core-1")
 RABBITMQ_CONTAINER = os.environ.get("SQUAREWISE_RABBITMQ_CONTAINER", "local-rabbitmq-1")
 POSTGRES_CONTAINER = os.environ.get("SQUAREWISE_POSTGRES_CONTAINER", "local-postgres-1")
+NOTIFICATION_DELIVERY_ATTEMPTS: Final[int] = 30
 
 
 def run_cmd(cmd: str) -> str:
@@ -260,14 +261,29 @@ def run_chaos_recovery_tests() -> None:
 
     # Step 8: Verify Event Delivery into Downstream Notifications Inbox
     print("\n[Step 8] Verifying downstream event delivery in Notifications inbox...")
+    status_before, inbox_before = request_json(f"{NOTIFICATIONS_URL}/notifications/v1/inbox", bearer=user_a)
+    assert status_before == 200, f"Failed to read Alice's notification baseline: {inbox_before}"
     delivered = False
-    for attempt in range(1, 10):
+    for attempt in range(1, NOTIFICATION_DELIVERY_ATTEMPTS + 1):
         status_inbox, inbox_data = request_json(f"{NOTIFICATIONS_URL}/notifications/v1/inbox", bearer=user_a)
         if status_inbox == 200 and inbox_data.get("items"):
             items = inbox_data["items"]
-            matching = [item for item in items if expense_id in str(item.get("notificationId")) or group_id in str(item.get("message"))]
+            matching = [
+                item for item in items
+                if item.get("notificationId") == expense_id
+                and item.get("eventType") == "expense.created"
+            ]
             if matching:
                 print(f"  ✓ Notification confirmed in inbox: eventType={matching[0]['eventType']}, message='{matching[0]['message']}'")
+                status_bob_inbox, bob_inbox = request_json(
+                    f"{NOTIFICATIONS_URL}/notifications/v1/inbox", bearer=user_b
+                )
+                assert status_bob_inbox == 200, f"Failed to read Bob's notification inbox: {bob_inbox}"
+                assert all(
+                    item.get("notificationId") != expense_id
+                    for item in bob_inbox.get("items", [])
+                    if isinstance(item, dict)
+                ), "Expense notification was delivered to the wrong recipient"
                 delivered = True
                 break
         time.sleep(1)

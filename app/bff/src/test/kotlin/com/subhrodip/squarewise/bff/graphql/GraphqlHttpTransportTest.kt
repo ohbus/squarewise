@@ -1,6 +1,7 @@
 package com.subhrodip.squarewise.bff.graphql
 
 import com.subhrodip.squarewise.errors.code.CategoryCode
+import com.subhrodip.squarewise.errors.catalog.PlatformErrors
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.verifyNoInteractions
 
@@ -136,11 +137,11 @@ class GraphqlHttpTransportTest {
         val settlement = BffSettlement("settlement-1", "alice", "bob", 500, "RECORDED", "EUR")
         `when`(expenseCoreGateway.createGroup(BffCreateGroup("Household", "HOUSEHOLD", "EUR"), null))
             .thenReturn(Mono.just(group))
-        `when`(expenseCoreGateway.recordRepayment("group-2", RepaymentInput("group-2", "alice", "bob", MoneyInput("EUR", "500"), "repaid"), null))
+        `when`(expenseCoreGateway.recordRepayment("group-2", RepaymentInput("group-2", "alice", "bob", MoneyInput("EUR", "500"), "repaid", "repayment-key-0001"), null))
             .thenReturn(Mono.just(settlement))
 
         client.post().uri(ApiEndpoints.Bff.GRAPHQL)
-            .bodyValue(mapOf("query" to "mutation { createGroup(input: { name: \"Household\", kind: HOUSEHOLD, currency: \"EUR\" }) { id name } recordRepayment(input: { groupId: \"group-2\", fromParticipantId: \"alice\", toParticipantId: \"bob\", amount: { currency: \"EUR\", minor: \"500\" }, reason: \"repaid\" }) { id status amount { minor currency } } }"))
+            .bodyValue(mapOf("query" to "mutation { createGroup(input: { name: \"Household\", kind: HOUSEHOLD, currency: \"EUR\" }) { id name } recordRepayment(input: { groupId: \"group-2\", fromParticipantId: \"alice\", toParticipantId: \"bob\", amount: { currency: \"EUR\", minor: \"500\" }, reason: \"repaid\", idempotencyKey: \"repayment-key-0001\" }) { id status amount { minor currency } } }"))
             .exchange()
             .expectStatus().isOk
             .expectBody()
@@ -383,7 +384,7 @@ class GraphqlHttpTransportTest {
             .jsonPath("$.errors[0].extensions.code").isEqualTo(CategoryCode.RATE_LIMIT_EXCEEDED.name)
             .jsonPath("$.errors[0].extensions.retryAfterSeconds").isEqualTo(60)
             .jsonPath("$.errors[0].extensions.requestId").isNotEmpty
-            .jsonPath("$.errors[0].message").isEqualTo("Rate limit exceeded")
+            .jsonPath("$.errors[0].message").isEqualTo(PlatformErrors.SECURITY_RATE_LIMITED.safeDetail)
     }
 
     @Test
@@ -512,13 +513,14 @@ class GraphqlHttpTransportTest {
             "alice",
             "bob",
             MoneyInput("EUR", "100"),
-            "conflict"
+            "conflict",
+            "repayment-key-0002"
         )
         `when`(expenseCoreGateway.recordRepayment("group-conflict", repaymentInput, null))
             .thenReturn(Mono.error(UpstreamServiceException(409, "private repayment conflict")))
         expectGraphqlError(
             query = "mutation { recordRepayment(input: { groupId: \"group-conflict\", fromParticipantId: \"alice\", " +
-                "toParticipantId: \"bob\", amount: { currency: \"EUR\", minor: \"100\" }, reason: \"conflict\" }) { id } }",
+                "toParticipantId: \"bob\", amount: { currency: \"EUR\", minor: \"100\" }, reason: \"conflict\", idempotencyKey: \"repayment-key-0002\" }) { id } }",
             privateDetail = "private repayment conflict"
         )
     }

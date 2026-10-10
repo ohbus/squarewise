@@ -747,3 +747,27 @@ failures, and artifact-preparation failures remain gate failures.
 - In-memory persistence doubles remain available only for direct unit tests; they are
   not component-scanned or selected by production profiles. Production stores are
   JPA-backed and production broker/rate-limit paths require RabbitMQ/Redis.
+
+### Boundary and delivery review fixes (2026-10-10)
+
+The current review increment corrected malformed Redis decisions to use the
+store-unavailable path, mapped limiter outages to BFF availability, aligned
+malformed WebFlux bodies and GraphQL rate-limit errors with their catalogued
+definitions, and made parsed BFF event IDs the async correlation IDs. Rabbit
+terminal-failure publishers are required dependencies; publishing uses confirms,
+and notification listeners reject without acknowledgement when dead-letter
+publication fails. Notification recipient and rate-limit skips now persist
+terminal delivery status. Recurring work uses the proxied transactional service
+method, and membership-denial, cursor, and error-hygiene boundaries were aligned
+with their existing contracts.
+
+The unsupported external OIDC configuration now has a `local-oidc` Spring context
+refresh test. The chaos inbox assertion retains strict event identity matching but
+allows the bounded broker-recovery drain window to complete. Live Docker Compose
+reproduction was unavailable on this host, so the reported product and chaos E2E
+failures remain environment-level evidence rather than current-HEAD live proof.
+
+Validation: the exact security test/check/JaCoCo command passed; affected BFF,
+Accounts, Notifications, and Expense Core tests passed; the forced BFF GraphQL
+tests passed; repository mypy, error-hygiene tests/scanner, and `git diff --check`
+passed.

@@ -74,9 +74,7 @@ class JpaGroupStore(
     @Transactional(readOnly = true)
     override fun list(subject: String): List<GroupResponse> =
         DbContextHolder.withContext(DbExecutionContext("groups.list", DbOperationKind.QUERY)) {
-            memberships.findAllBySubjectAndStatusOrderByMembershipId(subject, "ACTIVE")
-                .mapNotNull { groups.findById(it.groupId).orElse(null) }
-                .filter { it.status == "ACTIVE" }
+            memberships.findActiveGroupsBySubject(subject, "ACTIVE")
                 .map { it.toResponse() }
         }
 
@@ -96,6 +94,7 @@ class JpaGroupStore(
             "groupId" to groupId.toString(),
             "name" to saved.name,
             "revision" to saved.revision,
+            "subject" to subject,
             "changedBy" to subject
         )
         recordMutation(groupId, subject, "group.renamed", saved.revision, payload, occurredAt, "group.renamed.v1")
@@ -120,6 +119,7 @@ class JpaGroupStore(
             "groupId" to groupId.toString(),
             "status" to saved.status,
             "revision" to saved.revision,
+            "subject" to subject,
             "changedBy" to subject
         )
         recordMutation(groupId, subject, "group.archived", saved.revision, payload, occurredAt, "group.archived.v1")
@@ -157,6 +157,7 @@ class JpaGroupStore(
             "membershipId" to membershipId.toString(),
             "displayName" to entity.displayName.orEmpty(),
             "revision" to group.revision,
+            "subject" to subject,
             "changedBy" to subject
         )
         recordMutation(groupId, subject, "member.placeholder_added", group.revision, payload, occurredAt, "member.placeholder_added.v1")
@@ -186,6 +187,7 @@ class JpaGroupStore(
             "targetSubject" to target.subject.orEmpty(),
             "displayName" to target.displayName.orEmpty(),
             "revision" to group.revision,
+            "subject" to subject,
             "changedBy" to subject
         )
         recordMutation(groupId, subject, "member.removed", group.revision, payload, occurredAt, "member.removed.v1")
@@ -240,6 +242,7 @@ class JpaGroupStore(
             "groupId" to groupId.toString(),
             "token" to token,
             "revision" to group.revision,
+            "subject" to subject,
             "changedBy" to subject
         )
         recordMutation(groupId, subject, "invitation.revoked", group.revision, payload, occurredAt, "invitation.revoked.v1")
@@ -321,7 +324,7 @@ class JpaGroupStore(
 
     private fun checkActiveMembership(groupId: UUID, subject: String) {
         if (!memberships.existsByGroupIdAndSubjectAndStatus(groupId, subject, "ACTIVE")) {
-            notFound()
+            throw ExpenseDomainException(ExpenseErrors.GROUP_ACCESS_HIDDEN, "Group not found")
         }
     }
 

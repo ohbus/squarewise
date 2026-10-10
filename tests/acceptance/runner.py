@@ -74,10 +74,17 @@ def probe(url: str, timeout: float) -> tuple[str, str]:
     request = Request(url, method="GET")
     try:
         with urlopen(request, timeout=timeout) as response:
-            return ("passed", f"HTTP {response.status}")
+            raw = response.read().decode("utf-8")
+            try:
+                body = json.loads(raw) if raw else {}
+            except json.JSONDecodeError:
+                body = None
+            if response.status == 200 and isinstance(body, dict) and body.get("status") == "UP":
+                return ("passed", "HTTP 200 status=UP")
+            return ("failed", f"HTTP {response.status} body={body!r}")
     except HTTPError as error:
         try:
-            return ("passed" if error.code < 500 else "failed", f"HTTP {error.code}")
+            return ("failed", f"HTTP {error.code}")
         finally:
             error.close()
     except (URLError, TimeoutError, OSError, ConnectionRefusedError) as error:
@@ -410,8 +417,8 @@ def check_offline_replay(expense_core_url: str, group_id: str | None, timeout: f
         }
 
 
-def check_websocket_resync(bff_url: str, timeout: float) -> dict[str, Any]:
-    scenario_id = "QA-WEBSOCKET-RESYNC"
+def check_graphql_http_resync(bff_url: str, timeout: float) -> dict[str, Any]:
+    scenario_id = "QA-GRAPHQL-HTTP-RESYNC"
     headers = {
         CONTENT_TYPE: APPLICATION_JSON,
         ACCEPT: APPLICATION_JSON,
@@ -444,7 +451,7 @@ def check_websocket_resync(bff_url: str, timeout: float) -> dict[str, Any]:
         return {
             "id": scenario_id,
             "status": "passed",
-            "detail": "GraphQL query returned HTTP 200 with data payload",
+            "detail": "GraphQL HTTP query returned HTTP 200 with data payload",
         }
 
     except ServiceOfflineError as err:
@@ -486,8 +493,8 @@ def run_acceptance_suite(
     # 4. QA-OFFLINE-REPLAY
     results.append(check_offline_replay(expense_core_url, group_id, timeout))
 
-    # 5. QA-WEBSOCKET-RESYNC
-    results.append(check_websocket_resync(bff_url, timeout))
+    # 5. QA-GRAPHQL-HTTP-RESYNC
+    results.append(check_graphql_http_resync(bff_url, timeout))
 
     # 6. Edge-case journeys (QA-05 / QA-04)
     if include_edge_cases:

@@ -5,6 +5,7 @@ import com.subhrodip.squarewise.accounts.requests.export.model.ExportStatus
 import com.subhrodip.squarewise.accounts.profile.service.ProfileRules
 import com.subhrodip.squarewise.ids.generation.UuidGenerator
 import org.springframework.context.annotation.Primary
+import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
@@ -63,7 +64,15 @@ class JpaExportRequestStore(
     @Transactional(readOnly = true)
     override fun listBySubject(subject: String): List<ExportRequest> {
         ProfileRules.requireSubject(subject)
-        return repository.findBySubjectOrderByRequestedAtDesc(subject).map { it.toRecord() }
+        return repository.findBySubjectOrderByRequestedAtDesc(subject, PageRequest.of(0, 100)).map { it.toRecord() }
+    }
+
+    /** Reads a bounded newest-first export history page directly from the database. */
+    @Transactional(readOnly = true)
+    override fun listBySubject(subject: String, limit: Int): List<ExportRequest> {
+        require(limit in 1..100) { "export history limit must be between 1 and 100" }
+        ProfileRules.requireSubject(subject)
+        return repository.findBySubjectOrderByRequestedAtDesc(subject, PageRequest.of(0, limit)).map { it.toRecord() }
     }
 }
 

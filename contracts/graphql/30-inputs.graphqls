@@ -38,4 +38,5 @@ input RepaymentInput {
   toParticipantId: ID!
   amount: MoneyInput!
   reason: String
+  idempotencyKey: String!
 }

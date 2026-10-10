@@ -43,8 +43,7 @@ class GraphQlExceptionResolverTest {
             val error = resolver.resolve(BffDomainException(definition), environment)
 
             assertEquals(expectedGraphQlCode(definition), error.extensions?.get("code"))
-            val expectedDetail = if (definition == BffErrors.SUBSCRIPTION_LIMIT_EXCEEDED) "Rate limit exceeded" else definition.safeDetail
-            assertEquals(expectedDetail, error.message)
+            assertEquals(definition.safeDetail, error.message)
             assertEquals(expectedClassification(definition), error.errorType)
             assertNotNull(error.extensions?.get("requestId"))
             if (definition == BffErrors.SUBSCRIPTION_LIMIT_EXCEEDED) {
@@ -89,6 +88,17 @@ class GraphQlExceptionResolverTest {
         assertEquals("INTERNAL_ERROR", unknownError.extensions?.get("code"))
         assertEquals(ErrorType.INTERNAL_ERROR, unknownError.errorType)
         assertEquals(BffErrors.GRAPHQL_AGGREGATION_FAILED.safeDetail, unknownError.message)
+    }
+
+    @Test
+    fun `preserves an explicit upstream error definition`() {
+        val error = resolver.resolve(
+            UpstreamServiceException(418, definition = PlatformErrors.ACCESS_DENIED),
+            environment
+        )
+
+        assertEquals(PlatformErrors.ACCESS_DENIED.safeDetail, error.message)
+        assertEquals("AUTHORIZATION_ERROR", error.extensions?.get("code"))
     }
 
     private fun expectedGraphQlCode(definition: ErrorDefinition): String =

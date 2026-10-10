@@ -111,12 +111,23 @@ def main() -> int:
         failures.extend(run_variant("forged-signature", tamper_signature(TOKEN)))
     if args.variant in ("all", "unsupported-algorithm"):
         failures.extend(run_variant("unsupported-algorithm", tamper_algorithm(TOKEN)))
-    if args.variant in ("all", "provider") and WRONG_ISSUER_TOKEN:
-        failures.extend(run_variant("wrong-issuer", WRONG_ISSUER_TOKEN))
-    if args.variant in ("all", "provider") and EXPIRED_TOKEN:
-        failures.extend(run_variant("expired", EXPIRED_TOKEN))
-    if args.variant in ("all", "provider") and INVALID_SUBJECT_TOKEN:
-        failures.extend(run_variant("invalid-subject", INVALID_SUBJECT_TOKEN))
+    provider_tokens = {
+        "WRONG_ISSUER_TOKEN": WRONG_ISSUER_TOKEN,
+        "EXPIRED_TOKEN": EXPIRED_TOKEN,
+        "INVALID_SUBJECT_TOKEN": INVALID_SUBJECT_TOKEN,
+    }
+    if args.variant == "provider":
+        missing = [name for name, token in provider_tokens.items() if not token]
+        if missing:
+            print(f"provider variant requires fixture tokens: {', '.join(missing)}", file=sys.stderr)
+            return 2
+    if args.variant in ("all", "provider"):
+        if WRONG_ISSUER_TOKEN:
+            failures.extend(run_variant("wrong-issuer", WRONG_ISSUER_TOKEN))
+        if EXPIRED_TOKEN:
+            failures.extend(run_variant("expired", EXPIRED_TOKEN))
+        if INVALID_SUBJECT_TOKEN:
+            failures.extend(run_variant("invalid-subject", INVALID_SUBJECT_TOKEN))
     if failures:
         raise AssertionError("; ".join(failures))
     return 0

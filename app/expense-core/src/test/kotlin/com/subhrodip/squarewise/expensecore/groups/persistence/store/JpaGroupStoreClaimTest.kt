@@ -177,7 +177,7 @@ class JpaGroupStoreClaimTest {
             store.update(groupId, "outsider", UpdateGroupRequest("Renamed"))
         }
 
-        assertEquals(CategoryCode.NOT_FOUND, error.definition.category)
+        assertEquals("GROUP_ACCESS_HIDDEN", error.definition.errorName)
     }
 
     private fun invitation(token: String, groupId: UUID, placeholderId: UUID? = null): GroupInvitationEntity =

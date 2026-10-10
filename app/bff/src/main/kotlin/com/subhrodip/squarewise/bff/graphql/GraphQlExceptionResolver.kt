@@ -23,13 +23,14 @@ class GraphQlExceptionResolver : DataFetcherExceptionResolverAdapter() {
             return governedResolver.resolve(exception, environment, RequestIdContext.get())
         }
         val definition = when {
+            exception is UpstreamServiceException && exception.definition != null -> exception.definition
             exception is UpstreamServiceException -> when (exception.status) {
                 400, 422 -> BffErrors.GRAPHQL_INPUT_INVALID
                 401 -> PlatformErrors.AUTHENTICATION_REQUIRED
                 403 -> PlatformErrors.ACCESS_DENIED
                 404 -> PlatformErrors.RESOURCE_NOT_FOUND
                 409 -> PlatformErrors.RESOURCE_CONFLICT
-                429 -> BffErrors.SUBSCRIPTION_LIMIT_EXCEEDED
+                429 -> PlatformErrors.SECURITY_RATE_LIMITED
                 503 -> BffErrors.UPSTREAM_UNAVAILABLE
                 504 -> BffErrors.UPSTREAM_TIMEOUT
                 else -> BffErrors.UPSTREAM_PROTOCOL_INVALID

@@ -1,6 +1,7 @@
 package com.subhrodip.squarewise.expensecore.expenses
 
 import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
+import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
 import com.subhrodip.squarewise.expensecore.expenses.domain.AllocationCalculator
 import com.subhrodip.squarewise.expensecore.expenses.domain.FinancialArithmetic
 import com.subhrodip.squarewise.expensecore.expenses.api.request.AllocationItemDto
@@ -150,6 +151,24 @@ class AllocationCalculatorTest {
         }
     }
 
+    @Test
+    fun `calculate distinguishes overflowing allocation values from malformed values`() {
+        val overflow = assertThrows(SquarewiseException::class.java) {
+            AllocationCalculator.calculate("EXACT", 1, listOf(AllocationItemDto("a", "9223372036854775808")))
+        }
+        assertEquals(ExpenseErrors.EXPENSE_REQUEST_INVALID.errorName, overflow.definition.errorName)
+
+        val malformed = assertThrows(SquarewiseException::class.java) {
+            AllocationCalculator.calculate("EXACT", 1, listOf(AllocationItemDto("a", "not-a-number")))
+        }
+        assertEquals(ExpenseErrors.EXPENSE_REQUEST_INVALID.errorName, malformed.definition.errorName)
+
+        val empty = assertThrows(SquarewiseException::class.java) {
+            AllocationCalculator.calculate("EXACT", 1, listOf(AllocationItemDto("a", "")))
+        }
+        assertEquals(ExpenseErrors.EXPENSE_REQUEST_INVALID.errorName, empty.definition.errorName)
+    }
+
     /**
      * Exercises the allocation invariants across small boundary totals and input permutations.
      * The algorithms must be deterministic, non-negative, and conserve every minor unit.
@@ -213,6 +232,21 @@ class AllocationCalculatorTest {
             assertEquals(weighted, AllocationCalculator.weightedShares(total, weights.entries.reversed().associate { it.key to it.value }))
             assertEquals(percentage, AllocationCalculator.percentage(total, percentageValues.entries.reversed().associate { it.key to it.value }))
             assertEquals(equal, AllocationCalculator.exact(total, equal))
+        }
+    }
+
+    @Test
+    fun `calculate rejects duplicate participant IDs across all allocation modes`() {
+        val duplicateItems = listOf(
+            AllocationItemDto("alice", "50"),
+            AllocationItemDto("alice", "50")
+        )
+
+        listOf("EQUAL", "EXACT", "PERCENT_BASIS_POINTS", "WEIGHTED_SHARES").forEach { mode ->
+            val ex = assertThrows(IllegalArgumentException::class.java) {
+                AllocationCalculator.calculate(mode, 100L, duplicateItems)
+            }
+            assertTrue(ex.message?.contains("participant IDs must be unique") == true, "Mode $mode should reject duplicates")
         }
     }
 }

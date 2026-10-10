@@ -8,6 +8,7 @@ import com.subhrodip.squarewise.bff.messaging.model.DuplicateConsumptionResult
 import com.subhrodip.squarewise.bff.messaging.model.ProcessedConsumptionResult
 import com.subhrodip.squarewise.bff.messaging.service.BffEventConsumer
 import com.subhrodip.squarewise.bff.messaging.transport.RabbitBffEventListener
+import com.subhrodip.squarewise.bff.messaging.transport.DeadLetterPublisher
 import com.subhrodip.squarewise.bff.messaging.persistence.BffEventDeduplicator
 import com.subhrodip.squarewise.bff.realtime.GroupInvalidation
 import com.subhrodip.squarewise.bff.realtime.LiveUpdate
@@ -33,7 +34,7 @@ class RabbitBffEventListenerTest {
     private val deduplicator = BffEventDeduplicator()
     private val eventConsumer = BffEventConsumer(fanout, deduplicator)
     private val objectMapper = ObjectMapper()
-    private val listener = RabbitBffEventListener(eventConsumer, objectMapper)
+    private val listener = RabbitBffEventListener(eventConsumer, objectMapper, deadLetterPublisher = DeadLetterPublisher { })
     private val channel: Channel = mock(Channel::class.java)
 
     @Test
@@ -71,15 +72,15 @@ class RabbitBffEventListenerTest {
     }
 
     @Test
-    fun `rejects malformed poison-pill message without requeue`() {
+    fun `acknowledges malformed poison-pill after terminal record publication`() {
         val malformedJson = "{ not-valid-json }"
         val properties = MessageProperties().apply { deliveryTag = 99L }
         val message = Message(malformedJson.toByteArray(Charsets.UTF_8), properties)
 
         listener.onMessage(message, channel)
 
-        verify(channel, never()).basicAck(99L, false)
-        verify(channel).basicReject(99L, false)
+        verify(channel).basicAck(99L, false)
+        verify(channel, never()).basicReject(99L, false)
     }
 
     @Test
@@ -137,18 +138,21 @@ class RabbitBffEventListenerTest {
 
         listener.onMessage(message, channel)
 
-        verify(channel).basicReject(7L, false)
+        verify(channel).basicReject(7L, true)
     }
 
     @Test
-    fun `does not throw when poison-pill rejection also fails`() {
+    fun `requeues when terminal record publication fails`() {
         val message = Message("{ not-valid-json }".toByteArray(Charsets.UTF_8), MessageProperties().apply { deliveryTag = 8L })
         doThrow(IOException("reject failed"))
             .`when`(channel)
-            .basicReject(8L, false)
+            .basicReject(8L, true)
 
-        listener.onMessage(message, channel)
+        val failingPublisher = DeadLetterPublisher { throw IOException("publish failed") }
+        val failingListener = RabbitBffEventListener(eventConsumer, objectMapper, deadLetterPublisher = failingPublisher)
 
-        verify(channel).basicReject(8L, false)
+        failingListener.onMessage(message, channel)
+
+        verify(channel).basicReject(8L, true)
     }
 }

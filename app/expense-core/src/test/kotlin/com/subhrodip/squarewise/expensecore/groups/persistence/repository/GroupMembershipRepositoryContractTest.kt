@@ -35,12 +35,15 @@ class GroupMembershipRepositoryContractTest {
                 return emptyList()
             }
 
+            override fun findActiveGroupsBySubject(subject: String, status: String): List<com.subhrodip.squarewise.expensecore.groups.domain.GroupEntity> = emptyList()
+
             override fun findByGroupIdAndStatus(groupId: UUID, status: String): List<GroupMembershipEntity> {
                 findByGroupCalledWith = Pair(groupId, status)
                 return emptyList()
             }
 
             override fun findByMembershipIdAndGroupId(membershipId: UUID, groupId: UUID): GroupMembershipEntity? = null
+            override fun findByMembershipIdAndGroupIdAndStatus(membershipId: UUID, groupId: UUID, status: String): GroupMembershipEntity? = null
             override fun findByGroupIdAndSubjectAndStatus(groupId: UUID, subject: String, status: String): GroupMembershipEntity? = null
 
             // JpaRepository unneeded stubs

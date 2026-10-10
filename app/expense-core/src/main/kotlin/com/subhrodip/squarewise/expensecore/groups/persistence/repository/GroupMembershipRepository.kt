@@ -6,6 +6,9 @@ import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Lock
 import jakarta.persistence.LockModeType
 import org.springframework.stereotype.Repository
+import org.springframework.data.jpa.repository.Query
+import org.springframework.data.repository.query.Param
+import com.subhrodip.squarewise.expensecore.groups.domain.GroupEntity
 
 /**
  * Spring Data JPA repository for managing persistence operations on [GroupMembershipEntity].
@@ -38,6 +41,10 @@ interface GroupMembershipRepository : JpaRepository<GroupMembershipEntity, UUID>
      */
     fun findAllBySubjectAndStatusOrderByMembershipId(subject: String, status: String): List<GroupMembershipEntity>
 
+    /** Loads active groups for a subject in one query, avoiding a group lookup per membership. */
+    @Query("select g from GroupEntity g, GroupMembershipEntity m where m.groupId = g.groupId and m.subject = :subject and m.status = :status and g.status = 'ACTIVE' order by g.groupId")
+    fun findActiveGroupsBySubject(@Param("subject") subject: String, @Param("status") status: String): List<GroupEntity>
+
     /**
      * Convenience method to find all active memberships for a subject.
      */
@@ -67,6 +74,9 @@ interface GroupMembershipRepository : JpaRepository<GroupMembershipEntity, UUID>
      * @return the membership entity if found, null otherwise
      */
     fun findByMembershipIdAndGroupId(membershipId: UUID, groupId: UUID): GroupMembershipEntity?
+
+    /** Finds an active participant membership within a group. */
+    fun findByMembershipIdAndGroupIdAndStatus(membershipId: UUID, groupId: UUID, status: String): GroupMembershipEntity?
 
     /**
      * Finds an active membership by group ID and subject.

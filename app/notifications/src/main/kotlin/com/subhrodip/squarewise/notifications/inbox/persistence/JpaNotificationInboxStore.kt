@@ -1,6 +1,7 @@
 package com.subhrodip.squarewise.notifications.inbox.persistence
 
 import com.subhrodip.squarewise.notifications.inbox.model.InboxItem
+import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -47,6 +48,24 @@ class JpaNotificationInboxStore(
                 Sort.Order.desc("notificationId")
             )
         ).map(NotificationInboxEntity::toItem)
+
+    /** Reads only the requested inbox page from PostgreSQL using the cursor index. */
+    @Transactional(readOnly = true)
+    override fun page(
+        subject: String,
+        afterOccurredAt: java.time.Instant?,
+        afterNotificationId: UUID?,
+        limit: Int
+    ): List<InboxItem> {
+        require(limit in 1..100) { "inbox page limit must be between 1 and 100" }
+        val pageRequest = PageRequest.of(0, limit)
+        val entities = if (afterOccurredAt == null || afterNotificationId == null) {
+            repository.findBySubjectOrderByOccurredAtDescNotificationIdDesc(requireSubject(subject), pageRequest)
+        } else {
+            repository.findPageAfter(requireSubject(subject), afterOccurredAt, afterNotificationId, pageRequest)
+        }
+        return entities.map(NotificationInboxEntity::toItem)
+    }
 
     /**
      * Marks a notification as read if found and owned by the specified subject.

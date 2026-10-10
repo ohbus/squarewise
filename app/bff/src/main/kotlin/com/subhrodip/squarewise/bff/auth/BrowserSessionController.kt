@@ -3,6 +3,8 @@ package com.subhrodip.squarewise.bff.auth
 import com.subhrodip.squarewise.bff.config.BrowserSessionCookies
 import com.subhrodip.squarewise.bff.config.BrowserSessionProperties
 import com.subhrodip.squarewise.bff.transport.AccountsGateway
+import com.subhrodip.squarewise.bff.errors.BffDomainException
+import com.subhrodip.squarewise.errors.catalog.PlatformErrors
 import com.subhrodip.squarewise.bff.transport.model.auth.BrowserSessionResponse
 import com.subhrodip.squarewise.bff.transport.model.auth.BrowserLoginStartRequest
 import com.subhrodip.squarewise.bff.transport.model.auth.BrowserLoginStartResponse
@@ -10,14 +12,13 @@ import com.subhrodip.squarewise.bff.transport.model.auth.BrowserLoginVerifyReque
 import jakarta.validation.Valid
 import java.security.SecureRandom
 import java.util.Base64
-import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.server.ServerWebExchange
-import org.springframework.web.server.ResponseStatusException
 import reactor.core.publisher.Mono
 
 /** BFF-owned browser authentication boundary; refresh credentials never enter a response body. */
@@ -51,7 +52,7 @@ class BrowserSessionController(
     @PostMapping("/token/refresh")
     fun refresh(exchange: ServerWebExchange): Mono<BrowserSessionResponse> {
         val refresh = exchange.request.cookies.getFirst(sessionProperties.refreshCookieName)?.value
-            ?: return Mono.error(ResponseStatusException(HttpStatus.UNAUTHORIZED, "Browser session required"))
+            ?: return Mono.error(BffDomainException(PlatformErrors.AUTHENTICATION_REQUIRED))
         return accounts.refreshBrowserSession(refresh).map { tokens ->
             writeCookies(exchange, tokens.accessToken, tokens.refreshToken)
             BrowserSessionResponse(expiresIn = tokens.expiresIn)

@@ -28,8 +28,7 @@ import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
 @RequestMapping(ApiEndpoints.ExpenseCore.V1.PATH_GROUP_SETTLEMENTS)
 class SettlementController(
     private val service: SettlementService,
-    private val membershipRepository: GroupMembershipRepository,
-    private val suggestionEngine: SettlementSuggestionEngine? = null
+    private val membershipRepository: GroupMembershipRepository
 ) {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -41,20 +40,20 @@ class SettlementController(
     @PostMapping(ApiEndpoints.ExpenseCore.V1.SETTLEMENT_REVERSAL_RELATIVE_SUBPATH)
     fun reverse(@PathVariable groupId: UUID, @PathVariable settlementId: UUID, @Valid @RequestBody request: ReverseSettlementRequest, principal: Principal?): Settlement {
         ensureMembership(groupId, principal)
-        return service.reverse(groupId, settlementId, request.reason)
+        return service.reverse(groupId, settlementId, request.reason, principal!!.name)
     }
 
     @GetMapping(ApiEndpoints.ExpenseCore.V1.SETTLEMENT_SUGGESTIONS_RELATIVE_SUBPATH)
     fun getSuggestions(@PathVariable groupId: UUID, principal: Principal?): List<SuggestedSettlement> {
         ensureMembership(groupId, principal)
-        return suggestionEngine?.suggestSettlements(groupId) ?: service.suggestions(groupId)
+        return service.suggestions(groupId)
     }
 
     private fun ensureMembership(groupId: UUID, principal: Principal?) {
         val subject = principal?.name?.takeIf { it.isNotBlank() }
             ?: throw ExpenseDomainException(PlatformErrors.AUTHENTICATION_REQUIRED, "Authenticated subject is required")
         if (!membershipRepository.existsByGroupIdAndSubject(groupId, subject)) {
-            throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group $groupId not found")
+            throw ExpenseDomainException(ExpenseErrors.GROUP_ACCESS_HIDDEN, "Group $groupId not found")
         }
     }
 }

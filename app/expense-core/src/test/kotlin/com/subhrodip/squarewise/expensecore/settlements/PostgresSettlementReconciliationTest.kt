@@ -3,7 +3,9 @@ package com.subhrodip.squarewise.expensecore.settlements
 import com.subhrodip.squarewise.expensecore.settlements.domain.Settlement
 import com.subhrodip.squarewise.expensecore.settlements.persistence.JpaSettlementStore
 import com.subhrodip.squarewise.expensecore.groups.domain.GroupEntity
+import com.subhrodip.squarewise.expensecore.groups.domain.GroupMembershipEntity
 import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupRepository
+import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupMembershipRepository
 
 import java.util.UUID
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -27,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional
 class PostgresSettlementReconciliationTest @Autowired constructor(
     private val store: JpaSettlementStore,
     private val groupRepository: GroupRepository,
+    private val membershipRepository: GroupMembershipRepository,
     private val jdbc: JdbcTemplate
 ) {
     @PersistenceContext
@@ -36,12 +39,17 @@ class PostgresSettlementReconciliationTest @Autowired constructor(
     fun `reconciles recorded and reversed settlement postings`() {
         val groupId = UUID.randomUUID()
         groupRepository.save(GroupEntity(groupId, "Postgres settlement reconciliation", "HOUSEHOLD", "EUR"))
-        val recorded = Settlement(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), 1_250, "EUR")
-        val reversed = Settlement(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), 2_500, "EUR")
+        val from = UUID.randomUUID()
+        val to = UUID.randomUUID()
+        membershipRepository.save(GroupMembershipEntity(UUID.randomUUID(), groupId, "test-actor"))
+        membershipRepository.save(GroupMembershipEntity(from, groupId, "from"))
+        membershipRepository.save(GroupMembershipEntity(to, groupId, "to"))
+        val recorded = Settlement(UUID.randomUUID(), from, to, 1_250, "EUR")
+        val reversed = Settlement(UUID.randomUUID(), from, to, 2_500, "EUR")
 
-        store.record(groupId, recorded)
-        store.record(groupId, reversed)
-        store.reverse(groupId, reversed.id, "reconciliation")
+        store.record(groupId, recorded, "test-actor")
+        store.record(groupId, reversed, "test-actor")
+        store.reverse(groupId, reversed.id, "reconciliation", "test-actor")
         entityManager.flush()
 
         assertEquals(2L, postingCount(recorded.id))

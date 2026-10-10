@@ -438,6 +438,7 @@ def seed_group_with_expenses(
                 "toParticipantId": top_sugg["toParticipantId"],
                 "amount": top_sugg["amount"],
                 "reason": "Seed settlement / partial balance resolution",
+                "idempotencyKey": f"seed-repayment-{uuid.uuid4()}",
             }
             graphql_mutate(
                 """

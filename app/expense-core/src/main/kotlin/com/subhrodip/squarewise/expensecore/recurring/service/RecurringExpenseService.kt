@@ -16,6 +16,7 @@ import com.subhrodip.squarewise.expensecore.recurring.domain.RecurrenceFrequency
 import com.subhrodip.squarewise.expensecore.recurring.domain.RecurrencePolicy
 import com.subhrodip.squarewise.expensecore.recurring.domain.RecurringExpenseOccurrence
 import com.subhrodip.squarewise.expensecore.recurring.domain.RecurringExpenseSchedule
+import com.subhrodip.squarewise.expensecore.recurring.domain.RecurringExpenseSpecification
 import com.subhrodip.squarewise.expensecore.recurring.persistence.RecurringExpenseOccurrenceRepository
 import com.subhrodip.squarewise.expensecore.recurring.persistence.RecurringExpenseScheduleRepository
 import com.subhrodip.squarewise.ids.generation.UuidGenerator
@@ -26,11 +27,16 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
 import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
-import java.nio.charset.StandardCharsets
 import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
-import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CancellationException
+import java.util.concurrent.TimeoutException
+import com.subhrodip.squarewise.errors.exceptions.FatalErrorClassifier
+import org.springframework.amqp.AmqpException
+import org.springframework.dao.DataAccessException
+import org.slf4j.LoggerFactory
+import tools.jackson.databind.ObjectMapper
 
 /**
  * Service managing database-backed recurring expense schedule lifecycle operations,
@@ -44,9 +50,10 @@ class RecurringExpenseService(
     private val groupRepository: GroupRepository,
     @PersistenceContext private val entityManager: EntityManager,
     @Autowired(required = false)
-    private val outboxStore: OutboxStore? = null
+    private val outboxStore: OutboxStore? = null,
+    private val objectMapper: ObjectMapper = ObjectMapper()
 ) : RecurringCommandStore, RecurringQueryStore {
-    private val customSpecifications = ConcurrentHashMap<UUID, Pair<List<ExpensePayer>, List<ExpenseAllocation>>>()
+    private val log = LoggerFactory.getLogger(RecurringExpenseService::class.java)
 
     @Transactional
     override fun createSchedule(groupId: UUID, request: CreateRecurringScheduleRequest): RecurringExpenseSchedule {
@@ -73,9 +80,7 @@ class RecurringExpenseService(
             version = 1
         )
 
-        if (request.payers != null || request.allocations != null) {
-            customSpecifications[scheduleId] = (request.payers ?: emptyList()) to (request.allocations ?: emptyList())
-        }
+        schedule.customSpecification = encodeSpecification(request.payers, request.allocations)
 
         return scheduleRepository.save(schedule)
     }
@@ -87,7 +92,7 @@ class RecurringExpenseService(
         request: UpdateRecurringScheduleRequest
     ): RecurringExpenseSchedule {
         val schedule = scheduleRepository.findById(scheduleId).orElseThrow {
-            ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Schedule $scheduleId not found")
+            ExpenseDomainException(ExpenseErrors.SCHEDULE_NOT_FOUND, "Schedule $scheduleId not found")
         }
         if (schedule.groupId != groupId) {
             throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Schedule $scheduleId not in group $groupId")
@@ -103,11 +108,7 @@ class RecurringExpenseService(
         schedule.startDate = request.startDate
         schedule.endDate = request.endDate
 
-        if (request.payers != null || request.allocations != null) {
-            customSpecifications[scheduleId] = (request.payers ?: emptyList()) to (request.allocations ?: emptyList())
-        } else {
-            customSpecifications.remove(scheduleId)
-        }
+        schedule.customSpecification = encodeSpecification(request.payers, request.allocations)
 
         return scheduleRepository.save(schedule)
     }
@@ -115,7 +116,7 @@ class RecurringExpenseService(
     @Transactional
     override fun pauseSchedule(scheduleId: UUID): RecurringExpenseSchedule {
         val schedule = scheduleRepository.findById(scheduleId).orElseThrow {
-            ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Schedule $scheduleId not found")
+            ExpenseDomainException(ExpenseErrors.SCHEDULE_NOT_FOUND, "Schedule $scheduleId not found")
         }
         schedule.paused = true
         return scheduleRepository.save(schedule)
@@ -124,7 +125,7 @@ class RecurringExpenseService(
     @Transactional
     override fun resumeSchedule(scheduleId: UUID): RecurringExpenseSchedule {
         val schedule = scheduleRepository.findById(scheduleId).orElseThrow {
-            ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Schedule $scheduleId not found")
+            ExpenseDomainException(ExpenseErrors.SCHEDULE_NOT_FOUND, "Schedule $scheduleId not found")
         }
         schedule.paused = false
         return scheduleRepository.save(schedule)
@@ -133,6 +134,7 @@ class RecurringExpenseService(
     @Transactional
     fun processDueOccurrences(): Int = processDueOccurrences(LocalDate.now(), 12)
 
+    @Transactional
     override fun processDueOccurrences(
         asOfDate: LocalDate,
         maxCatchUpOccurrences: Int
@@ -168,13 +170,7 @@ class RecurringExpenseService(
                 break
             }
 
-            val members = getGroupMembers(schedule.groupId)
-            if (members.isEmpty() || !validateMembership(schedule, members)) {
-                schedule.paused = true
-                scheduleRepository.save(schedule)
-                emitSchedulePausedNotification(schedule, "invalid_membership")
-                break
-            }
+            val members = activeMembersOrPause(schedule) ?: break
 
             val occurrenceDate = schedule.nextOccurrenceDate
             val occurrenceId = OccurrenceIdentity.id(schedule.scheduleId, occurrenceDate)
@@ -197,9 +193,7 @@ class RecurringExpenseService(
                     occurrenceRepository.save(occurrence)
                     generated++
                 } catch (e: Exception) {
-                    schedule.paused = true
-                    scheduleRepository.save(schedule)
-                    emitSchedulePausedNotification(schedule, "generation_error")
+                    handleGenerationFailure(schedule, occurrenceId, e)
                     break
                 }
             }
@@ -211,10 +205,35 @@ class RecurringExpenseService(
         return generated
     }
 
+    private fun activeMembersOrPause(schedule: RecurringExpenseSchedule): List<UUID>? {
+        val members = getGroupMembers(schedule.groupId)
+        if (members.isNotEmpty() && validateMembership(schedule, members)) return members
+        schedule.paused = true
+        scheduleRepository.save(schedule)
+        emitSchedulePausedNotification(schedule, "invalid_membership")
+        return null
+    }
+
+    private fun handleGenerationFailure(schedule: RecurringExpenseSchedule, occurrenceId: UUID, error: Exception) {
+        if (error is CancellationException || FatalErrorClassifier.isFatal(error)) throw error
+        if (error is DataAccessException || error is AmqpException || error is TimeoutException) {
+            log.warn(
+                "Transient recurring expense generation failure; retrying scheduleId={} occurrenceId={} errorType={}",
+                schedule.scheduleId,
+                occurrenceId,
+                error::class.simpleName
+            )
+            return
+        }
+        schedule.paused = true
+        scheduleRepository.save(schedule)
+        emitSchedulePausedNotification(schedule, "generation_error")
+    }
+
     private fun validateMembership(schedule: RecurringExpenseSchedule, members: List<UUID>): Boolean {
         if (members.isEmpty()) return false
         val memberSet = members.toSet()
-        val custom = customSpecifications[schedule.scheduleId] ?: return true
+        val custom = readSpecification(schedule) ?: return true
         val (payers, allocations) = custom
         if (payers.isNotEmpty() && payers.any { it.participantId !in memberSet }) {
             return false
@@ -255,13 +274,13 @@ class RecurringExpenseService(
         occurrenceId: UUID,
         members: List<UUID>
     ): ExpenseRecord {
-        val custom = customSpecifications[schedule.scheduleId]
-        val (payers, allocations) = if (custom != null && (custom.first.isNotEmpty() || custom.second.isNotEmpty())) {
-            val customPayers = custom.first.ifEmpty {
+        val custom = readSpecification(schedule)
+        val (payers, allocations) = if (custom != null && (custom.payers.isNotEmpty() || custom.allocations.isNotEmpty())) {
+            val customPayers = custom.payers.ifEmpty {
                 val payerId = members.firstOrNull() ?: schedule.groupId
                 listOf(ExpensePayer(payerId, schedule.amountMinor))
             }
-            val customAllocations = custom.second.ifEmpty {
+            val customAllocations = custom.allocations.ifEmpty {
                 splitEqually(schedule.amountMinor, members.ifEmpty { listOf(schedule.groupId) })
             }
             customPayers to customAllocations
@@ -287,6 +306,33 @@ class RecurringExpenseService(
         )
     }
 
+    private fun encodeSpecification(
+        payers: List<ExpensePayer>?,
+        allocations: List<ExpenseAllocation>?
+    ): String? = if (payers == null && allocations == null) {
+        null
+    } else {
+        objectMapper.writeValueAsString(
+            RecurringExpenseSpecification(
+                payers = payers ?: emptyList(),
+                allocations = allocations ?: emptyList()
+            )
+        )
+    }
+
+    private fun readSpecification(schedule: RecurringExpenseSchedule): RecurringExpenseSpecification? =
+        schedule.customSpecification?.let { encoded ->
+            try {
+                objectMapper.readValue(encoded, RecurringExpenseSpecification::class.java)
+            } catch (error: Exception) {
+                throw ExpenseDomainException(
+                    ExpenseErrors.EXPENSE_REQUEST_INVALID,
+                    "Recurring expense specification is malformed",
+                    error
+                )
+            }
+        }
+
     private fun splitEqually(amountMinor: Long, participantIds: List<UUID>): List<ExpenseAllocation> {
         val equalMap = AllocationCalculator.equal(amountMinor, participantIds.map { it.toString() })
         return equalMap.map { (pidStr, minor) ->
@@ -295,19 +341,10 @@ class RecurringExpenseService(
     }
 
     private fun getGroupMembers(groupId: UUID): List<UUID> {
-        val rows = entityManager.createQuery(
-            "SELECT m.subject, m.membershipId FROM GroupMembershipEntity m WHERE m.groupId = :groupId ORDER BY m.membershipId ASC",
-            Array<Any>::class.java
+        return entityManager.createQuery(
+            "SELECT m.membershipId FROM GroupMembershipEntity m WHERE m.groupId = :groupId AND m.status = 'ACTIVE' ORDER BY m.membershipId ASC",
+            UUID::class.java
         ).setParameter("groupId", groupId).resultList
-
-        return rows.map { row ->
-            val subject = row[0] as String
-            try {
-                UUID.fromString(subject)
-            } catch (_: IllegalArgumentException) {
-                UUID.nameUUIDFromBytes(subject.toByteArray(StandardCharsets.UTF_8))
-            }
-        }
     }
 
     private fun validateSchedule(request: CreateRecurringScheduleRequest) {
@@ -368,12 +405,14 @@ class RecurringExpenseService(
     ) {
         if (payers != null) {
             require(payers.isNotEmpty()) { "payers must not be empty if provided" }
+            require(payers.all { it.amountMinor > 0 }) { "all payer amounts must be positive" }
             require(payers.sumOf { it.amountMinor } == amountMinor) {
                 "sum of payer amounts must equal schedule amount"
             }
         }
         if (allocations != null) {
             require(allocations.isNotEmpty()) { "allocations must not be empty if provided" }
+            require(allocations.all { it.allocatedMinor > 0 }) { "all allocation amounts must be positive" }
             require(allocations.sumOf { it.allocatedMinor } == amountMinor) {
                 "sum of allocation amounts must equal schedule amount"
             }

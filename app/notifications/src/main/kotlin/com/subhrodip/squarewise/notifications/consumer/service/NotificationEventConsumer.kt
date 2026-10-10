@@ -5,9 +5,14 @@ import com.subhrodip.squarewise.notifications.consumer.model.NotificationEvent
 import com.subhrodip.squarewise.notifications.consumer.persistence.ProcessedNotificationEventRepository
 import com.subhrodip.squarewise.notifications.email.delivery.EmailDispatcher
 import com.subhrodip.squarewise.notifications.email.delivery.opaqueRecipientId
+import com.subhrodip.squarewise.notifications.email.persistence.NotificationEmailDeliveryEntity
+import com.subhrodip.squarewise.notifications.email.persistence.NotificationEmailDeliveryRepository
 
 import com.subhrodip.squarewise.notifications.delivery.rate.DeliveryRateLimiter
+import com.subhrodip.squarewise.notifications.email.delivery.EmailDeliveryOutcome
+import com.subhrodip.squarewise.notifications.errors.NotificationDomainException
 import com.subhrodip.squarewise.notifications.preferences.persistence.PreferenceStore
+import com.subhrodip.squarewise.errors.catalog.NotificationErrors
 
 import org.hibernate.exception.ConstraintViolationException
 import org.slf4j.LoggerFactory
@@ -19,7 +24,7 @@ import org.springframework.stereotype.Service
  * be retried by the broker.
  *
  * When an event is APPLIED, email dispatch is triggered if allowed by recipient preferences.
- * Email dispatch errors are isolated and never cause inbox storage rollback.
+ * Email dispatch errors propagate so the broker can retry transient delivery failures.
  */
 @Service
 class NotificationEventConsumer(
@@ -27,7 +32,8 @@ class NotificationEventConsumer(
     private val processedEvents: ProcessedNotificationEventRepository,
     private val preferenceStore: PreferenceStore,
     private val emailDispatcher: EmailDispatcher,
-    private val deliveryRateLimiter: DeliveryRateLimiter
+    private val deliveryRateLimiter: DeliveryRateLimiter,
+    private val emailDeliveries: NotificationEmailDeliveryRepository? = null,
 ) : NotificationConsumer {
 
     private val log = LoggerFactory.getLogger(NotificationEventConsumer::class.java)
@@ -43,7 +49,19 @@ class NotificationEventConsumer(
             }
         }
 
-        if (outcome == NotificationConsumptionOutcome.APPLIED) {
+        val delivery = if (outcome == NotificationConsumptionOutcome.APPLIED) {
+            emailDeliveries?.let { repository ->
+                repository.findById(event.notificationId).orElseGet {
+                    repository.save(NotificationEmailDeliveryEntity(event.notificationId))
+                }
+            }
+        } else {
+            emailDeliveries?.let { repository -> repository.findById(event.notificationId).orElse(null) }
+        }
+        if (outcome == NotificationConsumptionOutcome.APPLIED || delivery?.status == NotificationEmailDeliveryEntity.PENDING) {
+            if (delivery?.status == NotificationEmailDeliveryEntity.DELIVERED || delivery?.status == NotificationEmailDeliveryEntity.SKIPPED) {
+                return outcome
+            }
             dispatchEmailIfEnabled(event)
         }
 
@@ -51,50 +69,51 @@ class NotificationEventConsumer(
     }
 
     private fun dispatchEmailIfEnabled(event: NotificationEvent) {
-        try {
-            val recipientId = event.recipientId
-            val preferences = try {
-                preferenceStore.get(recipientId)
-            } catch (e: Exception) {
-                log.warn(
-                    "Failed to retrieve notification preferences for recipientId={}; suppressing delivery",
-                    opaqueRecipientId(recipientId),
-                    e
-                )
-                return
-            }
+        val recipientId = event.recipientId
+        val preferences = preferenceStore.get(recipientId)
+        if (!preferences.emailEnabled) {
+            markDelivery(event.notificationId, NotificationEmailDeliveryEntity.SKIPPED)
+            log.info("Email notifications disabled for recipientId={}; skipping dispatch", opaqueRecipientId(recipientId))
+            return
+        }
+        val recipientEmail = resolveRecipientEmail(event) ?: run {
+            markDelivery(event.notificationId, NotificationEmailDeliveryEntity.SKIPPED)
+            return
+        }
+        if (!deliveryRateLimiter.allow(recipientId)) {
+            log.warn(
+                "Email delivery rate limit reached for recipientId={}; suppressing delivery",
+                opaqueRecipientId(recipientId)
+            )
+            markDelivery(event.notificationId, NotificationEmailDeliveryEntity.SKIPPED)
+            return
+        }
+        val deliveryOutcome = emailDispatcher.send(recipientEmail, "Notification: ${event.title}", event.body)
+        when (deliveryOutcome) {
+            EmailDeliveryOutcome.DELIVERED, EmailDeliveryOutcome.SKIPPED -> Unit
+            EmailDeliveryOutcome.RETRYABLE_FAILURE,
+            EmailDeliveryOutcome.PERMANENT_FAILURE -> throw NotificationDomainException(
+                NotificationErrors.EMAIL_DISPATCH_FAILED
+            )
+        }
+        markDelivery(event.notificationId, NotificationEmailDeliveryEntity.DELIVERED)
+        log.info("Email dispatch outcome for recipientId={} (notificationId={}): {}", opaqueRecipientId(recipientEmail), event.notificationId, deliveryOutcome)
+    }
 
-            val emailEnabled = preferences.emailEnabled
-            if (!emailEnabled) {
-                log.info("Email notifications disabled for recipientId={}; skipping dispatch", opaqueRecipientId(recipientId))
-                return
-            }
-
-            val recipientEmail = resolveRecipientEmail(event)
-            if (!deliveryRateLimiter.allow(recipientId)) {
-                log.warn(
-                    "Email delivery rate limit reached for recipientId={}; suppressing delivery",
-                    opaqueRecipientId(recipientId)
-                )
-                return
-            }
-            val subject = "Notification: ${event.title}"
-            val body = event.body
-
-            val deliveryOutcome = emailDispatcher.send(recipientEmail, subject, body)
-            log.info("Email dispatch outcome for recipientId={} (notificationId={}): {}", opaqueRecipientId(recipientEmail), event.notificationId, deliveryOutcome)
-        } catch (t: Exception) {
-            log.error("Unexpected email delivery failure for notification {}, errorClass={}", event.notificationId, t::class.simpleName)
+    private fun markDelivery(notificationId: java.util.UUID, status: String) {
+        emailDeliveries?.findById(notificationId)?.ifPresent { delivery ->
+            delivery.status = status
+            delivery.updatedAt = java.time.Instant.now()
+            emailDeliveries.save(delivery)
         }
     }
 
-    private fun resolveRecipientEmail(event: NotificationEvent): String {
+    private fun resolveRecipientEmail(event: NotificationEvent): String? {
         if (!event.recipientEmail.isNullOrBlank()) {
             return event.recipientEmail.trim()
         }
         val recipient = event.subject.trim()
-        require(recipient.contains("@")) { "Verified recipient email is required for notification delivery" }
-        return recipient
+        return recipient.takeIf { it.contains("@") }
     }
 }
 

@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.transaction.annotation.Transactional
+import jakarta.persistence.EntityManager
 import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
 import java.nio.charset.StandardCharsets
 import java.time.Instant
@@ -38,7 +39,8 @@ class RecurringExpenseServiceTest @Autowired constructor(
     private val expenseStore: ExpenseStore,
     private val scheduleRepository: RecurringExpenseScheduleRepository,
     private val occurrenceRepository: RecurringExpenseOccurrenceRepository,
-    private val outboxStore: OutboxStore
+    private val outboxStore: OutboxStore,
+    private val entityManager: EntityManager
 ) {
 
     @Test
@@ -192,8 +194,9 @@ class RecurringExpenseServiceTest @Autowired constructor(
         val group = groupStore.create("alice", CreateGroupRequest("One-sided updates", "HOUSEHOLD", "EUR"))
         val invite = groupStore.invite(group.groupId, "alice", CreateInviteRequest(24))
         groupStore.claim(invite.token, "bob")
-        val aliceId = UUID.nameUUIDFromBytes("alice".toByteArray(StandardCharsets.UTF_8))
-        val bobId = UUID.nameUUIDFromBytes("bob".toByteArray(StandardCharsets.UTF_8))
+        val members = groupStore.listMembers(group.groupId, "alice")
+        val aliceId = members.first { it.subject == "alice" }.membershipId
+        val bobId = members.first { it.subject == "bob" }.membershipId
         val startDate = LocalDate.of(2026, 9, 1)
 
         val allocationOnly = service.createSchedule(
@@ -428,7 +431,7 @@ class RecurringExpenseServiceTest @Autowired constructor(
     @Test
     fun `pauses schedule and emits outbox notification on invalid membership`() {
         val group = groupStore.create("alice", CreateGroupRequest("Private Flat", "HOUSEHOLD", "EUR"))
-        val aliceId = UUID.nameUUIDFromBytes("alice".toByteArray(StandardCharsets.UTF_8))
+        val aliceId = groupStore.listMembers(group.groupId, "alice").first().membershipId
         val nonMemberId = UUID.randomUUID()
         val startDate = LocalDate.of(2026, 9, 1)
 
@@ -573,8 +576,9 @@ class RecurringExpenseServiceTest @Autowired constructor(
         val invite = groupStore.invite(group.groupId, "alice", CreateInviteRequest(24))
         groupStore.claim(invite.token, "bob")
 
-        val aliceId = UUID.nameUUIDFromBytes("alice".toByteArray(StandardCharsets.UTF_8))
-        val bobId = UUID.nameUUIDFromBytes("bob".toByteArray(StandardCharsets.UTF_8))
+        val members = groupStore.listMembers(group.groupId, "alice")
+        val aliceId = members.first { it.subject == "alice" }.membershipId
+        val bobId = members.first { it.subject == "bob" }.membershipId
         val startDate = LocalDate.of(2026, 9, 1)
 
         val schedule = service.createSchedule(
@@ -603,14 +607,53 @@ class RecurringExpenseServiceTest @Autowired constructor(
         )
     }
 
+    /** Verifies a custom split survives a persistence-context restart before processing. */
+    @Test
+    fun `loads custom recurring split from durable schedule state`() {
+        val group = groupStore.create("alice", CreateGroupRequest("Durable split", "HOUSEHOLD", "EUR"))
+        val bobInvite = groupStore.invite(group.groupId, "alice", CreateInviteRequest(24))
+        groupStore.claim(bobInvite.token, "bob")
+        val members = groupStore.listMembers(group.groupId, "alice")
+        val aliceId = members.first { it.subject == "alice" }.membershipId
+        val bobId = members.first { it.subject == "bob" }.membershipId
+        val startDate = LocalDate.of(2026, 12, 1)
+
+        val schedule = service.createSchedule(
+            group.groupId,
+            CreateRecurringScheduleRequest(
+                description = "Durable custom split",
+                amountMinor = 6000,
+                currency = "EUR",
+                frequency = RecurrenceFrequency.MONTHLY,
+                startDate = startDate,
+                payers = listOf(ExpensePayer(aliceId, 6000)),
+                allocations = listOf(ExpenseAllocation(aliceId, 3000), ExpenseAllocation(bobId, 3000))
+            )
+        )
+        entityManager.flush()
+        entityManager.clear()
+
+        val reloaded = scheduleRepository.findById(schedule.scheduleId).orElseThrow()
+        assertNotNull(reloaded.customSpecification)
+        assertTrue(reloaded.customSpecification!!.contains(bobId.toString()))
+        assertEquals(1, service.processDueOccurrences(asOfDate = startDate))
+
+        val expenseId = service.getOccurrences(schedule.scheduleId).single().expenseId!!
+        assertEquals(
+            listOf(3000L, 3000L),
+            expenseStore.findById(expenseId)?.allocations?.map { it.allocatedMinor }?.sorted()
+        )
+    }
+
     @Test
     fun `fills only the omitted side of a custom recurring specification`() {
         val group = groupStore.create("alice", CreateGroupRequest("One-sided custom specs", "HOUSEHOLD", "EUR"))
         val invite = groupStore.invite(group.groupId, "alice", CreateInviteRequest(24))
         groupStore.claim(invite.token, "bob")
 
-        val aliceId = UUID.nameUUIDFromBytes("alice".toByteArray(StandardCharsets.UTF_8))
-        val bobId = UUID.nameUUIDFromBytes("bob".toByteArray(StandardCharsets.UTF_8))
+        val members = groupStore.listMembers(group.groupId, "alice")
+        val aliceId = members.first { it.subject == "alice" }.membershipId
+        val bobId = members.first { it.subject == "bob" }.membershipId
         val startDate = LocalDate.of(2026, 9, 1)
 
         val payersOnly = service.createSchedule(
@@ -888,6 +931,7 @@ class RecurringExpenseServiceTest @Autowired constructor(
     fun `generates recurring allocations for legacy non-UUID subjects`() {
         val legacySubject = "legacy-user"
         val group = groupStore.create(legacySubject, CreateGroupRequest("Legacy members", "HOUSEHOLD", "EUR"))
+        val member = groupStore.listMembers(group.groupId, legacySubject).single()
         val startDate = LocalDate.of(2026, 10, 1)
         val schedule = service.createSchedule(
             group.groupId,
@@ -904,14 +948,14 @@ class RecurringExpenseServiceTest @Autowired constructor(
 
         val expenseId = service.getOccurrences(schedule.scheduleId).single().expenseId
         val expense = expenseStore.findById(expenseId!!)
-        val expectedParticipant = UUID.nameUUIDFromBytes(legacySubject.toByteArray(StandardCharsets.UTF_8))
-        assertEquals(listOf(expectedParticipant), expense?.allocations?.map { it.participantId })
+        assertEquals(listOf(member.membershipId), expense?.allocations?.map { it.participantId })
     }
 
     @Test
     fun `preserves UUID-shaped member subjects when generating recurring allocations`() {
         val memberId = UUID.randomUUID()
         val group = groupStore.create(memberId.toString(), CreateGroupRequest("UUID members", "HOUSEHOLD", "EUR"))
+        val member = groupStore.listMembers(group.groupId, memberId.toString()).single()
         val startDate = LocalDate.of(2026, 11, 1)
         val schedule = service.createSchedule(
             group.groupId,
@@ -928,6 +972,6 @@ class RecurringExpenseServiceTest @Autowired constructor(
 
         val expenseId = service.getOccurrences(schedule.scheduleId).single().expenseId
         val expense = expenseStore.findById(expenseId!!)
-        assertEquals(listOf(memberId), expense?.allocations?.map { it.participantId })
+        assertEquals(listOf(member.membershipId), expense?.allocations?.map { it.participantId })
     }
 }
