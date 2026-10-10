@@ -35,4 +35,15 @@ class BffEventDeduplicatorTest {
         assertEquals(0, deduplicator.size())
         assertFalse(deduplicator.isDuplicateAndMark(first))
     }
+
+    @Test
+    fun `releases an in-flight claim so a failed delivery can be retried`() {
+        val deduplicator = BffEventDeduplicator()
+        val eventId = java.util.UUID.randomUUID()
+
+        assertTrue(deduplicator.tryClaim(eventId))
+        deduplicator.release(eventId)
+
+        assertTrue(deduplicator.tryClaim(eventId))
+    }
 }

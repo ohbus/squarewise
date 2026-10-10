@@ -90,6 +90,17 @@ class GraphQlExceptionResolverTest {
         assertEquals(BffErrors.GRAPHQL_AGGREGATION_FAILED.safeDetail, unknownError.message)
     }
 
+    @Test
+    fun `preserves an explicit upstream error definition`() {
+        val error = resolver.resolve(
+            UpstreamServiceException(418, definition = PlatformErrors.ACCESS_DENIED),
+            environment
+        )
+
+        assertEquals(PlatformErrors.ACCESS_DENIED.safeDetail, error.message)
+        assertEquals("AUTHORIZATION_ERROR", error.extensions?.get("code"))
+    }
+
     private fun expectedGraphQlCode(definition: ErrorDefinition): String =
         definition.category.name
 

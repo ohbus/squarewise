@@ -38,6 +38,7 @@ class ExpenseCoreGateway(
 
     private companion object {
         const val PAGE_SIZE = 100
+        const val UPSTREAM_SOURCE = "expense-core"
         // shortcut: group details include at most 1,000 expenses; add cursor pagination before raising this cap.
         const val MAX_EXPENSE_PAGES = 10
     }
@@ -49,14 +50,14 @@ class ExpenseCoreGateway(
         client.post().uri(ApiEndpoints.ExpenseCore.V1.PATH_GROUPS)
             .headers { headers -> bearer?.let { headers.setBearerAuth(it) } }
             .bodyValue(input).retrieve()
-            .onStatus({ it.isError }) { response -> response.toUpstreamException(upstreamProblemDecoder, "expense-core") }
+            .onStatus({ it.isError }) { response -> response.toUpstreamException(upstreamProblemDecoder, UPSTREAM_SOURCE) }
             .bodyToMono(UpstreamGroup::class.java).map { it.toBffGroup() }.timeout(timeout)
 
     fun listGroups(bearer: String?): Mono<List<BffGroup>> =
         client.get().uri(ApiEndpoints.ExpenseCore.V1.PATH_GROUPS)
             .headers { headers -> bearer?.let { headers.setBearerAuth(it) } }
             .retrieve()
-            .onStatus({ it.isError }) { response -> response.toUpstreamException(upstreamProblemDecoder, "expense-core") }
+            .onStatus({ it.isError }) { response -> response.toUpstreamException(upstreamProblemDecoder, UPSTREAM_SOURCE) }
             .bodyToFlux(UpstreamGroup::class.java).map { it.toBffGroup() }.collectList()
             .flatMap { groups ->
                 Flux.fromIterable(groups).flatMapSequential({ group ->
@@ -68,23 +69,23 @@ class ExpenseCoreGateway(
         client.patch().uri(ApiEndpoints.ExpenseCore.V1.PATH_GROUP_BY_ID, groupId)
             .headers { headers -> bearer?.let { headers.setBearerAuth(it) } }
             .bodyValue(mapOf("name" to name)).retrieve()
-            .onStatus({ it.isError }) { response -> response.toUpstreamException(upstreamProblemDecoder, "expense-core") }
+            .onStatus({ it.isError }) { response -> response.toUpstreamException(upstreamProblemDecoder, UPSTREAM_SOURCE) }
             .bodyToMono(UpstreamGroup::class.java).map { it.toBffGroup() }.timeout(timeout)
 
     fun listMembers(groupId: String, bearer: String?): Mono<List<BffMember>> =
         client.get().uri(ApiEndpoints.ExpenseCore.V1.PATH_GROUP_MEMBERS, groupId)
             .headers { headers -> bearer?.let { headers.setBearerAuth(it) } }.retrieve()
-            .onStatus({ it.isError }) { response -> response.toUpstreamException(upstreamProblemDecoder, "expense-core") }
+            .onStatus({ it.isError }) { response -> response.toUpstreamException(upstreamProblemDecoder, UPSTREAM_SOURCE) }
             .bodyToFlux(BffMember::class.java).collectList().timeout(timeout)
 
     fun getGroup(groupId: String, bearer: String?): Mono<BffGroup> {
         val groupMono = client.get().uri(ApiEndpoints.ExpenseCore.V1.PATH_GROUP_BY_ID, groupId)
             .headers { headers -> bearer?.let { headers.setBearerAuth(it) } }.retrieve()
-            .onStatus({ it.isError }) { response -> response.toUpstreamException(upstreamProblemDecoder, "expense-core") }
+            .onStatus({ it.isError }) { response -> response.toUpstreamException(upstreamProblemDecoder, UPSTREAM_SOURCE) }
             .bodyToMono(UpstreamGroup::class.java).map { it.toBffGroup() }
         val balancesMono = client.get().uri(ApiEndpoints.ExpenseCore.V1.PATH_GROUP_BALANCES, groupId)
             .headers { headers -> bearer?.let { headers.setBearerAuth(it) } }.retrieve()
-            .onStatus({ it.isError }) { response -> response.toUpstreamException(upstreamProblemDecoder, "expense-core") }
+            .onStatus({ it.isError }) { response -> response.toUpstreamException(upstreamProblemDecoder, UPSTREAM_SOURCE) }
             .bodyToMono(BffBalancesResponse::class.java).map { it.balances }
         val expensesMono = listAllExpenses(groupId, bearer)
         return Mono.zip(groupMono, balancesMono, expensesMono, listMembers(groupId, bearer)).map { tuple ->
@@ -100,7 +101,7 @@ class ExpenseCoreGateway(
                 .build(groupId)
         }
             .headers { headers -> bearer?.let { headers.setBearerAuth(it) } }.retrieve()
-            .onStatus({ it.isError }) { response -> response.toUpstreamException(upstreamProblemDecoder, "expense-core") }
+            .onStatus({ it.isError }) { response -> response.toUpstreamException(upstreamProblemDecoder, UPSTREAM_SOURCE) }
             .bodyToFlux(UpstreamExpense::class.java).map { it.toBffExpense() }.collectList()
             .map { expenses ->
                 ExpensePage(
@@ -128,7 +129,7 @@ class ExpenseCoreGateway(
         client.post().uri(ApiEndpoints.ExpenseCore.V1.PATH_GROUP_EXPENSES, groupId)
             .header(ApiEndpoints.Headers.IDEMPOTENCY_KEY, idempotencyKey)
             .headers { headers -> bearer?.let { headers.setBearerAuth(it) } }.bodyValue(input).retrieve()
-            .onStatus({ it.isError }) { response -> response.toUpstreamException(upstreamProblemDecoder, "expense-core") }
+            .onStatus({ it.isError }) { response -> response.toUpstreamException(upstreamProblemDecoder, UPSTREAM_SOURCE) }
             .bodyToMono(UpstreamExpense::class.java).map { it.toBffExpense(input.description) }.timeout(timeout)
 
     fun recordRepayment(groupId: String, input: RepaymentInput, bearer: String?): Mono<BffSettlement> {
@@ -136,13 +137,13 @@ class ExpenseCoreGateway(
         return client.post().uri(ApiEndpoints.ExpenseCore.V1.PATH_GROUP_SETTLEMENTS, groupId)
             .header(ApiEndpoints.Headers.IDEMPOTENCY_KEY, input.idempotencyKey)
             .headers { headers -> bearer?.let { headers.setBearerAuth(it) } }.bodyValue(payload).retrieve()
-            .onStatus({ it.isError }) { response -> response.toUpstreamException(upstreamProblemDecoder, "expense-core") }
+            .onStatus({ it.isError }) { response -> response.toUpstreamException(upstreamProblemDecoder, UPSTREAM_SOURCE) }
             .bodyToMono(UpstreamSettlement::class.java).map { it.toBffSettlement() }.timeout(timeout)
     }
 
     fun getSettlementSuggestions(groupId: String, bearer: String?): Mono<List<BffSuggestedSettlement>> =
         client.get().uri(ApiEndpoints.ExpenseCore.V1.PATH_GROUP_SETTLEMENT_SUGGESTIONS, groupId)
             .headers { headers -> bearer?.let { headers.setBearerAuth(it) } }.retrieve()
-            .onStatus({ it.isError }) { response -> response.toUpstreamException(upstreamProblemDecoder, "expense-core") }
+            .onStatus({ it.isError }) { response -> response.toUpstreamException(upstreamProblemDecoder, UPSTREAM_SOURCE) }
             .bodyToFlux(BffSuggestedSettlement::class.java).collectList().timeout(timeout)
 }

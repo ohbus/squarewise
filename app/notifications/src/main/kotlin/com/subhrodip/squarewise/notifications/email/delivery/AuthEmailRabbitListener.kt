@@ -40,7 +40,7 @@ class AuthEmailRabbitListener(
     override fun onMessage(message: Message, channel: Channel?) {
         val deliveryTag = message.messageProperties.deliveryTag
         try {
-            when (val result = asyncExecutionTemplate.execute(
+            val result = asyncExecutionTemplate.execute(
                 context = AsyncContext(
                     eventId = UUID.nameUUIDFromBytes(message.body),
                     eventType = AUTH_EMAIL_EVENT_TYPE,
@@ -61,25 +61,32 @@ class AuthEmailRabbitListener(
                     )
                 }
                 outcome
-            }) {
-                is AsyncExecutionResult.Completed -> channel?.basicAck(deliveryTag, false)
-                is AsyncExecutionResult.Failed -> {
-                    val deadLetter = result.deadLetter
-                    if (deadLetter != null) {
-                        try {
-                            deadLetterPublisher.publish(deadLetter)
-                            channel?.basicAck(deliveryTag, false)
-                        } catch (publishFailure: Exception) {
-                            channel?.basicReject(deliveryTag, false)
-                        }
-                    } else {
-                        channel?.basicReject(deliveryTag, result.disposition == MessageDisposition.NACK_REQUEUE)
-                    }
-                }
             }
+            handleResult(result, deliveryTag, channel)
         } catch (exception: Exception) {
             if (exception is CancellationException || FatalErrorClassifier.isFatal(exception)) throw exception
             channel?.basicReject(deliveryTag, true)
+        }
+    }
+
+    private fun handleResult(result: AsyncExecutionResult<EmailDeliveryOutcome>, deliveryTag: Long, channel: Channel?) {
+        when (result) {
+            is AsyncExecutionResult.Completed -> channel?.basicAck(deliveryTag, false)
+            is AsyncExecutionResult.Failed -> handleFailure(result, deliveryTag, channel)
+        }
+    }
+
+    private fun handleFailure(result: AsyncExecutionResult.Failed, deliveryTag: Long, channel: Channel?) {
+        val deadLetter = result.deadLetter
+        if (deadLetter == null) {
+            channel?.basicReject(deliveryTag, result.disposition == MessageDisposition.NACK_REQUEUE)
+            return
+        }
+        try {
+            deadLetterPublisher.publish(deadLetter)
+            channel?.basicAck(deliveryTag, false)
+        } catch (publishFailure: Exception) {
+            channel?.basicReject(deliveryTag, false)
         }
     }
 

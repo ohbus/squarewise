@@ -156,6 +156,23 @@ class RabbitNotificationListenerTest {
     }
 
     @Test
+    fun `rejects the original delivery when dead letter publication fails`() {
+        val consumer = NotificationConsumer { NotificationConsumptionOutcome.APPLIED }
+        val listener = RabbitNotificationListener(
+            consumer,
+            envelopeParser,
+            deadLetterPublisher = DeadLetterPublisher { throw IllegalStateException("broker unavailable") }
+        )
+        val channel = TestChannel()
+
+        listener.onMessage(createMessage("{ invalid json }", 14L), channel)
+
+        assertNull(channel.ackedTag)
+        assertEquals(14L, channel.rejectedTag)
+        assertEquals(false, channel.rejectedRequeue)
+    }
+
+    @Test
     fun `rejects with requeue when consumer throws transient exception`() {
         val eventId = UUID.fromString("00000000-0000-7000-8000-000000000209")
         val aggregateId = UUID.fromString("00000000-0000-7000-8000-000000000210")

@@ -27,7 +27,7 @@ class BffEventDeduplicator(private val capacity: Int = DEFAULT_CAPACITY) {
 
     /** Claims an event before side effects; failed work can release the claim. */
     fun tryClaim(eventId: UUID): Boolean = synchronized(seenEvents) {
-        if (seenEvents.containsKey(eventId) || !inFlight.add(eventId)) false else true
+        !seenEvents.containsKey(eventId) && inFlight.add(eventId)
     }
 
     /** Marks a successfully fanned-out event as complete. */

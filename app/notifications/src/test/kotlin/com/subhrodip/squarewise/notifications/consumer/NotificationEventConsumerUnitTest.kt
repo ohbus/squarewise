@@ -8,10 +8,13 @@ import com.subhrodip.squarewise.notifications.consumer.service.TransactionalNoti
 import com.subhrodip.squarewise.notifications.delivery.rate.DeliveryRateLimiter
 import com.subhrodip.squarewise.notifications.email.delivery.EmailDeliveryOutcome
 import com.subhrodip.squarewise.notifications.email.delivery.EmailDispatcher
+import com.subhrodip.squarewise.notifications.email.persistence.NotificationEmailDeliveryEntity
+import com.subhrodip.squarewise.notifications.email.persistence.NotificationEmailDeliveryRepository
 import com.subhrodip.squarewise.notifications.preferences.model.NotificationPreferences
 import com.subhrodip.squarewise.notifications.preferences.persistence.PreferenceStore
 import java.time.Instant
 import java.util.UUID
+import java.util.Optional
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
@@ -84,6 +87,35 @@ class NotificationEventConsumerUnitTest {
         assertEquals(NotificationConsumptionOutcome.APPLIED, consumer.consume(invalidRecipient))
 
         verify(emailDispatcher, never()).send(anyString(), anyString(), anyString())
+    }
+
+    @Test
+    fun `persists skipped delivery when recipient cannot be resolved or rate is denied`() {
+        val deliveries = mock(NotificationEmailDeliveryRepository::class.java)
+        val invalidRecipient = sampleEvent(subject = "opaque-subject")
+        val invalidDelivery = NotificationEmailDeliveryEntity(invalidRecipient.notificationId)
+        doReturn(NotificationConsumptionOutcome.APPLIED).`when`(processor).process(invalidRecipient)
+        doReturn(NotificationPreferences(emailEnabled = true)).`when`(preferenceStore).get("opaque-subject")
+        doReturn(Optional.of(invalidDelivery)).`when`(deliveries).findById(invalidRecipient.notificationId)
+
+        NotificationEventConsumer(processor, processedEvents, preferenceStore, emailDispatcher, deliveryRateLimiter, deliveries)
+            .consume(invalidRecipient)
+
+        assertEquals(NotificationEmailDeliveryEntity.SKIPPED, invalidDelivery.status)
+        verify(deliveries).save(invalidDelivery)
+
+        val rateDenied = sampleEvent(subject = "rate@example.com")
+        val rateDelivery = NotificationEmailDeliveryEntity(rateDenied.notificationId)
+        doReturn(NotificationConsumptionOutcome.APPLIED).`when`(processor).process(rateDenied)
+        doReturn(NotificationPreferences(emailEnabled = true)).`when`(preferenceStore).get("rate@example.com")
+        doReturn(false).`when`(deliveryRateLimiter).allow("rate@example.com")
+        doReturn(Optional.of(rateDelivery)).`when`(deliveries).findById(rateDenied.notificationId)
+
+        NotificationEventConsumer(processor, processedEvents, preferenceStore, emailDispatcher, deliveryRateLimiter, deliveries)
+            .consume(rateDenied)
+
+        assertEquals(NotificationEmailDeliveryEntity.SKIPPED, rateDelivery.status)
+        verify(deliveries).save(rateDelivery)
     }
 
     @Test

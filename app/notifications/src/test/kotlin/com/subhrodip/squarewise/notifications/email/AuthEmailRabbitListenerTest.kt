@@ -41,6 +41,19 @@ class AuthEmailRabbitListenerTest {
     }
 
     @Test
+    fun `rejects original delivery when dead letter publication fails`() {
+        val channel = TestChannel()
+        val failingPublisher = DeadLetterPublisher { throw IllegalStateException("broker unavailable") }
+        val boundaryListener = AuthEmailRabbitListener(ObjectMapper(), consumer, deadLetterPublisher = failingPublisher)
+
+        boundaryListener.onMessage(message("{not-json}", 12L), channel)
+
+        assertNull(channel.ackedTag)
+        assertEquals(12L, channel.rejectedTag)
+        assertEquals(false, channel.rejectedRequeue)
+    }
+
+    @Test
     fun `rejects an empty auth email body without requeue`() {
         val channel = TestChannel()
 

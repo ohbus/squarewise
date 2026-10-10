@@ -170,13 +170,7 @@ class RecurringExpenseService(
                 break
             }
 
-            val members = getGroupMembers(schedule.groupId)
-            if (members.isEmpty() || !validateMembership(schedule, members)) {
-                schedule.paused = true
-                scheduleRepository.save(schedule)
-                emitSchedulePausedNotification(schedule, "invalid_membership")
-                break
-            }
+            val members = activeMembersOrPause(schedule) ?: break
 
             val occurrenceDate = schedule.nextOccurrenceDate
             val occurrenceId = OccurrenceIdentity.id(schedule.scheduleId, occurrenceDate)
@@ -199,19 +193,7 @@ class RecurringExpenseService(
                     occurrenceRepository.save(occurrence)
                     generated++
                 } catch (e: Exception) {
-                    if (e is CancellationException || FatalErrorClassifier.isFatal(e)) throw e
-                    if (e is DataAccessException || e is AmqpException || e is TimeoutException) {
-                        log.warn(
-                            "Transient recurring expense generation failure; retrying scheduleId={} occurrenceId={} errorType={}",
-                            schedule.scheduleId,
-                            occurrenceId,
-                            e::class.simpleName
-                        )
-                        break
-                    }
-                    schedule.paused = true
-                    scheduleRepository.save(schedule)
-                    emitSchedulePausedNotification(schedule, "generation_error")
+                    handleGenerationFailure(schedule, occurrenceId, e)
                     break
                 }
             }
@@ -221,6 +203,31 @@ class RecurringExpenseService(
             scheduleRepository.save(schedule)
         }
         return generated
+    }
+
+    private fun activeMembersOrPause(schedule: RecurringExpenseSchedule): List<UUID>? {
+        val members = getGroupMembers(schedule.groupId)
+        if (members.isNotEmpty() && validateMembership(schedule, members)) return members
+        schedule.paused = true
+        scheduleRepository.save(schedule)
+        emitSchedulePausedNotification(schedule, "invalid_membership")
+        return null
+    }
+
+    private fun handleGenerationFailure(schedule: RecurringExpenseSchedule, occurrenceId: UUID, error: Exception) {
+        if (error is CancellationException || FatalErrorClassifier.isFatal(error)) throw error
+        if (error is DataAccessException || error is AmqpException || error is TimeoutException) {
+            log.warn(
+                "Transient recurring expense generation failure; retrying scheduleId={} occurrenceId={} errorType={}",
+                schedule.scheduleId,
+                occurrenceId,
+                error::class.simpleName
+            )
+            return
+        }
+        schedule.paused = true
+        scheduleRepository.save(schedule)
+        emitSchedulePausedNotification(schedule, "generation_error")
     }
 
     private fun validateMembership(schedule: RecurringExpenseSchedule, members: List<UUID>): Boolean {

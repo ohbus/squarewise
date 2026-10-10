@@ -162,6 +162,11 @@ class AllocationCalculatorTest {
             AllocationCalculator.calculate("EXACT", 1, listOf(AllocationItemDto("a", "not-a-number")))
         }
         assertEquals(ExpenseErrors.EXPENSE_REQUEST_INVALID.errorName, malformed.definition.errorName)
+
+        val empty = assertThrows(SquarewiseException::class.java) {
+            AllocationCalculator.calculate("EXACT", 1, listOf(AllocationItemDto("a", "")))
+        }
+        assertEquals(ExpenseErrors.EXPENSE_REQUEST_INVALID.errorName, empty.definition.errorName)
     }
 
     /**

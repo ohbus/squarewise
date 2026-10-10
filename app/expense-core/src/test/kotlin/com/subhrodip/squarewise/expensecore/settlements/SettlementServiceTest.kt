@@ -106,6 +106,9 @@ class SettlementServiceTest {
         assertThrows(IllegalArgumentException::class.java) {
             service.reverse(UUID.randomUUID(), UUID.randomUUID(), " ", "actor-1")
         }
+        assertThrows(IllegalArgumentException::class.java) {
+            service.reverse(UUID.randomUUID(), UUID.randomUUID(), "valid reason", " ")
+        }
         assertTrue(service.suggestions(UUID.randomUUID()).isEmpty())
     }
 
