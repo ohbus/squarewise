@@ -4276,7 +4276,7 @@
       "parent_id": "MILESTONE-PRODUCTION-HARDENING",
       "title": "Reliability, security, and capacity release gates",
       "phase": "operations",
-      "status": "done",
+      "status": "in_progress",
       "owner_role": "platform",
       "owner_agent": "/root/platform",
       "depends_on": [
@@ -4304,10 +4304,11 @@
       "evidence": [
         "Added repository release-hardening checklist and standard-library release-gate validator for production Compose safety, observability assets, and evidence categories.",
         "make release-gate, make check, make acceptance-live, and make security-hygiene passed.",
-        "Dependency failure recovery, secret scanning, and automated capacity gates verified in local Docker topology and release checklists."
+        "Dependency failure recovery, secret scanning, and automated capacity gates verified in local Docker topology and release checklists.",
+        "Local evidence is implementation/framework evidence only; production-like restore, failover, rotation, scanning, rollback, and capacity artifacts remain open."
       ],
       "reviewer": "/root",
-      "blocker": null
+      "blocker": "Requires reviewed production-like restore/failover, rotation, security-scan, rollback, and capacity artifacts before launch."
     },
     {
       "id": "OPS-21",
@@ -4350,7 +4351,7 @@
       "parent_id": "MILESTONE-PRODUCTION-HARDENING",
       "title": "1M-user capacity baseline and production readiness evidence",
       "phase": "operations",
-      "status": "done",
+      "status": "in_progress",
       "owner_role": "platform",
       "owner_agent": "/root/platform",
       "depends_on": [
@@ -4375,10 +4376,11 @@
       "evidence": [
         "Added explicit 1M-user workload model, per-surface targets, infrastructure starting envelope, and a mixed k6 baseline profile.",
         "5-second smoke profile completed 5,003 iterations (~996 req/s) with 0% failure rate; 30-second mixed soak documented local workstation saturation limit while maintaining 0% HTTP failures.",
-        "Infrastructure starting envelope, cost envelope, and scaling boundaries documented in capacity-baseline-1m.md and OPS-22.md."
+        "Infrastructure starting envelope, cost envelope, and scaling boundaries documented in capacity-baseline-1m.md and OPS-22.md.",
+        "The local smoke and soak are not production-like acceptance evidence; required soak, burst, failover, recovery, cost, and saturation artifacts remain open."
       ],
       "reviewer": "/root",
-      "blocker": null
+      "blocker": "Requires attached production-like load and infrastructure telemetry plus reviewed recovery and cost evidence."
     },
     {
       "id": "OPS-23",
@@ -5157,7 +5159,7 @@
       "parent_id": "MILESTONE-QUALITY",
       "title": "Production and WebSocket protocol validation follow-up",
       "phase": "quality",
-      "status": "done",
+      "status": "in_progress",
       "owner_role": "coordinator",
       "owner_agent": "/root",
       "depends_on": [
@@ -5189,10 +5191,10 @@
         "WebSocket & real-time protocol specification and handling semantics defined for malformed frames, error envelopes, duplicate IDs, 64-item backpressure buffers, stateless snapshot replay, and ping/pong heartbeats.",
         "Operational release gates documented for capacity soak/burst (make load-k6), database failover/restore, security hygiene scanning, and additive rollback.",
         "Live test suites verified across the healthy Docker stack: make e2e-all (e2e-live, e2e-offline, e2e-concurrency, e2e-chaos) passed with zero-sum balances, outbox drain, and optimistic locking races; make e2e-rest-edge passed 86 checks; make load-k6-validate, make security-hygiene, make release-gate, make architecture-validate, and make sbom-validate passed cleanly.",
-        "Evidence classification preserves strict segregation between local Docker evidence (L4/L5) and target production guarantees."
+        "Evidence classification preserves strict segregation between local Docker evidence (L4/L5) and target production guarantees; required target-environment artifacts are not complete."
       ],
       "reviewer": "/root",
-      "blocker": null
+      "blocker": "Framework is complete, but production-like capacity, failover, restore, scanning, rollback, rotation, and alert-routing evidence is still required."
     },
     {
       "id": "QA-09",

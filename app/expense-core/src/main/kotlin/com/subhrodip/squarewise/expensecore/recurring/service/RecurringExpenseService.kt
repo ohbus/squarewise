@@ -16,6 +16,7 @@ import com.subhrodip.squarewise.expensecore.recurring.domain.RecurrenceFrequency
 import com.subhrodip.squarewise.expensecore.recurring.domain.RecurrencePolicy
 import com.subhrodip.squarewise.expensecore.recurring.domain.RecurringExpenseOccurrence
 import com.subhrodip.squarewise.expensecore.recurring.domain.RecurringExpenseSchedule
+import com.subhrodip.squarewise.expensecore.recurring.domain.RecurringExpenseSpecification
 import com.subhrodip.squarewise.expensecore.recurring.persistence.RecurringExpenseOccurrenceRepository
 import com.subhrodip.squarewise.expensecore.recurring.persistence.RecurringExpenseScheduleRepository
 import com.subhrodip.squarewise.ids.generation.UuidGenerator
@@ -26,17 +27,16 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
 import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
-import java.nio.charset.StandardCharsets
 import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CancellationException
 import java.util.concurrent.TimeoutException
 import com.subhrodip.squarewise.errors.exceptions.FatalErrorClassifier
 import org.springframework.amqp.AmqpException
 import org.springframework.dao.DataAccessException
 import org.slf4j.LoggerFactory
+import tools.jackson.databind.ObjectMapper
 
 /**
  * Service managing database-backed recurring expense schedule lifecycle operations,
@@ -50,10 +50,10 @@ class RecurringExpenseService(
     private val groupRepository: GroupRepository,
     @PersistenceContext private val entityManager: EntityManager,
     @Autowired(required = false)
-    private val outboxStore: OutboxStore? = null
+    private val outboxStore: OutboxStore? = null,
+    private val objectMapper: ObjectMapper = ObjectMapper()
 ) : RecurringCommandStore, RecurringQueryStore {
     private val log = LoggerFactory.getLogger(RecurringExpenseService::class.java)
-    private val customSpecifications = ConcurrentHashMap<UUID, Pair<List<ExpensePayer>, List<ExpenseAllocation>>>()
 
     @Transactional
     override fun createSchedule(groupId: UUID, request: CreateRecurringScheduleRequest): RecurringExpenseSchedule {
@@ -80,9 +80,7 @@ class RecurringExpenseService(
             version = 1
         )
 
-        if (request.payers != null || request.allocations != null) {
-            customSpecifications[scheduleId] = (request.payers ?: emptyList()) to (request.allocations ?: emptyList())
-        }
+        schedule.customSpecification = encodeSpecification(request.payers, request.allocations)
 
         return scheduleRepository.save(schedule)
     }
@@ -110,11 +108,7 @@ class RecurringExpenseService(
         schedule.startDate = request.startDate
         schedule.endDate = request.endDate
 
-        if (request.payers != null || request.allocations != null) {
-            customSpecifications[scheduleId] = (request.payers ?: emptyList()) to (request.allocations ?: emptyList())
-        } else {
-            customSpecifications.remove(scheduleId)
-        }
+        schedule.customSpecification = encodeSpecification(request.payers, request.allocations)
 
         return scheduleRepository.save(schedule)
     }
@@ -232,7 +226,7 @@ class RecurringExpenseService(
     private fun validateMembership(schedule: RecurringExpenseSchedule, members: List<UUID>): Boolean {
         if (members.isEmpty()) return false
         val memberSet = members.toSet()
-        val custom = customSpecifications[schedule.scheduleId] ?: return true
+        val custom = readSpecification(schedule) ?: return true
         val (payers, allocations) = custom
         if (payers.isNotEmpty() && payers.any { it.participantId !in memberSet }) {
             return false
@@ -273,13 +267,13 @@ class RecurringExpenseService(
         occurrenceId: UUID,
         members: List<UUID>
     ): ExpenseRecord {
-        val custom = customSpecifications[schedule.scheduleId]
-        val (payers, allocations) = if (custom != null && (custom.first.isNotEmpty() || custom.second.isNotEmpty())) {
-            val customPayers = custom.first.ifEmpty {
+        val custom = readSpecification(schedule)
+        val (payers, allocations) = if (custom != null && (custom.payers.isNotEmpty() || custom.allocations.isNotEmpty())) {
+            val customPayers = custom.payers.ifEmpty {
                 val payerId = members.firstOrNull() ?: schedule.groupId
                 listOf(ExpensePayer(payerId, schedule.amountMinor))
             }
-            val customAllocations = custom.second.ifEmpty {
+            val customAllocations = custom.allocations.ifEmpty {
                 splitEqually(schedule.amountMinor, members.ifEmpty { listOf(schedule.groupId) })
             }
             customPayers to customAllocations
@@ -304,6 +298,33 @@ class RecurringExpenseService(
             allocations = allocations
         )
     }
+
+    private fun encodeSpecification(
+        payers: List<ExpensePayer>?,
+        allocations: List<ExpenseAllocation>?
+    ): String? = if (payers == null && allocations == null) {
+        null
+    } else {
+        objectMapper.writeValueAsString(
+            RecurringExpenseSpecification(
+                payers = payers ?: emptyList(),
+                allocations = allocations ?: emptyList()
+            )
+        )
+    }
+
+    private fun readSpecification(schedule: RecurringExpenseSchedule): RecurringExpenseSpecification? =
+        schedule.customSpecification?.let { encoded ->
+            try {
+                objectMapper.readValue(encoded, RecurringExpenseSpecification::class.java)
+            } catch (error: Exception) {
+                throw ExpenseDomainException(
+                    ExpenseErrors.EXPENSE_REQUEST_INVALID,
+                    "Recurring expense specification is malformed",
+                    error
+                )
+            }
+        }
 
     private fun splitEqually(amountMinor: Long, participantIds: List<UUID>): List<ExpenseAllocation> {
         val equalMap = AllocationCalculator.equal(amountMinor, participantIds.map { it.toString() })

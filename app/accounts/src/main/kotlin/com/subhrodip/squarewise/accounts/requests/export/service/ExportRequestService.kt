@@ -12,5 +12,5 @@ class ExportRequestService @Autowired constructor(
 ) {
     fun request(subject: String): ExportRequest = store.request(subject)
     fun get(exportId: UUID): ExportRequest? = store.get(exportId)
-    fun listBySubject(subject: String): List<ExportRequest> = store.listBySubject(subject)
+    fun listBySubject(subject: String, limit: Int = 100): List<ExportRequest> = store.listBySubject(subject, limit)
 }

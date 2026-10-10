@@ -299,17 +299,15 @@ def run_e2e_tests() -> int:
     workload_batch_status, workload_batch = request_json(
         f"{ACCOUNTS_URL}/accounts/v1/profiles/batch",
         method="POST",
-        body={"accountIds": [alice_id, alice_id, str(uuid.uuid4())]},
+        body={"accountIds": [alice_id, bob_id, str(uuid.uuid4())]},
         bearer=user_a,
         extra_headers={"X-Squarewise-Workload-Role": "internal-service"},
     )
-    assert workload_batch_status == 200, (
-        f"Accounts getProfilesBatch failed with workload authority: "
+    assert workload_batch_status == 403, (
+        f"Accounts getProfilesBatch accepted forged workload authority: "
         f"HTTP {workload_batch_status} ({workload_batch})"
     )
-    assert [profile["accountId"] for profile in workload_batch] == [alice_id], (
-        "Accounts getProfilesBatch workload lookup must deduplicate IDs and omit unknown profiles"
-    )
+    print("  ✓ Accounts rejects forged workload-role headers")
 
     foreign_batch_status, foreign_batch = request_json(
         f"{ACCOUNTS_URL}/accounts/v1/profiles/batch",

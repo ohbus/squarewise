@@ -30,4 +30,7 @@ interface ExportRequestStore {
      * @return List of [ExportRequest]s.
      */
     fun listBySubject(subject: String): List<ExportRequest>
+
+    /** Lists at most [limit] newest requests without loading unbounded history. */
+    fun listBySubject(subject: String, limit: Int): List<ExportRequest> = listBySubject(subject).take(limit)
 }

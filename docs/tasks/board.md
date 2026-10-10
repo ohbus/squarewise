@@ -44,7 +44,7 @@ query classification, and evidence gates are complete.
 | ID | Owner | Status | Deliverable |
 | --- | --- | --- | --- |
 | QA-07 | coordinator | done | Contract-driven REST, GraphQL, WebSocket, negative-path, concurrency, recovery, and evidence matrix |
-| QA-08 | coordinator | done | Production-scale, deployment-resilience, security, and unresolved WebSocket protocol evidence |
+| QA-08 | coordinator | in_progress | Production-scale, deployment-resilience, security, and unresolved WebSocket protocol evidence |
 | QA-09 | coordinator | done | Optimized and parallelized E2E pipeline with artifact reuse |
 | QA-10 | coordinator | done | Repository-wide unit, integration, and E2E test gap audit and closure criteria |
 | OPS-25 | coordinator | done | Migrate Python tooling to pyproject.toml + uv sync + uv run |
@@ -112,9 +112,9 @@ query classification, and evidence gates are complete.
 | OPS-17 | coordinator | done | Stable error taxonomy and service/source attribution |
 | OPS-18 | coordinator | done | Micrometer and Prometheus metrics for all services |
 | OPS-19 | operations | done | Dashboards, alerts, SLOs, and runbooks baseline |
-| OPS-20 | platform | done | Reliability, security, and capacity release gates |
+| OPS-20 | platform | in_progress | Reliability, security, and capacity release gates |
 | OPS-21 | platform | done | Modular k6 load tests for high-value endpoints |
-| OPS-22 | platform | done | 1M-user capacity baseline and production readiness evidence |
+| OPS-22 | platform | in_progress | 1M-user capacity baseline and production readiness evidence |
 | OPS-23 | platform | done | Fixture-backed mutation capacity scenarios |
 
 ## Error reporting hardening workstream

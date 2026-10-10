@@ -38,7 +38,8 @@ class ExpenseCoreGateway(
 
     private companion object {
         const val PAGE_SIZE = 100
-        const val MAX_EXPENSE_PAGES = 1_000
+        // shortcut: group details include at most 1,000 expenses; add cursor pagination before raising this cap.
+        const val MAX_EXPENSE_PAGES = 10
     }
 
     private val client = builder.filter(BffGatewayFilters.bearerPropagation).baseUrl(baseUrl).build()

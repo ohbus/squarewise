@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.transaction.annotation.Transactional
+import jakarta.persistence.EntityManager
 import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
 import java.nio.charset.StandardCharsets
 import java.time.Instant
@@ -38,7 +39,8 @@ class RecurringExpenseServiceTest @Autowired constructor(
     private val expenseStore: ExpenseStore,
     private val scheduleRepository: RecurringExpenseScheduleRepository,
     private val occurrenceRepository: RecurringExpenseOccurrenceRepository,
-    private val outboxStore: OutboxStore
+    private val outboxStore: OutboxStore,
+    private val entityManager: EntityManager
 ) {
 
     @Test
@@ -602,6 +604,44 @@ class RecurringExpenseServiceTest @Autowired constructor(
         assertEquals(
             listOf(ExpenseAllocation(aliceId, 4000), ExpenseAllocation(bobId, 2000)),
             expense?.allocations
+        )
+    }
+
+    /** Verifies a custom split survives a persistence-context restart before processing. */
+    @Test
+    fun `loads custom recurring split from durable schedule state`() {
+        val group = groupStore.create("alice", CreateGroupRequest("Durable split", "HOUSEHOLD", "EUR"))
+        val bobInvite = groupStore.invite(group.groupId, "alice", CreateInviteRequest(24))
+        groupStore.claim(bobInvite.token, "bob")
+        val members = groupStore.listMembers(group.groupId, "alice")
+        val aliceId = members.first { it.subject == "alice" }.membershipId
+        val bobId = members.first { it.subject == "bob" }.membershipId
+        val startDate = LocalDate.of(2026, 12, 1)
+
+        val schedule = service.createSchedule(
+            group.groupId,
+            CreateRecurringScheduleRequest(
+                description = "Durable custom split",
+                amountMinor = 6000,
+                currency = "EUR",
+                frequency = RecurrenceFrequency.MONTHLY,
+                startDate = startDate,
+                payers = listOf(ExpensePayer(aliceId, 6000)),
+                allocations = listOf(ExpenseAllocation(aliceId, 3000), ExpenseAllocation(bobId, 3000))
+            )
+        )
+        entityManager.flush()
+        entityManager.clear()
+
+        val reloaded = scheduleRepository.findById(schedule.scheduleId).orElseThrow()
+        assertNotNull(reloaded.customSpecification)
+        assertTrue(reloaded.customSpecification!!.contains(bobId.toString()))
+        assertEquals(1, service.processDueOccurrences(asOfDate = startDate))
+
+        val expenseId = service.getOccurrences(schedule.scheduleId).single().expenseId!!
+        assertEquals(
+            listOf(3000L, 3000L),
+            expenseStore.findById(expenseId)?.allocations?.map { it.allocatedMinor }?.sorted()
         )
     }
 
