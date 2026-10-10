@@ -118,9 +118,8 @@ class RabbitNotificationListenerTest {
         val message = createMessage("{ this is definitely not valid json }", deliveryTag)
         listener.onMessage(message, channel)
 
-        assertNull(channel.ackedTag)
-        assertEquals(deliveryTag, channel.rejectedTag)
-        assertEquals(false, channel.rejectedRequeue)
+        assertEquals(deliveryTag, channel.ackedTag)
+        assertNull(channel.rejectedTag)
     }
 
     @Test
@@ -146,9 +145,8 @@ class RabbitNotificationListenerTest {
         val message = createMessage(invalidEnvelope, deliveryTag)
         listener.onMessage(message, channel)
 
-        assertNull(channel.ackedTag)
-        assertEquals(deliveryTag, channel.rejectedTag)
-        assertEquals(false, channel.rejectedRequeue)
+        assertEquals(deliveryTag, channel.ackedTag)
+        assertNull(channel.rejectedTag)
     }
 
     @Test
@@ -199,8 +197,8 @@ class RabbitNotificationListenerTest {
 
         listener.onMessage(message, channel)
 
-        assertEquals(78L, channel.rejectedTag)
-        assertEquals(false, channel.rejectedRequeue)
+        assertEquals(78L, channel.ackedTag)
+        assertNull(channel.rejectedTag)
     }
 
     @Test

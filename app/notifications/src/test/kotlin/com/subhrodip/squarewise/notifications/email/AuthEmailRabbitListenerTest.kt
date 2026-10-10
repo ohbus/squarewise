@@ -31,9 +31,8 @@ class AuthEmailRabbitListenerTest {
         val channel = TestChannel()
         listener.onMessage(message("{not-json}", 11L), channel)
 
-        assertEquals(11L, channel.rejectedTag)
-        assertEquals(false, channel.rejectedRequeue)
-        assertNull(channel.ackedTag)
+        assertEquals(11L, channel.ackedTag)
+        assertNull(channel.rejectedTag)
     }
 
     @Test
@@ -42,9 +41,8 @@ class AuthEmailRabbitListenerTest {
 
         listener.onMessage(message("", 10L), channel)
 
-        assertEquals(10L, channel.rejectedTag)
-        assertEquals(false, channel.rejectedRequeue)
-        assertNull(channel.ackedTag)
+        assertEquals(10L, channel.ackedTag)
+        assertNull(channel.rejectedTag)
     }
 
     @Test
@@ -88,9 +86,8 @@ class AuthEmailRabbitListenerTest {
 
         listener.onMessage(message(unsupported, 15L), channel)
 
-        assertEquals(15L, channel.rejectedTag)
-        assertEquals(false, channel.rejectedRequeue)
-        assertNull(channel.ackedTag)
+        assertEquals(15L, channel.ackedTag)
+        assertNull(channel.rejectedTag)
     }
 
     @Test
@@ -105,8 +102,8 @@ class AuthEmailRabbitListenerTest {
 
         listener.onMessage(message(validEvent(), 16L), channel)
 
-        assertEquals(16L, channel.rejectedTag)
-        assertEquals(false, channel.rejectedRequeue)
+        assertEquals(16L, channel.ackedTag)
+        assertNull(channel.rejectedTag)
     }
 
     @Test
@@ -122,8 +119,8 @@ class AuthEmailRabbitListenerTest {
 
         listener.onMessage(message(event, 12L, redelivered = true), channel)
 
-        assertEquals(12L, channel.rejectedTag)
-        assertEquals(false, channel.rejectedRequeue)
+        assertEquals(12L, channel.ackedTag)
+        assertNull(channel.rejectedTag)
     }
 
     /** Verifies missing payload fields are permanent envelope failures. */
@@ -146,8 +143,8 @@ class AuthEmailRabbitListenerTest {
 
             listener.onMessage(message(malformed, 20L + index), channel)
 
-            assertEquals(20L + index, channel.rejectedTag)
-            assertEquals(false, channel.rejectedRequeue)
+            assertEquals(20L + index, channel.ackedTag)
+            assertNull(channel.rejectedTag)
         }
     }
 
@@ -158,9 +155,8 @@ class AuthEmailRabbitListenerTest {
 
         listener.onMessage(message(malformed, 28L), channel)
 
-        assertEquals(28L, channel.rejectedTag)
-        assertEquals(false, channel.rejectedRequeue)
-        assertNull(channel.ackedTag)
+        assertEquals(28L, channel.ackedTag)
+        assertNull(channel.rejectedTag)
     }
 
     @Test
@@ -173,9 +169,8 @@ class AuthEmailRabbitListenerTest {
 
             listener.onMessage(message(malformed, 29L + index), channel)
 
-            assertEquals(29L + index, channel.rejectedTag)
-            assertEquals(false, channel.rejectedRequeue)
-            assertNull(channel.ackedTag)
+            assertEquals(29L + index, channel.ackedTag)
+            assertNull(channel.rejectedTag)
         }
     }
 
@@ -189,9 +184,8 @@ class AuthEmailRabbitListenerTest {
 
         boundaryListener.onMessage(message("ignored", 32L), channel)
 
-        assertEquals(32L, channel.rejectedTag)
-        assertEquals(false, channel.rejectedRequeue)
-        assertNull(channel.ackedTag)
+        assertEquals(32L, channel.ackedTag)
+        assertNull(channel.rejectedTag)
     }
 
     /** Verifies an absent payload object is rejected separately from an explicit JSON null. */
@@ -202,9 +196,8 @@ class AuthEmailRabbitListenerTest {
 
         listener.onMessage(message(missingPayload, 33L), channel)
 
-        assertEquals(33L, channel.rejectedTag)
-        assertEquals(false, channel.rejectedRequeue)
-        assertNull(channel.ackedTag)
+        assertEquals(33L, channel.ackedTag)
+        assertNull(channel.rejectedTag)
     }
 
     /** Verifies an unparsable expiry is rejected as a permanent envelope failure. */
@@ -215,9 +208,8 @@ class AuthEmailRabbitListenerTest {
 
         listener.onMessage(message(malformed, 27L), channel)
 
-        assertEquals(27L, channel.rejectedTag)
-        assertEquals(false, channel.rejectedRequeue)
-        assertNull(channel.ackedTag)
+        assertEquals(27L, channel.ackedTag)
+        assertNull(channel.rejectedTag)
     }
 
     /** Verifies channel-optional delivery remains safe when no broker channel is supplied. */

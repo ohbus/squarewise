@@ -2,6 +2,8 @@ package com.subhrodip.squarewise.notifications.email.delivery
 
 import com.subhrodip.squarewise.notifications.email.security.AuthEmailEnvelopeProtector
 import com.subhrodip.squarewise.notifications.delivery.rate.DeliveryRateLimiter
+import com.subhrodip.squarewise.notifications.errors.NotificationDomainException
+import com.subhrodip.squarewise.errors.catalog.NotificationErrors
 import java.time.Instant
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -17,8 +19,12 @@ class AuthEmailDeliveryConsumer(
 
     /** Delivers one event and never logs the decrypted credential. */
     fun consume(event: AuthEmailDeliveryEvent, now: Instant = Instant.now()): EmailDeliveryOutcome {
-        require(event.template == "LOGIN_LINK" || event.template == "LOGIN_CODE") { "unsupported auth email template" }
-        require(event.expiresAt.isAfter(now)) { "auth email credential has expired" }
+        if (event.template != "LOGIN_LINK" && event.template != "LOGIN_CODE") {
+            throw NotificationDomainException(NotificationErrors.EMAIL_TEMPLATE_INPUT_INVALID)
+        }
+        if (!event.expiresAt.isAfter(now)) {
+            throw NotificationDomainException(NotificationErrors.EMAIL_TEMPLATE_INPUT_INVALID)
+        }
         if (!deliveryRateLimiter.allow(event.recipient)) {
             log.warn("Authentication email delivery rate limit reached for event {}; suppressing delivery", event.eventId)
             return EmailDeliveryOutcome.SKIPPED

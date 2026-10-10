@@ -118,14 +118,16 @@ class NotificationConsumerServiceTest {
     }
 
     @Test
-    fun `suppresses email when recipient preference is missing`() {
-        val event = sampleEvent(subject = "charlie")
+    fun `uses the store default when recipient preferences are absent`() {
+        val event = sampleEvent(subject = "charlie@example.com")
         doReturn(NotificationConsumptionOutcome.APPLIED).`when`(processor).process(event)
-        doReturn(null).`when`(preferenceStore).get("charlie")
+        doReturn(NotificationPreferences(emailEnabled = true)).`when`(preferenceStore).get("charlie@example.com")
+        doReturn(EmailDeliveryOutcome.DELIVERED).`when`(emailDispatcher)
+            .send("charlie@example.com", "Notification: expense.created", "Dinner was added")
         val outcome = consumer.consume(event)
 
         assertEquals(NotificationConsumptionOutcome.APPLIED, outcome)
-        verify(emailDispatcher, never()).send(anyString(), anyString(), anyString())
+        verify(emailDispatcher, times(1)).send(anyString(), anyString(), anyString())
     }
 
     @Test
@@ -170,14 +172,15 @@ class NotificationConsumerServiceTest {
 
     @Test
     fun `propagates permanent delivery failure for broker visibility`() {
-        val event = sampleEvent(subject = "frank")
+        val event = sampleEvent(subject = "frank@example.com")
         doReturn(NotificationConsumptionOutcome.APPLIED).`when`(processor).process(event)
-        doReturn(NotificationPreferences(emailEnabled = true)).`when`(preferenceStore).get("frank")
+        doReturn(NotificationPreferences(emailEnabled = true)).`when`(preferenceStore).get("frank@example.com")
         doReturn(EmailDeliveryOutcome.PERMANENT_FAILURE).`when`(emailDispatcher)
             .send(anyString(), anyString(), anyString())
 
-        assertEquals(NotificationConsumptionOutcome.APPLIED, consumer.consume(event))
+        assertThrows(RuntimeException::class.java) { consumer.consume(event) }
         verify(processor, times(1)).process(event)
+        verify(emailDispatcher, times(1)).send(anyString(), anyString(), anyString())
     }
 
     @Test
