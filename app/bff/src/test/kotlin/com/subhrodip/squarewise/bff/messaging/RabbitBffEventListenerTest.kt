@@ -34,7 +34,7 @@ class RabbitBffEventListenerTest {
     private val deduplicator = BffEventDeduplicator()
     private val eventConsumer = BffEventConsumer(fanout, deduplicator)
     private val objectMapper = ObjectMapper()
-    private val listener = RabbitBffEventListener(eventConsumer, objectMapper)
+    private val listener = RabbitBffEventListener(eventConsumer, objectMapper, deadLetterPublisher = DeadLetterPublisher { })
     private val channel: Channel = mock(Channel::class.java)
 
     @Test

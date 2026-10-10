@@ -17,6 +17,8 @@ import org.springframework.amqp.core.Message
 import org.springframework.amqp.core.MessageProperties
 import tools.jackson.databind.ObjectMapper
 import com.subhrodip.squarewise.notifications.email.delivery.EmailDeliveryOutcome
+import com.subhrodip.squarewise.notifications.consumer.transport.DeadLetterPublisher
+import com.subhrodip.squarewise.errors.async.DeadLetterRecord
 import com.subhrodip.squarewise.errors.async.AsyncExecutionTemplate
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.verify
@@ -24,15 +26,18 @@ import org.mockito.Mockito.times
 
 class AuthEmailRabbitListenerTest {
     private val consumer = mock(AuthEmailDeliveryConsumer::class.java)
-    private val listener = AuthEmailRabbitListener(ObjectMapper(), consumer)
+    private val listener = AuthEmailRabbitListener(ObjectMapper(), consumer, deadLetterPublisher = DeadLetterPublisher { })
 
     @Test
-    fun `rejects malformed auth email without requeue`() {
+    fun `publishes malformed auth email to dead letter and acknowledges it`() {
         val channel = TestChannel()
-        listener.onMessage(message("{not-json}", 11L), channel)
+        val publisher = RecordingDeadLetterPublisher()
+        val boundaryListener = AuthEmailRabbitListener(ObjectMapper(), consumer, deadLetterPublisher = publisher)
+        boundaryListener.onMessage(message("{not-json}", 11L), channel)
 
         assertEquals(11L, channel.ackedTag)
         assertNull(channel.rejectedTag)
+        assertEquals(1, publisher.records.size)
     }
 
     @Test
@@ -179,7 +184,7 @@ class AuthEmailRabbitListenerTest {
     fun `rejects auth email when the object mapper returns no root`() {
         val objectMapper = mock(ObjectMapper::class.java)
         doReturn(null).`when`(objectMapper).readTree(any<ByteArray>())
-        val boundaryListener = AuthEmailRabbitListener(objectMapper, consumer)
+        val boundaryListener = AuthEmailRabbitListener(objectMapper, consumer, deadLetterPublisher = DeadLetterPublisher { })
         val channel = TestChannel()
 
         boundaryListener.onMessage(message("ignored", 32L), channel)
@@ -297,6 +302,14 @@ class AuthEmailRabbitListenerTest {
         override fun basicReject(deliveryTag: Long, requeue: Boolean) {
             rejectedTag = deliveryTag
             rejectedRequeue = requeue
+        }
+    }
+
+    private class RecordingDeadLetterPublisher : DeadLetterPublisher {
+        val records = mutableListOf<DeadLetterRecord>()
+
+        override fun publish(record: DeadLetterRecord) {
+            records += record
         }
     }
 }

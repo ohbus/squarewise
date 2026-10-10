@@ -76,12 +76,16 @@ class NotificationEventConsumer(
             log.info("Email notifications disabled for recipientId={}; skipping dispatch", opaqueRecipientId(recipientId))
             return
         }
-        val recipientEmail = resolveRecipientEmail(event) ?: return
+        val recipientEmail = resolveRecipientEmail(event) ?: run {
+            markDelivery(event.notificationId, NotificationEmailDeliveryEntity.SKIPPED)
+            return
+        }
         if (!deliveryRateLimiter.allow(recipientId)) {
             log.warn(
                 "Email delivery rate limit reached for recipientId={}; suppressing delivery",
                 opaqueRecipientId(recipientId)
             )
+            markDelivery(event.notificationId, NotificationEmailDeliveryEntity.SKIPPED)
             return
         }
         val deliveryOutcome = emailDispatcher.send(recipientEmail, "Notification: ${event.title}", event.body)

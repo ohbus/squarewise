@@ -44,15 +44,19 @@ class RedisRateLimiter(
                 policy.window.seconds.toString(),
                 policy.maximumPermits.toString(),
                 policy.cooldown.seconds.toString()
-            ) ?: throw PlatformDomainException(
-                PlatformErrors.DATABASE_DATA_INCONSISTENT,
-                "Redis returned no rate-limit decision"
+            ) ?: throw RateLimitStoreUnavailableException(
+                PlatformDomainException(
+                    PlatformErrors.DATABASE_DATA_INCONSISTENT,
+                    "Redis returned no rate-limit decision"
+                )
             )
             val fields = result.split('|')
             if (fields.size != 3) {
-                throw PlatformDomainException(
-                    PlatformErrors.DATABASE_DATA_INCONSISTENT,
-                    "Redis returned malformed rate-limit decision"
+                throw RateLimitStoreUnavailableException(
+                    PlatformDomainException(
+                        PlatformErrors.DATABASE_DATA_INCONSISTENT,
+                        "Redis returned malformed rate-limit decision"
+                    )
                 )
             }
             val allowed = fields[0] == "1"

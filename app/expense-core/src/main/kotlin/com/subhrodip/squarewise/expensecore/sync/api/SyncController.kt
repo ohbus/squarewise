@@ -1,7 +1,6 @@
 package com.subhrodip.squarewise.expensecore.sync.api
 
 import com.subhrodip.squarewise.errors.catalog.PlatformErrors
-import com.subhrodip.squarewise.expensecore.sync.domain.InvalidSyncCursorException
 import com.subhrodip.squarewise.expensecore.sync.persistence.SynchronizationStore
 import com.subhrodip.squarewise.expensecore.sync.api.toResponse
 import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupMembershipRepository
@@ -35,10 +34,6 @@ class SyncController(
             throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group $groupId not found")
         }
         if (limit !in 1..100) throw ExpenseDomainException(ExpenseErrors.EXPENSE_REQUEST_INVALID, "limit must be between 1 and 100")
-        return try {
-            store.snapshot(groupId.toString(), cursor, limit).toResponse()
-        } catch (exception: InvalidSyncCursorException) {
-            throw exception
-        }
+        return store.snapshot(groupId.toString(), cursor, limit).toResponse()
     }
 }

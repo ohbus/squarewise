@@ -31,17 +31,18 @@ class RabbitBffEventListener(
     private val eventConsumer: BffEventConsumer,
     private val objectMapper: ObjectMapper,
     private val asyncExecutionTemplate: AsyncExecutionTemplate = AsyncExecutionTemplate(AsyncMetricsRecorder { _, _, _ -> }),
-    private val deadLetterPublisher: DeadLetterPublisher = DeadLetterPublisher { },
+    private val deadLetterPublisher: DeadLetterPublisher,
 ) : ChannelAwareMessageListener {
 
     private val log = LoggerFactory.getLogger(RabbitBffEventListener::class.java)
 
     override fun onMessage(message: Message, channel: Channel?) {
         val deliveryTag = message.messageProperties.deliveryTag
+        val parsed = runCatching { parse(message.body) }
         try {
             when (val result = asyncExecutionTemplate.execute(
                 context = AsyncContext(
-                    UUID.nameUUIDFromBytes(message.body),
+                    parsed.getOrNull()?.eventId ?: UUID.nameUUIDFromBytes(message.body),
                     "bff.event",
                     1,
                     attemptCount(message),
@@ -50,7 +51,7 @@ class RabbitBffEventListener(
                 definition = BffErrors.LIVE_UPDATE_UPSTREAM_UNAVAILABLE,
                 queue = "squarewise.bff.events",
                 payload = if (message.body.isEmpty()) "<empty>".toByteArray() else message.body,
-            ) { eventConsumer.consume(parse(message.body)) }) {
+            ) { eventConsumer.consume(parsed.getOrThrow()) }) {
                 is AsyncExecutionResult.Completed -> channel?.basicAck(deliveryTag, false)
                 is AsyncExecutionResult.Failed -> result.deadLetter?.let { deadLetter ->
                     deadLetterPublisher.publish(deadLetter)

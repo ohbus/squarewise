@@ -1,6 +1,7 @@
 package com.subhrodip.squarewise.bff.errors
 
 import com.subhrodip.squarewise.errors.catalog.PlatformErrors
+import com.subhrodip.squarewise.errors.catalog.BffErrors
 import com.subhrodip.squarewise.errors.code.ErrorDefinition
 import com.subhrodip.squarewise.errors.request.RequestIdContext
 import com.subhrodip.squarewise.errors.web.ProblemDetailsDto
@@ -10,6 +11,8 @@ import java.util.UUID
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.web.server.ServerWebExchange
+import org.springframework.web.server.ResponseStatusException
+import org.springframework.web.server.ServerWebInputException
 import reactor.core.publisher.Mono
 import tools.jackson.databind.ObjectMapper
 
@@ -74,12 +77,17 @@ class BffReactiveProblemHandler(
         val definition = when (exception) {
             is com.subhrodip.squarewise.bff.transport.UpstreamServiceException ->
                 exception.definition ?: definitionForStatus(exception.status)
-            is org.springframework.web.server.ResponseStatusException -> definitionForStatus(exception.statusCode.value())
+            is ServerWebInputException -> when (exception.statusCode.value()) {
+                400 -> PlatformErrors.REQUEST_BODY_MALFORMED
+                422 -> BffErrors.GRAPHQL_INPUT_INVALID
+                else -> definitionForStatus(exception.statusCode.value())
+            }
+            is ResponseStatusException -> definitionForStatus(exception.statusCode.value())
             is java.util.concurrent.TimeoutException -> com.subhrodip.squarewise.errors.catalog.BffErrors.UPSTREAM_TIMEOUT
             is org.springframework.web.reactive.function.client.WebClientRequestException ->
                 com.subhrodip.squarewise.errors.catalog.BffErrors.UPSTREAM_UNAVAILABLE
             is com.subhrodip.squarewise.security.ratelimit.RateLimitStoreUnavailableException ->
-                com.subhrodip.squarewise.errors.catalog.PlatformErrors.SECURITY_RATE_LIMITED
+                BffErrors.UPSTREAM_UNAVAILABLE
             is com.subhrodip.squarewise.errors.exceptions.SquarewiseException -> exception.definition
             else -> com.subhrodip.squarewise.errors.catalog.BffErrors.GRAPHQL_AGGREGATION_FAILED
         }

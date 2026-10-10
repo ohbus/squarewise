@@ -324,7 +324,7 @@ class JpaGroupStore(
 
     private fun checkActiveMembership(groupId: UUID, subject: String) {
         if (!memberships.existsByGroupIdAndSubjectAndStatus(groupId, subject, "ACTIVE")) {
-            notFound()
+            throw ExpenseDomainException(ExpenseErrors.GROUP_ACCESS_HIDDEN, "Group not found")
         }
     }
 

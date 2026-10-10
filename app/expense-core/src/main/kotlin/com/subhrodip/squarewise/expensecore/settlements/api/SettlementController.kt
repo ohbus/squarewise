@@ -53,7 +53,7 @@ class SettlementController(
         val subject = principal?.name?.takeIf { it.isNotBlank() }
             ?: throw ExpenseDomainException(PlatformErrors.AUTHENTICATION_REQUIRED, "Authenticated subject is required")
         if (!membershipRepository.existsByGroupIdAndSubject(groupId, subject)) {
-            throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group $groupId not found")
+            throw ExpenseDomainException(ExpenseErrors.GROUP_ACCESS_HIDDEN, "Group $groupId not found")
         }
     }
 }

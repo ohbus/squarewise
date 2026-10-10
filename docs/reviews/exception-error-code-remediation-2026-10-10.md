@@ -66,7 +66,10 @@ The live E2E stack was not running in this workspace: ports 28080, 28081, 28082,
 
 ## Remaining risks and follow-up
 
-- External OIDC token exchange is intentionally unsupported; enabling that provider now fails startup until a real exchange adapter exists.
+- External OIDC token exchange is intentionally unsupported; when
+  `squarewise.security.oidc.external-provider.enabled=true` is enabled under
+  the `production`, `staging`, or `local-oidc` profile, startup fails until a
+  real exchange adapter exists.
 - Three adapter-specific generic exceptions remain on the documented hygiene allowlist with owner and expiry metadata.
 - Catalog lifecycle metadata and generated producer/boundary parity checks should be added after the runtime mapping migration, without deleting published codes.
 - A live Compose run is still required before treating the repayment fix, broker disposition, durable email delivery, and WebSocket paths as environment-verified.

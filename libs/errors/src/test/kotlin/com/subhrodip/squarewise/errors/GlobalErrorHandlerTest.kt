@@ -121,7 +121,7 @@ class GlobalErrorHandlerTest {
 
     /** Verifies content negotiation uses the same safe problem envelope as other failures. */
     @Test
-    fun `not acceptable response is bodyless`() {
+    fun `not acceptable response contains its problem detail`() {
         val response = handler.notAcceptable()
 
         assertEquals(HttpStatus.NOT_ACCEPTABLE, response.statusCode)

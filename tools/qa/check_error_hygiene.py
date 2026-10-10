@@ -17,7 +17,7 @@ PATTERNS: Final[dict[str, re.Pattern[str]]] = {
         r"\bthrow\s+(?:RuntimeException|Exception|Throwable|IllegalArgumentException|IllegalStateException|UnsupportedOperationException|ResponseStatusException)\s*\("
     ),
     "generic_exception_subclass": re.compile(
-        r"^\s*(?:open\s+|abstract\s+)?class\s+\w+\s*\([^)]*\)\s*:\s*(?:RuntimeException|Exception|IllegalArgumentException|IllegalStateException)\b"
+        r"^\s*(?:(?:public|private|protected|internal|open|abstract|sealed|data|final)\s+)*class\s+\w+(?:\s*<[^>]+>)?(?:\s*\([^{}\n]*\))?\s*:\s*(?:RuntimeException|Exception|IllegalArgumentException|IllegalStateException)\b"
     ),
     "boundary_assertion": re.compile(r"(?<![\w.])(?:require|check|error)\s*\("),
     "raw_numeric_code": re.compile(r"\bthrow\b[^\n]*[\"']\d{6}[\"']"),

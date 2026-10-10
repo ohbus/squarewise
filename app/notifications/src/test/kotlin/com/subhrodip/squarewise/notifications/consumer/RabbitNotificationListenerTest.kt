@@ -9,6 +9,8 @@ import com.subhrodip.squarewise.notifications.consumer.service.NotificationEvent
 import com.subhrodip.squarewise.notifications.consumer.service.TransactionalNotificationEventProcessor
 import com.subhrodip.squarewise.notifications.consumer.transport.BrokerEnvelopeParser
 import com.subhrodip.squarewise.notifications.consumer.transport.RabbitNotificationListener
+import com.subhrodip.squarewise.notifications.consumer.transport.DeadLetterPublisher
+import com.subhrodip.squarewise.errors.async.DeadLetterRecord
 import com.subhrodip.squarewise.notifications.preferences.persistence.PreferenceStore
 
 import com.rabbitmq.client.Channel
@@ -40,7 +42,7 @@ class RabbitNotificationListenerTest {
             NotificationConsumptionOutcome.APPLIED
         }
 
-        val listener = RabbitNotificationListener(consumer, envelopeParser)
+        val listener = RabbitNotificationListener(consumer, envelopeParser, deadLetterPublisher = DeadLetterPublisher { })
         val channel = TestChannel()
         val deliveryTag = 42L
 
@@ -84,7 +86,7 @@ class RabbitNotificationListenerTest {
             NotificationConsumptionOutcome.DUPLICATE
         }
 
-        val listener = RabbitNotificationListener(consumer, envelopeParser)
+        val listener = RabbitNotificationListener(consumer, envelopeParser, deadLetterPublisher = DeadLetterPublisher { })
         val channel = TestChannel()
         val deliveryTag = 99L
 
@@ -109,9 +111,10 @@ class RabbitNotificationListenerTest {
     }
 
     @Test
-    fun `rejects poison pill message without requeue on malformed json`() {
+    fun `publishes malformed json to dead letter and acknowledges it`() {
         val consumer = NotificationConsumer { NotificationConsumptionOutcome.APPLIED }
-        val listener = RabbitNotificationListener(consumer, envelopeParser)
+        val publisher = RecordingDeadLetterPublisher()
+        val listener = RabbitNotificationListener(consumer, envelopeParser, deadLetterPublisher = publisher)
         val channel = TestChannel()
         val deliveryTag = 12L
 
@@ -120,12 +123,14 @@ class RabbitNotificationListenerTest {
 
         assertEquals(deliveryTag, channel.ackedTag)
         assertNull(channel.rejectedTag)
+        assertEquals(1, publisher.records.size)
     }
 
     @Test
-    fun `rejects poison pill message without requeue on schema violation`() {
+    fun `publishes schema violation to dead letter and acknowledges it`() {
         val consumer = NotificationConsumer { NotificationConsumptionOutcome.APPLIED }
-        val listener = RabbitNotificationListener(consumer, envelopeParser)
+        val publisher = RecordingDeadLetterPublisher()
+        val listener = RabbitNotificationListener(consumer, envelopeParser, deadLetterPublisher = publisher)
         val channel = TestChannel()
         val deliveryTag = 13L
 
@@ -147,6 +152,7 @@ class RabbitNotificationListenerTest {
 
         assertEquals(deliveryTag, channel.ackedTag)
         assertNull(channel.rejectedTag)
+        assertEquals(1, publisher.records.size)
     }
 
     @Test
@@ -159,7 +165,7 @@ class RabbitNotificationListenerTest {
             throw IllegalStateException("Transient database connectivity failure")
         }
 
-        val listener = RabbitNotificationListener(consumer, envelopeParser)
+        val listener = RabbitNotificationListener(consumer, envelopeParser, deadLetterPublisher = DeadLetterPublisher { })
         val channel = TestChannel()
         val deliveryTag = 77L
 
@@ -187,7 +193,7 @@ class RabbitNotificationListenerTest {
     @Test
     fun `rejects redelivered transient failure without requeue`() {
         val consumer = NotificationConsumer { throw IllegalStateException("database unavailable") }
-        val listener = RabbitNotificationListener(consumer, envelopeParser)
+        val listener = RabbitNotificationListener(consumer, envelopeParser, deadLetterPublisher = DeadLetterPublisher { })
         val channel = TestChannel()
         val message = createMessage(
             """{"eventId":"00000000-0000-7000-8000-000000000212","eventType":"expense.created","schemaVersion":1,"aggregateId":"00000000-0000-7000-8000-000000000213","groupId":"00000000-0000-7000-8000-000000000214","groupRevision":1,"occurredAt":"2026-09-17T20:00:00Z","payload":{"subject":"alice@example.com"}}""",
@@ -204,7 +210,7 @@ class RabbitNotificationListenerTest {
     @Test
     fun `handles null channel gracefully without throwing`() {
         val consumer = NotificationConsumer { NotificationConsumptionOutcome.APPLIED }
-        val listener = RabbitNotificationListener(consumer, envelopeParser)
+        val listener = RabbitNotificationListener(consumer, envelopeParser, deadLetterPublisher = DeadLetterPublisher { })
         val message = createMessage("{}", 1L)
 
         // Should not throw NPE when channel is null
@@ -214,7 +220,7 @@ class RabbitNotificationListenerTest {
     @Test
     fun `accepts a valid delivery when the broker channel is unavailable`() {
         val consumer = NotificationConsumer { NotificationConsumptionOutcome.APPLIED }
-        val listener = RabbitNotificationListener(consumer, envelopeParser)
+        val listener = RabbitNotificationListener(consumer, envelopeParser, deadLetterPublisher = DeadLetterPublisher { })
         val message = createMessage(
             """{"eventId":"00000000-0000-7000-8000-000000000215","eventType":"expense.created","schemaVersion":1,"aggregateId":"00000000-0000-7000-8000-000000000216","groupId":"00000000-0000-7000-8000-000000000217","groupRevision":1,"occurredAt":"2026-09-17T20:00:00Z","payload":{}}""",
             80L
@@ -226,7 +232,7 @@ class RabbitNotificationListenerTest {
     @Test
     fun `swallows transient failure when the broker channel is unavailable`() {
         val consumer = NotificationConsumer { throw IllegalStateException("database unavailable") }
-        val listener = RabbitNotificationListener(consumer, envelopeParser)
+        val listener = RabbitNotificationListener(consumer, envelopeParser, deadLetterPublisher = DeadLetterPublisher { })
         val message = createMessage(
             """{"eventId":"00000000-0000-0000-0000-000000000215","eventType":"expense.created","schemaVersion":1,"aggregateId":"00000000-0000-0000-0000-000000000216","groupId":"00000000-0000-0000-0000-000000000217","groupRevision":1,"occurredAt":"2026-09-17T20:00:00Z","payload":{}}""",
             81L
@@ -255,6 +261,14 @@ class RabbitNotificationListenerTest {
         override fun basicReject(deliveryTag: Long, requeue: Boolean) {
             rejectedTag = deliveryTag
             rejectedRequeue = requeue
+        }
+    }
+
+    private class RecordingDeadLetterPublisher : DeadLetterPublisher {
+        val records = mutableListOf<DeadLetterRecord>()
+
+        override fun publish(record: DeadLetterRecord) {
+            records += record
         }
     }
 }

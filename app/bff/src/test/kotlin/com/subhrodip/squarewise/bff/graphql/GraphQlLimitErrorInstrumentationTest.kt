@@ -5,7 +5,14 @@ import com.subhrodip.squarewise.errors.catalog.BffErrors
 import com.subhrodip.squarewise.errors.catalog.PlatformErrors
 import graphql.GraphqlErrorBuilder
 import graphql.ExecutionResultImpl
+import graphql.ExecutionResult
+import graphql.GraphQL
+import graphql.execution.instrumentation.ChainedInstrumentation
+import graphql.execution.instrumentation.Instrumentation
 import graphql.execution.instrumentation.parameters.InstrumentationExecutionParameters
+import graphql.schema.idl.RuntimeWiring
+import graphql.schema.idl.SchemaGenerator
+import graphql.schema.idl.SchemaParser
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
@@ -17,15 +24,17 @@ class GraphQlLimitErrorInstrumentationTest {
     private val parameters = mock(InstrumentationExecutionParameters::class.java)
 
     @Test
-    fun `maps complexity and depth failures to rate limits`() {
-        listOf("Maximum query complexity exceeded", "Maximum query depth exceeded").forEach { message ->
-            val result = instrument(message)
+    fun `maps complexity failures from the graphql engine to rate limits`() {
+        val result = execute(GraphQlComplexityLimitInstrumentation(1))
 
-            assertEquals(CategoryCode.RATE_LIMIT_EXCEEDED.name, result.errors.single().extensions?.get("code"))
-            assertEquals(PlatformErrors.SECURITY_RATE_LIMITED.safeDetail, result.errors.single().message)
-            assertEquals(60, result.errors.single().extensions?.get("retryAfterSeconds"))
-            assertNotNull(result.errors.single().extensions?.get("requestId"))
-        }
+        assertRateLimited(result)
+    }
+
+    @Test
+    fun `maps depth failure extensions from the graphql engine to rate limits`() {
+        val result = execute(GraphQlDepthLimitInstrumentation(1))
+
+        assertRateLimited(result)
     }
 
     @Test
@@ -68,4 +77,29 @@ class GraphQlLimitErrorInstrumentationTest {
             parameters,
             null
         ).join()
+
+    private fun execute(limitInstrumentation: Instrumentation): ExecutionResult =
+        GraphQL.newGraphQL(schema())
+            .instrumentation(
+                ChainedInstrumentation(listOf(limitInstrumentation, instrumentation))
+            )
+            .build()
+            .execute("{ root { value } }")
+
+    private fun assertRateLimited(result: ExecutionResult) {
+        val error = result.errors.single()
+        assertEquals(CategoryCode.RATE_LIMIT_EXCEEDED.name, error.extensions?.get("code"))
+        assertEquals(PlatformErrors.SECURITY_RATE_LIMITED.safeDetail, error.message)
+        assertEquals(60, error.extensions?.get("retryAfterSeconds"))
+        assertNotNull(error.extensions?.get("requestId"))
+    }
+
+    private fun schema() = SchemaGenerator().makeExecutableSchema(
+        SchemaParser().parse("type Query { root: Root } type Root { value: String }"),
+        RuntimeWiring.newRuntimeWiring()
+            .type("Query") { builder ->
+                builder.dataFetcher("root") { mapOf("value" to "ok") }
+            }
+            .build()
+    )
 }

@@ -23,6 +23,10 @@ spring:
       locations: classpath:graphql/
     websocket:
       path: /graphql
+  rabbitmq:
+    publisher-confirm-type: correlated
+    template:
+      mandatory: true
 
 management:
   endpoints:

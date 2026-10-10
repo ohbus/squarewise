@@ -30,7 +30,7 @@ class GraphQlExceptionResolver : DataFetcherExceptionResolverAdapter() {
                 403 -> PlatformErrors.ACCESS_DENIED
                 404 -> PlatformErrors.RESOURCE_NOT_FOUND
                 409 -> PlatformErrors.RESOURCE_CONFLICT
-                429 -> BffErrors.SUBSCRIPTION_LIMIT_EXCEEDED
+                429 -> PlatformErrors.SECURITY_RATE_LIMITED
                 503 -> BffErrors.UPSTREAM_UNAVAILABLE
                 504 -> BffErrors.UPSTREAM_TIMEOUT
                 else -> BffErrors.UPSTREAM_PROTOCOL_INVALID

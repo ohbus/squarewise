@@ -129,7 +129,7 @@ class JpaSettlementStore(
     private fun lockActiveGroup(groupId: UUID, actorSubject: String) = groupRepository.findForMembershipUpdate(groupId)?.also { group ->
         if (group.status == "ARCHIVED") throw ExpenseDomainException(ExpenseErrors.GROUP_ARCHIVED, "Group is archived")
         if (!membershipRepository.existsByGroupIdAndSubjectAndStatus(groupId, actorSubject, "ACTIVE")) {
-            throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group $groupId not found")
+            throw ExpenseDomainException(ExpenseErrors.GROUP_ACCESS_HIDDEN, "Group $groupId not found")
         }
     } ?: throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group $groupId not found")
 

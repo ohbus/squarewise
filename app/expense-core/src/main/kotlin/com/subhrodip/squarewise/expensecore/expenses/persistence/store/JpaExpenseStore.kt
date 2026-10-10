@@ -187,7 +187,7 @@ class JpaExpenseStore(
 
     private fun requireActiveMembership(groupId: UUID, actorSubject: String?) {
         if (actorSubject != null && membershipRepository.findByGroupIdAndSubjectAndStatus(groupId, actorSubject, "ACTIVE") == null) {
-            throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group $groupId not found")
+            throw ExpenseDomainException(ExpenseErrors.GROUP_ACCESS_HIDDEN, "Group $groupId not found")
         }
     }
 
@@ -395,9 +395,13 @@ class JpaExpenseStore(
     @Transactional(readOnly = true)
     override fun list(groupId: UUID, category: String?, cursor: String?, limit: Int): List<ExpenseRecord> {
         val boundedLimit = limit.coerceIn(1, 100)
-        val after = cursor?.let {
-            runCatching { UUID.fromString(it) }.getOrElse {
-                throw ExpenseDomainException(ExpenseErrors.EXPENSE_REQUEST_INVALID, "Invalid expense cursor", it)
+        val after = cursor?.let { cursorValue ->
+            runCatching { UUID.fromString(cursorValue) }.getOrElse { parseFailure ->
+                throw ExpenseDomainException(
+                    ExpenseErrors.EXPENSE_REQUEST_INVALID,
+                    "Invalid expense cursor",
+                    parseFailure
+                )
             }
         }
         val page = PageRequest.of(0, boundedLimit)

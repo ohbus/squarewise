@@ -273,7 +273,7 @@ class JpaGroupStoreTest @Autowired constructor(
         val nonMemberErr = assertThrows<SquarewiseException> {
             store.update(group.groupId, "unauthorized-subject", UpdateGroupRequest("Hacked Name"))
         }
-        assertEquals(CategoryCode.NOT_FOUND, nonMemberErr.definition.category)
+        assertEquals("GROUP_ACCESS_HIDDEN", nonMemberErr.definition.errorName)
 
         // Missing group attempt
         val nonExistentId = UUID.randomUUID()

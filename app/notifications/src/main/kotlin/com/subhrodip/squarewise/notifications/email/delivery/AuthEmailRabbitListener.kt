@@ -31,7 +31,7 @@ class AuthEmailRabbitListener(
     private val objectMapper: ObjectMapper,
     private val consumer: AuthEmailDeliveryConsumer,
     private val asyncExecutionTemplate: AsyncExecutionTemplate = AsyncExecutionTemplate(AsyncMetricsRecorder { _, _, _ -> }),
-    private val deadLetterPublisher: DeadLetterPublisher = DeadLetterPublisher { },
+    private val deadLetterPublisher: DeadLetterPublisher,
 ) : ChannelAwareMessageListener {
     @RabbitListener(
         queues = ["\${squarewise.notifications.auth-email-queue:squarewise.auth-email.v2}"],
@@ -66,8 +66,12 @@ class AuthEmailRabbitListener(
                 is AsyncExecutionResult.Failed -> {
                     val deadLetter = result.deadLetter
                     if (deadLetter != null) {
-                        deadLetterPublisher.publish(deadLetter)
-                        channel?.basicAck(deliveryTag, false)
+                        try {
+                            deadLetterPublisher.publish(deadLetter)
+                            channel?.basicAck(deliveryTag, false)
+                        } catch (publishFailure: Exception) {
+                            channel?.basicReject(deliveryTag, false)
+                        }
                     } else {
                         channel?.basicReject(deliveryTag, result.disposition == MessageDisposition.NACK_REQUEUE)
                     }

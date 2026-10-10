@@ -36,6 +36,7 @@ import java.util.concurrent.TimeoutException
 import com.subhrodip.squarewise.errors.exceptions.FatalErrorClassifier
 import org.springframework.amqp.AmqpException
 import org.springframework.dao.DataAccessException
+import org.slf4j.LoggerFactory
 
 /**
  * Service managing database-backed recurring expense schedule lifecycle operations,
@@ -51,6 +52,7 @@ class RecurringExpenseService(
     @Autowired(required = false)
     private val outboxStore: OutboxStore? = null
 ) : RecurringCommandStore, RecurringQueryStore {
+    private val log = LoggerFactory.getLogger(RecurringExpenseService::class.java)
     private val customSpecifications = ConcurrentHashMap<UUID, Pair<List<ExpensePayer>, List<ExpenseAllocation>>>()
 
     @Transactional
@@ -138,6 +140,7 @@ class RecurringExpenseService(
     @Transactional
     fun processDueOccurrences(): Int = processDueOccurrences(LocalDate.now(), 12)
 
+    @Transactional
     override fun processDueOccurrences(
         asOfDate: LocalDate,
         maxCatchUpOccurrences: Int
@@ -204,6 +207,12 @@ class RecurringExpenseService(
                 } catch (e: Exception) {
                     if (e is CancellationException || FatalErrorClassifier.isFatal(e)) throw e
                     if (e is DataAccessException || e is AmqpException || e is TimeoutException) {
+                        log.warn(
+                            "Transient recurring expense generation failure; retrying scheduleId={} occurrenceId={} errorType={}",
+                            schedule.scheduleId,
+                            occurrenceId,
+                            e::class.simpleName
+                        )
                         break
                     }
                     schedule.paused = true

@@ -20,10 +20,14 @@ class RabbitDeadLetterPublisher(
     private val objectMapper: ObjectMapper,
 ) : DeadLetterPublisher {
     override fun publish(record: DeadLetterRecord) {
-        rabbitTemplate.convertAndSend(
-            properties.deadLetterExchange,
-            "notifications.dead-letter",
-            objectMapper.writeValueAsBytes(record),
-        )
+        rabbitTemplate.invoke { operations ->
+            operations.convertAndSend(
+                properties.deadLetterExchange,
+                "notifications.dead-letter",
+                objectMapper.writeValueAsBytes(record),
+            )
+            operations.waitForConfirmsOrDie(5_000)
+            null
+        }
     }
 }

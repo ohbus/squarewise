@@ -52,7 +52,7 @@ class RabbitNotificationListener(
     private val consumer: NotificationConsumer,
     private val envelopeParser: BrokerEnvelopeParser,
     private val asyncExecutionTemplate: AsyncExecutionTemplate = AsyncExecutionTemplate(AsyncMetricsRecorder { _, _, _ -> }),
-    private val deadLetterPublisher: DeadLetterPublisher = DeadLetterPublisher { },
+    private val deadLetterPublisher: DeadLetterPublisher,
 ) : ChannelAwareMessageListener {
     @RabbitListener(
         queues = ["\${squarewise.notifications.queue:squarewise.notifications.v2}"],
@@ -77,8 +77,12 @@ class RabbitNotificationListener(
                 is AsyncExecutionResult.Failed -> {
                     val deadLetter = result.deadLetter
                     if (deadLetter != null) {
-                        deadLetterPublisher.publish(deadLetter)
-                        channel?.basicAck(deliveryTag, false)
+                        try {
+                            deadLetterPublisher.publish(deadLetter)
+                            channel?.basicAck(deliveryTag, false)
+                        } catch (publishFailure: Exception) {
+                            channel?.basicReject(deliveryTag, false)
+                        }
                     } else {
                         channel?.basicReject(deliveryTag, result.disposition == MessageDisposition.NACK_REQUEUE)
                     }
