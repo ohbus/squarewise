@@ -23,6 +23,23 @@ class BffEventDeduplicator(private val capacity: Int = DEFAULT_CAPACITY) {
             }
         }
     )
+    private val inFlight: MutableSet<UUID> = mutableSetOf()
+
+    /** Claims an event before side effects; failed work can release the claim. */
+    fun tryClaim(eventId: UUID): Boolean = synchronized(seenEvents) {
+        if (seenEvents.containsKey(eventId) || !inFlight.add(eventId)) false else true
+    }
+
+    /** Marks a successfully fanned-out event as complete. */
+    fun markProcessed(eventId: UUID) = synchronized(seenEvents) {
+        inFlight.remove(eventId)
+        seenEvents[eventId] = true
+    }
+
+    /** Makes a failed event eligible for broker redelivery. */
+    fun release(eventId: UUID) = synchronized(seenEvents) {
+        inFlight.remove(eventId)
+    }
 
     /**
      * Checks if the event has been seen before, and marks it as seen if not.
@@ -33,7 +50,8 @@ class BffEventDeduplicator(private val capacity: Int = DEFAULT_CAPACITY) {
      */
     fun isDuplicateAndMark(eventId: UUID): Boolean {
         synchronized(seenEvents) {
-            return if (seenEvents[eventId] != null) {
+            return if (seenEvents.containsKey(eventId)) {
+                seenEvents[eventId]
                 true
             } else {
                 seenEvents[eventId] = true
@@ -46,7 +64,10 @@ class BffEventDeduplicator(private val capacity: Int = DEFAULT_CAPACITY) {
      * Clears all recorded event IDs from the cache.
      */
     fun clear() {
-        seenEvents.clear()
+        synchronized(seenEvents) {
+            seenEvents.clear()
+            inFlight.clear()
+        }
     }
 
     /**

@@ -1,6 +1,7 @@
 package com.subhrodip.squarewise.security.ratelimit
 
 import com.subhrodip.squarewise.errors.catalog.PlatformErrors
+import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
 import com.subhrodip.squarewise.security.errors.PlatformDomainException
 import java.time.Duration
 import java.util.concurrent.TimeoutException
@@ -61,6 +62,8 @@ class RedisRateLimiter(
             RateLimitDecision(allowed, remaining, Duration.ofSeconds(retryAfterSeconds), policy.id)
         } catch (exception: RateLimitStoreUnavailableException) {
             recordFailure(policy.id, exception)
+            throw exception
+        } catch (exception: SquarewiseException) {
             throw exception
         } catch (exception: Exception) {
             recordFailure(policy.id, exception)

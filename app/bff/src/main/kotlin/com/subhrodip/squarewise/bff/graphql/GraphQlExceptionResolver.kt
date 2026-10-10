@@ -23,6 +23,7 @@ class GraphQlExceptionResolver : DataFetcherExceptionResolverAdapter() {
             return governedResolver.resolve(exception, environment, RequestIdContext.get())
         }
         val definition = when {
+            exception is UpstreamServiceException && exception.definition != null -> exception.definition
             exception is UpstreamServiceException -> when (exception.status) {
                 400, 422 -> BffErrors.GRAPHQL_INPUT_INVALID
                 401 -> PlatformErrors.AUTHENTICATION_REQUIRED

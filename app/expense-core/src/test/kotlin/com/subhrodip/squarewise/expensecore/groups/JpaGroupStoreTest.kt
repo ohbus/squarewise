@@ -661,7 +661,7 @@ class JpaGroupStoreTest @Autowired constructor(
 
         // Non-existent token (valid shape)
         val notFoundError = assertThrows<SquarewiseException> {
-            store.claim("a".repeat(43), "user1")
+            store.claim("a".repeat(64), "user1")
         }
         assertEquals(CategoryCode.STATE_CONFLICT, notFoundError.definition.category)
 

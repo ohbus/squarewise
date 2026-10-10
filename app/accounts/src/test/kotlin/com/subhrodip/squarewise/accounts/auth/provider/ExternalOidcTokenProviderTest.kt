@@ -1,7 +1,9 @@
 package com.subhrodip.squarewise.accounts.auth.provider
 
 import java.util.UUID
+import com.subhrodip.squarewise.security.errors.PlatformDomainException
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 /** Verifies fail-closed construction and explicit unsupported delegation behavior. */
@@ -27,8 +29,9 @@ class ExternalOidcTokenProviderTest {
             audience = "audience",
         )
 
-        assertThrows(UnsupportedOperationException::class.java) {
+        val exception = assertThrows(PlatformDomainException::class.java) {
             provider.issueAccessToken(UUID.randomUUID(), "subject", "user@example.com")
         }
+        assertEquals("PLATFORM_CONFIGURATION_INVALID", exception.definition.errorName)
     }
 }

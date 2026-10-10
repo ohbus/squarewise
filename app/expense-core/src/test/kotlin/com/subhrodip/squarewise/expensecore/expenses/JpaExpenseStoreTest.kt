@@ -115,7 +115,7 @@ class JpaExpenseStoreTest @Autowired constructor(
         val duplicateError = assertThrows(SquarewiseException::class.java) {
             expenseStore.create(group.groupId, duplicateParticipant, "duplicate-key", "alice")
         }
-        assertEquals(CategoryCode.VALIDATION_ERROR, duplicateError.definition.category)
+        assertEquals("EXPENSE_REQUEST_INVALID", duplicateError.definition.errorName)
 
         val duplicateAllocationId = UUID.randomUUID()
         val duplicateAllocation = duplicateParticipant.copy(
@@ -129,7 +129,7 @@ class JpaExpenseStoreTest @Autowired constructor(
         val duplicateAllocationError = assertThrows(SquarewiseException::class.java) {
             expenseStore.create(group.groupId, duplicateAllocation, "duplicate-allocation-key", "alice")
         }
-        assertEquals(CategoryCode.VALIDATION_ERROR, duplicateAllocationError.definition.category)
+        assertEquals("EXPENSE_REQUEST_INVALID", duplicateAllocationError.definition.errorName)
 
         val inactiveId = UUID.randomUUID()
         val inactiveParticipant = duplicateParticipant.copy(
@@ -140,7 +140,7 @@ class JpaExpenseStoreTest @Autowired constructor(
         val inactiveError = assertThrows(SquarewiseException::class.java) {
             expenseStore.create(group.groupId, inactiveParticipant, "inactive-key", "alice")
         }
-        assertEquals(CategoryCode.NOT_FOUND, inactiveError.definition.category)
+        assertEquals("PARTICIPANT_SET_INVALID", inactiveError.definition.errorName)
 
         assertEquals(initialRevision, groupRepository.findById(group.groupId).orElseThrow().revision)
         assertNull(expenseStore.findById(duplicateId))
@@ -641,7 +641,7 @@ class JpaExpenseStoreTest @Autowired constructor(
                 )
             )
         }
-        assertEquals(CategoryCode.NOT_FOUND, missingGroupError.definition.category)
+        assertEquals("GROUP_NOT_FOUND", missingGroupError.definition.errorName)
 
         val group = groupStore.create("update-boundary-owner", CreateGroupRequest("Update boundaries", "TRIP", "EUR"))
         val missingExpenseError = assertThrows(SquarewiseException::class.java) {
@@ -830,7 +830,7 @@ class JpaExpenseStoreTest @Autowired constructor(
         val missingExpenseError = assertThrows(SquarewiseException::class.java) {
             expenseStore.delete(group.groupId, UUID.randomUUID(), version = null, actorSubject = "alice")
         }
-        assertEquals(CategoryCode.AUTHENTICATION_ERROR, missingExpenseError.definition.category)
+        assertEquals("EXPENSE_NOT_FOUND", missingExpenseError.definition.errorName)
 
         val expenseId = UUID.randomUUID()
         val participantId = UUID.randomUUID()

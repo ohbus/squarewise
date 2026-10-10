@@ -38,7 +38,7 @@ class SyncController(
         return try {
             store.snapshot(groupId.toString(), cursor, limit).toResponse()
         } catch (exception: InvalidSyncCursorException) {
-            throw ExpenseDomainException(ExpenseErrors.EXPENSE_REQUEST_INVALID, exception.message ?: "Invalid sync cursor", exception)
+            throw exception
         }
     }
 }

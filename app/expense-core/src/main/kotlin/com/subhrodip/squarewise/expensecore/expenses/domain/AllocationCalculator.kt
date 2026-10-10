@@ -79,7 +79,8 @@ object AllocationCalculator {
         }
     }
 
-    private fun parseAllocationValue(rawValue: String): Long = rawValue.toLongOrNull() ?: throw IllegalArgumentException(
+    private fun parseAllocationValue(rawValue: String): Long = rawValue.toLongOrNull() ?: throw ExpenseDomainException(
+        ExpenseErrors.EXPENSE_REQUEST_INVALID,
         if (rawValue.isNotEmpty() && rawValue.all(Char::isDigit)) {
             "allocation value must fit in a signed 64-bit integer"
         } else {

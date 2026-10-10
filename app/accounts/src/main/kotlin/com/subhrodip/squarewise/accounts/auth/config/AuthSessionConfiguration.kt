@@ -11,13 +11,14 @@ import com.subhrodip.squarewise.accounts.auth.jwks.DefaultRsaKeyProvider
 import com.subhrodip.squarewise.accounts.auth.jwks.RsaKeyProperties
 import com.subhrodip.squarewise.accounts.auth.jwks.RsaKeyProvider
 import com.subhrodip.squarewise.accounts.auth.provider.AsymmetricJwtTokenProvider
-import com.subhrodip.squarewise.accounts.auth.provider.ExternalOidcTokenProvider
 import com.subhrodip.squarewise.accounts.auth.provider.IdentityProviderPort
 import com.subhrodip.squarewise.accounts.auth.session.AuthSessionRepository
 import com.subhrodip.squarewise.accounts.auth.session.SessionPolicy
 import com.subhrodip.squarewise.accounts.auth.session.SessionPolicyProperties
 import com.subhrodip.squarewise.accounts.auth.session.TokenSessionService
 import com.subhrodip.squarewise.accounts.profile.persistence.ProfileStore
+import com.subhrodip.squarewise.errors.catalog.PlatformErrors
+import com.subhrodip.squarewise.security.errors.PlatformDomainException
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
@@ -58,10 +59,9 @@ class AuthSessionConfiguration(
     @Bean
     @Profile("production", "staging", "local-oidc")
     @ConditionalOnProperty(name = ["squarewise.security.oidc.external-provider.enabled"], havingValue = "true")
-    fun externalIdentityProviderPort(): IdentityProviderPort = ExternalOidcTokenProvider(
-        externalIssuerUri = issuerUri,
-        clientId = audience,
-        audience = audience
+    fun externalIdentityProviderPort(): IdentityProviderPort = throw PlatformDomainException(
+        PlatformErrors.PLATFORM_CONFIGURATION_INVALID,
+        "External OIDC token exchange is not implemented"
     )
 
     /**

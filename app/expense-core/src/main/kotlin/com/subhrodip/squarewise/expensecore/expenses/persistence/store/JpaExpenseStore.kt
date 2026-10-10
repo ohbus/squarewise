@@ -69,17 +69,17 @@ class JpaExpenseStore(
         requireActiveMembership(groupId, actorSubject)
         validateFinancialParticipants(groupId, expense, actorSubject)
         if (group.status == "ARCHIVED") {
-            throw ExpenseDomainException(ExpenseErrors.GROUP_NAME_CONFLICT, "Group is archived")
+            throw ExpenseDomainException(ExpenseErrors.GROUP_ARCHIVED, "Group is archived")
         }
         val priorClaim = idempotencyRepository.findByGroupIdAndActorSubjectAndOperationAndIdempotencyKey(
             groupId, actor, "expense.create", idempotencyKey
         )
         if (priorClaim != null) {
             if (priorClaim.payloadHash != payloadHash) {
-                throw ExpenseDomainException(ExpenseErrors.GROUP_NAME_CONFLICT, "Idempotency key was already used with a different payload")
+                throw ExpenseDomainException(ExpenseErrors.EXPENSE_IDEMPOTENCY_CONFLICT, "Idempotency key was already used with a different payload")
             }
             return expenseRepository.findById(priorClaim.expenseId).orElseThrow {
-                ExpenseDomainException(ExpenseErrors.GROUP_NAME_CONFLICT, "Idempotency record has no committed expense")
+                ExpenseDomainException(ExpenseErrors.EXPENSE_IDEMPOTENCY_CONFLICT, "Idempotency record has no committed expense")
             }.toRecord()
         }
         val existing = expenseRepository.findById(expense.expenseId).orElse(null)
@@ -93,7 +93,7 @@ class JpaExpenseStore(
             ) {
                 return existingRecord
             }
-            throw ExpenseDomainException(ExpenseErrors.GROUP_NAME_CONFLICT, "Expense already exists with different payload")
+            throw ExpenseDomainException(ExpenseErrors.EXPENSE_IDEMPOTENCY_CONFLICT, "Expense already exists with different payload")
         }
 
         group.revision += 1
@@ -205,7 +205,7 @@ class JpaExpenseStore(
             .map { it.membershipId }
             .toSet()
         if (!activeIds.containsAll(participantIds)) {
-            throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Every financial participant must be an active group member")
+            throw ExpenseDomainException(ExpenseErrors.PARTICIPANT_SET_INVALID, "Every financial participant must be an active group member")
         }
     }
 
@@ -227,18 +227,18 @@ class JpaExpenseStore(
         requireActiveMembership(groupId, actorSubject)
         validateFinancialParticipants(groupId, update, actorSubject)
         if (group.status == "ARCHIVED") {
-            throw ExpenseDomainException(ExpenseErrors.GROUP_NAME_CONFLICT, "Group is archived")
+            throw ExpenseDomainException(ExpenseErrors.GROUP_ARCHIVED, "Group is archived")
         }
 
         val entity = expenseRepository.findByExpenseIdAndGroupId(expenseId, groupId)
-            ?: throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Expense $expenseId not found in group $groupId")
+            ?: throw ExpenseDomainException(ExpenseErrors.EXPENSE_NOT_FOUND, "Expense $expenseId not found in group $groupId")
 
         if (entity.deleted) {
-            throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Expense $expenseId has been deleted")
+            throw ExpenseDomainException(ExpenseErrors.EXPENSE_NOT_FOUND, "Expense $expenseId has been deleted")
         }
 
         if (entity.version != update.version) {
-            throw ExpenseDomainException(ExpenseErrors.GROUP_NAME_CONFLICT, "Stale version: expected ${entity.version}, but got ${update.version}")
+            throw ExpenseDomainException(ExpenseErrors.EXPENSE_VERSION_CONFLICT, "Stale version: expected ${entity.version}, but got ${update.version}")
         }
 
         group.revision += 1
@@ -331,18 +331,18 @@ class JpaExpenseStore(
             ?: throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group $groupId not found")
         requireActiveMembership(groupId, actorSubject)
         if (group.status == "ARCHIVED") {
-            throw ExpenseDomainException(ExpenseErrors.GROUP_NAME_CONFLICT, "Group is archived")
+            throw ExpenseDomainException(ExpenseErrors.GROUP_ARCHIVED, "Group is archived")
         }
 
         val entity = expenseRepository.findByExpenseIdAndGroupId(expenseId, groupId)
-            ?: throw ExpenseDomainException(PlatformErrors.AUTHENTICATION_REQUIRED, "Expense $expenseId not found in group $groupId")
+            ?: throw ExpenseDomainException(ExpenseErrors.EXPENSE_NOT_FOUND, "Expense $expenseId not found in group $groupId")
 
         if (entity.deleted) {
-            throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Expense $expenseId has already been deleted")
+            throw ExpenseDomainException(ExpenseErrors.EXPENSE_NOT_FOUND, "Expense $expenseId has already been deleted")
         }
 
         if (version != null && entity.version != version) {
-            throw ExpenseDomainException(ExpenseErrors.GROUP_NAME_CONFLICT, "Stale version: expected ${entity.version}, but got $version")
+            throw ExpenseDomainException(ExpenseErrors.EXPENSE_VERSION_CONFLICT, "Stale version: expected ${entity.version}, but got $version")
         }
 
         group.revision += 1

@@ -174,7 +174,7 @@ class ExpenseController(
             throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group $groupId not found")
         }
         if (groupRepository.findById(groupId).map { it.status }.orElse(null) != "ACTIVE") {
-            throw ExpenseDomainException(ExpenseErrors.GROUP_NAME_CONFLICT, "Group $groupId is archived")
+            throw ExpenseDomainException(ExpenseErrors.GROUP_ARCHIVED, "Group $groupId is archived")
         }
     }
 

@@ -147,12 +147,12 @@ class RecurringExpenseController(
         recurringService.getSchedule(scheduleId)?.let { schedule ->
             if (schedule.groupId != groupId) {
                 throw ExpenseDomainException(
-                    ExpenseErrors.GROUP_NOT_FOUND,
+                    ExpenseErrors.SCHEDULE_NOT_FOUND,
                     "Schedule $scheduleId not found in group $groupId"
                 )
             }
             schedule
-        } ?: throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Schedule $scheduleId not found")
+        } ?: throw ExpenseDomainException(ExpenseErrors.SCHEDULE_NOT_FOUND, "Schedule $scheduleId not found")
 
     /** Converts optional API payer entries to the service's money representation. */
     private fun toDomainPayers(payers: List<ExpensePayerDto>?): List<ExpensePayer>? =

@@ -220,7 +220,7 @@ class GraphqlHttpTransportTest {
             .header(ApiEndpoints.Headers.CONTENT_TYPE, ApiEndpoints.Headers.APPLICATION_JSON)
             .bodyValue("{\"query\":")
             .exchange()
-            .expectStatus().isBadRequest
+            .expectStatus().isEqualTo(422)
     }
 
     @Test
@@ -383,7 +383,7 @@ class GraphqlHttpTransportTest {
             .jsonPath("$.errors[0].extensions.code").isEqualTo(CategoryCode.RATE_LIMIT_EXCEEDED.name)
             .jsonPath("$.errors[0].extensions.retryAfterSeconds").isEqualTo(60)
             .jsonPath("$.errors[0].extensions.requestId").isNotEmpty
-            .jsonPath("$.errors[0].message").isEqualTo("Rate limit exceeded")
+            .jsonPath("$.errors[0].message").isEqualTo("Maximum concurrent WebSocket subscriptions exceeded for this connection.")
     }
 
     @Test

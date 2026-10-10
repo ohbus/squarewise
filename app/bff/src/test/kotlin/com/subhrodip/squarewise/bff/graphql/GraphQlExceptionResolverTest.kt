@@ -43,8 +43,7 @@ class GraphQlExceptionResolverTest {
             val error = resolver.resolve(BffDomainException(definition), environment)
 
             assertEquals(expectedGraphQlCode(definition), error.extensions?.get("code"))
-            val expectedDetail = if (definition == BffErrors.SUBSCRIPTION_LIMIT_EXCEEDED) "Rate limit exceeded" else definition.safeDetail
-            assertEquals(expectedDetail, error.message)
+            assertEquals(definition.safeDetail, error.message)
             assertEquals(expectedClassification(definition), error.errorType)
             assertNotNull(error.extensions?.get("requestId"))
             if (definition == BffErrors.SUBSCRIPTION_LIMIT_EXCEEDED) {

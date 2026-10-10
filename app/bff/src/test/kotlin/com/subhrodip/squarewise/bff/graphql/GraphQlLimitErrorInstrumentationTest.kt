@@ -1,6 +1,8 @@
 package com.subhrodip.squarewise.bff.graphql
 
 import com.subhrodip.squarewise.errors.code.CategoryCode
+import com.subhrodip.squarewise.errors.catalog.BffErrors
+import com.subhrodip.squarewise.errors.catalog.PlatformErrors
 import graphql.GraphqlErrorBuilder
 import graphql.ExecutionResultImpl
 import graphql.execution.instrumentation.parameters.InstrumentationExecutionParameters
@@ -20,6 +22,7 @@ class GraphQlLimitErrorInstrumentationTest {
             val result = instrument(message)
 
             assertEquals(CategoryCode.RATE_LIMIT_EXCEEDED.name, result.errors.single().extensions?.get("code"))
+            assertEquals(PlatformErrors.SECURITY_RATE_LIMITED.safeDetail, result.errors.single().message)
             assertEquals(60, result.errors.single().extensions?.get("retryAfterSeconds"))
             assertNotNull(result.errors.single().extensions?.get("requestId"))
         }
@@ -31,7 +34,7 @@ class GraphQlLimitErrorInstrumentationTest {
         val error = result.errors.single()
 
         assertEquals(CategoryCode.VALIDATION_ERROR.name, error.extensions?.get("code"))
-        assertEquals("GraphQL request is invalid", error.message)
+        assertEquals(BffErrors.GRAPHQL_INPUT_INVALID.safeDetail, error.message)
         assertNotNull(error.extensions?.get("requestId"))
     }
 
@@ -51,7 +54,16 @@ class GraphQlLimitErrorInstrumentationTest {
     private fun instrument(message: String) =
         instrumentation.instrumentExecutionResult(
             ExecutionResultImpl.newExecutionResult()
-                .errors(listOf(GraphqlErrorBuilder.newError().message(message).build()))
+                .errors(listOf(
+                    GraphqlErrorBuilder.newError()
+                        .message(message)
+                        .extensions(
+                            if (message.contains("complexity")) mapOf("squarewiseLimit" to "COMPLEXITY")
+                            else if (message.contains("depth")) mapOf("squarewiseLimit" to "DEPTH")
+                            else emptyMap()
+                        )
+                        .build()
+                ))
                 .build(),
             parameters,
             null

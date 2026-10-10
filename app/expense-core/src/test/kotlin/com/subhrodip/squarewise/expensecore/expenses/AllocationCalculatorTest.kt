@@ -1,6 +1,7 @@
 package com.subhrodip.squarewise.expensecore.expenses
 
 import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
+import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
 import com.subhrodip.squarewise.expensecore.expenses.domain.AllocationCalculator
 import com.subhrodip.squarewise.expensecore.expenses.domain.FinancialArithmetic
 import com.subhrodip.squarewise.expensecore.expenses.api.request.AllocationItemDto
@@ -152,15 +153,15 @@ class AllocationCalculatorTest {
 
     @Test
     fun `calculate distinguishes overflowing allocation values from malformed values`() {
-        val overflow = assertThrows(IllegalArgumentException::class.java) {
+        val overflow = assertThrows(SquarewiseException::class.java) {
             AllocationCalculator.calculate("EXACT", 1, listOf(AllocationItemDto("a", "9223372036854775808")))
         }
-        assertTrue(overflow.message?.contains("64-bit") == true)
+        assertEquals(ExpenseErrors.EXPENSE_REQUEST_INVALID.errorName, overflow.definition.errorName)
 
-        val malformed = assertThrows(IllegalArgumentException::class.java) {
+        val malformed = assertThrows(SquarewiseException::class.java) {
             AllocationCalculator.calculate("EXACT", 1, listOf(AllocationItemDto("a", "not-a-number")))
         }
-        assertEquals("allocation value must be a valid integer", malformed.message)
+        assertEquals(ExpenseErrors.EXPENSE_REQUEST_INVALID.errorName, malformed.definition.errorName)
     }
 
     /**

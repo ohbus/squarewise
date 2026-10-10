@@ -19,6 +19,7 @@ import io.micrometer.core.instrument.MeterRegistry
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.web.server.WebFilter
+import org.springframework.web.server.WebExceptionHandler
 import org.springframework.data.redis.core.StringRedisTemplate
 import reactor.core.publisher.Mono
 
@@ -45,6 +46,11 @@ class BffApplication {
         properties: GraphQlAbuseProperties,
         @org.springframework.beans.factory.annotation.Value("\${squarewise.bff.rate-limit.enabled:true}") enabled: Boolean
     ): WebFilter = GraphQlRateLimitWebFilter(rateLimiter, properties, enabled)
+
+    /** Registers the catalog-backed reactive REST failure boundary. */
+    @Bean
+    fun bffReactiveProblemHandler(objectMapper: tools.jackson.databind.ObjectMapper): WebExceptionHandler =
+        com.subhrodip.squarewise.bff.errors.BffReactiveProblemHandler(objectMapper)
     @Bean
     fun liveUpdateFanout(properties: GraphQlAbuseProperties): LiveUpdateFanout = LiveUpdateFanout(
         queueCapacity = properties.subscriptionQueueCapacity,

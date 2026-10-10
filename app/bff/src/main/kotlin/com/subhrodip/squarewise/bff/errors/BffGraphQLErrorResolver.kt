@@ -29,8 +29,7 @@ class BffGraphQLErrorResolver {
                 putAll(GraphQLExtensionsFormatter.fromDefinition(definition, requestId))
                 if (isRateLimit) put("retryAfterSeconds", 60)
             }
-            val detail = if (isRateLimit) "Rate limit exceeded" else definition.safeDetail
-            return error(environment, detail, extensions, classification(definition))
+            return error(environment, definition.safeDetail, extensions, classification(definition))
     }
 
     private fun error(environment: DataFetchingEnvironment, detail: String, extensions: Map<String, Any>, type: ErrorType): GraphQLError =

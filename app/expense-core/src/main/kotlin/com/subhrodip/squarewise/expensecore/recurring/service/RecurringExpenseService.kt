@@ -31,6 +31,11 @@ import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CancellationException
+import java.util.concurrent.TimeoutException
+import com.subhrodip.squarewise.errors.exceptions.FatalErrorClassifier
+import org.springframework.amqp.AmqpException
+import org.springframework.dao.DataAccessException
 
 /**
  * Service managing database-backed recurring expense schedule lifecycle operations,
@@ -87,7 +92,7 @@ class RecurringExpenseService(
         request: UpdateRecurringScheduleRequest
     ): RecurringExpenseSchedule {
         val schedule = scheduleRepository.findById(scheduleId).orElseThrow {
-            ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Schedule $scheduleId not found")
+            ExpenseDomainException(ExpenseErrors.SCHEDULE_NOT_FOUND, "Schedule $scheduleId not found")
         }
         if (schedule.groupId != groupId) {
             throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Schedule $scheduleId not in group $groupId")
@@ -115,7 +120,7 @@ class RecurringExpenseService(
     @Transactional
     override fun pauseSchedule(scheduleId: UUID): RecurringExpenseSchedule {
         val schedule = scheduleRepository.findById(scheduleId).orElseThrow {
-            ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Schedule $scheduleId not found")
+            ExpenseDomainException(ExpenseErrors.SCHEDULE_NOT_FOUND, "Schedule $scheduleId not found")
         }
         schedule.paused = true
         return scheduleRepository.save(schedule)
@@ -124,7 +129,7 @@ class RecurringExpenseService(
     @Transactional
     override fun resumeSchedule(scheduleId: UUID): RecurringExpenseSchedule {
         val schedule = scheduleRepository.findById(scheduleId).orElseThrow {
-            ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Schedule $scheduleId not found")
+            ExpenseDomainException(ExpenseErrors.SCHEDULE_NOT_FOUND, "Schedule $scheduleId not found")
         }
         schedule.paused = false
         return scheduleRepository.save(schedule)
@@ -197,6 +202,10 @@ class RecurringExpenseService(
                     occurrenceRepository.save(occurrence)
                     generated++
                 } catch (e: Exception) {
+                    if (e is CancellationException || FatalErrorClassifier.isFatal(e)) throw e
+                    if (e is DataAccessException || e is AmqpException || e is TimeoutException) {
+                        break
+                    }
                     schedule.paused = true
                     scheduleRepository.save(schedule)
                     emitSchedulePausedNotification(schedule, "generation_error")

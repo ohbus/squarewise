@@ -9,5 +9,6 @@ data class BffMessagingProperties(
     var enabled: Boolean = false,
     var exchange: String = EventConstants.EVENTS_EXCHANGE,
     var routingKey: String = EventConstants.Routing.ALL_EVENTS,
+    var deadLetterExchange: String = "squarewise.events.dlx",
     var deduplicatorCapacity: Int = 10_000
 )
