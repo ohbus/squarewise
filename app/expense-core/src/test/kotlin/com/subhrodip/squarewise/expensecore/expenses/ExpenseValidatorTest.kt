@@ -152,4 +152,27 @@ class ExpenseValidatorTest {
         }
         assertEquals(CategoryCode.VALIDATION_ERROR, error.definition.category)
     }
+
+    @Test
+    fun `shared record validation rejects oversized participant lists`() {
+        val participants = (1..101).map { UUID.randomUUID() }
+        val error = assertThrows(SquarewiseException::class.java) {
+            ExpenseValidator.validateRecord(
+                ExpenseRecord(
+                    expenseId = UUID.randomUUID(),
+                    groupId = UUID.randomUUID(),
+                    description = "too many participants",
+                    category = "expense",
+                    currency = "EUR",
+                    amountMinor = 101,
+                    version = 1,
+                    allocationMode = "EQUAL",
+                    createdAt = Instant.EPOCH,
+                    payers = participants.map { ExpensePayer(it, 1) },
+                    allocations = participants.map { ExpenseAllocation(it, 1) }
+                )
+            )
+        }
+        assertEquals(CategoryCode.VALIDATION_ERROR, error.definition.category)
+    }
 }

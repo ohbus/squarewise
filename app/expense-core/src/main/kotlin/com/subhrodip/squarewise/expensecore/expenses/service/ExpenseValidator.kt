@@ -5,6 +5,7 @@
 package com.subhrodip.squarewise.expensecore.expenses.service
 
 import com.subhrodip.squarewise.expensecore.expenses.api.ExpenseController
+import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseRequestLimits
 import com.subhrodip.squarewise.expensecore.expenses.api.request.PayerDto
 import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseAllocation
 import com.subhrodip.squarewise.expensecore.expenses.domain.ExpensePayer
@@ -21,6 +22,9 @@ object ExpenseValidator {
         if (expense.amountMinor <= 0) invalid("expense amount must be positive")
         if (expense.payers.isEmpty()) invalid("expense must contain at least one payer")
         if (expense.allocations.isEmpty()) invalid("expense must contain at least one allocation")
+        if (expense.payers.size > ExpenseRequestLimits.MAX_PARTICIPANTS ||
+            expense.allocations.size > ExpenseRequestLimits.MAX_PARTICIPANTS
+        ) invalid("participant count exceeds the maximum")
         if (expense.payers.map { it.participantId }.distinct().size != expense.payers.size) invalid("payer participant IDs must be unique")
         if (expense.allocations.map { it.participantId }.distinct().size != expense.allocations.size) invalid("allocation participant IDs must be unique")
         val payerTotal = expense.payers.fold(0L) { total, payer ->
