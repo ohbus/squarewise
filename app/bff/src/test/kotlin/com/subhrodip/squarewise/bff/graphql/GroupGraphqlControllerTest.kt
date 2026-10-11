@@ -33,6 +33,8 @@ import com.subhrodip.squarewise.bff.transport.model.input.RepaymentInput
 
 import com.subhrodip.squarewise.bff.transport.UpstreamServiceException
 import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
+import graphql.schema.DataFetchingEnvironment
+import graphql.schema.DataFetchingFieldSelectionSet
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -102,6 +104,15 @@ class GroupGraphqlControllerTest {
         assertEquals(403, thrown.status)
     }
 
+    /** Verifies an explicit GraphQL page size reaches the bounded gateway overload. */
+    @Test
+    fun `forwards explicit group limit`() {
+        val expected = listOf(BffGroup(groupId = "group-limited", name = "Limited", kind = "TRIP", revision = 1))
+        `when`(gateway.listGroups("alice", 2)).thenReturn(Mono.just(expected))
+
+        assertEquals(expected, controller.groups(principal, 2).block())
+    }
+
     @Test
     fun `resolves group by id with balances and expenses`() {
         val groupId = UUID.randomUUID().toString()
@@ -146,6 +157,35 @@ class GroupGraphqlControllerTest {
         assertEquals("mem-1", result?.members?.get(0)?.membershipId)
         assertEquals("alice", result?.members?.get(0)?.subject)
         assertEquals(null, result?.members?.get(0)?.isPlaceholder)
+    }
+
+    /** Verifies GraphQL selection-aware reads request only the fields selected by the client. */
+    @Test
+    fun `routes selected group fields to the bounded gateway`() {
+        val groupId = UUID.randomUUID().toString()
+        val expected = BffGroup(groupId = groupId, name = "Selected", kind = "TRIP", revision = 3)
+        val environment = mock(DataFetchingEnvironment::class.java)
+        val selectionSet = mock(DataFetchingFieldSelectionSet::class.java)
+        `when`(environment.selectionSet).thenReturn(selectionSet)
+        `when`(selectionSet.contains("balances")).thenReturn(true)
+        `when`(selectionSet.contains("expenses")).thenReturn(false)
+        `when`(selectionSet.contains("members")).thenReturn(false)
+        `when`(gateway.getGroup(groupId, "alice", true, false, false)).thenReturn(Mono.just(expected))
+
+        assertEquals(expected, controller.group(groupId, principal, environment).block())
+    }
+
+    /** Verifies an introspection-only selection preserves the legacy full-group gateway call. */
+    @Test
+    fun `falls back to the simple group lookup when no collection fields are selected`() {
+        val groupId = UUID.randomUUID().toString()
+        val expected = BffGroup(groupId = groupId, name = "Scalar only", kind = "TRIP", revision = 4)
+        val environment = mock(DataFetchingEnvironment::class.java)
+        val selectionSet = mock(DataFetchingFieldSelectionSet::class.java)
+        `when`(environment.selectionSet).thenReturn(selectionSet)
+        `when`(gateway.getGroup(groupId, "alice")).thenReturn(Mono.just(expected))
+
+        assertEquals(expected, controller.group(groupId, principal, environment).block())
     }
 
     @Test

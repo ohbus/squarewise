@@ -411,4 +411,16 @@ class GroupControllerTest {
         testMvc.perform(post(ApiEndpoints.ExpenseCore.V1.inviteClaim(token)).with(bob))
             .andExpect(status().isConflict)
     }
+
+    /** Verifies Kotlin controller defaults retain the public compatibility limits. */
+    @Test
+    fun `direct controller calls use default group and member limits`() {
+        val store = InMemoryGroupStore()
+        val controller = GroupController(store)
+        val principal = Principal { "default-limit-owner" }
+        val group = store.create(principal.name, CreateGroupRequest("Defaults", "TRIP", "EUR"))
+
+        assertEquals(1, controller.list(principal = principal).size)
+        assertEquals(1, controller.listMembers(group.groupId, fault = null, principal = principal).size)
+    }
 }

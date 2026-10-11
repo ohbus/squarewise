@@ -372,6 +372,35 @@ class BffFanoutTest {
         assertThat(group.members[0].subject).isEqualTo("alice")
     }
 
+    /** Verifies the gateway rejects an unbounded group request before any HTTP call. */
+    @Test
+    fun `rejects group list limits outside the compatibility cap`() {
+        assertThrows<IllegalArgumentException> { gateway.listGroups("bearer-token", 0) }
+        assertThrows<IllegalArgumentException> { gateway.listGroups("bearer-token", 101) }
+    }
+
+    /** Verifies GraphQL-style field selection avoids unnecessary balance, expense, and member calls. */
+    @Test
+    fun `getGroup skips unselected collection fanout`() {
+        registerHandler(ApiEndpoints.ExpenseCore.V1.groupById("g-scalars")) { exchange ->
+            respondJson(exchange, 200, groupJson("g-scalars", "Scalars only"))
+        }
+
+        val group = gateway.getGroup(
+            "g-scalars",
+            "bearer-token",
+            includeBalances = false,
+            includeExpenses = false,
+            includeMembers = false
+        ).block()
+
+        assertThat(group).isNotNull
+        assertThat(group!!.groupId).isEqualTo("g-scalars")
+        assertThat(group.balances).isEmpty()
+        assertThat(group.expenses).isEmpty()
+        assertThat(group.members).isEmpty()
+    }
+
     /** Verifies the bounded look-ahead accepts exactly the configured 1,000-expense cap. */
     @Test
     fun `accepts exactly one thousand expenses when the look ahead is empty`() {

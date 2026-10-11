@@ -13,6 +13,7 @@ import java.time.Instant
 import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseRecord
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 /** Verifies the shared expense input parser and DTO-to-domain mappings. */
@@ -174,5 +175,59 @@ class ExpenseValidatorTest {
             )
         }
         assertEquals(CategoryCode.VALIDATION_ERROR, error.definition.category)
+    }
+
+    /** Verifies every ledger invariant fails before a malformed record can reach persistence. */
+    @Test
+    fun `shared record validation rejects each invalid ledger condition`() {
+        val valid = ExpenseRecord(
+            expenseId = UUID.randomUUID(),
+            groupId = UUID.randomUUID(),
+            description = "valid",
+            category = "expense",
+            currency = "EUR",
+            amountMinor = 100,
+            version = 1,
+            allocationMode = "EXACT",
+            createdAt = Instant.EPOCH,
+            payers = listOf(ExpensePayer(alice, 100)),
+            allocations = listOf(ExpenseAllocation(alice, 100))
+        )
+        val invalidRecords = listOf(
+            "expense amount must be positive" to valid.copy(amountMinor = 0),
+            "expense must contain at least one payer" to valid.copy(payers = emptyList()),
+            "expense must contain at least one allocation" to valid.copy(allocations = emptyList()),
+            "payer participant IDs must be unique" to valid.copy(
+                payers = listOf(ExpensePayer(alice, 50), ExpensePayer(alice, 50))
+            ),
+            "allocation participant IDs must be unique" to valid.copy(
+                allocations = listOf(ExpenseAllocation(alice, 50), ExpenseAllocation(alice, 50))
+            ),
+            "participant count exceeds the maximum" to valid.copy(
+                allocations = (1..101).map { ExpenseAllocation(UUID.randomUUID(), 1) }
+            ),
+            "payer amounts must be positive" to valid.copy(payers = listOf(ExpensePayer(alice, -1))),
+            "allocation amounts must be positive" to valid.copy(allocations = listOf(ExpenseAllocation(alice, -1))),
+            "payer amounts must equal expense amount" to valid.copy(payers = listOf(ExpensePayer(alice, 99))),
+            "allocation amounts must equal expense amount" to valid.copy(allocations = listOf(ExpenseAllocation(alice, 99)))
+        )
+
+        invalidRecords.forEach { (message, record) ->
+            val error = assertThrows(SquarewiseException::class.java) {
+                ExpenseValidator.validateRecord(record)
+            }
+            assertEquals(CategoryCode.VALIDATION_ERROR, error.definition.category)
+            assertTrue(error.message?.contains(message) == true, "expected message: $message")
+        }
+
+        val allocationOverflow = valid.copy(
+            amountMinor = Long.MAX_VALUE,
+            payers = listOf(ExpensePayer(alice, Long.MAX_VALUE)),
+            allocations = listOf(ExpenseAllocation(alice, Long.MAX_VALUE), ExpenseAllocation(bob, 1))
+        )
+        val overflowError = assertThrows(SquarewiseException::class.java) {
+            ExpenseValidator.validateRecord(allocationOverflow)
+        }
+        assertTrue(overflowError.message?.contains("financial amount exceeds supported range") == true)
     }
 }
