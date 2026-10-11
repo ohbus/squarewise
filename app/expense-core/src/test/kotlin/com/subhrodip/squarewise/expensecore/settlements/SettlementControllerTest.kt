@@ -50,6 +50,15 @@ class SettlementControllerTest {
     }
 
     @Test
+    fun `rejects amount that does not fit in signed long`() {
+        mvc.perform(post(ApiEndpoints.ExpenseCore.V1.groupSettlements(UUID.randomUUID())).with(user)
+            .header(ApiEndpoints.Headers.IDEMPOTENCY_KEY, "settlement-key-0001")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"fromParticipantId\":\"${UUID.randomUUID()}\",\"toParticipantId\":\"${UUID.randomUUID()}\",\"amountMinor\":\"${"9".repeat(20)}\",\"currency\":\"EUR\"}"))
+            .andExpect(status().isUnprocessableContent)
+    }
+
+    @Test
     fun `returns settlement suggestions successfully`() {
         val groupId = UUID.randomUUID()
         val alice = UUID.randomUUID()
