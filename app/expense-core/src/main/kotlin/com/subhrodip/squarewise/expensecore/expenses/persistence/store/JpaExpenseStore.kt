@@ -475,21 +475,17 @@ class JpaExpenseStore(
     }
 
     private fun reverseExpensePostings(groupId: UUID, expenseId: UUID, timestamp: Instant) {
-        val previousPostings = balancePostingRepository.findByExpenseId(expenseId)
-        val activePostingSums = previousPostings
-            .groupBy { it.participantId to it.currency }
-            .mapValues { (_, list) -> list.sumOf { it.amountMinor } }
-
-        val reversalPostings = activePostingSums
-            .filter { (_, sum) -> sum != 0L }
-            .map { (key, sum) ->
-                val (participantId, currency) = key
+        val reversalPostings = balancePostingRepository
+            .sumPostingsByGroupAndExpense(groupId, expenseId)
+            .mapNotNull { row ->
+                val sum = (row[2] as Number).toLong()
+                if (sum == 0L) return@mapNotNull null
                 BalancePostingEntity(
                     postingId = UuidGenerator.next(),
                     groupId = groupId,
                     expenseId = expenseId,
-                    participantId = participantId,
-                    currency = currency,
+                    participantId = UUID.fromString(row[0].toString()),
+                    currency = row[1].toString(),
                     amountMinor = -sum,
                     createdAt = timestamp
                 )
