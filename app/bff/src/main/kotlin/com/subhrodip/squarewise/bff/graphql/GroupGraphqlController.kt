@@ -23,6 +23,7 @@ import org.springframework.stereotype.Controller
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import graphql.schema.DataFetchingEnvironment
 
 @Controller
 class GroupGraphqlController(
@@ -57,23 +58,47 @@ class GroupGraphqlController(
                 )
             },
             { subscription ->
-                gateway.getGroup(groupId, bearerToken(principal))
-                    .flatMapMany {
-                        liveFanout.invalidations()
-                            .filter { it.groupId == groupId }
-                            .takeUntilOther(liveFanout.revocationSignal(subscription.id))
-                    }
+                liveFanout.invalidations()
+                    .filter { it.groupId == groupId }
+                    .takeUntilOther(liveFanout.revocationSignal(subscription.id))
+                    .publish { events -> gateway.getGroup(groupId, bearerToken(principal)).thenMany(events) }
             },
             { subscription -> liveFanout.unsubscribe(subscription.id) }
         )
 
 
     @QueryMapping
-    fun groups(@AuthenticationPrincipal(expression = "tokenValue") principal: Any?): Mono<List<BffGroup>> = gateway.listGroups(bearerToken(principal))
+    fun groups(
+        @AuthenticationPrincipal(expression = "tokenValue") principal: Any?,
+        @Argument limit: Int = 100
+    ): Mono<List<BffGroup>> = if (limit == 100) {
+        gateway.listGroups(bearerToken(principal))
+    } else {
+        gateway.listGroups(bearerToken(principal), limit)
+    }
 
     @QueryMapping
-    fun group(@Argument id: String, @AuthenticationPrincipal(expression = "tokenValue") principal: Any?): Mono<BffGroup> =
-        gateway.getGroup(id, bearerToken(principal))
+    fun group(
+        @Argument id: String,
+        @AuthenticationPrincipal(expression = "tokenValue") principal: Any?,
+        environment: DataFetchingEnvironment? = null
+    ): Mono<BffGroup> {
+        if (environment == null) return gateway.getGroup(id, bearerToken(principal))
+        val selections = environment.selectionSet
+        val includeBalances = selections.contains("balances")
+        val includeExpenses = selections.contains("expenses")
+        val includeMembers = selections.contains("members")
+        if (!includeBalances && !includeExpenses && !includeMembers) {
+            return gateway.getGroup(id, bearerToken(principal))
+        }
+        return gateway.getGroup(
+            id,
+            bearerToken(principal),
+            includeBalances = includeBalances,
+            includeExpenses = includeExpenses,
+            includeMembers = includeMembers
+        )
+    }
 
     @QueryMapping
     fun settlementSuggestions(@Argument groupId: String, @AuthenticationPrincipal(expression = "tokenValue") principal: Any?): Mono<List<BffSuggestedSettlement>> =
@@ -104,11 +129,6 @@ class GroupGraphqlController(
         @AuthenticationPrincipal(expression = "tokenValue") principal: Any?
     ): Mono<BffExpense> =
         gateway.createExpense(groupId, input, idempotencyKey, bearerToken(principal))
-            .doOnSuccess { expense ->
-                if (expense != null) {
-                    emitInvalidation(groupId, expense.version)
-                }
-            }
 
     @MutationMapping
     fun recordRepayment(
@@ -118,10 +138,5 @@ class GroupGraphqlController(
         val groupId = input.groupId
             ?: return Mono.error(BffDomainException(BffErrors.GRAPHQL_INPUT_INVALID, "groupId is required for recording a repayment"))
         return gateway.recordRepayment(groupId, input, bearerToken(principal))
-            .doOnSuccess { settlement ->
-                if (settlement != null) {
-                    emitInvalidation(groupId, 1L)
-                }
-            }
     }
 }

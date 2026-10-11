@@ -14,6 +14,7 @@ data class UpdateRecurringScheduleRequest(
     val dayOfMonth: Int? = null,
     val startDate: LocalDate,
     val endDate: LocalDate? = null,
+    val timezone: String = "UTC",
     val payers: List<ExpensePayer>? = null,
     val allocations: List<ExpenseAllocation>? = null
 )

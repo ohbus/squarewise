@@ -1,6 +1,5 @@
 package com.subhrodip.squarewise.notifications.inbox.persistence
 
-import org.springframework.data.domain.Sort
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
@@ -14,15 +13,6 @@ import java.util.UUID
  */
 @Repository
 interface NotificationInboxRepository : JpaRepository<NotificationInboxEntity, UUID> {
-    /**
-     * Retrieves all notifications for an authenticated subject using the specified sort order.
-     *
-     * @param subject Authenticated recipient subject.
-     * @param sort Sort specification (typically occurredAt DESC, notificationId DESC).
-     * @return List of matching inbox entities.
-     */
-    fun findAllBySubject(subject: String, sort: Sort): List<NotificationInboxEntity>
-
     /** Reads the first bounded inbox page in stable cursor order. */
     fun findBySubjectOrderByOccurredAtDescNotificationIdDesc(subject: String, pageable: Pageable): List<NotificationInboxEntity>
 

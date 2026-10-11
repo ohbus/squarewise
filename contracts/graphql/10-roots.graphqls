@@ -1,6 +1,6 @@
 type Query {
   me: Profile!
-  groups: [Group!]!
+  groups(limit: Int = 100): [Group!]!
   group(id: ID!): Group
   settlementSuggestions(groupId: ID!): [SuggestedSettlement!]!
 }

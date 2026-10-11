@@ -12,7 +12,9 @@ class NotificationInboxQueryStoreTest {
     fun `returns the first bounded page when no cursor is supplied`() {
         val newest = item(2, Instant.parse("2026-10-02T00:00:00Z"))
         val oldest = item(1, Instant.parse("2026-10-01T00:00:00Z"))
-        val store = NotificationInboxQueryStore { listOf(newest, oldest) }
+        val store = object : NotificationInboxQueryStore {
+            override fun list(subject: String) = listOf(newest, oldest)
+        }
 
         assertEquals(listOf(newest), store.page("alice", null, null, 1))
     }
@@ -22,7 +24,9 @@ class NotificationInboxQueryStoreTest {
         val cursor = item(2, Instant.parse("2026-10-02T00:00:00Z"))
         val sameTimestampLowerId = item(1, cursor.occurredAt)
         val older = item(3, Instant.parse("2026-10-01T00:00:00Z"))
-        val store = NotificationInboxQueryStore { listOf(cursor, sameTimestampLowerId, older) }
+        val store = object : NotificationInboxQueryStore {
+            override fun list(subject: String) = listOf(cursor, sameTimestampLowerId, older)
+        }
 
         assertEquals(listOf(sameTimestampLowerId, older), store.page("alice", cursor.occurredAt, cursor.notificationId, 10))
         assertEquals(listOf(cursor, sameTimestampLowerId), store.page("alice", cursor.occurredAt, null, 2))

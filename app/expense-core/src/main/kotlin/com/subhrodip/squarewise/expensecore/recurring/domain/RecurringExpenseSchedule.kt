@@ -68,8 +68,43 @@ class RecurringExpenseSchedule(
 
     @Version
     @Column(name = "version", nullable = false)
-    var version: Long = 1
+    var version: Long = 1,
+
+    @Column(name = "timezone", nullable = false, length = 64)
+    var timezone: String = "UTC"
 ) {
+    /** Keeps the pre-timezone Java construction signature source-compatible. */
+    constructor(
+        scheduleId: UUID,
+        groupId: UUID,
+        description: String,
+        amountMinor: Long,
+        currency: String,
+        frequency: RecurrenceFrequency,
+        dayOfMonth: Int?,
+        startDate: LocalDate,
+        endDate: LocalDate?,
+        nextOccurrenceDate: LocalDate,
+        paused: Boolean,
+        createdAt: Instant,
+        version: Long
+    ) : this(
+        scheduleId,
+        groupId,
+        description,
+        amountMinor,
+        currency,
+        frequency,
+        dayOfMonth,
+        startDate,
+        endDate,
+        nextOccurrenceDate,
+        paused,
+        createdAt,
+        version,
+        "UTC"
+    )
+
     @Column(name = "custom_specification", columnDefinition = "TEXT")
     var customSpecification: String? = null
 }

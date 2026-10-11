@@ -19,7 +19,8 @@ import org.springframework.stereotype.Service
 @Service
 class NotificationInboxService(private val store: NotificationInboxStore, private val dbTelemetry: DbTelemetry = DbTelemetry()) {
     fun append(subject: String, item: InboxItem) = store.append(subject, item)
-    fun list(subject: String): List<InboxItem> = store.list(subject)
+    /** Returns one bounded compatibility page; callers needing more use [page]. */
+    fun list(subject: String): List<InboxItem> = store.list(subject).take(100)
     fun markAsRead(subject: String, notificationId: UUID): Boolean = store.markAsRead(subject, notificationId)
     fun page(subject: String, cursor: String?, limit: Int): InboxPage {
         require(limit in 1..100) { "inbox page limit must be between 1 and 100" }

@@ -13,6 +13,7 @@ fun RecurringExpenseSchedule.toResponse(): RecurringScheduleResponse = Recurring
     dayOfMonth = dayOfMonth,
     startDate = startDate,
     endDate = endDate,
+    timezone = timezone,
     nextOccurrenceDate = nextOccurrenceDate,
     paused = paused,
     createdAt = createdAt,

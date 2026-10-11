@@ -18,3 +18,8 @@ used for financial history or synchronization.
 Every collection contract must declare its maximum page size, ordering key,
 cursor semantics, authorization scope, and expired-cursor behavior before
 implementation. A collection must never silently return an unbounded array.
+
+The current group REST/BFF list compatibility shape accepts a bounded `limit` of
+1 through 100. Full cursor connections remain required before raising that cap;
+the BFF group detail response likewise keeps its documented 1,000-expense
+look-ahead until the GraphQL contract exposes expense cursors.

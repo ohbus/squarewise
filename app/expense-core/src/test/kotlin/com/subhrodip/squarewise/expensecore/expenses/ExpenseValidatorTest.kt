@@ -9,6 +9,8 @@ import com.subhrodip.squarewise.expensecore.expenses.api.request.MoneyDto
 import com.subhrodip.squarewise.expensecore.expenses.api.request.PayerDto
 import com.subhrodip.squarewise.expensecore.expenses.service.ExpenseValidator
 import java.util.UUID
+import java.time.Instant
+import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseRecord
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
@@ -127,5 +129,27 @@ class ExpenseValidatorTest {
         }
         assertEquals(CategoryCode.VALIDATION_ERROR, error.definition.category)
         assertEquals(true, error.message?.contains("exceeds maximum allowed value"))
+    }
+
+    @Test
+    fun `shared record validation rejects overflowing recurring totals`() {
+        val error = assertThrows(SquarewiseException::class.java) {
+            ExpenseValidator.validateRecord(
+                ExpenseRecord(
+                    expenseId = UUID.randomUUID(),
+                    groupId = UUID.randomUUID(),
+                    description = "overflow",
+                    category = "recurring",
+                    currency = "EUR",
+                    amountMinor = Long.MAX_VALUE,
+                    version = 1,
+                    allocationMode = "EXACT",
+                    createdAt = Instant.EPOCH,
+                    payers = listOf(ExpensePayer(alice, Long.MAX_VALUE), ExpensePayer(bob, 1)),
+                    allocations = listOf(ExpenseAllocation(alice, Long.MAX_VALUE))
+                )
+            )
+        }
+        assertEquals(CategoryCode.VALIDATION_ERROR, error.definition.category)
     }
 }

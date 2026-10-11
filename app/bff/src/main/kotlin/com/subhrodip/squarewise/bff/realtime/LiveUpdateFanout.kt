@@ -39,8 +39,9 @@ class LiveUpdateFanout(
     private val revocationSignals = ConcurrentHashMap<String, Sinks.One<Void>>()
 
     private val admissionLock = Any()
+    /** Replays a bounded window while a subscriber loads its authorization snapshot. */
     val invalidationSink: Sinks.Many<GroupInvalidation> =
-        Sinks.many().multicast().directBestEffort()
+        Sinks.many().replay().limit(REPLAY_BUFFER_CAPACITY)
 
     fun emitInvalidation(groupId: String, revision: Long): GroupInvalidation =
         emitInvalidation(groupId, revision, UuidGenerator.next().toString())
@@ -182,6 +183,7 @@ class LiveUpdateFanout(
     companion object {
         const val DEFAULT_QUEUE_CAPACITY = 64
         const val DEFAULT_MAX_SUBSCRIPTIONS_PER_USER = 20
+        const val REPLAY_BUFFER_CAPACITY = 256
         val DEFAULT_SUBSCRIPTION_TTL: Duration = Duration.ofMinutes(30)
     }
 }

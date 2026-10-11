@@ -169,6 +169,14 @@ class LiveUpdateFanoutTest {
         }
     }
 
+    @Test
+    fun `replays an invalidation emitted before a subscriber attaches`() {
+        val fanout = LiveUpdateFanout()
+        val invalidation = fanout.emitInvalidation("group-1", 11L, "change-before-subscribe")
+
+        assertThat(fanout.invalidations().blockFirst()).isEqualTo(invalidation)
+    }
+
     // ---------------------------------------------------------------------------
     // Revocation signal tests (SEC-003)
     // ---------------------------------------------------------------------------

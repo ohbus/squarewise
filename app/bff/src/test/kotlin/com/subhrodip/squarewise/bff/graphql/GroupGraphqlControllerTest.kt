@@ -389,7 +389,7 @@ class GroupGraphqlControllerTest {
     }
 
     @Test
-    fun `createExpense mutation emits invalidation on success`() {
+    fun `createExpense mutation waits for committed outbox invalidation`() {
         val groupId = UUID.randomUUID().toString()
         val expenseId = UUID.randomUUID().toString()
         val participantId = UUID.randomUUID().toString()
@@ -419,17 +419,14 @@ class GroupGraphqlControllerTest {
         try {
             val result = controller.createExpense(groupId, input, "idemp-exp-2", principal).block()
             assertNotNull(result)
-            assertEquals(1, events.size)
-            assertEquals(groupId, events[0].groupId)
-            assertEquals(3L, events[0].revision)
-            assertNotNull(events[0].changeId)
+            assertTrue(events.isEmpty())
         } finally {
             disposable.dispose()
         }
     }
 
     @Test
-    fun `recordRepayment mutation emits invalidation on success`() {
+    fun `recordRepayment mutation waits for committed outbox invalidation`() {
         val groupId = UUID.randomUUID().toString()
         val settlementId = UUID.randomUUID().toString()
         val fromId = UUID.randomUUID().toString()
@@ -461,10 +458,7 @@ class GroupGraphqlControllerTest {
         try {
             val result = controller.recordRepayment(input, principal).block()
             assertNotNull(result)
-            assertEquals(1, events.size)
-            assertEquals(groupId, events[0].groupId)
-            assertEquals(1L, events[0].revision)
-            assertNotNull(events[0].changeId)
+            assertTrue(events.isEmpty())
         } finally {
             disposable.dispose()
         }

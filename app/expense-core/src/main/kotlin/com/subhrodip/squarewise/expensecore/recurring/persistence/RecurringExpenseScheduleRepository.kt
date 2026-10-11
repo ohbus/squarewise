@@ -2,13 +2,11 @@ package com.subhrodip.squarewise.expensecore.recurring.persistence
 
 import com.subhrodip.squarewise.expensecore.recurring.domain.RecurringExpenseSchedule
 import org.springframework.data.jpa.repository.JpaRepository
-import org.springframework.data.jpa.repository.Lock
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 import org.springframework.stereotype.Repository
 import java.time.LocalDate
 import java.util.UUID
-import jakarta.persistence.LockModeType
 
 /**
  * Spring Data JPA repository for managing [RecurringExpenseSchedule] entities.
@@ -32,13 +30,17 @@ interface RecurringExpenseScheduleRepository : JpaRepository<RecurringExpenseSch
      * @return a list of due schedules ready for processing.
      */
     @Query(
-        """
-        SELECT s FROM RecurringExpenseSchedule s
-        WHERE s.paused = false
-          AND s.nextOccurrenceDate <= :asOfDate
-        ORDER BY s.nextOccurrenceDate ASC
-        """
+        value = """
+            SELECT * FROM recurring_expense_schedules
+            WHERE paused = false AND next_occurrence_date <= :asOfDate
+            ORDER BY next_occurrence_date ASC
+            LIMIT 100 FOR UPDATE SKIP LOCKED
+        """,
+        nativeQuery = true
     )
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
     fun findDueSchedules(@Param("asOfDate") asOfDate: LocalDate): List<RecurringExpenseSchedule>
+
+    /** Re-locks one claimed schedule inside its isolated occurrence transaction. */
+    @Query("SELECT * FROM recurring_expense_schedules WHERE schedule_id = :scheduleId FOR UPDATE", nativeQuery = true)
+    fun findForUpdate(@Param("scheduleId") scheduleId: UUID): RecurringExpenseSchedule?
 }

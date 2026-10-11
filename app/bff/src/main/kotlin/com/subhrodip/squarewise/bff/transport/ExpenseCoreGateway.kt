@@ -41,6 +41,7 @@ class ExpenseCoreGateway(
         const val UPSTREAM_SOURCE = "expense-core"
         // shortcut: group details include at most 1,000 expenses; add cursor pagination before raising this cap.
         const val MAX_EXPENSE_PAGES = 10
+        const val MAX_GROUPS = 100
     }
 
     private val client = builder.filter(BffGatewayFilters.bearerPropagation).baseUrl(baseUrl).build()
@@ -53,8 +54,11 @@ class ExpenseCoreGateway(
             .onStatus({ it.isError }) { response -> response.toUpstreamException(upstreamProblemDecoder, UPSTREAM_SOURCE) }
             .bodyToMono(UpstreamGroup::class.java).map { it.toBffGroup() }.timeout(timeout)
 
-    fun listGroups(bearer: String?): Mono<List<BffGroup>> =
-        client.get().uri(ApiEndpoints.ExpenseCore.V1.PATH_GROUPS)
+    fun listGroups(bearer: String?, limit: Int = MAX_GROUPS): Mono<List<BffGroup>> {
+        require(limit in 1..MAX_GROUPS) { "group limit must be between 1 and $MAX_GROUPS" }
+        return client.get().uri { builder ->
+            builder.path(ApiEndpoints.ExpenseCore.V1.PATH_GROUPS).queryParam("limit", limit).build()
+        }
             .headers { headers -> bearer?.let { headers.setBearerAuth(it) } }
             .retrieve()
             .onStatus({ it.isError }) { response -> response.toUpstreamException(upstreamProblemDecoder, UPSTREAM_SOURCE) }
@@ -64,6 +68,7 @@ class ExpenseCoreGateway(
                     listMembers(group.groupId, bearer).map { members -> group.copy(members = members) }
                 }, 4).collectList()
             }.timeout(timeout)
+    }
 
     fun updateGroup(groupId: String, name: String, bearer: String?): Mono<BffGroup> =
         client.patch().uri(ApiEndpoints.ExpenseCore.V1.PATH_GROUP_BY_ID, groupId)
@@ -79,16 +84,28 @@ class ExpenseCoreGateway(
             .bodyToFlux(BffMember::class.java).collectList().timeout(timeout)
 
     fun getGroup(groupId: String, bearer: String?): Mono<BffGroup> {
+        return getGroup(groupId, bearer, includeBalances = true, includeExpenses = true, includeMembers = true)
+    }
+
+    /** Loads only the collection fields selected by GraphQL. */
+    fun getGroup(
+        groupId: String,
+        bearer: String?,
+        includeBalances: Boolean,
+        includeExpenses: Boolean,
+        includeMembers: Boolean
+    ): Mono<BffGroup> {
         val groupMono = client.get().uri(ApiEndpoints.ExpenseCore.V1.PATH_GROUP_BY_ID, groupId)
             .headers { headers -> bearer?.let { headers.setBearerAuth(it) } }.retrieve()
             .onStatus({ it.isError }) { response -> response.toUpstreamException(upstreamProblemDecoder, UPSTREAM_SOURCE) }
             .bodyToMono(UpstreamGroup::class.java).map { it.toBffGroup() }
-        val balancesMono = client.get().uri(ApiEndpoints.ExpenseCore.V1.PATH_GROUP_BALANCES, groupId)
+        val balancesMono = if (includeBalances) client.get().uri(ApiEndpoints.ExpenseCore.V1.PATH_GROUP_BALANCES, groupId)
             .headers { headers -> bearer?.let { headers.setBearerAuth(it) } }.retrieve()
             .onStatus({ it.isError }) { response -> response.toUpstreamException(upstreamProblemDecoder, UPSTREAM_SOURCE) }
-            .bodyToMono(BffBalancesResponse::class.java).map { it.balances }
-        val expensesMono = listAllExpenses(groupId, bearer)
-        return Mono.zip(groupMono, balancesMono, expensesMono, listMembers(groupId, bearer)).map { tuple ->
+            .bodyToMono(BffBalancesResponse::class.java).map { it.balances } else Mono.just(emptyList())
+        val expensesMono = if (includeExpenses) listAllExpenses(groupId, bearer) else Mono.just(emptyList())
+        val membersMono = if (includeMembers) listMembers(groupId, bearer) else Mono.just(emptyList())
+        return Mono.zip(groupMono, balancesMono, expensesMono, membersMono).map { tuple ->
             tuple.t1.copy(balances = tuple.t2, expenses = tuple.t3, members = tuple.t4)
         }.timeout(timeout)
     }

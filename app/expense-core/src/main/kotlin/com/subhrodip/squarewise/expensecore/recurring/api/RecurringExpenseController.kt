@@ -56,6 +56,7 @@ class RecurringExpenseController(
             dayOfMonth = request.dayOfMonth,
             startDate = request.startDate,
             endDate = request.endDate,
+            timezone = request.timezone,
             payers = toDomainPayers(request.payers),
             allocations = toDomainAllocations(request.allocations)
         )
@@ -102,6 +103,7 @@ class RecurringExpenseController(
             dayOfMonth = request.dayOfMonth,
             startDate = request.startDate,
             endDate = request.endDate,
+            timezone = request.timezone,
             payers = toDomainPayers(request.payers),
             allocations = toDomainAllocations(request.allocations)
         )

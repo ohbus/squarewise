@@ -11,9 +11,9 @@ import org.junit.jupiter.api.Test
 import org.springframework.data.domain.Example
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageImpl
-import org.springframework.data.domain.Pageable
 import org.springframework.data.domain.Sort
 import org.springframework.data.repository.query.FluentQuery.FetchableFluentQuery
+import org.springframework.data.domain.Pageable
 
 /** Verifies repository convenience methods consistently constrain queries to active members. */
 class GroupMembershipRepositoryContractTest {
@@ -37,6 +37,8 @@ class GroupMembershipRepositoryContractTest {
             }
 
             override fun findActiveGroupsBySubject(subject: String, status: String): List<GroupEntity> = emptyList()
+            override fun findActiveGroupsBySubject(subject: String, status: String, pageable: Pageable): List<GroupEntity> = emptyList()
+            override fun findActiveGroupBySubjectAndId(groupId: UUID, subject: String, status: String): GroupEntity? = null
 
             override fun findByGroupIdAndStatus(groupId: UUID, status: String): List<GroupMembershipEntity> {
                 findByGroupCalledWith = Pair(groupId, status)

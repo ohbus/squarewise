@@ -24,6 +24,7 @@ import com.subhrodip.squarewise.db.routing.DbOperationKind
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
+import org.springframework.data.domain.PageRequest
 import org.springframework.context.annotation.Primary
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -77,6 +78,21 @@ class JpaGroupStore(
             memberships.findActiveGroupsBySubject(subject, "ACTIVE")
                 .map { it.toResponse() }
         }
+
+    /** Loads a bounded group page without materializing every membership. */
+    @Transactional(readOnly = true)
+    override fun list(subject: String, limit: Int): List<GroupResponse> {
+        require(limit in 1..100) { "group limit must be between 1 and 100" }
+        return DbContextHolder.withContext(DbExecutionContext("groups.list", DbOperationKind.QUERY)) {
+            memberships.findActiveGroupsBySubject(subject, "ACTIVE", PageRequest.of(0, limit))
+                .map { it.toResponse() }
+        }
+    }
+
+    /** Resolves one active group through the membership join. */
+    @Transactional(readOnly = true)
+    override fun get(groupId: UUID, subject: String): GroupResponse? =
+        memberships.findActiveGroupBySubjectAndId(groupId, subject, "ACTIVE")?.toResponse()
 
     /**
      * Updates an existing expense group's name and increments its revision.

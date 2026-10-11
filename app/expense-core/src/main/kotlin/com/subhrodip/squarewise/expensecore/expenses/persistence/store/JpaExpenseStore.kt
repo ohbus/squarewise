@@ -7,6 +7,7 @@ import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseRecord
 import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseAllocation
 import com.subhrodip.squarewise.expensecore.expenses.domain.ExpensePayer
 import com.subhrodip.squarewise.expensecore.expenses.service.toRecord
+import com.subhrodip.squarewise.expensecore.expenses.service.ExpenseValidator
 import com.subhrodip.squarewise.expensecore.expenses.persistence.entity.ExpenseEntity
 import com.subhrodip.squarewise.expensecore.expenses.persistence.entity.ExpensePayerEntity
 import com.subhrodip.squarewise.expensecore.expenses.persistence.entity.ExpenseAllocationEntity
@@ -97,6 +98,8 @@ class JpaExpenseStore(
             }
             throw ExpenseDomainException(ExpenseErrors.EXPENSE_IDEMPOTENCY_CONFLICT, "Expense already exists with different payload")
         }
+
+        ExpenseValidator.validateRecord(expense)
 
         group.revision += 1
         groupRepository.save(group)
@@ -242,6 +245,8 @@ class JpaExpenseStore(
         if (entity.version != update.version) {
             throw ExpenseDomainException(ExpenseErrors.EXPENSE_VERSION_CONFLICT, "Stale version: expected ${entity.version}, but got ${update.version}")
         }
+
+        ExpenseValidator.validateRecord(update)
 
         group.revision += 1
         groupRepository.save(group)

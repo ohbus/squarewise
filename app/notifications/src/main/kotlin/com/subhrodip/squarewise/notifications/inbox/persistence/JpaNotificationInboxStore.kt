@@ -2,7 +2,6 @@ package com.subhrodip.squarewise.notifications.inbox.persistence
 
 import com.subhrodip.squarewise.notifications.inbox.model.InboxItem
 import org.springframework.data.domain.PageRequest
-import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
@@ -21,6 +20,10 @@ class JpaNotificationInboxStore(
     private val repository: NotificationInboxRepository
 ) : NotificationInboxStore {
 
+    /** Returns the first bounded inbox page for compatibility callers. */
+    @Transactional(readOnly = true)
+    override fun list(subject: String): List<InboxItem> = page(requireSubject(subject), null, null, 100)
+
     /**
      * Appends an inbox notification for the given subject.
      *
@@ -32,23 +35,6 @@ class JpaNotificationInboxStore(
     override fun append(subject: String, item: InboxItem) {
         repository.save(item.toEntity(requireSubject(subject)))
     }
-
-    /**
-     * Lists all inbox notification items for a subject ordered by occurredAt descending and notificationId descending.
-     *
-     * @param subject Authenticated recipient subject.
-     * @return List of inbox notification items.
-     * @throws IllegalArgumentException if subject validation fails.
-     */
-    @Transactional(readOnly = true)
-    override fun list(subject: String): List<InboxItem> =
-        repository.findAllBySubject(
-            requireSubject(subject),
-            Sort.by(
-                Sort.Order.desc("occurredAt"),
-                Sort.Order.desc("notificationId")
-            )
-        ).map(NotificationInboxEntity::toItem)
 
     /** Reads only the requested inbox page from PostgreSQL using the cursor index. */
     @Transactional(readOnly = true)

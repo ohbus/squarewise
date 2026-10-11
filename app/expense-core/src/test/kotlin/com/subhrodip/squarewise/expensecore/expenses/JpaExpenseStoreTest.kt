@@ -666,6 +666,7 @@ class JpaExpenseStoreTest @Autowired constructor(
         assertEquals(CategoryCode.NOT_FOUND, missingExpenseError.definition.category)
 
         val expenseId = UUID.randomUUID()
+        val participantId = membershipRepository.findByGroupId(group.groupId).single().membershipId
         val record = ExpenseRecord(
             expenseId = expenseId,
             groupId = group.groupId,
@@ -676,8 +677,8 @@ class JpaExpenseStoreTest @Autowired constructor(
             version = 1,
             allocationMode = "EXACT",
             createdAt = Instant.now(),
-            payers = emptyList(),
-            allocations = emptyList()
+            payers = listOf(ExpensePayer(participantId, 100)),
+            allocations = listOf(ExpenseAllocation(participantId, 100))
         )
         expenseStore.create(group.groupId, record, "update-deleted")
         expenseStore.delete(group.groupId, expenseId, version = 1)
