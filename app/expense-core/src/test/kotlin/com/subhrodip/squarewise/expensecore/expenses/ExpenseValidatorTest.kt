@@ -212,6 +212,8 @@ class ExpenseValidatorTest {
             "allocation amounts must equal expense amount" to valid.copy(allocations = listOf(ExpenseAllocation(alice, 99)))
         )
 
+        ExpenseValidator.validateRecord(valid)
+
         invalidRecords.forEach { (message, record) ->
             val error = assertThrows(SquarewiseException::class.java) {
                 ExpenseValidator.validateRecord(record)
