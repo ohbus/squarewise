@@ -55,6 +55,16 @@ class AsyncExecutionTemplateTest {
     }
 
     @Test
+    fun `fatal checked interruptions are propagated before disposition`() {
+        assertThrows(InterruptedException::class.java) {
+            AsyncExecutionTemplate(AsyncMetricsRecorder { _, _, _ -> })
+                .execute(context, BffErrors.UPSTREAM_TIMEOUT, "events", byteArrayOf(1)) {
+                    throw InterruptedException("interrupted")
+                }
+        }
+    }
+
+    @Test
     fun `cancellation is propagated before retry handling`() {
         assertThrows(CancellationException::class.java) {
             AsyncExecutionTemplate(AsyncMetricsRecorder { _, _, _ -> })

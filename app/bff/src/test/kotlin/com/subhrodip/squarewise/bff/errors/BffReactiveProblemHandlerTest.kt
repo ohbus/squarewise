@@ -159,6 +159,34 @@ class BffReactiveProblemHandlerTest {
         assertTrue(responseBody(exchange).contains(BffErrors.UPSTREAM_TIMEOUT.safeDetail))
     }
 
+    @Test
+    fun `writer ignores blank request ids and bounds retry delays`() {
+        val exchange = MockServerWebExchange.from(
+            MockServerHttpRequest.get("/graphql").header("X-Request-Id", " ").build()
+        )
+
+        BffReactiveProblemWriter(ObjectMapper()).write(
+            exchange,
+            PlatformErrors.SECURITY_RATE_LIMITED,
+            retryAfterSeconds = 90_000
+        ).block()
+
+        assertTrue(exchange.response.headers.getFirst("X-Request-Id")?.isNotBlank() == true)
+        assertEquals("86400", exchange.response.headers.getFirst(HttpHeaders.RETRY_AFTER))
+    }
+
+    @Test
+    fun `maps unexpected input and generic failures safely`() {
+        val input = exchange()
+        handler.handle(input, UnrecognizedInputException()).block()
+        assertTrue(responseBody(input).contains(BffErrors.UPSTREAM_PROTOCOL_INVALID.safeDetail))
+
+        val generic = exchange()
+        handler.handle(generic, IllegalStateException("secret internal failure")).block()
+        assertTrue(responseBody(generic).contains(BffErrors.GRAPHQL_AGGREGATION_FAILED.safeDetail))
+        assertTrue(!responseBody(generic).contains("secret internal failure"))
+    }
+
     private fun exchange(): MockServerWebExchange =
         MockServerWebExchange.from(MockServerHttpRequest.get("/graphql").build())
 
@@ -168,4 +196,8 @@ class BffReactiveProblemHandlerTest {
 
 private class SemanticInputException : ServerWebInputException("semantic input") {
     override fun getStatusCode(): HttpStatusCode = HttpStatus.UNPROCESSABLE_ENTITY
+}
+
+private class UnrecognizedInputException : ServerWebInputException("unrecognized input") {
+    override fun getStatusCode(): HttpStatusCode = HttpStatus.I_AM_A_TEAPOT
 }

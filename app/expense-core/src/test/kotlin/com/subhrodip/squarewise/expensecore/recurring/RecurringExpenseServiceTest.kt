@@ -7,6 +7,7 @@ import com.subhrodip.squarewise.expensecore.expenses.persistence.store.ExpenseSt
 import com.subhrodip.squarewise.expensecore.groups.api.CreateGroupRequest
 import com.subhrodip.squarewise.expensecore.groups.api.CreateInviteRequest
 import com.subhrodip.squarewise.expensecore.groups.persistence.store.JpaGroupStore
+import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupRepository
 import com.subhrodip.squarewise.expensecore.messaging.outbox.persistence.OutboxStore
 import com.subhrodip.squarewise.expensecore.recurring.api.CreateRecurringScheduleRequest
 import com.subhrodip.squarewise.expensecore.recurring.api.UpdateRecurringScheduleRequest
@@ -40,7 +41,8 @@ class RecurringExpenseServiceTest @Autowired constructor(
     private val scheduleRepository: RecurringExpenseScheduleRepository,
     private val occurrenceRepository: RecurringExpenseOccurrenceRepository,
     private val outboxStore: OutboxStore,
-    private val entityManager: EntityManager
+    private val entityManager: EntityManager,
+    private val groupRepository: GroupRepository
 ) {
 
     @Test
@@ -643,6 +645,56 @@ class RecurringExpenseServiceTest @Autowired constructor(
             listOf(3000L, 3000L),
             expenseStore.findById(expenseId)?.allocations?.map { it.allocatedMinor }?.sorted()
         )
+    }
+
+    @Test
+    fun `fallback mapper round trips a custom recurring specification`() {
+        val fallbackService = RecurringExpenseService(
+            scheduleRepository,
+            occurrenceRepository,
+            expenseStore,
+            groupRepository,
+            entityManager,
+            outboxStore
+        )
+        val group = groupStore.create("fallback-mapper", CreateGroupRequest("Fallback mapper", "HOUSEHOLD", "EUR"))
+        val member = groupStore.listMembers(group.groupId, "fallback-mapper").single().membershipId
+        val schedule = fallbackService.createSchedule(
+            group.groupId,
+            CreateRecurringScheduleRequest(
+                description = "Fallback custom split",
+                amountMinor = 1000,
+                currency = "EUR",
+                frequency = RecurrenceFrequency.WEEKLY,
+                startDate = LocalDate.of(2026, 12, 1),
+                payers = listOf(ExpensePayer(member, 1000)),
+                allocations = listOf(ExpenseAllocation(member, 1000))
+            )
+        )
+
+        assertEquals(1, fallbackService.processDueOccurrences(schedule.startDate))
+        assertEquals(1, fallbackService.getOccurrences(schedule.scheduleId).size)
+    }
+
+    @Test
+    fun `rejects malformed persisted recurring specifications`() {
+        val group = groupStore.create("malformed-spec", CreateGroupRequest("Malformed spec", "HOUSEHOLD", "EUR"))
+        val schedule = service.createSchedule(
+            group.groupId,
+            CreateRecurringScheduleRequest(
+                description = "Malformed recurring split",
+                amountMinor = 1000,
+                currency = "EUR",
+                frequency = RecurrenceFrequency.WEEKLY,
+                startDate = LocalDate.of(2026, 12, 8)
+            )
+        )
+        schedule.customSpecification = "{not-json}"
+        scheduleRepository.saveAndFlush(schedule)
+
+        assertThrows(SquarewiseException::class.java) {
+            service.processDueOccurrences(schedule.startDate)
+        }
     }
 
     @Test

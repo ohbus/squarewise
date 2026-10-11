@@ -9,6 +9,7 @@ import com.subhrodip.squarewise.notifications.consumer.service.NotificationEvent
 import com.subhrodip.squarewise.notifications.consumer.service.TransactionalNotificationEventProcessor
 import com.subhrodip.squarewise.notifications.consumer.transport.BrokerEnvelopeParser
 import com.subhrodip.squarewise.notifications.consumer.transport.BrokerEnvelope
+import com.subhrodip.squarewise.notifications.consumer.transport.InvalidEnvelopeException
 import com.subhrodip.squarewise.notifications.consumer.transport.RabbitNotificationListener
 import com.subhrodip.squarewise.notifications.consumer.transport.DeadLetterPublisher
 import com.subhrodip.squarewise.notifications.consumer.transport.toNotificationEvent
@@ -134,6 +135,47 @@ class RabbitNotificationListenerTest {
         assertEquals(aggregateId, event.notificationId)
         assertEquals(" changed-user ", event.subject)
         assertEquals("expense.created for group ${envelope.groupId}", event.message)
+    }
+
+    @Test
+    fun `uses the documented recipient and message fallbacks`() {
+        val base = BrokerEnvelope(
+            eventId = UUID.randomUUID(),
+            eventType = "expense.created",
+            schemaVersion = 1,
+            aggregateId = UUID.randomUUID(),
+            groupId = UUID.randomUUID(),
+            groupRevision = 1,
+            occurredAt = Instant.EPOCH,
+            payload = emptyMap()
+        )
+
+        listOf("recipient", "recipientId", "userId").forEach { field ->
+            val event = base.copy(payload = mapOf(field to "subject-$field", "description" to "description"))
+                .toNotificationEvent()
+            assertEquals("subject-$field", event.subject)
+            assertEquals("description", event.message)
+        }
+
+        assertThrows(InvalidEnvelopeException::class.java) {
+            base.toNotificationEvent()
+        }
+    }
+
+    @Test
+    fun `dead letters an empty broker body`() {
+        val publisher = RecordingDeadLetterPublisher()
+        val listener = RabbitNotificationListener(
+            NotificationConsumer { NotificationConsumptionOutcome.APPLIED },
+            envelopeParser,
+            deadLetterPublisher = publisher
+        )
+        val channel = TestChannel()
+
+        listener.onMessage(createMessage("", 17L), channel)
+
+        assertEquals(17L, channel.ackedTag)
+        assertEquals(1, publisher.records.size)
     }
 
     @Test

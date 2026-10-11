@@ -67,6 +67,24 @@ class JpaNotificationInboxStoreTest @Autowired constructor(
     }
 
     @Test
+    fun `treats a cursor with only an id as the first page`() {
+        inboxRepository.deleteAll()
+        store.append("partial-id", InboxItem(UUID.randomUUID(), "expense.created", "Item", Instant.EPOCH))
+
+        assertEquals(1, store.page("partial-id", null, UUID.randomUUID(), 10).size)
+    }
+
+    @Test
+    fun `rejects page sizes outside the bounded contract`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            store.page("alice", null, null, 0)
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            store.page("alice", null, null, 101)
+        }
+    }
+
+    @Test
     fun `persists event id deduplication across adapter calls`() {
         eventRepository.deleteAll()
         val eventId = UUID.fromString("00000000-0000-7000-8000-000000000003")

@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.doThrow
+import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
 import org.mockito.ArgumentMatchers.any
@@ -172,6 +173,21 @@ class RabbitBffEventListenerTest {
     }
 
     @Test
+    fun `uses redelivery metadata and preserves empty payload handling`() {
+        val publisher = RecordingDeadLetterPublisher()
+        val redeliveredListener = RabbitBffEventListener(eventConsumer, objectMapper, deadLetterPublisher = publisher)
+        val properties = MessageProperties().apply {
+            deliveryTag = 19L
+            isRedelivered = true
+        }
+
+        redeliveredListener.onMessage(Message(ByteArray(0), properties), channel)
+
+        assertEquals(3, publisher.records.single().attemptCount)
+        verify(channel).basicAck(19L, false)
+    }
+
+    @Test
     fun `requeues non-fatal consumer failures`() {
         val failingConsumer = mock(BffEventConsumer::class.java)
         doThrow(IllegalStateException("fanout unavailable")).`when`(failingConsumer)
@@ -204,6 +220,23 @@ class RabbitBffEventListenerTest {
 
         assertThrows(CancellationException::class.java) {
             cancellingListener.onMessage(Message(json.toByteArray(), MessageProperties()), channel)
+        }
+    }
+
+    @Test
+    fun `propagates fatal checked failures without broker disposition`() {
+        val failingConsumer = mock(BffEventConsumer::class.java)
+        doAnswer { throw InterruptedException("interrupted") }.`when`(failingConsumer)
+            .consume(any(BffEventEnvelope::class.java) ?: sampleEnvelope())
+        val failingListener = RabbitBffEventListener(failingConsumer, objectMapper, deadLetterPublisher = DeadLetterPublisher { })
+        val json = """
+            {"eventId":"${UUID.randomUUID()}","eventType":"group.updated","schemaVersion":1,
+             "aggregateId":"${UUID.randomUUID()}","groupId":"${UUID.randomUUID()}","groupRevision":1,
+             "occurredAt":"${Instant.now()}","payload":{}}
+        """.trimIndent()
+
+        assertThrows(InterruptedException::class.java) {
+            failingListener.onMessage(Message(json.toByteArray(), MessageProperties()), channel)
         }
     }
 

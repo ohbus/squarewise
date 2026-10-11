@@ -157,4 +157,17 @@ class BffErrorResolverTest {
         assertEquals("squarewise-bff", exception.problem.source)
         assertEquals("unknown", exception.problem.requestId)
     }
+
+    @Test
+    fun `decoder accepts valid fallback source and request id`() {
+        val exception = UpstreamProblemDecoder(ObjectMapper()).decode(
+            502,
+            "{}",
+            "fallback-request",
+            "notifications"
+        )
+
+        assertEquals("notifications", exception.problem.source)
+        assertEquals("fallback-request", exception.problem.requestId)
+    }
 }

@@ -25,4 +25,5 @@ class HmacCredentialDigestTest {
             HmacCredentialDigest(ByteArray(31))
         }
     }
+
 }

@@ -84,6 +84,20 @@ class AuthEmailRabbitListenerTest {
     }
 
     @Test
+    fun `acknowledges an intentionally skipped auth email`() {
+        doReturn(EmailDeliveryOutcome.SKIPPED).`when`(consumer).consume(
+            any(AuthEmailDeliveryEvent::class.java) ?: AuthEmailDeliveryEvent("event", "user@example.com", "LOGIN_CODE", "cipher", Instant.MAX),
+            any(Instant::class.java) ?: Instant.EPOCH
+        )
+        val channel = TestChannel()
+
+        listener.onMessage(message(validEvent(), 44L), channel)
+
+        assertEquals(44L, channel.ackedTag)
+        assertNull(channel.rejectedTag)
+    }
+
+    @Test
     fun `requeues first transient auth email failure`() {
         doThrow(IllegalStateException("temporary failure"))
             .`when`(consumer)
