@@ -5,8 +5,8 @@ import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseAllocation
 import com.subhrodip.squarewise.expensecore.expenses.domain.ExpensePayer
 import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseRecord
 import com.subhrodip.squarewise.expensecore.expenses.domain.FinancialArithmetic
+import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseRequestLimits
 import com.subhrodip.squarewise.expensecore.expenses.persistence.store.ExpenseStore
-import com.subhrodip.squarewise.expensecore.groups.domain.GroupMembershipEntity
 import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupRepository
 import com.subhrodip.squarewise.expensecore.messaging.outbox.model.OutboxMessage
 import com.subhrodip.squarewise.expensecore.messaging.outbox.persistence.OutboxStore
@@ -258,7 +258,12 @@ class RecurringExpenseService(
     }
 
     private fun activeMembersOrPause(schedule: RecurringExpenseSchedule, members: List<UUID>): List<UUID>? {
-        if (members.isNotEmpty() && validateMembership(schedule, members)) return members
+        val custom = readSpecification(schedule)
+        val requiresAllMembers = custom == null || custom.allocations.isEmpty()
+        if (members.size <= ExpenseRequestLimits.MAX_PARTICIPANTS &&
+            members.isNotEmpty() && validateMembership(schedule, members)
+        ) return members
+        if (!requiresAllMembers && members.isNotEmpty() && validateMembership(schedule, members)) return members
         schedule.paused = true
         scheduleRepository.save(schedule)
         emitSchedulePausedNotification(schedule, "invalid_membership")
@@ -287,13 +292,17 @@ class RecurringExpenseService(
         val memberSet = members.toSet()
         val custom = readSpecification(schedule) ?: return true
         val (payers, allocations) = custom
-        if (payers.isNotEmpty() && payers.any { it.participantId !in memberSet }) {
-            return false
-        }
-        if (allocations.isNotEmpty() && allocations.any { it.participantId !in memberSet }) {
-            return false
-        }
-        return true
+        val requestedIds = (payers.map { it.participantId } + allocations.map { it.participantId }).toSet()
+        val missingIds = requestedIds - memberSet
+        if (missingIds.isEmpty()) return true
+        val activeMissingIds = entityManager.createQuery(
+            "SELECT m.membershipId FROM GroupMembershipEntity m WHERE m.groupId = :groupId AND m.membershipId IN :membershipIds AND m.status = 'ACTIVE'",
+            UUID::class.java
+        ).setParameter("groupId", schedule.groupId)
+            .setParameter("membershipIds", missingIds)
+            .resultList
+            .toSet()
+        return missingIds == activeMissingIds
     }
 
     private fun emitSchedulePausedNotification(schedule: RecurringExpenseSchedule, reason: String) {
@@ -394,19 +403,15 @@ class RecurringExpenseService(
 
     private fun getGroupMembers(groupIds: Set<UUID>): Map<UUID, List<UUID>> {
         if (groupIds.isEmpty()) return emptyMap()
-        return entityManager.createQuery(
-            "SELECT m FROM GroupMembershipEntity m WHERE m.groupId IN :groupIds AND m.status = 'ACTIVE' ORDER BY m.membershipId ASC",
-            GroupMembershipEntity::class.java
-        ).setParameter("groupIds", groupIds)
-            .resultList
-            .groupBy { it.groupId }
-            .mapValues { (_, memberships) -> memberships.map { it.membershipId } }
+        return groupIds.associateWith { getGroupMembers(it) }
     }
 
     private fun getGroupMembers(groupId: UUID): List<UUID> = entityManager.createQuery(
         "SELECT m.membershipId FROM GroupMembershipEntity m WHERE m.groupId = :groupId AND m.status = 'ACTIVE' ORDER BY m.membershipId ASC",
         UUID::class.java
-    ).setParameter("groupId", groupId).resultList
+    ).setParameter("groupId", groupId)
+        .setMaxResults(ExpenseRequestLimits.MAX_PARTICIPANTS + 1)
+        .resultList
 
     private fun validateSchedule(request: CreateRecurringScheduleRequest) {
         validateScheduleValues(
@@ -471,6 +476,7 @@ class RecurringExpenseService(
         allocations: List<ExpenseAllocation>?
     ) {
         if (payers != null) {
+            require(payers.size <= ExpenseRequestLimits.MAX_PARTICIPANTS) { "payer count exceeds the maximum" }
             require(payers.isNotEmpty()) { "payers must not be empty if provided" }
             require(payers.all { it.amountMinor > 0 }) { "all payer amounts must be positive" }
             require(payers.map { it.participantId }.distinct().size == payers.size) { "payer participant IDs must be unique" }
@@ -480,6 +486,7 @@ class RecurringExpenseService(
             }
         }
         if (allocations != null) {
+            require(allocations.size <= ExpenseRequestLimits.MAX_PARTICIPANTS) { "allocation count exceeds the maximum" }
             require(allocations.isNotEmpty()) { "allocations must not be empty if provided" }
             require(allocations.all { it.allocatedMinor > 0 }) { "all allocation amounts must be positive" }
             require(allocations.map { it.participantId }.distinct().size == allocations.size) { "allocation participant IDs must be unique" }

@@ -73,6 +73,7 @@ class RecurringExpenseOptionalOutboxTest {
             )
         ).thenReturn(query)
         `when`(query.setParameter("groupId", groupId)).thenReturn(query)
+        `when`(query.setMaxResults(101)).thenReturn(query)
         `when`(query.resultList).thenReturn(listOf(arrayOf("alice", UUID.randomUUID())))
         doThrow(IllegalStateException("expense store unavailable"))
             .`when`(expenseStore)
@@ -148,6 +149,7 @@ class RecurringExpenseOptionalOutboxTest {
         ).thenReturn(false)
         `when`(entityManager.createQuery(anyString(), any(Class::class.java) ?: UUID::class.java)).thenReturn(query)
         `when`(query.setParameter("groupId", groupId)).thenReturn(query)
+        `when`(query.setMaxResults(101)).thenReturn(query)
         `when`(query.resultList).thenReturn(listOf(payerId, otherId))
         var created: ExpenseRecord? = null
         doAnswer {
