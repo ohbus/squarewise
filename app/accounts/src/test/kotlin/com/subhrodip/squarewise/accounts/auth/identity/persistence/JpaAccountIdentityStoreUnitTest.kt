@@ -113,7 +113,7 @@ class JpaAccountIdentityStoreUnitTest {
     fun `email update keeps a false deletion flag when the profile is missing`() {
         val accountId = UUID.randomUUID()
         val entity = identity(accountId, email = "old@example.com")
-        `when`(identities.findByAccountId(accountId)).thenReturn(listOf(entity))
+        `when`(identities.findFirstByAccountIdOrderByIdentityIdAsc(accountId)).thenReturn(entity)
         `when`(identities.save(entity)).thenReturn(entity)
         `when`(profiles.findById(accountId)).thenReturn(Optional.empty())
 
