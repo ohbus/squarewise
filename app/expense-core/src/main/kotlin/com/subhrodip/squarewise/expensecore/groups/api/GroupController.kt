@@ -74,13 +74,15 @@ class GroupController(private val groups: GroupStore) {
     }
 
     @GetMapping("/{groupId}/members")
+    /** Returns the first bounded page of members visible to the authenticated member. */
     fun listMembers(
         @PathVariable groupId: UUID,
         @RequestHeader(ApiEndpoints.Headers.ACCEPTANCE_FAULT, required = false) fault: String?,
+        @RequestParam(defaultValue = "100") limit: Int = 100,
         principal: Principal
     ): List<GroupMemberResponse> {
         if (fault == ApiEndpoints.Bff.ACCEPTANCE_FAULT_FANOUT) throw ExpenseDomainException(BffErrors.UPSTREAM_PROTOCOL_INVALID, "Acceptance fanout fault")
-        return groups.listMembers(groupId, principal.name)
+        return groups.listMembers(groupId, principal.name, limit)
     }
 
     @PostMapping("/{groupId}/invites")

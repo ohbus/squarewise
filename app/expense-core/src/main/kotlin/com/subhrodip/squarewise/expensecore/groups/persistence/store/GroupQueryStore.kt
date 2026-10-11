@@ -19,6 +19,6 @@ interface GroupQueryStore {
     fun get(groupId: UUID, subject: String): GroupResponse? =
         list(subject).firstOrNull { it.groupId == groupId }
 
-    /** Lists active members and placeholders in a group. */
-    fun listMembers(groupId: UUID, subject: String): List<GroupMemberResponse>
+    /** Lists at most [limit] active members and placeholders in a group. */
+    fun listMembers(groupId: UUID, subject: String, limit: Int = 100): List<GroupMemberResponse>
 }

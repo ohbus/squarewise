@@ -73,11 +73,7 @@ class JpaGroupStore(
      * Lists all groups in which the given user subject is an active member.
      */
     @Transactional(readOnly = true)
-    override fun list(subject: String): List<GroupResponse> =
-        DbContextHolder.withContext(DbExecutionContext("groups.list", DbOperationKind.QUERY)) {
-            memberships.findActiveGroupsBySubject(subject, "ACTIVE")
-                .map { it.toResponse() }
-        }
+    override fun list(subject: String): List<GroupResponse> = list(subject, 100)
 
     /** Loads a bounded group page without materializing every membership. */
     @Transactional(readOnly = true)
@@ -213,11 +209,13 @@ class JpaGroupStore(
      * Lists all active members and placeholders registered in the specified group.
      */
     @Transactional(readOnly = true)
-    override fun listMembers(groupId: UUID, subject: String): List<GroupMemberResponse> {
+    override fun listMembers(groupId: UUID, subject: String, limit: Int): List<GroupMemberResponse> {
+        require(limit in 1..100) { "member limit must be between 1 and 100" }
         checkActiveMembership(groupId, subject)
         val group = groups.findById(groupId).orElse(null) ?: notFound()
         if (group.status != "ACTIVE") notFound()
-        return memberships.findByGroupIdAndStatus(groupId, "ACTIVE").map { it.toResponse() }
+        // shortcut: return the first 100 members until the public contract has cursor pagination.
+        return memberships.findByGroupIdAndStatus(groupId, "ACTIVE", PageRequest.of(0, limit)).map { it.toResponse() }
     }
 
     /**

@@ -50,6 +50,17 @@ class GroupControllerTest {
             .andExpect(status().isOk).andExpect(jsonPath("$[0].revision").value(0))
     }
 
+    @Test
+    fun `rejects member limit above compatibility cap`() {
+        val created = mvc.perform(post(ApiEndpoints.ExpenseCore.V1.PATH_GROUPS).with(alice).contentType(MediaType.APPLICATION_JSON)
+            .content("{\"name\":\"Member cap\",\"kind\":\"TRIP\",\"currency\":\"EUR\"}"))
+            .andExpect(status().isCreated).andReturn().response.contentAsString
+        val groupId = Regex("\\\"groupId\\\":\\\"([^\\\"]+)\\\"").find(created)!!.groupValues[1]
+
+        mvc.perform(get(ApiEndpoints.ExpenseCore.V1.groupMembers(groupId)).queryParam("limit", "101").with(alice))
+            .andExpect(status().isUnprocessableContent)
+    }
+
     /**
      * Verifies that invalid group creation payloads return 400 Bad Request with ProblemDetail code VALIDATION_FAILED.
      */

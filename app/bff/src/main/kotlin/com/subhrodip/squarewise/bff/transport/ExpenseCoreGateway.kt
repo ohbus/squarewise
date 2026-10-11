@@ -42,6 +42,8 @@ class ExpenseCoreGateway(
         // shortcut: group details include at most 1,000 expenses; add cursor pagination before raising this cap.
         const val MAX_EXPENSE_PAGES = 10
         const val MAX_GROUPS = 100
+        // shortcut: group details include at most 100 members until the REST contract has cursors.
+        const val MAX_MEMBERS = 100
     }
 
     private val client = builder.filter(BffGatewayFilters.bearerPropagation).baseUrl(baseUrl).build()
@@ -78,7 +80,11 @@ class ExpenseCoreGateway(
             .bodyToMono(UpstreamGroup::class.java).map { it.toBffGroup() }.timeout(timeout)
 
     fun listMembers(groupId: String, bearer: String?): Mono<List<BffMember>> =
-        client.get().uri(ApiEndpoints.ExpenseCore.V1.PATH_GROUP_MEMBERS, groupId)
+        client.get().uri { builder ->
+            builder.path(ApiEndpoints.ExpenseCore.V1.PATH_GROUP_MEMBERS)
+                .queryParam("limit", MAX_MEMBERS)
+                .build(groupId)
+        }
             .headers { headers -> bearer?.let { headers.setBearerAuth(it) } }.retrieve()
             .onStatus({ it.isError }) { response -> response.toUpstreamException(upstreamProblemDecoder, UPSTREAM_SOURCE) }
             .bodyToFlux(BffMember::class.java).collectList().timeout(timeout)
