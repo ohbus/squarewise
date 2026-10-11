@@ -80,6 +80,14 @@ interface GroupMembershipRepository : JpaRepository<GroupMembershipEntity, UUID>
     /** Finds only the requested first page of members for a group. */
     fun findByGroupIdAndStatus(groupId: UUID, status: String, pageable: Pageable): List<GroupMembershipEntity>
 
+    /** Finds active memberships only for the requested participant identifiers. */
+    @Query("select m from GroupMembershipEntity m where m.groupId = :groupId and m.membershipId in :membershipIds and m.status = :status")
+    fun findByGroupIdAndMembershipIdInAndStatus(
+        @Param("groupId") groupId: UUID,
+        @Param("membershipIds") membershipIds: Collection<UUID>,
+        @Param("status") status: String
+    ): List<GroupMembershipEntity>
+
     /**
      * Convenience method to find active member records belonging to the specified group.
      */

@@ -45,6 +45,7 @@ class GroupMembershipRepositoryContractTest {
                 return emptyList()
             }
             override fun findByGroupIdAndStatus(groupId: UUID, status: String, pageable: Pageable): List<GroupMembershipEntity> = emptyList()
+            override fun findByGroupIdAndMembershipIdInAndStatus(groupId: UUID, membershipIds: Collection<UUID>, status: String): List<GroupMembershipEntity> = emptyList()
 
             override fun findByMembershipIdAndGroupId(membershipId: UUID, groupId: UUID): GroupMembershipEntity? = null
             override fun findByMembershipIdAndGroupIdAndStatus(membershipId: UUID, groupId: UUID, status: String): GroupMembershipEntity? = null

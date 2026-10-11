@@ -206,7 +206,7 @@ class JpaExpenseStore(
             throw ExpenseDomainException(ExpenseErrors.EXPENSE_REQUEST_INVALID, "Participant IDs must be unique within payers and allocations")
         }
         val participantIds = payerIds + allocationIds
-        val activeIds = membershipRepository.findByGroupIdAndStatus(groupId, "ACTIVE")
+        val activeIds = membershipRepository.findByGroupIdAndMembershipIdInAndStatus(groupId, participantIds.toSet(), "ACTIVE")
             .map { it.membershipId }
             .toSet()
         if (!activeIds.containsAll(participantIds)) {
