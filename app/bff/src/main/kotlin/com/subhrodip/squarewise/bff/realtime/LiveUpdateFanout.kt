@@ -36,7 +36,7 @@ class LiveUpdateFanout(
     private val subscriptions = ConcurrentHashMap<String, Subscriber>()
 
     /** Per-subscription revocation signals: completing the sink terminates the consumer Flux. */
-    private val revocationSignals = ConcurrentHashMap<String, Sinks.One<Void>>()
+    private val revocationSignals = ConcurrentHashMap<String, Sinks.One<Unit>>()
 
     private val admissionLock = Any()
     /** Replays a bounded window while a subscriber loads its authorization snapshot. */
@@ -62,7 +62,7 @@ class LiveUpdateFanout(
      *
      * @param subscriptionId the [LiveSubscription.id] obtained from [subscribe]
      */
-    fun revocationSignal(subscriptionId: String): Mono<Void> =
+    fun revocationSignal(subscriptionId: String): Mono<Unit> =
         revocationSignals[subscriptionId]?.asMono() ?: Mono.empty()
 
     init {
