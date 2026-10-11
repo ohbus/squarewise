@@ -173,4 +173,64 @@ class RecurringExpenseOptionalOutboxTest {
             created?.allocations
         )
     }
+
+    /** Verifies the bounded member query still accepts an explicit custom participant on page 101. */
+    @Suppress("UNCHECKED_CAST")
+    @Test
+    fun `accepts custom recurring participants when the bounded member query overflows`() {
+        val scheduleRepository = mock(RecurringExpenseScheduleRepository::class.java)
+        val occurrenceRepository = mock(RecurringExpenseOccurrenceRepository::class.java)
+        val expenseStore = mock(ExpenseStore::class.java)
+        val groupRepository = mock(GroupRepository::class.java)
+        val entityManager = mock(EntityManager::class.java)
+        val query = mock(TypedQuery::class.java) as TypedQuery<UUID>
+        val groupId = UUID.randomUUID()
+        val participantIds = (1..101).map { UUID.randomUUID() }
+        val occurrenceDate = LocalDate.of(2026, 11, 1)
+        val schedule = RecurringExpenseSchedule(
+            scheduleId = UUID.randomUUID(),
+            groupId = groupId,
+            description = "Large group custom split",
+            amountMinor = 1200,
+            currency = "EUR",
+            frequency = RecurrenceFrequency.MONTHLY,
+            startDate = occurrenceDate,
+            nextOccurrenceDate = occurrenceDate,
+            createdAt = Instant.EPOCH
+        ).apply {
+            customSpecification = """{"payers":[{"participantId":"${participantIds.first()}","amountMinor":1200}],"allocations":[{"participantId":"${participantIds.first()}","allocatedMinor":1200}]}"""
+        }
+
+        `when`(scheduleRepository.findDueSchedules(occurrenceDate)).thenReturn(listOf(schedule))
+        `when`(scheduleRepository.save(any(RecurringExpenseSchedule::class.java))).thenAnswer { it.arguments[0] }
+        `when`(occurrenceRepository.existsById(any(UUID::class.java) ?: UUID(0, 0))).thenReturn(false)
+        `when`(
+            occurrenceRepository.existsByScheduleIdAndOccurrenceDate(
+                any(UUID::class.java) ?: UUID(0, 0),
+                any(LocalDate::class.java) ?: occurrenceDate
+            )
+        ).thenReturn(false)
+        `when`(entityManager.createQuery(anyString(), any(Class::class.java) ?: UUID::class.java)).thenReturn(query)
+        `when`(query.setParameter("groupId", groupId)).thenReturn(query)
+        `when`(query.setMaxResults(101)).thenReturn(query)
+        `when`(query.resultList).thenReturn(participantIds)
+        var created: ExpenseRecord? = null
+        doAnswer {
+            created = it.arguments[1] as ExpenseRecord
+            created
+        }.`when`(expenseStore).create(
+            any(UUID::class.java) ?: UUID(0, 0),
+            any(ExpenseRecord::class.java) ?: ExpenseRecord(
+                UUID(0, 0), UUID(0, 0), "", "", "EUR", 0, 1, "EQUAL", Instant.EPOCH, emptyList(), emptyList()
+            ),
+            anyString(),
+            isNull()
+        )
+
+        val service = RecurringExpenseService(scheduleRepository, occurrenceRepository, expenseStore, groupRepository, entityManager)
+
+        assertEquals(1, service.processDueOccurrences(occurrenceDate))
+        assertEquals(listOf(ExpensePayer(participantIds.first(), 1200)), created?.payers)
+        assertEquals(listOf(ExpenseAllocation(participantIds.first(), 1200)), created?.allocations)
+    }
 }

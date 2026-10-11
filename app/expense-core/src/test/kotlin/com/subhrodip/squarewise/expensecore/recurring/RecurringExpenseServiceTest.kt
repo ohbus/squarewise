@@ -60,6 +60,12 @@ class RecurringExpenseServiceTest @Autowired constructor(
         assertThrows(IllegalArgumentException::class.java) {
             service.getOccurrences(UUID.randomUUID(), 101)
         }
+        assertThrows(IllegalArgumentException::class.java) {
+            service.listSchedules(groupId, 0)
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            service.getOccurrences(UUID.randomUUID(), 0)
+        }
     }
 
     @Test
@@ -986,6 +992,29 @@ class RecurringExpenseServiceTest @Autowired constructor(
         }
         assertThrows(IllegalArgumentException::class.java) {
             service.createSchedule(group.groupId, valid.copy(allocations = listOf(ExpenseAllocation(UUID.randomUUID(), 999))))
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            service.createSchedule(group.groupId, valid.copy(timezone = "Not/AZone"))
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            service.createSchedule(group.groupId, valid.copy(payers = listOf(ExpensePayer(UUID.randomUUID(), -1))))
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            val participant = UUID.randomUUID()
+            service.createSchedule(
+                group.groupId,
+                valid.copy(payers = listOf(ExpensePayer(participant, 500), ExpensePayer(participant, 500)))
+            )
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            service.createSchedule(group.groupId, valid.copy(allocations = listOf(ExpenseAllocation(UUID.randomUUID(), -1))))
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            val participant = UUID.randomUUID()
+            service.createSchedule(
+                group.groupId,
+                valid.copy(allocations = listOf(ExpenseAllocation(participant, 500), ExpenseAllocation(participant, 500)))
+            )
         }
 
         assertEquals(0, scheduleRepository.count())
