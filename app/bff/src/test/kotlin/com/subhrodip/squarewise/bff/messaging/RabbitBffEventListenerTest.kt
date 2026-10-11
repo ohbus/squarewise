@@ -207,6 +207,21 @@ class RabbitBffEventListenerTest {
     }
 
     @Test
+    fun `does not require a channel when requeueing a non-fatal failure`() {
+        val failingConsumer = mock(BffEventConsumer::class.java)
+        doThrow(IllegalStateException("fanout unavailable")).`when`(failingConsumer)
+            .consume(any(BffEventEnvelope::class.java) ?: sampleEnvelope())
+        val retryListener = RabbitBffEventListener(failingConsumer, objectMapper, deadLetterPublisher = DeadLetterPublisher { })
+        val json = """
+            {"eventId":"${UUID.randomUUID()}","eventType":"group.updated","schemaVersion":1,
+             "aggregateId":"${UUID.randomUUID()}","groupId":"${UUID.randomUUID()}","groupRevision":1,
+             "occurredAt":"${Instant.now()}","payload":{}}
+        """.trimIndent()
+
+        retryListener.onMessage(Message(json.toByteArray(), MessageProperties()), null)
+    }
+
+    @Test
     fun `propagates cancellation without broker disposition`() {
         val cancellingConsumer = mock(BffEventConsumer::class.java)
         doThrow(CancellationException("cancelled")).`when`(cancellingConsumer)

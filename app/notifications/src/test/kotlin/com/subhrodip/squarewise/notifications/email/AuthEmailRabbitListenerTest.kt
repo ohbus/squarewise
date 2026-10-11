@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.doThrow
+import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.any
 import org.springframework.amqp.core.Message
@@ -332,6 +333,21 @@ class AuthEmailRabbitListenerTest {
 
         assertThrows(CancellationException::class.java) {
             listener.onMessage(message(validEvent(), 43L), channel)
+        }
+        assertNull(channel.ackedTag)
+        assertNull(channel.rejectedTag)
+    }
+
+    @Test
+    fun `propagates fatal checked failures without acknowledging or rejecting`() {
+        doAnswer { throw InterruptedException("interrupted") }.`when`(consumer).consume(
+            any(AuthEmailDeliveryEvent::class.java) ?: AuthEmailDeliveryEvent("evt", "user@example.com", "LOGIN_CODE", "cipher", Instant.MAX),
+            any(Instant::class.java) ?: Instant.EPOCH
+        )
+        val channel = TestChannel()
+
+        assertThrows(InterruptedException::class.java) {
+            listener.onMessage(message(validEvent(), 45L), channel)
         }
         assertNull(channel.ackedTag)
         assertNull(channel.rejectedTag)

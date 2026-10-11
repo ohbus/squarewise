@@ -17,6 +17,8 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.springframework.http.HttpStatus
+import org.springframework.web.reactive.function.client.ClientResponse
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
 import org.springframework.graphql.execution.ErrorType
@@ -169,5 +171,16 @@ class BffErrorResolverTest {
 
         assertEquals("notifications", exception.problem.source)
         assertEquals("fallback-request", exception.problem.requestId)
+    }
+
+    @Test
+    fun `response decoder handles an empty body without an upstream request header`() {
+        val response = ClientResponse.create(HttpStatus.BAD_GATEWAY).build()
+
+        val exception = response.toUpstreamException(UpstreamProblemDecoder(ObjectMapper()), "accounts")
+            .block() as UpstreamProblemException
+
+        assertEquals("unknown", exception.problem.requestId)
+        assertEquals("accounts", exception.problem.source)
     }
 }

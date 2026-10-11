@@ -342,6 +342,31 @@ class RabbitNotificationListenerTest {
         }
     }
 
+    @Test
+    fun `propagates fatal checked failures without broker disposition`() {
+        val consumer = NotificationConsumer { throw InterruptedException("interrupted") }
+        val listener = RabbitNotificationListener(consumer, envelopeParser, deadLetterPublisher = DeadLetterPublisher { })
+
+        assertThrows(InterruptedException::class.java) {
+            listener.onMessage(
+                createMessage(
+                    """{"eventId":"00000000-0000-7000-8000-000000000221","eventType":"expense.created","schemaVersion":1,"aggregateId":"00000000-0000-7000-8000-000000000222","groupId":"00000000-0000-7000-8000-000000000223","groupRevision":1,"occurredAt":"2026-09-17T20:00:00Z","payload":{"subject":"interrupted-user"}}""",
+                    83L
+                ),
+                TestChannel()
+            )
+        }
+    }
+
+    @Test
+    fun `bounds an explicit broker attempt header`() {
+        val consumer = NotificationConsumer { NotificationConsumptionOutcome.APPLIED }
+        val listener = RabbitNotificationListener(consumer, envelopeParser, deadLetterPublisher = DeadLetterPublisher { })
+        val message = createMessage("{}", 84L).also { it.messageProperties.setHeader("x-attempt", 99) }
+
+        listener.onMessage(message, TestChannel())
+    }
+
 
     private fun createMessage(content: String, deliveryTag: Long, redelivered: Boolean = false): Message {
         val props = MessageProperties().apply {
