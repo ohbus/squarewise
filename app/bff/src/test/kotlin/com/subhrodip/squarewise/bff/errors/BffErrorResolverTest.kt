@@ -183,4 +183,24 @@ class BffErrorResolverTest {
         assertEquals("unknown", exception.problem.requestId)
         assertEquals("accounts", exception.problem.source)
     }
+
+    @Test
+    fun `decoder rejects mismatched upstream identities`() {
+        val decoder = UpstreamProblemDecoder(ObjectMapper())
+        val wrongName = decoder.decode(
+            404,
+            """{"numericCode":"213201","errorName":"WRONG_NAME"}""",
+            "request",
+            "accounts"
+        )
+        val wrongStatus = decoder.decode(
+            500,
+            """{"numericCode":"213201","errorName":"GROUP_NOT_FOUND"}""",
+            "request",
+            "accounts"
+        )
+
+        assertEquals("UPSTREAM_PROTOCOL_INVALID", wrongName.problem.errorName)
+        assertEquals("UPSTREAM_PROTOCOL_INVALID", wrongStatus.problem.errorName)
+    }
 }

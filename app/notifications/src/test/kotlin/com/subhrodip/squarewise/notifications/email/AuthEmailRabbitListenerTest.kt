@@ -57,6 +57,14 @@ class AuthEmailRabbitListenerTest {
     }
 
     @Test
+    fun `does not require a channel when dead letter publication fails`() {
+        val failingPublisher = DeadLetterPublisher { throw IllegalStateException("broker unavailable") }
+        val boundaryListener = AuthEmailRabbitListener(ObjectMapper(), consumer, deadLetterPublisher = failingPublisher)
+
+        boundaryListener.onMessage(message("{not-json}", 47L), null)
+    }
+
+    @Test
     fun `rejects an empty auth email body without requeue`() {
         val channel = TestChannel()
 
@@ -353,6 +361,24 @@ class AuthEmailRabbitListenerTest {
         assertNull(channel.rejectedTag)
     }
 
+    @Test
+    fun `requeues when acknowledgement fails`() {
+        doReturn(EmailDeliveryOutcome.DELIVERED).`when`(consumer).consume(
+            any(AuthEmailDeliveryEvent::class.java) ?: AuthEmailDeliveryEvent("event", "user@example.com", "LOGIN_CODE", "cipher", Instant.MAX),
+            any(Instant::class.java) ?: Instant.EPOCH
+        )
+        val channel = object : TestChannel() {
+            override fun basicAck(deliveryTag: Long, multiple: Boolean) {
+                throw IllegalStateException("ack failed")
+            }
+        }
+
+        listener.onMessage(message(validEvent(), 46L), channel)
+
+        assertEquals(46L, channel.rejectedTag)
+        assertEquals(true, channel.rejectedRequeue)
+    }
+
     private fun fieldValue(field: String): String = when (field) {
         "recipient" -> "user@example.com"
         "template" -> "LOGIN_CODE"
@@ -372,7 +398,7 @@ class AuthEmailRabbitListenerTest {
     private fun validEvent(): String =
         """{"eventType":"auth.email.requested.v1","eventId":"evt-1","payload":{"recipient":"user@example.com","template":"LOGIN_CODE","encryptedCredential":"cipher","expiresAt":"2099-09-21T01:00:00Z"}}"""
 
-    private class TestChannel : Channel by mock(Channel::class.java) {
+    private open class TestChannel : Channel by mock(Channel::class.java) {
         var ackedTag: Long? = null
         var rejectedTag: Long? = null
         var rejectedRequeue: Boolean? = null

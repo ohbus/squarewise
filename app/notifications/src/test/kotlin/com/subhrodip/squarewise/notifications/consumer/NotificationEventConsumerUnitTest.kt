@@ -15,6 +15,8 @@ import com.subhrodip.squarewise.notifications.preferences.persistence.Preference
 import java.time.Instant
 import java.util.UUID
 import java.util.Optional
+import java.sql.SQLException
+import org.hibernate.exception.ConstraintViolationException
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
@@ -136,6 +138,16 @@ class NotificationEventConsumerUnitTest {
         doReturn(false).`when`(processedEvents).existsById(event.eventId)
 
         assertThrows(DataIntegrityViolationException::class.java) { consumer.consume(event) }
+    }
+
+    @Test
+    fun `acknowledges a Hibernate constraint duplicate only when already durable`() {
+        val event = sampleEvent(subject = "hibernate-duplicate")
+        doThrow(ConstraintViolationException("duplicate", SQLException("duplicate"), "processed_events_pkey"))
+            .`when`(processor).process(event)
+        doReturn(true).`when`(processedEvents).existsById(event.eventId)
+
+        assertEquals(NotificationConsumptionOutcome.DUPLICATE, consumer.consume(event))
     }
 
     @Test

@@ -179,6 +179,20 @@ class RabbitNotificationListenerTest {
     }
 
     @Test
+    fun `does not require a channel when acknowledging a dead letter`() {
+        val publisher = RecordingDeadLetterPublisher()
+        val listener = RabbitNotificationListener(
+            NotificationConsumer { NotificationConsumptionOutcome.APPLIED },
+            envelopeParser,
+            deadLetterPublisher = publisher
+        )
+
+        listener.onMessage(createMessage("", 18L), null)
+
+        assertEquals(1, publisher.records.size)
+    }
+
+    @Test
     fun `publishes malformed json to dead letter and acknowledges it`() {
         val consumer = NotificationConsumer { NotificationConsumptionOutcome.APPLIED }
         val publisher = RecordingDeadLetterPublisher()
@@ -238,6 +252,17 @@ class RabbitNotificationListenerTest {
         assertNull(channel.ackedTag)
         assertEquals(14L, channel.rejectedTag)
         assertEquals(false, channel.rejectedRequeue)
+    }
+
+    @Test
+    fun `does not require a channel when dead letter publication fails`() {
+        val listener = RabbitNotificationListener(
+            NotificationConsumer { NotificationConsumptionOutcome.APPLIED },
+            envelopeParser,
+            deadLetterPublisher = DeadLetterPublisher { throw IllegalStateException("broker unavailable") }
+        )
+
+        listener.onMessage(createMessage("{ invalid json }", 19L), null)
     }
 
     @Test
@@ -315,6 +340,18 @@ class RabbitNotificationListenerTest {
     }
 
     @Test
+    fun `acknowledges a valid delivery without a broker channel`() {
+        val consumer = NotificationConsumer { NotificationConsumptionOutcome.APPLIED }
+        val listener = RabbitNotificationListener(consumer, envelopeParser, deadLetterPublisher = DeadLetterPublisher { })
+        val message = createMessage(
+            """{"eventId":"00000000-0000-7000-8000-000000000227","eventType":"expense.created","schemaVersion":1,"aggregateId":"00000000-0000-7000-8000-000000000228","groupId":"00000000-0000-7000-8000-000000000229","groupRevision":1,"occurredAt":"2026-09-17T20:00:00Z","payload":{"subject":"channel-less"}}""",
+            86L
+        )
+
+        listener.onMessage(message, null)
+    }
+
+    @Test
     fun `swallows transient failure when the broker channel is unavailable`() {
         val consumer = NotificationConsumer { throw IllegalStateException("database unavailable") }
         val listener = RabbitNotificationListener(consumer, envelopeParser, deadLetterPublisher = DeadLetterPublisher { })
@@ -359,6 +396,31 @@ class RabbitNotificationListenerTest {
     }
 
     @Test
+    fun `requeues when acknowledgement fails`() {
+        val listener = RabbitNotificationListener(
+            NotificationConsumer { NotificationConsumptionOutcome.APPLIED },
+            envelopeParser,
+            deadLetterPublisher = DeadLetterPublisher { }
+        )
+        val channel = object : TestChannel() {
+            override fun basicAck(deliveryTag: Long, multiple: Boolean) {
+                throw IllegalStateException("ack failed")
+            }
+        }
+
+        listener.onMessage(
+            createMessage(
+                """{"eventId":"00000000-0000-7000-8000-000000000224","eventType":"expense.created","schemaVersion":1,"aggregateId":"00000000-0000-7000-8000-000000000225","groupId":"00000000-0000-7000-8000-000000000226","groupRevision":1,"occurredAt":"2026-09-17T20:00:00Z","payload":{"subject":"ack-failure"}}""",
+                85L
+            ),
+            channel
+        )
+
+        assertEquals(85L, channel.rejectedTag)
+        assertEquals(true, channel.rejectedRequeue)
+    }
+
+    @Test
     fun `bounds an explicit broker attempt header`() {
         val consumer = NotificationConsumer { NotificationConsumptionOutcome.APPLIED }
         val listener = RabbitNotificationListener(consumer, envelopeParser, deadLetterPublisher = DeadLetterPublisher { })
@@ -376,7 +438,7 @@ class RabbitNotificationListenerTest {
         return Message(content.toByteArray(StandardCharsets.UTF_8), props)
     }
 
-    private class TestChannel : Channel by mock(Channel::class.java) {
+    private open class TestChannel : Channel by mock(Channel::class.java) {
         var ackedTag: Long? = null
         var rejectedTag: Long? = null
         var rejectedRequeue: Boolean? = null
