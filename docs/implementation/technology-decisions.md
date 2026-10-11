@@ -29,6 +29,16 @@ share a cluster initially, but cross-service SQL, foreign keys and entities are
 forbidden. Store monetary values as integer minor units internally and strings
 on JSON/GraphQL boundaries.
 
+Same-service foreign keys remain mandatory for durable relationships such as
+Expense Core groups, expenses, postings, and settlement records. Application
+services perform authorization and domain validation in the writer transaction,
+but those checks supplement rather than replace database referential integrity.
+Before changing a constraint for performance, capture normalized query timing,
+lock waits, child-index usage, and controlled `EXPLAIN (ANALYZE, BUFFERS, WAL)`
+evidence. The existing Expense Core foreign-key columns are indexed for the
+dependent-row checks. `libs/db` may provide routing and telemetry for this work,
+but it must not contain business relationship checks or service entities.
+
 ## Messaging and API
 
 REST over HTTPS is the synchronous service boundary. RabbitMQ via Spring AMQP

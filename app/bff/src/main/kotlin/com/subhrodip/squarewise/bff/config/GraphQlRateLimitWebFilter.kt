@@ -1,12 +1,13 @@
 package com.subhrodip.squarewise.bff.config
 
 import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
+import com.subhrodip.squarewise.bff.errors.BffReactiveProblemWriter
+import com.subhrodip.squarewise.errors.catalog.PlatformErrors
 import com.subhrodip.squarewise.security.ratelimit.RateLimitPolicy
 import com.subhrodip.squarewise.security.ratelimit.RateLimitStoreUnavailableException
 import com.subhrodip.squarewise.security.ratelimit.RateLimitPolicyIds
 import com.subhrodip.squarewise.security.ratelimit.RateLimiter
 import java.time.Duration
-import java.util.UUID
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
@@ -14,6 +15,7 @@ import org.springframework.web.server.ServerWebExchange
 import org.springframework.web.server.WebFilter
 import org.springframework.web.server.WebFilterChain
 import reactor.core.publisher.Mono
+import tools.jackson.databind.ObjectMapper
 
 /**
  * Applies the shared distributed admission limit before GraphQL body parsing.
@@ -25,8 +27,10 @@ import reactor.core.publisher.Mono
 class GraphQlRateLimitWebFilter(
     private val rateLimiter: RateLimiter,
     private val properties: GraphQlAbuseProperties,
-    private val enabled: Boolean = true
+    private val enabled: Boolean = true,
+    objectMapper: ObjectMapper = ObjectMapper(),
 ) : WebFilter {
+    private val problemWriter = BffReactiveProblemWriter(objectMapper)
     override fun filter(exchange: ServerWebExchange, chain: WebFilterChain): Mono<Void> {
         if (!enabled || exchange.request.uri.path != ApiEndpoints.Bff.GRAPHQL) {
             return chain.filter(exchange)
@@ -52,15 +56,8 @@ class GraphQlRateLimitWebFilter(
         }
     }
 
-    private fun reject(exchange: ServerWebExchange, retryAfterSeconds: Long): Mono<Void> {
-        val response = exchange.response
-        response.statusCode = HttpStatus.TOO_MANY_REQUESTS
-        response.headers.contentType = MediaType.APPLICATION_PROBLEM_JSON
-        response.headers.set(HttpHeaders.RETRY_AFTER, retryAfterSeconds.coerceIn(1, 86_400).toString())
-        val requestId = exchange.request.headers.getFirst(ApiEndpoints.Headers.REQUEST_ID) ?: UUID.randomUUID().toString()
-        val body = "{\"code\":\"RATE_LIMITED\",\"source\":\"bff\",\"component\":\"graphql\",\"requestId\":\"$requestId\"}"
-        return response.writeWith(Mono.just(response.bufferFactory().wrap(body.toByteArray(Charsets.UTF_8))))
-    }
+    private fun reject(exchange: ServerWebExchange, retryAfterSeconds: Long): Mono<Void> =
+        problemWriter.write(exchange, PlatformErrors.SECURITY_RATE_LIMITED, retryAfterSeconds)
 
     private fun clientPartition(exchange: ServerWebExchange): String =
         exchange.request.remoteAddress?.address?.hostAddress ?: "unknown"

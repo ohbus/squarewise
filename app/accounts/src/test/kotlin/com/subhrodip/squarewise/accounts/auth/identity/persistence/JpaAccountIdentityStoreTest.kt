@@ -6,6 +6,7 @@ import com.subhrodip.squarewise.accounts.profile.persistence.ProfileRepository
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
@@ -168,7 +169,7 @@ class JpaAccountIdentityStoreTest @Autowired constructor(
     fun `rejects email update when account has no identity`() {
         val accountId = UUID.randomUUID()
 
-        val error = org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException::class.java) {
+        val error = assertThrows(IllegalArgumentException::class.java) {
             identityStore.updateEmail(accountId, "missing@example.com", verified = true)
         }
 

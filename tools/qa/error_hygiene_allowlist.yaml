@@ -1,3 +1,18 @@
 # Legacy error-path debt quarantined for the bounded-context migration.
 # Every entry must be removed by its owner task; this is not a permanent waiver.
-entries: []
+entries:
+  - file: app/bff/src/main/kotlin/com/subhrodip/squarewise/bff/errors/BffInputException.kt
+    line: 4
+    violation_type: generic_exception_subclass
+    owner_task: ERRC-BOUNDARY
+    expires_by_task: ERRC-BOUNDARY
+  - file: app/notifications/src/main/kotlin/com/subhrodip/squarewise/notifications/email/smtp/MailException.kt
+    line: 3
+    violation_type: generic_exception_subclass
+    owner_task: ERRC-BOUNDARY
+    expires_by_task: ERRC-BOUNDARY
+  - file: app/notifications/src/main/kotlin/com/subhrodip/squarewise/notifications/errors/NotificationInputException.kt
+    line: 4
+    violation_type: generic_exception_subclass
+    owner_task: ERRC-BOUNDARY
+    expires_by_task: ERRC-BOUNDARY

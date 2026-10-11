@@ -115,7 +115,7 @@ class JpaExpenseStoreTest @Autowired constructor(
         val duplicateError = assertThrows(SquarewiseException::class.java) {
             expenseStore.create(group.groupId, duplicateParticipant, "duplicate-key", "alice")
         }
-        assertEquals(CategoryCode.VALIDATION_ERROR, duplicateError.definition.category)
+        assertEquals("EXPENSE_REQUEST_INVALID", duplicateError.definition.errorName)
 
         val duplicateAllocationId = UUID.randomUUID()
         val duplicateAllocation = duplicateParticipant.copy(
@@ -129,7 +129,7 @@ class JpaExpenseStoreTest @Autowired constructor(
         val duplicateAllocationError = assertThrows(SquarewiseException::class.java) {
             expenseStore.create(group.groupId, duplicateAllocation, "duplicate-allocation-key", "alice")
         }
-        assertEquals(CategoryCode.VALIDATION_ERROR, duplicateAllocationError.definition.category)
+        assertEquals("EXPENSE_REQUEST_INVALID", duplicateAllocationError.definition.errorName)
 
         val inactiveId = UUID.randomUUID()
         val inactiveParticipant = duplicateParticipant.copy(
@@ -140,7 +140,7 @@ class JpaExpenseStoreTest @Autowired constructor(
         val inactiveError = assertThrows(SquarewiseException::class.java) {
             expenseStore.create(group.groupId, inactiveParticipant, "inactive-key", "alice")
         }
-        assertEquals(CategoryCode.NOT_FOUND, inactiveError.definition.category)
+        assertEquals("PARTICIPANT_SET_INVALID", inactiveError.definition.errorName)
 
         assertEquals(initialRevision, groupRepository.findById(group.groupId).orElseThrow().revision)
         assertNull(expenseStore.findById(duplicateId))
@@ -641,7 +641,7 @@ class JpaExpenseStoreTest @Autowired constructor(
                 )
             )
         }
-        assertEquals(CategoryCode.NOT_FOUND, missingGroupError.definition.category)
+        assertEquals("GROUP_NOT_FOUND", missingGroupError.definition.errorName)
 
         val group = groupStore.create("update-boundary-owner", CreateGroupRequest("Update boundaries", "TRIP", "EUR"))
         val missingExpenseError = assertThrows(SquarewiseException::class.java) {
@@ -830,7 +830,7 @@ class JpaExpenseStoreTest @Autowired constructor(
         val missingExpenseError = assertThrows(SquarewiseException::class.java) {
             expenseStore.delete(group.groupId, UUID.randomUUID(), version = null, actorSubject = "alice")
         }
-        assertEquals(CategoryCode.AUTHENTICATION_ERROR, missingExpenseError.definition.category)
+        assertEquals("EXPENSE_NOT_FOUND", missingExpenseError.definition.errorName)
 
         val expenseId = UUID.randomUUID()
         val participantId = UUID.randomUUID()
@@ -861,5 +861,76 @@ class JpaExpenseStoreTest @Autowired constructor(
         assertEquals(CategoryCode.NOT_FOUND, repeatedDeleteError.definition.category)
         assertEquals(revisionAfterDelete, groupRepository.findById(group.groupId).orElseThrow().revision)
         assertEquals(2, balancePostingRepository.findByExpenseId(expenseId).size)
+    }
+
+    /** Verifies balances are ordered deterministically by participantId ascending then currency ascending. */
+    @Test
+    fun `balances returns deterministically sorted balances by participantId and currency`() {
+        val group = groupStore.create("alice", CreateGroupRequest("Multi-currency Balances", "TRIP", "EUR"))
+        val aliceId = UUID.randomUUID()
+        val bobId = UUID.randomUUID()
+
+        // Create USD expense
+        val usdExpense = ExpenseRecord(
+            expenseId = UUID.randomUUID(),
+            groupId = group.groupId,
+            description = "USD lunch",
+            category = "food",
+            currency = "USD",
+            amountMinor = 2000,
+            version = 1,
+            allocationMode = "EXACT",
+            createdAt = Instant.now(),
+            payers = listOf(ExpensePayer(aliceId, 2000)),
+            allocations = listOf(ExpenseAllocation(bobId, 2000))
+        )
+        expenseStore.create(group.groupId, usdExpense, "idemp-usd-1")
+
+        // Create EUR expense
+        val eurExpense = ExpenseRecord(
+            expenseId = UUID.randomUUID(),
+            groupId = group.groupId,
+            description = "EUR dinner",
+            category = "food",
+            currency = "EUR",
+            amountMinor = 1000,
+            version = 1,
+            allocationMode = "EXACT",
+            createdAt = Instant.now(),
+            payers = listOf(ExpensePayer(aliceId, 1000)),
+            allocations = listOf(ExpenseAllocation(bobId, 1000))
+        )
+        expenseStore.create(group.groupId, eurExpense, "idemp-eur-1")
+
+        // Create GBP expense
+        val gbpExpense = ExpenseRecord(
+            expenseId = UUID.randomUUID(),
+            groupId = group.groupId,
+            description = "GBP tea",
+            category = "food",
+            currency = "GBP",
+            amountMinor = 500,
+            version = 1,
+            allocationMode = "EXACT",
+            createdAt = Instant.now(),
+            payers = listOf(ExpensePayer(aliceId, 500)),
+            allocations = listOf(ExpenseAllocation(bobId, 500))
+        )
+        expenseStore.create(group.groupId, gbpExpense, "idemp-gbp-1")
+
+        val balances = expenseStore.balances(group.groupId)
+        assertEquals(6, balances.size)
+
+        // Verify ordering: participantId ascending, then currency ascending
+        for (i in 0 until balances.size - 1) {
+            val current = balances[i]
+            val next = balances[i + 1]
+            val participantCmp = current.participantId.compareTo(next.participantId)
+            if (participantCmp == 0) {
+                assertTrue(current.amount.currency <= next.amount.currency, "Currencies for same participant must be sorted ascending")
+            } else {
+                assertTrue(participantCmp < 0, "Participants must be sorted ascending")
+            }
+        }
     }
 }

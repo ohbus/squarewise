@@ -1,6 +1,7 @@
 package com.subhrodip.squarewise.security.ratelimit
 
 import com.subhrodip.squarewise.errors.catalog.PlatformErrors
+import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
 import com.subhrodip.squarewise.security.errors.PlatformDomainException
 import java.time.Duration
 import java.util.concurrent.TimeoutException
@@ -43,15 +44,19 @@ class RedisRateLimiter(
                 policy.window.seconds.toString(),
                 policy.maximumPermits.toString(),
                 policy.cooldown.seconds.toString()
-            ) ?: throw PlatformDomainException(
-                PlatformErrors.DATABASE_DATA_INCONSISTENT,
-                "Redis returned no rate-limit decision"
+            ) ?: throw RateLimitStoreUnavailableException(
+                PlatformDomainException(
+                    PlatformErrors.DATABASE_DATA_INCONSISTENT,
+                    "Redis returned no rate-limit decision"
+                )
             )
             val fields = result.split('|')
             if (fields.size != 3) {
-                throw PlatformDomainException(
-                    PlatformErrors.DATABASE_DATA_INCONSISTENT,
-                    "Redis returned malformed rate-limit decision"
+                throw RateLimitStoreUnavailableException(
+                    PlatformDomainException(
+                        PlatformErrors.DATABASE_DATA_INCONSISTENT,
+                        "Redis returned malformed rate-limit decision"
+                    )
                 )
             }
             val allowed = fields[0] == "1"
@@ -61,6 +66,8 @@ class RedisRateLimiter(
             RateLimitDecision(allowed, remaining, Duration.ofSeconds(retryAfterSeconds), policy.id)
         } catch (exception: RateLimitStoreUnavailableException) {
             recordFailure(policy.id, exception)
+            throw exception
+        } catch (exception: SquarewiseException) {
             throw exception
         } catch (exception: Exception) {
             recordFailure(policy.id, exception)

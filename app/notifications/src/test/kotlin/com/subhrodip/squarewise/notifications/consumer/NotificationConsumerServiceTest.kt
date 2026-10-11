@@ -18,6 +18,7 @@ import com.subhrodip.squarewise.notifications.email.delivery.EmailDispatcher
 import com.subhrodip.squarewise.notifications.delivery.rate.DeliveryRateLimiter
 import com.subhrodip.squarewise.notifications.preferences.model.NotificationPreferences
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers.anyString
@@ -117,23 +118,24 @@ class NotificationConsumerServiceTest {
     }
 
     @Test
-    fun `suppresses email when recipient preference is missing`() {
-        val event = sampleEvent(subject = "charlie")
+    fun `uses the store default when recipient preferences are absent`() {
+        val event = sampleEvent(subject = "charlie@example.com")
         doReturn(NotificationConsumptionOutcome.APPLIED).`when`(processor).process(event)
-        doReturn(null).`when`(preferenceStore).get("charlie")
+        doReturn(NotificationPreferences(emailEnabled = true)).`when`(preferenceStore).get("charlie@example.com")
+        doReturn(EmailDeliveryOutcome.DELIVERED).`when`(emailDispatcher)
+            .send("charlie@example.com", "Notification: expense.created", "Dinner was added")
         val outcome = consumer.consume(event)
 
         assertEquals(NotificationConsumptionOutcome.APPLIED, outcome)
-        verify(emailDispatcher, never()).send(anyString(), anyString(), anyString())
+        verify(emailDispatcher, times(1)).send(anyString(), anyString(), anyString())
     }
 
     @Test
-    fun `suppresses email when preference store throws an exception`() {
+    fun `propagates preference store failures for broker retry`() {
         val event = sampleEvent(subject = "dave")
         doReturn(NotificationConsumptionOutcome.APPLIED).`when`(processor).process(event)
         doThrow(RuntimeException("Preferences database connection failure")).`when`(preferenceStore).get("dave")
-        val outcome = consumer.consume(event)
-        assertEquals(NotificationConsumptionOutcome.APPLIED, outcome)
+        assertThrows(RuntimeException::class.java) { consumer.consume(event) }
         verify(emailDispatcher, never()).send(anyString(), anyString(), anyString())
     }
 
@@ -157,30 +159,28 @@ class NotificationConsumerServiceTest {
     }
 
     @Test
-    fun `email dispatch failure does not fail inbox consumption or throw exception`() {
-        val event = sampleEvent(subject = "eve")
+    fun `propagates email dispatch failure for broker retry`() {
+        val event = sampleEvent(subject = "eve@example.com")
         doReturn(NotificationConsumptionOutcome.APPLIED).`when`(processor).process(event)
-        doReturn(NotificationPreferences(emailEnabled = true)).`when`(preferenceStore).get("eve")
+        doReturn(NotificationPreferences(emailEnabled = true)).`when`(preferenceStore).get("eve@example.com")
         doThrow(RuntimeException("SMTP server unreachable")).`when`(emailDispatcher)
             .send(anyString(), anyString(), anyString())
 
-        val outcome = consumer.consume(event)
-        assertEquals(NotificationConsumptionOutcome.APPLIED, outcome)
+        assertThrows(RuntimeException::class.java) { consumer.consume(event) }
         verify(processor, times(1)).process(event)
     }
 
     @Test
-    fun `email dispatch retryable or permanent failure does not fail consumption`() {
-        val event = sampleEvent(subject = "frank")
+    fun `propagates permanent delivery failure for broker visibility`() {
+        val event = sampleEvent(subject = "frank@example.com")
         doReturn(NotificationConsumptionOutcome.APPLIED).`when`(processor).process(event)
-        doReturn(NotificationPreferences(emailEnabled = true)).`when`(preferenceStore).get("frank")
+        doReturn(NotificationPreferences(emailEnabled = true)).`when`(preferenceStore).get("frank@example.com")
         doReturn(EmailDeliveryOutcome.PERMANENT_FAILURE).`when`(emailDispatcher)
             .send(anyString(), anyString(), anyString())
 
-        val outcome = consumer.consume(event)
-
-        assertEquals(NotificationConsumptionOutcome.APPLIED, outcome)
+        assertThrows(RuntimeException::class.java) { consumer.consume(event) }
         verify(processor, times(1)).process(event)
+        verify(emailDispatcher, times(1)).send(anyString(), anyString(), anyString())
     }
 
     @Test

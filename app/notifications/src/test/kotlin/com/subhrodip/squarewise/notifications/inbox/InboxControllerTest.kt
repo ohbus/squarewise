@@ -180,6 +180,22 @@ class InboxControllerTest {
     }
 
     @Test
+    fun `returns an empty first page without inventing a cursor`() {
+        val page = NotificationInboxService(InMemoryNotificationInboxStore()).page("alice", null, 10)
+
+        assertTrue(page.items.isEmpty())
+        assertEquals(null, page.nextCursor)
+    }
+
+    @Test
+    fun `rejects both lower and upper page limit boundaries`() {
+        val service = NotificationInboxService(InMemoryNotificationInboxStore())
+
+        assertThrows(IllegalArgumentException::class.java) { service.page("alice", null, 0) }
+        assertThrows(IllegalArgumentException::class.java) { service.page("alice", null, 101) }
+    }
+
+    @Test
     fun `in memory store markAsRead updates status correctly`() {
         val store = InMemoryNotificationInboxStore()
         val id = UUID.randomUUID()

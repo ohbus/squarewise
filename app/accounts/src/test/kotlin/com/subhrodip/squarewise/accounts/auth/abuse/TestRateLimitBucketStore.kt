@@ -1,5 +1,6 @@
 package com.subhrodip.squarewise.accounts.auth.abuse
 
+import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
 import org.springframework.context.annotation.Profile
@@ -49,7 +50,7 @@ class TestRateLimitBucketStore : RateLimiter {
         return RateLimitDecision(
             allowed,
             if (allowed) policy.maximumPermits - 1 else 0,
-            if (allowed) java.time.Duration.ZERO else policy.window,
+            if (allowed) Duration.ZERO else policy.window,
             policy.id
         )
     }

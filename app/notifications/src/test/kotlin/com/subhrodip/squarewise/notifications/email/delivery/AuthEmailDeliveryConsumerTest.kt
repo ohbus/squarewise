@@ -3,6 +3,7 @@ package com.subhrodip.squarewise.notifications.email.delivery
 import org.mockito.ArgumentMatchers.anyString
 
 import com.subhrodip.squarewise.notifications.email.security.AuthEmailEnvelopeProtector
+import com.subhrodip.squarewise.notifications.errors.NotificationDomainException
 import com.subhrodip.squarewise.notifications.delivery.rate.DeliveryRateLimiter
 import java.time.Instant
 import org.assertj.core.api.Assertions.assertThat
@@ -74,7 +75,7 @@ class AuthEmailDeliveryConsumerTest {
     fun `expired credential is rejected before reveal or dispatch`() {
         val expired = event(expiresAt = now)
 
-        assertThrows(IllegalArgumentException::class.java) { consumer.consume(expired, now) }
+        assertThrows(NotificationDomainException::class.java) { consumer.consume(expired, now) }
 
         verify(protector, never()).reveal(anyString(), anyString(), anyString())
         verify(dispatcher, never()).send(
@@ -86,7 +87,7 @@ class AuthEmailDeliveryConsumerTest {
 
     @Test
     fun `unsupported template is rejected before reveal or dispatch`() {
-        assertThrows(IllegalArgumentException::class.java) {
+        assertThrows(NotificationDomainException::class.java) {
             consumer.consume(event(template = "PASSWORD_RESET"), now)
         }
 

@@ -239,6 +239,62 @@ class RecurringExpenseControllerTest @Autowired constructor(
     }
 
     @Test
+    fun `rejects currency mismatch between schedule and custom payers or allocations`() {
+        val group = groupStore.create("alice", CreateGroupRequest("Currency mismatch group", "TRIP", "EUR"))
+        val aliceId = groupStore.listMembers(group.groupId, "alice").first().membershipId.toString()
+        val validRequest = CreateRecurringScheduleRequestDto(
+            description = "EUR schedule",
+            amount = MoneyDto("EUR", "1000"),
+            frequency = RecurrenceFrequency.WEEKLY,
+            startDate = LocalDate.of(2026, 10, 1)
+        )
+
+        val payerCurrencyMismatch = validRequest.copy(
+            payers = listOf(ExpensePayerDto(aliceId, MoneyDto("USD", "1000")))
+        )
+        val errorPayer = assertThrows<SquarewiseException> {
+            controller.createSchedule(group.groupId, payerCurrencyMismatch, alice)
+        }
+        assertEquals(CategoryCode.VALIDATION_ERROR, errorPayer.definition.category)
+
+        val allocationCurrencyMismatch = validRequest.copy(
+            allocations = listOf(ExpenseAllocationItemDto(aliceId, MoneyDto("USD", "1000")))
+        )
+        val errorAlloc = assertThrows<SquarewiseException> {
+            controller.createSchedule(group.groupId, allocationCurrencyMismatch, alice)
+        }
+        assertEquals(CategoryCode.VALIDATION_ERROR, errorAlloc.definition.category)
+    }
+
+    @Test
+    fun `rejects non-positive custom payer or allocation amounts`() {
+        val group = groupStore.create("alice", CreateGroupRequest("Non positive group", "TRIP", "EUR"))
+        val aliceId = groupStore.listMembers(group.groupId, "alice").first().membershipId.toString()
+        val validRequest = CreateRecurringScheduleRequestDto(
+            description = "EUR schedule",
+            amount = MoneyDto("EUR", "1000"),
+            frequency = RecurrenceFrequency.WEEKLY,
+            startDate = LocalDate.of(2026, 10, 1)
+        )
+
+        val zeroPayer = validRequest.copy(
+            payers = listOf(ExpensePayerDto(aliceId, MoneyDto("EUR", "0")), ExpensePayerDto(aliceId, MoneyDto("EUR", "1000")))
+        )
+        val errorPayer = assertThrows<SquarewiseException> {
+            controller.createSchedule(group.groupId, zeroPayer, alice)
+        }
+        assertEquals(CategoryCode.VALIDATION_ERROR, errorPayer.definition.category)
+
+        val zeroAlloc = validRequest.copy(
+            allocations = listOf(ExpenseAllocationItemDto(aliceId, MoneyDto("EUR", "0")), ExpenseAllocationItemDto(aliceId, MoneyDto("EUR", "1000")))
+        )
+        val errorAlloc = assertThrows<SquarewiseException> {
+            controller.createSchedule(group.groupId, zeroAlloc, alice)
+        }
+        assertEquals(CategoryCode.VALIDATION_ERROR, errorAlloc.definition.category)
+    }
+
+    @Test
     fun `rejects missing principal for an existing group`() {
         val group = groupStore.create("alice", CreateGroupRequest("No Anonymous Schedules", "TRIP", "EUR"))
         val request = CreateRecurringScheduleRequestDto(

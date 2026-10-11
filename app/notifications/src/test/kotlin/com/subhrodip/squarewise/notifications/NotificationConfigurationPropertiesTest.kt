@@ -3,6 +3,7 @@ package com.subhrodip.squarewise.notifications
 import com.subhrodip.squarewise.notifications.consumer.config.NotificationMessagingProperties
 import com.subhrodip.squarewise.notifications.email.config.EmailProperties
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 
 /** Verifies notification broker and SMTP properties retain values supplied by binding. */
@@ -22,16 +23,16 @@ class NotificationConfigurationPropertiesTest {
 
     @Test
     fun `notification delivery policy bounds fail closed`() {
-        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException::class.java) {
+        assertThrows(IllegalArgumentException::class.java) {
             NotificationMessagingProperties(deliveryMaxPermits = 0)
         }
-        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException::class.java) {
+        assertThrows(IllegalArgumentException::class.java) {
             NotificationMessagingProperties(deliveryWindowSeconds = 0)
         }
-        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException::class.java) {
+        assertThrows(IllegalArgumentException::class.java) {
             NotificationMessagingProperties(deliveryMaxPermits = 1_000_001)
         }
-        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException::class.java) {
+        assertThrows(IllegalArgumentException::class.java) {
             NotificationMessagingProperties(deliveryWindowSeconds = 86_401)
         }
         NotificationMessagingProperties(deliveryMaxPermits = 1_000_000, deliveryWindowSeconds = 86_400)

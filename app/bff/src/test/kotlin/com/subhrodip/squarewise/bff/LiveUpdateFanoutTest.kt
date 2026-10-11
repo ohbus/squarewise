@@ -14,6 +14,7 @@ import com.subhrodip.squarewise.bff.realtime.GroupInvalidation
 import com.subhrodip.squarewise.bff.realtime.LiveUpdate
 import com.subhrodip.squarewise.bff.realtime.LiveUpdateFanout
 import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
+import java.time.ZoneId
 
 
 import org.assertj.core.api.Assertions.assertThat
@@ -253,7 +254,7 @@ class LiveUpdateFanoutTest {
     private class MutableClock(var now: Instant) : Clock() {
         override fun getZone(): ZoneOffset = ZoneOffset.UTC
 
-        override fun withZone(zone: java.time.ZoneId): Clock = this
+        override fun withZone(zone: ZoneId): Clock = this
 
         override fun instant(): Instant = now
     }

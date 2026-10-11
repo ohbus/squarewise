@@ -4,6 +4,8 @@ import java.nio.charset.StandardCharsets
 import java.security.GeneralSecurityException
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
+import com.subhrodip.squarewise.errors.catalog.PlatformErrors
+import com.subhrodip.squarewise.security.errors.PlatformDomainException
 
 /** HMAC-SHA-256 adapter for storing one-time credential digests. */
 class HmacCredentialDigest(secret: ByteArray) : CredentialDigest {
@@ -17,7 +19,7 @@ class HmacCredentialDigest(secret: ByteArray) : CredentialDigest {
             mac.init(SecretKeySpec(key, ALGORITHM))
             return mac.doFinal(credential.toByteArray(StandardCharsets.UTF_8))
         } catch (exception: GeneralSecurityException) {
-            throw IllegalStateException("Credential digest algorithm is unavailable", exception)
+            throw PlatformDomainException(PlatformErrors.PLATFORM_CONFIGURATION_INVALID, cause = exception)
         }
     }
 

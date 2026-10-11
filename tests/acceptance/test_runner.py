@@ -271,7 +271,7 @@ class RunnerTest(unittest.TestCase):
     def test_probe_success(self) -> None:
         status, detail = runner.probe(f"{self.server_url}/actuator/health", timeout=1.0)
         self.assertEqual(status, "passed")
-        self.assertEqual(detail, "HTTP 200")
+        self.assertEqual(detail, "HTTP 200 status=UP")
 
     def test_probe_connection_refused(self) -> None:
         unused_port = find_free_port()
@@ -308,7 +308,7 @@ class RunnerTest(unittest.TestCase):
             self.assertEqual(statuses["QA-HEALTH"], "passed")
             self.assertEqual(statuses["QA-GROUP-EXPENSE-SETTLEMENT"], "passed")
             self.assertEqual(statuses["QA-OFFLINE-REPLAY"], "passed")
-            self.assertEqual(statuses["QA-WEBSOCKET-RESYNC"], "passed")
+            self.assertEqual(statuses["QA-GRAPHQL-HTTP-RESYNC"], "passed")
             self.assertEqual(statuses["QA05-ROLLBACK"], "passed")
             self.assertEqual(statuses["QA05-CONCURRENCY"], "passed")
             self.assertEqual(statuses["QA05-AUTHORIZATION"], "passed")
@@ -335,7 +335,7 @@ class RunnerTest(unittest.TestCase):
             self.assertEqual(statuses["QA-HEALTH"], "blocked")
             self.assertEqual(statuses["QA-GROUP-EXPENSE-SETTLEMENT"], "blocked")
             self.assertEqual(statuses["QA-OFFLINE-REPLAY"], "blocked")
-            self.assertEqual(statuses["QA-WEBSOCKET-RESYNC"], "blocked")
+            self.assertEqual(statuses["QA-GRAPHQL-HTTP-RESYNC"], "blocked")
 
     def test_offline_services_with_require_services(self) -> None:
         repo_root = Path(__file__).resolve().parents[2]

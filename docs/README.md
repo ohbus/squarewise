@@ -120,6 +120,7 @@ This index is the navigation entry point for repository documentation. [`AGENTS.
 - [Current task state](reviews/current-task-state.md)
 - [DOC-15A architecture-contract drift](reviews/DOC-15A-architecture-contract-drift.md)
 - [DOC-15B build-code drift](reviews/DOC-15B-build-code-drift.md)
+- [Financial calculations and currency audit](reviews/financial-calculations-and-currency-audit.md)
 - [Production-readiness audit](reviews/production-readiness-audit.md)
 - [Visuals index](visuals/README.md)
 - [Brand identity and logo assets](visuals/README.md#brand-identity-assets) ([Logo](visuals/squarewise-logo.svg), [Icon](visuals/squarewise-icon.svg))

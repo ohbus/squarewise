@@ -1,6 +1,7 @@
 package com.subhrodip.squarewise.expensecore.sync.persistence
 
 import com.subhrodip.squarewise.expensecore.sync.domain.InvalidSyncCursorException
+import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
 import com.subhrodip.squarewise.expensecore.sync.domain.SyncChange
 import com.subhrodip.squarewise.expensecore.sync.domain.SyncCursor
 import com.subhrodip.squarewise.expensecore.sync.domain.SyncPage
@@ -108,7 +109,7 @@ class JpaSynchronizationStore(
         if (cursor == null) return 0
         val decoded = SyncCursor.decode(cursor)
         if (decoded.groupId != groupId) throw InvalidSyncCursorException()
-        if (!decoded.expiresAt.isAfter(clock.instant())) throw InvalidSyncCursorException()
+        if (!decoded.expiresAt.isAfter(clock.instant())) throw InvalidSyncCursorException(ExpenseErrors.SYNC_CURSOR_EXPIRED)
         return decoded.revision
     }
 }

@@ -1,6 +1,10 @@
 package com.subhrodip.squarewise.bff.graphql
 
 import com.subhrodip.squarewise.errors.code.CategoryCode
+import com.subhrodip.squarewise.errors.catalog.BffErrors
+import com.subhrodip.squarewise.errors.catalog.PlatformErrors
+import com.subhrodip.squarewise.errors.graphql.GraphQLExtensionsFormatter
+import com.subhrodip.squarewise.errors.request.RequestIdContext
 import graphql.ExecutionResult
 import graphql.GraphQLError
 import graphql.GraphqlErrorBuilder
@@ -8,8 +12,6 @@ import graphql.execution.instrumentation.SimplePerformantInstrumentation
 import graphql.execution.instrumentation.InstrumentationState
 import graphql.execution.instrumentation.parameters.InstrumentationExecutionParameters
 import java.util.concurrent.CompletableFuture
-import java.util.Locale
-import java.util.UUID
 
 /** Adds the application code to pre-execution depth and complexity failures. */
 class GraphQlLimitErrorInstrumentation : SimplePerformantInstrumentation() {
@@ -22,15 +24,16 @@ class GraphQlLimitErrorInstrumentation : SimplePerformantInstrumentation() {
             if (error.extensions?.containsKey("code") == true) {
                 error
             } else {
-                val category = if (isQueryLimitError(error)) CategoryCode.RATE_LIMIT_EXCEEDED else CategoryCode.VALIDATION_ERROR
+                val limit = error.extensions?.get("squarewiseLimit")
+                val definition = if (limit != null) PlatformErrors.SECURITY_RATE_LIMITED else BffErrors.GRAPHQL_INPUT_INVALID
+                val category = definition.category
                 GraphqlErrorBuilder.newError()
-                    .message(if (category == CategoryCode.RATE_LIMIT_EXCEEDED) "GraphQL query limit exceeded" else "GraphQL request is invalid")
+                    .message(definition.safeDetail)
                     .errorType(error.errorType)
                     .locations(error.locations)
                     .extensions(
                         buildMap<String, Any> {
-                            put("code", category.name)
-                            put("requestId", UUID.randomUUID().toString())
+                            putAll(GraphQLExtensionsFormatter.fromDefinition(definition, RequestIdContext.getOrGenerate()))
                             if (category == CategoryCode.RATE_LIMIT_EXCEEDED) put("retryAfterSeconds", 60)
                         }
                     )
@@ -40,8 +43,4 @@ class GraphQlLimitErrorInstrumentation : SimplePerformantInstrumentation() {
         return CompletableFuture.completedFuture(executionResult.transform { it.errors(errors) })
     }
 
-    private fun isQueryLimitError(error: GraphQLError): Boolean {
-        val message = error.message.lowercase(Locale.ROOT)
-        return "maximum query complexity" in message || "maximum query depth" in message
-    }
 }

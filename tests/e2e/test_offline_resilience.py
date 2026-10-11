@@ -321,7 +321,11 @@ def run_offline_resilience_tests() -> int:
     delta_changes = delta_page.get("changes", [])
     assert len(delta_changes) >= 1, f"Expected at least 1 change in delta, got: {delta_changes}"
     latest_change = delta_changes[-1]
-    assert bob_expense_id in str(latest_change.get("entityId")) or str(latest_change.get("payload", "")), f"Expected Bob's expense in delta change: {latest_change}"
+    assert any(
+        bob_expense_id == str(change.get("entityId"))
+        or bob_expense_id in json.dumps(change.get("payload", {}), sort_keys=True)
+        for change in delta_changes
+    ), f"Expected Bob's expense in delta changes: {delta_changes}"
     print(f"  ✓ Sync cursor gap recovered: received {len(delta_changes)} incremental change(s), latest revision={latest_change.get('revision')}")
 
     print("\n" + "=" * 70)

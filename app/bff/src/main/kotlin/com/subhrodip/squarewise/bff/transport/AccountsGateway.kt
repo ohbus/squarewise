@@ -6,15 +6,16 @@ import com.subhrodip.squarewise.bff.transport.model.output.BffProfile
 import com.subhrodip.squarewise.bff.transport.model.auth.AccountsTokenResponse
 import com.subhrodip.squarewise.bff.transport.model.auth.BrowserLoginStartRequest
 import com.subhrodip.squarewise.bff.transport.model.auth.BrowserLoginStartResponse
-import com.subhrodip.squarewise.bff.transport.UpstreamServiceException
-
 import com.subhrodip.squarewise.bff.transport.BffGatewayFilters
+import com.subhrodip.squarewise.bff.errors.UpstreamProblemDecoder
+import com.subhrodip.squarewise.bff.errors.toUpstreamException
 import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
 import java.time.Duration
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient
 import reactor.core.publisher.Mono
+import com.fasterxml.jackson.databind.ObjectMapper
 
 /** REST gateway for authenticated Accounts profile calls. */
 @Component
@@ -24,12 +25,13 @@ class AccountsGateway(
     @Value("${'$'}{squarewise.bff.upstream-timeout:2s}") private val timeout: Duration
 ) {
     private val client = builder.filter(BffGatewayFilters.bearerPropagation).baseUrl(baseUrl).build()
+    private val upstreamProblemDecoder = UpstreamProblemDecoder(ObjectMapper())
 
     fun getMe(bearer: String?): Mono<BffProfile> =
         client.get().uri(ApiEndpoints.Accounts.V1.PATH_ME)
             .headers { headers -> bearer?.let { headers.setBearerAuth(it) } }
             .retrieve()
-            .onStatus({ it.isError }) { response -> Mono.error(UpstreamServiceException(response.statusCode().value(), "Accounts returned HTTP ${response.statusCode().value()}")) }
+            .onStatus({ it.isError }) { response -> response.toUpstreamException(upstreamProblemDecoder, "accounts") }
             .bodyToMono(BffProfile::class.java)
             .timeout(timeout)
 
@@ -38,7 +40,7 @@ class AccountsGateway(
         client.post().uri(ApiEndpoints.Accounts.V1.PATH_LOGIN_START)
             .bodyValue(request)
             .retrieve()
-            .onStatus({ it.isError }) { response -> Mono.error(UpstreamServiceException(response.statusCode().value(), "Accounts returned HTTP ${response.statusCode().value()}")) }
+            .onStatus({ it.isError }) { response -> response.toUpstreamException(upstreamProblemDecoder, "accounts") }
             .bodyToMono(BrowserLoginStartResponse::class.java)
             .timeout(timeout)
 
@@ -47,7 +49,7 @@ class AccountsGateway(
         client.post().uri(ApiEndpoints.Accounts.V1.PATH_LOGIN_VERIFY)
             .bodyValue(mapOf("credential" to credential, "clientKind" to "BROWSER"))
             .retrieve()
-            .onStatus({ it.isError }) { response -> Mono.error(UpstreamServiceException(response.statusCode().value(), "Accounts returned HTTP ${response.statusCode().value()}")) }
+            .onStatus({ it.isError }) { response -> response.toUpstreamException(upstreamProblemDecoder, "accounts") }
             .bodyToMono(AccountsTokenResponse::class.java)
             .timeout(timeout)
 
@@ -56,7 +58,7 @@ class AccountsGateway(
         client.post().uri(ApiEndpoints.Accounts.V1.PATH_TOKEN_REFRESH)
             .bodyValue(mapOf("refreshToken" to refreshToken))
             .retrieve()
-            .onStatus({ it.isError }) { response -> Mono.error(UpstreamServiceException(response.statusCode().value(), "Accounts returned HTTP ${response.statusCode().value()}")) }
+            .onStatus({ it.isError }) { response -> response.toUpstreamException(upstreamProblemDecoder, "accounts") }
             .bodyToMono(AccountsTokenResponse::class.java)
             .timeout(timeout)
 
@@ -66,7 +68,7 @@ class AccountsGateway(
             .headers { headers -> headers.setBearerAuth(accessToken) }
             .bodyValue(mapOf("refreshToken" to refreshToken))
             .retrieve()
-            .onStatus({ it.isError }) { response -> Mono.error(UpstreamServiceException(response.statusCode().value(), "Accounts returned HTTP ${response.statusCode().value()}")) }
+            .onStatus({ it.isError }) { response -> response.toUpstreamException(upstreamProblemDecoder, "accounts") }
             .toBodilessEntity()
             .then()
 }

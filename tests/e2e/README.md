@@ -177,8 +177,8 @@ the local Accounts database before the suites run. This is fixture setup only:
 application profile reads remain non-provisioning, and production/staging never
 seed or implicitly create profiles from bearer-token reads.
 
-The product journey exercises Accounts batch lookup in both permitted modes:
-owner-only requests use the signed user token, while mixed or unknown profile IDs
-send the explicit `X-Squarewise-Workload-Role: internal-service` header. This
-matches the fail-closed authorization boundary; ordinary users are not granted
-bulk profile access merely to test deduplication.
+The product journey exercises Accounts batch lookup with Alice's signed user
+token, then verifies that the same token with a forged
+`X-Squarewise-Workload-Role: internal-service` header is rejected with HTTP 403.
+This matches the fail-closed authorization boundary; ordinary users are not
+granted bulk profile access merely to test deduplication.

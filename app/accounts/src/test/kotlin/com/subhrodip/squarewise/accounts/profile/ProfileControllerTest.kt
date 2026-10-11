@@ -35,6 +35,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.test.web.servlet.setup.MockMvcBuilders
+import org.springframework.security.authentication.TestingAuthenticationToken
 
 class ProfileControllerTest {
     private val recordingProfiles = RecordingProfileStore(InMemoryProfileStore())
@@ -50,6 +51,14 @@ class ProfileControllerTest {
         .build()
     private val alice = RequestPostProcessor { request ->
         request.userPrincipal = Principal { "oidc|alice" }
+        request
+    }
+    private val internalService = RequestPostProcessor { request ->
+        request.userPrincipal = TestingAuthenticationToken(
+            "squarewise-internal",
+            "",
+            "SCOPE_squarewise.internal"
+        )
         request
     }
 
@@ -68,6 +77,7 @@ class ProfileControllerTest {
 
         mvc.perform(
             get(ApiEndpoints.Accounts.V1.profileById(accountId))
+                .with(internalService)
                 .header(ApiEndpoints.Headers.WORKLOAD_ROLE, ApiEndpoints.Headers.WORKLOAD_ROLE_INTERNAL)
         )
             .andExpect(status().isOk)
@@ -192,7 +202,11 @@ class ProfileControllerTest {
         val bobId = UUID.nameUUIDFromBytes("oidc|bob".toByteArray(StandardCharsets.UTF_8))
         recordingProfiles.seed("oidc|bob", bobId)
 
-        mvc.perform(get(ApiEndpoints.Accounts.V1.profileById(bobId)).with(alice))
+        mvc.perform(
+            get(ApiEndpoints.Accounts.V1.profileById(bobId))
+                .with(alice)
+                .header(ApiEndpoints.Headers.WORKLOAD_ROLE, ApiEndpoints.Headers.WORKLOAD_ROLE_INTERNAL)
+        )
             .andExpect(status().isForbidden)
             .andExpect(jsonPath("$.code").value("AUTHORIZATION_ERROR"))
             .andExpect(jsonPath("$.detail").value("Access denied to foreign profile"))
@@ -224,7 +238,7 @@ class ProfileControllerTest {
 
         mvc.perform(
             get(ApiEndpoints.Accounts.V1.profileById(bobId))
-                .header(ApiEndpoints.Headers.WORKLOAD_ROLE, ApiEndpoints.Headers.WORKLOAD_ROLE_INTERNAL)
+                .with(internalService)
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.accountId").value(bobId.toString()))
@@ -236,6 +250,7 @@ class ProfileControllerTest {
         val nonExistentId = UUID.randomUUID()
         mvc.perform(
             get(ApiEndpoints.Accounts.V1.profileById(nonExistentId))
+                .with(internalService)
                 .header(ApiEndpoints.Headers.WORKLOAD_ROLE, ApiEndpoints.Headers.WORKLOAD_ROLE_INTERNAL)
         )
             .andExpect(status().isNotFound)
@@ -260,6 +275,7 @@ class ProfileControllerTest {
         val requestBody = "{\"accountIds\": [\"$aliceId\", \"$bobId\", \"$nonExistentId\"]}"
         mvc.perform(
             post(ApiEndpoints.Accounts.V1.PATH_PROFILES_BATCH)
+                .with(internalService)
                 .header(ApiEndpoints.Headers.WORKLOAD_ROLE, ApiEndpoints.Headers.WORKLOAD_ROLE_INTERNAL)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestBody)
@@ -271,6 +287,7 @@ class ProfileControllerTest {
         val emptyBatch = "{\"accountIds\": [\"$nonExistentId\"]}"
         mvc.perform(
             post(ApiEndpoints.Accounts.V1.PATH_PROFILES_BATCH)
+                .with(internalService)
                 .header(ApiEndpoints.Headers.WORKLOAD_ROLE, ApiEndpoints.Headers.WORKLOAD_ROLE_INTERNAL)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(emptyBatch)
@@ -344,6 +361,7 @@ class ProfileControllerTest {
     fun `rejects batch profile lookup with empty account ids`() {
         mvc.perform(
             post(ApiEndpoints.Accounts.V1.PATH_PROFILES_BATCH)
+                .with(internalService)
                 .header(ApiEndpoints.Headers.WORKLOAD_ROLE, ApiEndpoints.Headers.WORKLOAD_ROLE_INTERNAL)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"accountIds\": []}")
@@ -356,6 +374,7 @@ class ProfileControllerTest {
     fun `rejects batch profile lookup with invalid uuid`() {
         mvc.perform(
             post(ApiEndpoints.Accounts.V1.PATH_PROFILES_BATCH)
+                .with(internalService)
                 .header(ApiEndpoints.Headers.WORKLOAD_ROLE, ApiEndpoints.Headers.WORKLOAD_ROLE_INTERNAL)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"accountIds\": [\"not-a-valid-uuid\"]}")
@@ -370,6 +389,7 @@ class ProfileControllerTest {
 
         mvc.perform(
             post(ApiEndpoints.Accounts.V1.PATH_PROFILES_BATCH)
+                .with(internalService)
                 .header(ApiEndpoints.Headers.WORKLOAD_ROLE, ApiEndpoints.Headers.WORKLOAD_ROLE_INTERNAL)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"accountIds\":[$accountIds]}")
@@ -383,6 +403,7 @@ class ProfileControllerTest {
     fun `deduplicates repeated profile identifiers in batch response`() {
         mvc.perform(
             post(ApiEndpoints.Accounts.V1.PATH_PROFILES_BATCH)
+                .with(internalService)
                 .header(ApiEndpoints.Headers.WORKLOAD_ROLE, ApiEndpoints.Headers.WORKLOAD_ROLE_INTERNAL)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"accountIds\":[\"$aliceId\",\"$aliceId\"]}")

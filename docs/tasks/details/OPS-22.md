@@ -1,5 +1,7 @@
 # OPS-22: 1M-user capacity baseline and production readiness evidence
 
+Status: workload/framework complete; production-like acceptance evidence remains open.
+
 Define a measurable one-million-registered-user workload model, infrastructure
 starting envelope, per-surface SLOs, and a mixed k6 profile. Validate it against
 production-like data and topology with soak, burst, replica-loss, broker-delay,
@@ -29,3 +31,8 @@ and the environment-specific release-gate commands.
    failures.
 4. **Readiness Gate Integration:** Sizing envelope and environment boundaries are
    reconciled with `tools/ops/validate_release_gate.py` and the release checklist.
+
+The local smoke and soak establish only a single-host calibration boundary. OPS-22
+stays open until the declared production-like soak, burst, replica-loss,
+broker-delay, database-failover, recovery, cost, and saturation artifacts are
+attached and reviewed.

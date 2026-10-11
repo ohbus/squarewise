@@ -2,6 +2,7 @@ package com.subhrodip.squarewise.bff.messaging.config
 
 import com.subhrodip.squarewise.bff.messaging.service.BffEventConsumer
 import com.subhrodip.squarewise.bff.messaging.transport.RabbitBffEventListener
+import com.subhrodip.squarewise.bff.messaging.transport.DeadLetterPublisher
 import com.subhrodip.squarewise.bff.realtime.LiveUpdateFanout
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -43,7 +44,11 @@ class BffMessagingConfigurationTest {
     @Test
     fun `builds manually acknowledged listener container`() {
         val consumer = configuration.bffEventConsumer(LiveUpdateFanout(), configuration.bffEventDeduplicator(properties))
-        val listener = configuration.rabbitBffEventListener(consumer, mock(ObjectMapper::class.java))
+        val listener = configuration.rabbitBffEventListener(
+            consumer,
+            mock(ObjectMapper::class.java),
+            DeadLetterPublisher { }
+        )
         val queue = configuration.bffReplicaQueue()
         val container = configuration.bffMessageListenerContainer(
             mock(ConnectionFactory::class.java),

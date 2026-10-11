@@ -22,12 +22,14 @@ class NotificationInboxService(private val store: NotificationInboxStore, privat
     fun list(subject: String): List<InboxItem> = store.list(subject)
     fun markAsRead(subject: String, notificationId: UUID): Boolean = store.markAsRead(subject, notificationId)
     fun page(subject: String, cursor: String?, limit: Int): InboxPage {
-        val sorted = dbTelemetry.measureQuery("notification.inbox.history", "approved-query") {
-            DbContextHolder.withContext(DbExecutionContext("notification.inbox.history", DbOperationKind.QUERY, ReadConsistency.EVENTUAL, readerEligible = true)) { list(subject) }
-        }.sortedWith(compareByDescending<InboxItem> { it.occurredAt }.thenByDescending { it.notificationId })
-        val start = cursor?.let(::decodeCursor)?.let { key -> sorted.indexOfFirst { it.occurredAt < key.first || (it.occurredAt == key.first && it.notificationId < key.second) }.takeIf { it >= 0 } ?: sorted.size } ?: 0
-        val page = sorted.drop(start).take(limit)
-        return InboxPage(page, if (start + page.size < sorted.size) encodeCursor(page.last()) else null)
+        require(limit in 1..100) { "inbox page limit must be between 1 and 100" }
+        val key = cursor?.let(::decodeCursor)
+        val page = dbTelemetry.measureQuery("notification.inbox.history", "approved-query") {
+            DbContextHolder.withContext(DbExecutionContext("notification.inbox.history", DbOperationKind.QUERY, ReadConsistency.EVENTUAL, readerEligible = true)) {
+                store.page(subject, key?.first, key?.second, limit)
+            }
+        }
+        return InboxPage(page, page.lastOrNull()?.let(::encodeCursor).takeIf { page.size == limit })
     }
     private fun encodeCursor(item: InboxItem): String = Base64.getUrlEncoder().withoutPadding().encodeToString("${item.occurredAt}|${item.notificationId}".toByteArray())
     private fun decodeCursor(cursor: String): Pair<Instant, UUID> = runCatching { String(Base64.getUrlDecoder().decode(cursor)).split('|').also { require(it.size == 2) }.let { Instant.parse(it[0]) to UUID.fromString(it[1]) } }.getOrElse { throw NotificationDomainException(NotificationErrors.INBOX_CURSOR_INVALID, "invalid inbox cursor", it) }

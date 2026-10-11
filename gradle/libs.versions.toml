@@ -50,5 +50,6 @@ jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", ver
 jmh-core = { module = "org.openjdk.jmh:jmh-core", version = "1.37" }
 jmh-generator-annprocess = { module = "org.openjdk.jmh:jmh-generator-annprocess", version = "1.37" }
 jackson-datatype-jsr310 = { module = "com.fasterxml.jackson.datatype:jackson-datatype-jsr310", version.ref = "jackson" }
+jackson-module-kotlin = { module = "tools.jackson.module:jackson-module-kotlin" }
 
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }

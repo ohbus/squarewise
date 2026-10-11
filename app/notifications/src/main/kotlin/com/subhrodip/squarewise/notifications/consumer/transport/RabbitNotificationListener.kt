@@ -10,9 +10,11 @@ import com.subhrodip.squarewise.errors.async.AsyncExecutionTemplate
 import com.subhrodip.squarewise.errors.async.AsyncMetricsRecorder
 import com.subhrodip.squarewise.errors.async.MessageDisposition
 import com.subhrodip.squarewise.errors.catalog.NotificationErrors
+import com.subhrodip.squarewise.errors.exceptions.FatalErrorClassifier
 
 import com.rabbitmq.client.Channel
 import java.util.UUID
+import java.util.concurrent.CancellationException
 import org.springframework.amqp.core.Message
 import org.springframework.amqp.rabbit.annotation.RabbitListener
 import org.springframework.amqp.rabbit.listener.api.ChannelAwareMessageListener
@@ -23,12 +25,14 @@ fun BrokerEnvelope.toNotificationEvent(): NotificationEvent {
     val notificationId = (payload["notificationId"] as? String)?.let {
         runCatching { UUID.fromString(it) }.getOrNull()
     } ?: aggregateId
-    val subject = (payload["subject"] as? String
-        ?: payload["recipient"] as? String
-        ?: payload["recipientId"] as? String
-        ?: payload["userId"] as? String)
-        ?.takeIf { it.isNotBlank() }
-        ?: groupId.toString()
+    val subject = listOfNotNull(
+        payload["subject"] as? String,
+        payload["changedBy"] as? String,
+        payload["recipient"] as? String,
+        payload["recipientId"] as? String,
+        payload["userId"] as? String
+    ).firstOrNull { it.isNotBlank() }
+        ?: throw InvalidEnvelopeException("Notification payload is missing a recipient subject")
     val message = (payload["message"] as? String ?: payload["description"] as? String)
         ?.takeIf { it.isNotBlank() }
         ?: "$eventType for group $groupId"
@@ -47,7 +51,8 @@ fun BrokerEnvelope.toNotificationEvent(): NotificationEvent {
 class RabbitNotificationListener(
     private val consumer: NotificationConsumer,
     private val envelopeParser: BrokerEnvelopeParser,
-    private val asyncExecutionTemplate: AsyncExecutionTemplate = AsyncExecutionTemplate(AsyncMetricsRecorder { _, _, _ -> })
+    private val asyncExecutionTemplate: AsyncExecutionTemplate = AsyncExecutionTemplate(AsyncMetricsRecorder { _, _, _ -> }),
+    private val deadLetterPublisher: DeadLetterPublisher,
 ) : ChannelAwareMessageListener {
     @RabbitListener(
         queues = ["\${squarewise.notifications.queue:squarewise.notifications.v2}"],
@@ -56,18 +61,36 @@ class RabbitNotificationListener(
     override fun onMessage(message: Message, channel: Channel?) {
         val deliveryTag = message.messageProperties.deliveryTag
         try {
-            val event = envelopeParser.parse(message.body).toNotificationEvent()
             when (val result = asyncExecutionTemplate.execute(
-                context = AsyncContext(event.eventId, event.eventType, 1, attemptCount(message), "notifications.rabbit"),
+                context = AsyncContext(
+                    UUID.nameUUIDFromBytes(message.body),
+                    "notification.event",
+                    1,
+                    attemptCount(message),
+                    "notifications.rabbit",
+                ),
                 definition = NotificationErrors.NOTIFICATION_DISPATCH_FAILED,
                 queue = "squarewise.notifications.v2",
-                payload = message.body,
-            ) { consumer.consume(event) }) {
+                payload = if (message.body.isEmpty()) "<empty>".toByteArray() else message.body,
+            ) { consumer.consume(envelopeParser.parse(message.body).toNotificationEvent()) }) {
                 is AsyncExecutionResult.Completed -> channel?.basicAck(deliveryTag, false)
-                is AsyncExecutionResult.Failed -> channel?.basicReject(deliveryTag, result.disposition == MessageDisposition.NACK_REQUEUE)
+                is AsyncExecutionResult.Failed -> {
+                    val deadLetter = result.deadLetter
+                    if (deadLetter != null) {
+                        try {
+                            deadLetterPublisher.publish(deadLetter)
+                            channel?.basicAck(deliveryTag, false)
+                        } catch (publishFailure: Exception) {
+                            channel?.basicReject(deliveryTag, false)
+                        }
+                    } else {
+                        channel?.basicReject(deliveryTag, result.disposition == MessageDisposition.NACK_REQUEUE)
+                    }
+                }
             }
-        } catch (_: InvalidEnvelopeException) {
-            channel?.basicReject(deliveryTag, false)
+        } catch (exception: Exception) {
+            if (exception is CancellationException || FatalErrorClassifier.isFatal(exception)) throw exception
+            channel?.basicReject(deliveryTag, true)
         }
     }
 

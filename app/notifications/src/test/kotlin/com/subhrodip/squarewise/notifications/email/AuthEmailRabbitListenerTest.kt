@@ -8,32 +8,60 @@ import com.rabbitmq.client.Channel
 import java.nio.charset.StandardCharsets
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.doThrow
+import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.any
 import org.springframework.amqp.core.Message
 import org.springframework.amqp.core.MessageProperties
 import tools.jackson.databind.ObjectMapper
 import com.subhrodip.squarewise.notifications.email.delivery.EmailDeliveryOutcome
+import com.subhrodip.squarewise.notifications.consumer.transport.DeadLetterPublisher
+import com.subhrodip.squarewise.errors.async.DeadLetterRecord
 import com.subhrodip.squarewise.errors.async.AsyncExecutionTemplate
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.times
+import java.util.concurrent.CancellationException
 
 class AuthEmailRabbitListenerTest {
     private val consumer = mock(AuthEmailDeliveryConsumer::class.java)
-    private val listener = AuthEmailRabbitListener(ObjectMapper(), consumer)
+    private val listener = AuthEmailRabbitListener(ObjectMapper(), consumer, deadLetterPublisher = DeadLetterPublisher { })
 
     @Test
-    fun `rejects malformed auth email without requeue`() {
+    fun `publishes malformed auth email to dead letter and acknowledges it`() {
         val channel = TestChannel()
-        listener.onMessage(message("{not-json}", 11L), channel)
+        val publisher = RecordingDeadLetterPublisher()
+        val boundaryListener = AuthEmailRabbitListener(ObjectMapper(), consumer, deadLetterPublisher = publisher)
+        boundaryListener.onMessage(message("{not-json}", 11L), channel)
 
-        assertEquals(11L, channel.rejectedTag)
-        assertEquals(false, channel.rejectedRequeue)
+        assertEquals(11L, channel.ackedTag)
+        assertNull(channel.rejectedTag)
+        assertEquals(1, publisher.records.size)
+    }
+
+    @Test
+    fun `rejects original delivery when dead letter publication fails`() {
+        val channel = TestChannel()
+        val failingPublisher = DeadLetterPublisher { throw IllegalStateException("broker unavailable") }
+        val boundaryListener = AuthEmailRabbitListener(ObjectMapper(), consumer, deadLetterPublisher = failingPublisher)
+
+        boundaryListener.onMessage(message("{not-json}", 12L), channel)
+
         assertNull(channel.ackedTag)
+        assertEquals(12L, channel.rejectedTag)
+        assertEquals(false, channel.rejectedRequeue)
+    }
+
+    @Test
+    fun `does not require a channel when dead letter publication fails`() {
+        val failingPublisher = DeadLetterPublisher { throw IllegalStateException("broker unavailable") }
+        val boundaryListener = AuthEmailRabbitListener(ObjectMapper(), consumer, deadLetterPublisher = failingPublisher)
+
+        boundaryListener.onMessage(message("{not-json}", 47L), null)
     }
 
     @Test
@@ -42,9 +70,8 @@ class AuthEmailRabbitListenerTest {
 
         listener.onMessage(message("", 10L), channel)
 
-        assertEquals(10L, channel.rejectedTag)
-        assertEquals(false, channel.rejectedRequeue)
-        assertNull(channel.ackedTag)
+        assertEquals(10L, channel.ackedTag)
+        assertNull(channel.rejectedTag)
     }
 
     @Test
@@ -63,6 +90,20 @@ class AuthEmailRabbitListenerTest {
             any(AuthEmailDeliveryEvent::class.java) ?: AuthEmailDeliveryEvent("event", "user@example.com", "LOGIN_CODE", "cipher", Instant.MAX),
             any(Instant::class.java) ?: Instant.EPOCH
         )
+    }
+
+    @Test
+    fun `acknowledges an intentionally skipped auth email`() {
+        doReturn(EmailDeliveryOutcome.SKIPPED).`when`(consumer).consume(
+            any(AuthEmailDeliveryEvent::class.java) ?: AuthEmailDeliveryEvent("event", "user@example.com", "LOGIN_CODE", "cipher", Instant.MAX),
+            any(Instant::class.java) ?: Instant.EPOCH
+        )
+        val channel = TestChannel()
+
+        listener.onMessage(message(validEvent(), 44L), channel)
+
+        assertEquals(44L, channel.ackedTag)
+        assertNull(channel.rejectedTag)
     }
 
     @Test
@@ -88,9 +129,8 @@ class AuthEmailRabbitListenerTest {
 
         listener.onMessage(message(unsupported, 15L), channel)
 
-        assertEquals(15L, channel.rejectedTag)
-        assertEquals(false, channel.rejectedRequeue)
-        assertNull(channel.ackedTag)
+        assertEquals(15L, channel.ackedTag)
+        assertNull(channel.rejectedTag)
     }
 
     @Test
@@ -105,8 +145,8 @@ class AuthEmailRabbitListenerTest {
 
         listener.onMessage(message(validEvent(), 16L), channel)
 
-        assertEquals(16L, channel.rejectedTag)
-        assertEquals(false, channel.rejectedRequeue)
+        assertEquals(16L, channel.ackedTag)
+        assertNull(channel.rejectedTag)
     }
 
     @Test
@@ -122,8 +162,8 @@ class AuthEmailRabbitListenerTest {
 
         listener.onMessage(message(event, 12L, redelivered = true), channel)
 
-        assertEquals(12L, channel.rejectedTag)
-        assertEquals(false, channel.rejectedRequeue)
+        assertEquals(12L, channel.ackedTag)
+        assertNull(channel.rejectedTag)
     }
 
     /** Verifies missing payload fields are permanent envelope failures. */
@@ -146,8 +186,8 @@ class AuthEmailRabbitListenerTest {
 
             listener.onMessage(message(malformed, 20L + index), channel)
 
-            assertEquals(20L + index, channel.rejectedTag)
-            assertEquals(false, channel.rejectedRequeue)
+            assertEquals(20L + index, channel.ackedTag)
+            assertNull(channel.rejectedTag)
         }
     }
 
@@ -158,9 +198,8 @@ class AuthEmailRabbitListenerTest {
 
         listener.onMessage(message(malformed, 28L), channel)
 
-        assertEquals(28L, channel.rejectedTag)
-        assertEquals(false, channel.rejectedRequeue)
-        assertNull(channel.ackedTag)
+        assertEquals(28L, channel.ackedTag)
+        assertNull(channel.rejectedTag)
     }
 
     @Test
@@ -173,9 +212,8 @@ class AuthEmailRabbitListenerTest {
 
             listener.onMessage(message(malformed, 29L + index), channel)
 
-            assertEquals(29L + index, channel.rejectedTag)
-            assertEquals(false, channel.rejectedRequeue)
-            assertNull(channel.ackedTag)
+            assertEquals(29L + index, channel.ackedTag)
+            assertNull(channel.rejectedTag)
         }
     }
 
@@ -184,14 +222,13 @@ class AuthEmailRabbitListenerTest {
     fun `rejects auth email when the object mapper returns no root`() {
         val objectMapper = mock(ObjectMapper::class.java)
         doReturn(null).`when`(objectMapper).readTree(any<ByteArray>())
-        val boundaryListener = AuthEmailRabbitListener(objectMapper, consumer)
+        val boundaryListener = AuthEmailRabbitListener(objectMapper, consumer, deadLetterPublisher = DeadLetterPublisher { })
         val channel = TestChannel()
 
         boundaryListener.onMessage(message("ignored", 32L), channel)
 
-        assertEquals(32L, channel.rejectedTag)
-        assertEquals(false, channel.rejectedRequeue)
-        assertNull(channel.ackedTag)
+        assertEquals(32L, channel.ackedTag)
+        assertNull(channel.rejectedTag)
     }
 
     /** Verifies an absent payload object is rejected separately from an explicit JSON null. */
@@ -202,9 +239,8 @@ class AuthEmailRabbitListenerTest {
 
         listener.onMessage(message(missingPayload, 33L), channel)
 
-        assertEquals(33L, channel.rejectedTag)
-        assertEquals(false, channel.rejectedRequeue)
-        assertNull(channel.ackedTag)
+        assertEquals(33L, channel.ackedTag)
+        assertNull(channel.rejectedTag)
     }
 
     /** Verifies an unparsable expiry is rejected as a permanent envelope failure. */
@@ -215,9 +251,8 @@ class AuthEmailRabbitListenerTest {
 
         listener.onMessage(message(malformed, 27L), channel)
 
-        assertEquals(27L, channel.rejectedTag)
-        assertEquals(false, channel.rejectedRequeue)
-        assertNull(channel.ackedTag)
+        assertEquals(27L, channel.ackedTag)
+        assertNull(channel.rejectedTag)
     }
 
     /** Verifies channel-optional delivery remains safe when no broker channel is supplied. */
@@ -277,6 +312,73 @@ class AuthEmailRabbitListenerTest {
         assertEquals(41L, channel2.ackedTag)
     }
 
+    @Test
+    fun `dead letters terminal consumer outcomes`() {
+        listOf(EmailDeliveryOutcome.RETRYABLE_FAILURE, EmailDeliveryOutcome.PERMANENT_FAILURE)
+            .forEachIndexed { index, outcome ->
+                doReturn(outcome).`when`(consumer).consume(
+                    any(AuthEmailDeliveryEvent::class.java) ?: AuthEmailDeliveryEvent("evt", "user@example.com", "LOGIN_CODE", "cipher", Instant.MAX),
+                    any(Instant::class.java) ?: Instant.EPOCH
+                )
+                val publisher = RecordingDeadLetterPublisher()
+                val boundaryListener = AuthEmailRabbitListener(ObjectMapper(), consumer, deadLetterPublisher = publisher)
+                val channel = TestChannel()
+
+                boundaryListener.onMessage(message(validEvent(), 42L + index, redelivered = true), channel)
+
+                assertEquals(42L + index, channel.ackedTag)
+                assertEquals(1, publisher.records.size)
+            }
+    }
+
+    @Test
+    fun `propagates cancellation without acknowledging or rejecting`() {
+        doThrow(CancellationException("cancelled")).`when`(consumer).consume(
+            any(AuthEmailDeliveryEvent::class.java) ?: AuthEmailDeliveryEvent("evt", "user@example.com", "LOGIN_CODE", "cipher", Instant.MAX),
+            any(Instant::class.java) ?: Instant.EPOCH
+        )
+        val channel = TestChannel()
+
+        assertThrows(CancellationException::class.java) {
+            listener.onMessage(message(validEvent(), 43L), channel)
+        }
+        assertNull(channel.ackedTag)
+        assertNull(channel.rejectedTag)
+    }
+
+    @Test
+    fun `propagates fatal checked failures without acknowledging or rejecting`() {
+        doAnswer { throw InterruptedException("interrupted") }.`when`(consumer).consume(
+            any(AuthEmailDeliveryEvent::class.java) ?: AuthEmailDeliveryEvent("evt", "user@example.com", "LOGIN_CODE", "cipher", Instant.MAX),
+            any(Instant::class.java) ?: Instant.EPOCH
+        )
+        val channel = TestChannel()
+
+        assertThrows(InterruptedException::class.java) {
+            listener.onMessage(message(validEvent(), 45L), channel)
+        }
+        assertNull(channel.ackedTag)
+        assertNull(channel.rejectedTag)
+    }
+
+    @Test
+    fun `requeues when acknowledgement fails`() {
+        doReturn(EmailDeliveryOutcome.DELIVERED).`when`(consumer).consume(
+            any(AuthEmailDeliveryEvent::class.java) ?: AuthEmailDeliveryEvent("event", "user@example.com", "LOGIN_CODE", "cipher", Instant.MAX),
+            any(Instant::class.java) ?: Instant.EPOCH
+        )
+        val channel = object : TestChannel() {
+            override fun basicAck(deliveryTag: Long, multiple: Boolean) {
+                throw IllegalStateException("ack failed")
+            }
+        }
+
+        listener.onMessage(message(validEvent(), 46L), channel)
+
+        assertEquals(46L, channel.rejectedTag)
+        assertEquals(true, channel.rejectedRequeue)
+    }
+
     private fun fieldValue(field: String): String = when (field) {
         "recipient" -> "user@example.com"
         "template" -> "LOGIN_CODE"
@@ -296,7 +398,7 @@ class AuthEmailRabbitListenerTest {
     private fun validEvent(): String =
         """{"eventType":"auth.email.requested.v1","eventId":"evt-1","payload":{"recipient":"user@example.com","template":"LOGIN_CODE","encryptedCredential":"cipher","expiresAt":"2099-09-21T01:00:00Z"}}"""
 
-    private class TestChannel : Channel by mock(Channel::class.java) {
+    private open class TestChannel : Channel by mock(Channel::class.java) {
         var ackedTag: Long? = null
         var rejectedTag: Long? = null
         var rejectedRequeue: Boolean? = null
@@ -305,6 +407,14 @@ class AuthEmailRabbitListenerTest {
         override fun basicReject(deliveryTag: Long, requeue: Boolean) {
             rejectedTag = deliveryTag
             rejectedRequeue = requeue
+        }
+    }
+
+    private class RecordingDeadLetterPublisher : DeadLetterPublisher {
+        val records = mutableListOf<DeadLetterRecord>()
+
+        override fun publish(record: DeadLetterRecord) {
+            records += record
         }
     }
 }

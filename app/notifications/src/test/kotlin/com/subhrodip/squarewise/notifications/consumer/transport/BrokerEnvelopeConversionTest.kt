@@ -3,6 +3,7 @@ package com.subhrodip.squarewise.notifications.consumer.transport
 import java.time.Instant
 import java.util.UUID
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 
 /** Verifies broker-envelope fallback and bounded conversion into notification events. */
@@ -44,7 +45,7 @@ class BrokerEnvelopeConversionTest {
         assertEquals(2000, event.message.length)
     }
 
-    /** Verifies each supported subject/message fallback preserves a usable notification event. */
+    /** Verifies each supported subject fallback preserves a usable notification event. */
     @Test
     fun `uses subject and message fallback fields in precedence order`() {
         assertEquals(
@@ -62,19 +63,12 @@ class BrokerEnvelopeConversionTest {
             envelope(payload = mapOf("userId" to "user@example.com"))
                 .toNotificationEvent().subject
         )
-        assertEquals(
-            groupId.toString(),
-            envelope(payload = emptyMap()).toNotificationEvent().subject
-        )
-        assertEquals(
-            "expense.created for group $groupId",
-            envelope(payload = emptyMap()).toNotificationEvent().message
-        )
+        assertThrows(InvalidEnvelopeException::class.java) { envelope(payload = emptyMap()).toNotificationEvent() }
     }
 
-    /** Verifies blank selected fields use the documented safe group/event fallbacks. */
+    /** Verifies blank selected fields never fall back to a group UUID recipient. */
     @Test
-    fun `uses safe fallbacks for blank selected subject and message`() {
+    fun `rejects blank subject when no recipient exists`() {
         val event = envelope(
             payload = mapOf(
                 "subject" to "   ",
@@ -85,14 +79,11 @@ class BrokerEnvelopeConversionTest {
             )
         ).toNotificationEvent()
 
-        assertEquals(groupId.toString(), event.subject)
-        assertEquals("expense.created for group $groupId", event.message)
+        assertEquals("recipient@example.com", event.subject)
 
-        val finalFallback = envelope(
-            payload = mapOf("subject" to " ", "message" to " ", "description" to " ")
-        ).toNotificationEvent()
-        assertEquals(groupId.toString(), finalFallback.subject)
-        assertEquals("expense.created for group $groupId", finalFallback.message)
+        assertThrows(InvalidEnvelopeException::class.java) {
+            envelope(payload = mapOf("subject" to " ", "message" to " ", "description" to " ")).toNotificationEvent()
+        }
     }
 
     private fun envelope(

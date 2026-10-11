@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.transaction.annotation.Transactional
+import com.subhrodip.squarewise.security.ratelimit.RateLimitStoreUnavailableException
 
 @SpringBootTest
 @Transactional
@@ -143,7 +144,7 @@ class LoginVerificationServiceTest @Autowired constructor(
             digest,
             object : RateLimiter {
                 override fun consume(key: String, policy: RateLimitPolicy): RateLimitDecision =
-                    throw com.subhrodip.squarewise.security.ratelimit.RateLimitStoreUnavailableException(
+                    throw RateLimitStoreUnavailableException(
                         IllegalStateException("redis unavailable")
                     )
             }

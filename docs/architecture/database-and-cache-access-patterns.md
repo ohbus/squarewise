@@ -77,7 +77,7 @@ flowchart TD
 | | `POST /groups/{id}/expenses` *(Create)* | **0** | **6 - 8** *(1 Tx)* | 1. Active membership check<br/>2. Group pessimistic lock (`findForMembershipUpdate`)<br/>3. Idempotency claim lookup<br/>4. Group revision update<br/>5. Save expense + payers + allocations<br/>6. Save idempotency record<br/>7. Double-entry ledger postings (`balance_postings`)<br/>8. Outbox message + sync feed record |
 | | `PUT /groups/{id}/expenses/{id}` *(Update)* | **0** | **5 - 7** *(1 Tx)* | Active check, group lock, load current expense, save updated expense, post reversal & new balance entries, outbox + sync records. |
 | | `DELETE /groups/{id}/expenses/{id}` | **0** | **4 - 5** *(1 Tx)* | Active check, group lock, soft delete/version update, balance reversal posting, outbox + sync records. |
-| | `POST /groups/{id}/settlements` | **0** | **5 - 6** *(1 Tx)* | Active check, group lock, insert settlement, post ledger credit/debit, outbox + sync records. |
+| | `POST /groups/{id}/settlements` | **0** | **8** *(1 Tx)* | Lock group, re-check actor membership, validate both participant memberships, replay lookup, insert settlement, post ledger credit/debit, increment revision, audit + outbox + sync records. |
 | | `POST /invites/{token}/claim` | **0** | **3 - 4** *(1 Tx)* | Check invite validity, mark claimed, insert group membership, emit member-added outbox event. |
 | **Expense Core** *(Queries)* | `GET /groups` | **0** | **1 read** | Join on `group_memberships` for caller subject. |
 | | `GET /groups/{id}` | **0** | **2 reads** | Verify caller membership + fetch group details. |

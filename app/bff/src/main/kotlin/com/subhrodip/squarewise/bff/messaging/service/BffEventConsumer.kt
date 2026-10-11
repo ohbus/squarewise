@@ -29,33 +29,38 @@ class BffEventConsumer(
      * @return [ConsumptionResult] indicating whether the event was processed, ignored as duplicate, or rejected
      */
     fun consume(envelope: BffEventEnvelope): ConsumptionResult {
-        if (deduplicator.isDuplicateAndMark(envelope.eventId)) {
+        if (!deduplicator.tryClaim(envelope.eventId)) {
             log.debug("Ignoring duplicate event {}", envelope.eventId)
             return DuplicateConsumptionResult(envelope.eventId)
         }
+        try {
+            val groupIdStr = envelope.groupId.toString()
+            val changeIdStr = envelope.eventId.toString()
+            val revision = envelope.groupRevision
 
-        val groupIdStr = envelope.groupId.toString()
-        val changeIdStr = envelope.eventId.toString()
-        val revision = envelope.groupRevision
-
-        if (envelope.eventType == "member.removed.v1") {
-            val removedSubject = envelope.payload["targetSubject"]?.toString()?.trim()
-            if (!removedSubject.isNullOrBlank()) {
-                fanout.revokeUserFromGroup(removedSubject, groupIdStr)
+            if (envelope.eventType == "member.removed.v1") {
+                val removedSubject = envelope.payload["targetSubject"]?.toString()?.trim()
+                if (!removedSubject.isNullOrBlank()) {
+                    fanout.revokeUserFromGroup(removedSubject, groupIdStr)
+                }
             }
+
+            val invalidation = fanout.emitInvalidation(groupIdStr, revision, changeIdStr)
+            val deliveredQueues = fanout.publish(LiveUpdate(groupIdStr, revision))
+            deduplicator.markProcessed(envelope.eventId)
+
+            log.debug(
+                "Processed group event {} for group {}, revision {}, delivered to {} queue(s)",
+                envelope.eventId,
+                groupIdStr,
+                revision,
+                deliveredQueues
+            )
+
+            return ProcessedConsumptionResult(invalidation, deliveredQueues)
+        } catch (failure: Exception) {
+            deduplicator.release(envelope.eventId)
+            throw failure
         }
-
-        val invalidation = fanout.emitInvalidation(groupIdStr, revision, changeIdStr)
-        val deliveredQueues = fanout.publish(LiveUpdate(groupIdStr, revision))
-
-        log.debug(
-            "Processed group event {} for group {}, revision {}, delivered to {} queue(s)",
-            envelope.eventId,
-            groupIdStr,
-            revision,
-            deliveredQueues
-        )
-
-        return ProcessedConsumptionResult(invalidation, deliveredQueues)
     }
 }

@@ -110,6 +110,24 @@ class BffFanoutTest {
         return """{"groupId":"$groupId","name":"$name","kind":"$kind","revision":$revision,"balances":[],"expenses":[],"members":[]}"""
     }
 
+    private fun registerGroupDetails(groupId: String, expenses: (HttpExchange) -> Unit) {
+        registerHandler(ApiEndpoints.ExpenseCore.V1.groupById(groupId)) { exchange ->
+            respondJson(exchange, 200, groupJson(groupId, "Group"))
+        }
+        registerHandler(ApiEndpoints.ExpenseCore.V1.groupBalances(groupId)) { exchange ->
+            respondJson(exchange, 200, "{\"groupId\":\"$groupId\",\"balances\":[]}")
+        }
+        registerHandler(ApiEndpoints.ExpenseCore.V1.groupMembers(groupId)) { exchange ->
+            respondJson(exchange, 200, "[]")
+        }
+        registerHandler(ApiEndpoints.ExpenseCore.V1.groupExpenses(groupId), expenses)
+    }
+
+    private fun expensePage(start: Int, endExclusive: Int): String =
+        (start until endExclusive).joinToString(prefix = "[", postfix = "]") { index ->
+            """{"expenseId":"e-$index","version":1,"amount":{"currency":"EUR","minor":"1"},"allocations":[]}"""
+        }
+
     /**
      * Verifies that when Expense Core returns an empty group list, listGroups returns an empty list
      * without triggering any downstream member resolution requests.
@@ -354,6 +372,39 @@ class BffFanoutTest {
         assertThat(group.members[0].subject).isEqualTo("alice")
     }
 
+    /** Verifies the bounded look-ahead accepts exactly the configured 1,000-expense cap. */
+    @Test
+    fun `accepts exactly one thousand expenses when the look ahead is empty`() {
+        val requests = AtomicInteger()
+        registerGroupDetails("g-cap") { exchange ->
+            val cursor = exchange.requestURI.query?.substringAfter("cursor=", "")?.takeIf { it.isNotEmpty() }
+            val start = cursor?.removePrefix("e-")?.toInt()?.plus(1) ?: 0
+            requests.incrementAndGet()
+            respondJson(exchange, 200, if (start >= 1000) "[]" else expensePage(start, minOf(start + 100, 1000)))
+        }
+
+        val group = gateway.getGroup("g-cap", "bearer-token").block()
+
+        assertThat(group!!.expenses).hasSize(1000)
+        assertThat(requests).hasValue(11)
+    }
+
+    /** Verifies the gateway rejects an upstream page beyond the bounded response contract. */
+    @Test
+    fun `rejects expenses beyond the one thousand expense cap`() {
+        registerGroupDetails("g-over-cap") { exchange ->
+            val cursor = exchange.requestURI.query?.substringAfter("cursor=", "")?.takeIf { it.isNotEmpty() }
+            val start = cursor?.removePrefix("e-")?.toInt()?.plus(1) ?: 0
+            respondJson(exchange, 200, expensePage(start, minOf(start + 100, 1001)))
+        }
+
+        val error = assertThrows<RuntimeException> { gateway.getGroup("g-over-cap", "bearer-token").block() }
+
+        val cause = Exceptions.unwrap(error)
+        assertThat(cause).isInstanceOf(UpstreamServiceException::class.java)
+        assertThat((cause as UpstreamServiceException).status).isEqualTo(502)
+    }
+
     /** Verifies a balance failure cannot be presented as an empty successful balance list. */
     @Test
     fun `getGroup propagates balance fanout failure`() {
@@ -463,7 +514,7 @@ class BffFanoutTest {
         ).block()
         val settlement = gateway.recordRepayment(
             "g-1",
-            RepaymentInput("g-1", "p-1", "p-2", MoneyInput("EUR", "500"), null),
+            RepaymentInput("g-1", "p-1", "p-2", MoneyInput("EUR", "500"), null, "repayment-key-0001"),
             "token"
         ).block()
         val suggestions = gateway.getSettlementSuggestions("g-1", "token").block()
@@ -559,7 +610,7 @@ class BffFanoutTest {
         ).block()
         gateway.recordRepayment(
             "g-null",
-            RepaymentInput("g-null", "p-1", "p-2", MoneyInput("EUR", "1"), null),
+            RepaymentInput("g-null", "p-1", "p-2", MoneyInput("EUR", "1"), null, "repayment-key-0002"),
             null
         ).block()
         gateway.getSettlementSuggestions("g-null", null).block()

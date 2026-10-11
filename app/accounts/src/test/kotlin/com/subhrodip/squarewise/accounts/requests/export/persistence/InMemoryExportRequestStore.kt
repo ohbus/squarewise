@@ -26,4 +26,10 @@ class InMemoryExportRequestStore(
         ProfileRules.requireSubject(subject)
         return requests.values.filter { it.subject == subject }.sortedByDescending { it.requestedAt }
     }
+
+    override fun listBySubject(subject: String, page: Int, limit: Int): List<ExportRequest> {
+        require(page >= 0)
+        require(limit in 1..100)
+        return listBySubject(subject).drop(page * limit).take(limit)
+    }
 }

@@ -29,7 +29,7 @@ class PersistenceEntityStateTest {
         val groupId = UUID.randomUUID()
         val from = UUID.randomUUID()
         val to = UUID.randomUUID()
-        val settlement = SettlementEntity(UUID.randomUUID(), groupId, from, to, 1250)
+        val settlement = SettlementEntity(UUID.randomUUID(), groupId, from, to, 1250, "EUR")
         settlement.status = SettlementStatus.REVERSED
         settlement.reversalReason = "Duplicate external payment"
 
@@ -50,6 +50,7 @@ class PersistenceEntityStateTest {
         assertEquals(from, settlement.fromParticipantId)
         assertEquals(to, settlement.toParticipantId)
         assertEquals(1250, settlement.amountMinor)
+        assertEquals("EUR", settlement.currency)
         assertEquals(SettlementStatus.REVERSED, settlement.status)
         assertEquals("Duplicate external payment", settlement.reversalReason)
         assertEquals("a".repeat(64), invitation.token)

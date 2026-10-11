@@ -102,4 +102,15 @@ class OneTimeCredentialIssuerTest {
     fun `rejects weak digest secret`() {
         assertThrows(IllegalArgumentException::class.java) { HmacCredentialDigest(ByteArray(31)) }
     }
+
+    @Test
+    fun `digest keeps an immutable copy of the signing secret`() {
+        val secret = ByteArray(32) { it.toByte() }
+        val digest = HmacCredentialDigest(secret)
+        val beforeMutation = digest.digest("credential")
+
+        secret[0] = 99
+
+        assertArrayEquals(beforeMutation, digest.digest("credential"))
+    }
 }

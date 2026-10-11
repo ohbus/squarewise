@@ -1,7 +1,5 @@
 package com.subhrodip.squarewise.accounts.profile.api
 
-import org.springframework.web.bind.annotation.RequestHeader
-
 import com.subhrodip.squarewise.accounts.requests.deletion.service.DeletionRequestService
 import com.subhrodip.squarewise.accounts.requests.export.service.ExportRequestService
 import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
@@ -13,6 +11,7 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import com.subhrodip.squarewise.accounts.errors.AccountsDomainException
@@ -25,6 +24,9 @@ import com.subhrodip.squarewise.db.routing.DbOperationKind
 import com.subhrodip.squarewise.db.routing.ReadConsistency
 import com.subhrodip.squarewise.observability.db.DbTelemetry
 import com.subhrodip.squarewise.accounts.profile.persistence.ProfileStore
+import org.springframework.security.core.Authentication
+
+private const val INTERNAL_SERVICE_SCOPE = "SCOPE_squarewise.internal"
 
 @RestController
 @RequestMapping(ApiEndpoints.Accounts.V1.BASE)
@@ -62,9 +64,13 @@ class ProfileController(
     }
 
     @GetMapping(ApiEndpoints.Accounts.V1.ME_EXPORT_REQUESTS)
-    fun listExportRequests(principal: Principal?): List<ExportRequestResponse> {
+    fun listExportRequests(
+        principal: Principal?,
+        @RequestParam(name = "page", defaultValue = "0") page: Int,
+        @RequestParam(name = "limit", defaultValue = "100") limit: Int,
+    ): List<ExportRequestResponse> {
         val subject = principal?.name ?: throw AccountsDomainException(AccountsErrors.PROFILE_SUBJECT_INVALID)
-        return exportService.listBySubject(subject).map {
+        return exportService.listBySubject(subject, page, limit).map {
             ExportRequestResponse(it.exportId, it.status, it.requestedAt)
         }
     }
@@ -72,13 +78,12 @@ class ProfileController(
     /**
      * Retrieves a profile by account ID.
      *
-     * Authorized only if the caller possesses internal workload authority or is performing a
+     * Authorized only if the validated service token possesses internal workload authority or is performing a
      * self-lookup matching their authenticated profile account ID. Arbitrary cross-user lookups
      * are rejected with 403 Forbidden.
      *
      * @param accountId target account identifier.
-     * @param principal authenticated caller security principal.
-     * @param workloadRole optional internal service trust header.
+     * @param principal authenticated caller, including validated service authorities.
      * @return [ProfileResponse] matching the account ID.
      * @throws AccountsDomainException if unauthenticated, unauthorized, or not found.
      */
@@ -86,12 +91,8 @@ class ProfileController(
     fun getProfileById(
         @PathVariable accountId: UUID,
         principal: Principal?,
-        @RequestHeader(
-            value = ApiEndpoints.Headers.WORKLOAD_ROLE,
-            required = false
-        ) workloadRole: String? = null
     ): ProfileResponse {
-        val isWorkload = workloadRole == ApiEndpoints.Headers.WORKLOAD_ROLE_INTERNAL
+        val isWorkload = hasInternalServiceAuthority(principal)
         if (!isWorkload) {
             val callerSubject = principal?.name ?: throw AccountsDomainException(AccountsErrors.PROFILE_SUBJECT_INVALID)
             val callerProfile = profiles.get(callerSubject) ?: throw AccountsDomainException(AccountsErrors.AUTHENTICATED_PROFILE_NOT_FOUND)
@@ -109,13 +110,12 @@ class ProfileController(
     /**
      * Batch lookups profiles for a collection of account IDs.
      *
-     * Restricted to callers with internal workload authority or end-user callers limited to
+     * Restricted to callers with validated internal service authority or end-user callers limited to
      * querying their own profile ID. Batch lookups encompassing foreign profiles by non-workload
      * callers are rejected with 403 Forbidden.
      *
      * @param request batch lookup payload with up to 100 account IDs.
-     * @param principal authenticated caller security principal.
-     * @param workloadRole optional internal service trust header.
+     * @param principal authenticated caller, including validated service authorities.
      * @return list of resolved [ProfileResponse] records matching existing IDs.
      * @throws AccountsDomainException if unauthenticated or unauthorized.
      */
@@ -123,12 +123,8 @@ class ProfileController(
     fun getProfilesBatch(
         @Valid @RequestBody request: BatchProfileRequest,
         principal: Principal?,
-        @RequestHeader(
-            value = ApiEndpoints.Headers.WORKLOAD_ROLE,
-            required = false
-        ) workloadRole: String? = null
     ): List<ProfileResponse> {
-        val isWorkload = workloadRole == ApiEndpoints.Headers.WORKLOAD_ROLE_INTERNAL
+        val isWorkload = hasInternalServiceAuthority(principal)
         if (!isWorkload) {
             val callerSubject = principal?.name ?: throw AccountsDomainException(AccountsErrors.PROFILE_SUBJECT_INVALID)
             val callerProfile = profiles.get(callerSubject) ?: throw AccountsDomainException(AccountsErrors.AUTHENTICATED_PROFILE_NOT_FOUND)
@@ -148,4 +144,7 @@ class ProfileController(
         consistency = ReadConsistency.EVENTUAL,
         readerEligible = true
     )
+
+    private fun hasInternalServiceAuthority(principal: Principal?): Boolean =
+        (principal as? Authentication)?.authorities?.any { it.authority == INTERNAL_SERVICE_SCOPE } == true
 }

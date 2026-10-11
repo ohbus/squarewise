@@ -3,6 +3,7 @@ package com.subhrodip.squarewise.bff.messaging.config
 import com.subhrodip.squarewise.bff.messaging.service.BffEventConsumer
 import com.subhrodip.squarewise.bff.messaging.persistence.BffEventDeduplicator
 import com.subhrodip.squarewise.bff.messaging.transport.RabbitBffEventListener
+import com.subhrodip.squarewise.bff.messaging.transport.DeadLetterPublisher
 
 import com.subhrodip.squarewise.bff.realtime.LiveUpdateFanout
 import org.springframework.amqp.core.AcknowledgeMode
@@ -61,8 +62,9 @@ class BffMessagingConfiguration {
     @ConditionalOnProperty(prefix = "squarewise.bff.messaging", name = ["enabled"], havingValue = "true")
     fun rabbitBffEventListener(
         bffEventConsumer: BffEventConsumer,
-        objectMapper: ObjectMapper
-    ): RabbitBffEventListener = RabbitBffEventListener(bffEventConsumer, objectMapper)
+        objectMapper: ObjectMapper,
+        deadLetterPublisher: DeadLetterPublisher
+    ): RabbitBffEventListener = RabbitBffEventListener(bffEventConsumer, objectMapper, deadLetterPublisher = deadLetterPublisher)
 
     @Bean
     @ConditionalOnProperty(prefix = "squarewise.bff.messaging", name = ["enabled"], havingValue = "true")

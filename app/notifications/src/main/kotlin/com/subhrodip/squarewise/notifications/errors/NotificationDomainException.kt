@@ -5,7 +5,7 @@ import com.subhrodip.squarewise.errors.diagnostics.ErrorDiagnostics
 import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
 
 /** Exception carrying a governed Notifications error definition to the shared boundary. */
-class NotificationDomainException(
+open class NotificationDomainException(
     definition: ErrorDefinition,
     message: String? = null,
     cause: Throwable? = null,

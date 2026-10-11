@@ -205,6 +205,13 @@ operation, baseline, hypothesis, index/query/schema change, write/read cost,
 correctness impact, before/after plan, and rollback. Query plans belong in
 reviewable performance evidence, not in application logs.
 
+This evidence gate also applies to foreign-key changes. Keep same-service
+foreign keys as the final referential-integrity guard; move only friendly
+validation and authorization into the owning service transaction. Cross-service
+relationships use IDs, authenticated service calls, versioned events,
+idempotency, and reconciliation because separate service databases cannot share
+an atomic foreign-key constraint.
+
 ## Service classification
 
 ### Expense Core

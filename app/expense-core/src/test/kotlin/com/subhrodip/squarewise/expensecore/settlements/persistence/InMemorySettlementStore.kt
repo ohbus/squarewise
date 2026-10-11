@@ -1,11 +1,10 @@
 package com.subhrodip.squarewise.expensecore.settlements.persistence
 
+import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
 import com.subhrodip.squarewise.errors.catalog.PlatformErrors
 import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
 import com.subhrodip.squarewise.expensecore.settlements.domain.Settlement
 import com.subhrodip.squarewise.expensecore.settlements.domain.SettlementStatus
-
-import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
 
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -16,15 +15,16 @@ import java.util.concurrent.ConcurrentHashMap
 class InMemorySettlementStore : SettlementStore {
     private val settlements = ConcurrentHashMap<Pair<UUID, UUID>, Settlement>()
 
-    override fun record(groupId: UUID, settlement: Settlement): Settlement {
+    override fun record(groupId: UUID, settlement: Settlement, actorSubject: String): Settlement {
         val key = groupId to settlement.id
         val existing = settlements[key]
         if (existing != null) {
             if (existing.fromParticipantId != settlement.fromParticipantId ||
                 existing.toParticipantId != settlement.toParticipantId ||
-                existing.amountMinor != settlement.amountMinor
+                existing.amountMinor != settlement.amountMinor ||
+                existing.currency != settlement.currency
             ) {
-                throw ExpenseDomainException(PlatformErrors.RESOURCE_CONFLICT, "Idempotency key was already used with a different settlement")
+                throw ExpenseDomainException(ExpenseErrors.EXPENSE_IDEMPOTENCY_CONFLICT, "Idempotency key was already used with a different settlement")
             }
             return existing
         }
@@ -32,7 +32,7 @@ class InMemorySettlementStore : SettlementStore {
     }
 
     @Synchronized
-    override fun reverse(groupId: UUID, settlementId: UUID, reason: String): Settlement {
+    override fun reverse(groupId: UUID, settlementId: UUID, reason: String, actorSubject: String): Settlement {
         val key = groupId to settlementId
         val settlement = settlements[key]
             ?: throw ExpenseDomainException(PlatformErrors.RESOURCE_NOT_FOUND, "Settlement not found")

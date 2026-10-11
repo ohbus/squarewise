@@ -1,6 +1,8 @@
 package com.subhrodip.squarewise.errors.catalog
 
 import com.subhrodip.squarewise.errors.code.ErrorDefinition
+import java.util.Collections
+import java.util.IdentityHashMap
 
 /** Immutable aggregate view of every statically compiled domain catalog. */
 object ErrorCatalog {
@@ -17,8 +19,8 @@ object ErrorCatalog {
     val byNumericCode: Map<String, ErrorDefinition> = all.associateBy { it.numericCode.value }
 
     /** Immutable identity set for O(1) zero-reflection exception validation. */
-    private val definitionSet: Set<ErrorDefinition> = java.util.Collections.newSetFromMap(
-        java.util.IdentityHashMap<ErrorDefinition, Boolean>(all.size)
+    private val definitionSet: Set<ErrorDefinition> = Collections.newSetFromMap(
+        IdentityHashMap<ErrorDefinition, Boolean>(all.size)
     ).apply { addAll(all) }
 
     /** Checks in O(1) whether an ErrorDefinition belongs to the compiled catalog. */

@@ -63,7 +63,7 @@ class BffTransportModelTest {
         val token = AccountsTokenResponse("access", "Bearer", 600, "refresh")
         val session = BrowserSessionResponse(expiresIn = 600)
         val allocation = AllocationItemInput("member-1", "500")
-        val repayment = RepaymentInput("group-1", "from", "to", MoneyInput("EUR", "500"), "Dinner")
+        val repayment = RepaymentInput("group-1", "from", "to", MoneyInput("EUR", "500"), "Dinner", "repayment-key-0001")
         val invalidation = GroupInvalidation("group-1", 3, UUID.randomUUID().toString())
 
         assertEquals("alice@example.test", start.email)

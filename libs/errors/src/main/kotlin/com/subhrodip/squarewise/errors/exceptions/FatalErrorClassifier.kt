@@ -1,5 +1,7 @@
 package com.subhrodip.squarewise.errors.exceptions
 
+import java.util.concurrent.CancellationException
+
 /** Classifies JVM and coroutine termination conditions that must never be recovered. */
 object FatalErrorClassifier {
     /** Return true for process/thread termination and interruption conditions. */
@@ -7,7 +9,7 @@ object FatalErrorClassifier {
         is VirtualMachineError,
         is LinkageError,
         is InterruptedException,
-        is java.util.concurrent.CancellationException -> true
+        is CancellationException -> true
         else -> throwable.javaClass.name == "java.lang.ThreadDeath" ||
             throwable.javaClass.name == "kotlinx.coroutines.CancellationException"
     }

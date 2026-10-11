@@ -1,5 +1,7 @@
 # OPS-20: Reliability, security, and capacity release gates
 
+Status: implementation/framework complete; launch evidence remains open.
+
 Add production rehearsals for backup/restore, migration rollback, dependency
 loss, broker backlog, rate limiting, secret rotation, image/dependency scanning,
 load/soak testing, and graceful degradation. Record measured limits and known
@@ -25,10 +27,14 @@ the release record.
    `load`, `rollback`, `scan`).
 2. **Tracked-File Security Hygiene:** `make security-hygiene` verified 527 tracked files
    clean of leaked secrets or private keys.
-3. **Live Dependency Resilience:** RabbitMQ outage & recovery (11s reconnection),
-   PostgreSQL failover/restart recovery, and BFF upstream fault isolation tested and
-   verified in live multi-service acceptance.
+3. **Local Dependency Resilience:** RabbitMQ outage & recovery, PostgreSQL restart
+   recovery, and BFF upstream fault isolation were tested in the local
+   multi-service topology. Production-like failover and restore evidence remains open.
 4. **Capacity & Mutation Validation:** `make load-k6-validate`, `make load-mutation-check`,
    and 1M-user workload baseline executed with zero data loss or financial discrepancies.
 5. **Checklists:** `docs/operations/release-hardening-checklist.md` and
    `docs/operations/local-release-checklist.md` define and record verified evidence.
+
+The repository gate and local acceptance results do not close OPS-20. Reviewed
+production-like restore, failover, rotation, scanning, rollback, capacity, and
+alert-routing artifacts are required before launch.

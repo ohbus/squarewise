@@ -17,6 +17,8 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.springframework.http.HttpStatus
+import org.springframework.web.reactive.function.client.ClientResponse
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
 import org.springframework.graphql.execution.ErrorType
@@ -117,5 +119,88 @@ class BffErrorResolverTest {
 
         assertEquals("426701", exception.problem.numericCode)
         assertEquals("UPSTREAM_PROTOCOL_INVALID", exception.problem.errorName)
+    }
+
+    @Test
+    fun `decoder falls back safely for malformed identity metadata`() {
+        val decoder = UpstreamProblemDecoder(ObjectMapper())
+        val exception = decoder.decode(502, "{not-json}", "x".repeat(129), "untrusted-source")
+
+        assertEquals("squarewise-bff", exception.problem.source)
+        assertEquals("unknown", exception.problem.requestId)
+        assertEquals(Instant.EPOCH, exception.problem.timestamp)
+        assertEquals("UPSTREAM_PROTOCOL_INVALID", exception.problem.errorName)
+    }
+
+    @Test
+    fun `decoder validates each optional upstream identity field independently`() {
+        val decoder = UpstreamProblemDecoder(ObjectMapper())
+        val exception = decoder.decode(
+            502,
+            """{"source":"untrusted","requestId":"${"r".repeat(129)}","timestamp":"not-an-instant"}""",
+            "fallback-request",
+            "notifications"
+        )
+
+        assertEquals("notifications", exception.problem.source)
+        assertEquals("fallback-request", exception.problem.requestId)
+        assertEquals(Instant.EPOCH, exception.problem.timestamp)
+    }
+
+    @Test
+    fun `decoder defaults source and request id when both fallbacks are invalid`() {
+        val exception = UpstreamProblemDecoder(ObjectMapper()).decode(
+            502,
+            """{"source":"untrusted","requestId":""}""",
+            "x".repeat(129),
+            "untrusted"
+        )
+
+        assertEquals("squarewise-bff", exception.problem.source)
+        assertEquals("unknown", exception.problem.requestId)
+    }
+
+    @Test
+    fun `decoder accepts valid fallback source and request id`() {
+        val exception = UpstreamProblemDecoder(ObjectMapper()).decode(
+            502,
+            "{}",
+            "fallback-request",
+            "notifications"
+        )
+
+        assertEquals("notifications", exception.problem.source)
+        assertEquals("fallback-request", exception.problem.requestId)
+    }
+
+    @Test
+    fun `response decoder handles an empty body without an upstream request header`() {
+        val response = ClientResponse.create(HttpStatus.BAD_GATEWAY).build()
+
+        val exception = response.toUpstreamException(UpstreamProblemDecoder(ObjectMapper()), "accounts")
+            .block() as UpstreamProblemException
+
+        assertEquals("unknown", exception.problem.requestId)
+        assertEquals("accounts", exception.problem.source)
+    }
+
+    @Test
+    fun `decoder rejects mismatched upstream identities`() {
+        val decoder = UpstreamProblemDecoder(ObjectMapper())
+        val wrongName = decoder.decode(
+            404,
+            """{"numericCode":"213201","errorName":"WRONG_NAME"}""",
+            "request",
+            "accounts"
+        )
+        val wrongStatus = decoder.decode(
+            500,
+            """{"numericCode":"213201","errorName":"GROUP_NOT_FOUND"}""",
+            "request",
+            "accounts"
+        )
+
+        assertEquals("UPSTREAM_PROTOCOL_INVALID", wrongName.problem.errorName)
+        assertEquals("UPSTREAM_PROTOCOL_INVALID", wrongStatus.problem.errorName)
     }
 }

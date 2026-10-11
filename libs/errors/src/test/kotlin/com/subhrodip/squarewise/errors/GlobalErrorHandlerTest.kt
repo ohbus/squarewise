@@ -42,7 +42,7 @@ class GlobalErrorHandlerTest {
         assertEquals(CategoryCode.NOT_FOUND.name, response.body?.code)
         assertEquals("919201", response.body?.numericCode)
         assertEquals("RESOURCE_NOT_FOUND", response.body?.errorName)
-        assertEquals("Group 123 not found", response.body?.detail)
+        assertEquals(PlatformErrors.RESOURCE_NOT_FOUND.safeDetail, response.body?.detail)
     }
 
     @Test
@@ -92,7 +92,7 @@ class GlobalErrorHandlerTest {
         assertEquals(422, response.statusCode.value())
         assertEquals(2, response.body?.violations?.size)
         assertEquals("user.amount", response.body?.violations?.get(0)?.field)
-        assertEquals(10, response.body?.violations?.get(0)?.rejectedValue)
+        assertEquals("10", response.body?.violations?.get(0)?.rejectedValue)
         assertEquals("user.currency", response.body?.violations?.get(1)?.field)
         assertEquals("XYZ", response.body?.violations?.get(1)?.rejectedValue)
     }
@@ -102,7 +102,7 @@ class GlobalErrorHandlerTest {
         val response = handler.illegalArgument(IllegalArgumentException("Invalid parameter"))
         assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, response.statusCode)
         assertEquals(CategoryCode.VALIDATION_ERROR.name, response.body?.code)
-        assertEquals("Invalid parameter", response.body?.detail)
+        assertEquals(PlatformErrors.REQUEST_VALUE_INVALID.safeDetail, response.body?.detail)
     }
 
     @Test
@@ -119,13 +119,13 @@ class GlobalErrorHandlerTest {
         assertEquals(CategoryCode.INTERNAL_ERROR.name, response.body?.code)
     }
 
-    /** Verifies the content-negotiation failure intentionally has no RFC 7807 body. */
+    /** Verifies content negotiation uses the same safe problem envelope as other failures. */
     @Test
-    fun `not acceptable response is bodyless`() {
+    fun `not acceptable response contains its problem detail`() {
         val response = handler.notAcceptable()
 
         assertEquals(HttpStatus.NOT_ACCEPTABLE, response.statusCode)
-        assertEquals(null, response.body)
+        assertEquals(PlatformErrors.REPRESENTATION_NOT_ACCEPTABLE.safeDetail, response.body?.detail)
     }
 
     /** Verifies field-level validation messages and the safe default message branch. */
@@ -157,7 +157,7 @@ class GlobalErrorHandlerTest {
         assertEquals(null, response.body?.violations?.get(7)?.rejectedValue)
     }
 
-    /** Verifies malformed-body detail precedence for root causes and empty messages. */
+    /** Verifies malformed-body details never expose parser or cause text. */
     @Test
     fun `malformed body uses root cause or safe fallback`() {
         val rootCause = IllegalStateException("invalid json")
@@ -168,31 +168,31 @@ class GlobalErrorHandlerTest {
             HttpMessageNotReadableException("", inputMessage())
         )
 
-        assertEquals("invalid json", withRootCause.body?.detail)
-        assertEquals("Malformed request payload", withoutDetail.body?.detail)
+        assertEquals(PlatformErrors.REQUEST_BODY_MALFORMED.safeDetail, withRootCause.body?.detail)
+        assertEquals(PlatformErrors.REQUEST_BODY_MALFORMED.safeDetail, withoutDetail.body?.detail)
 
         val blankRootCause = handler.messageNotReadable(
             HttpMessageNotReadableException("outer detail", IllegalStateException(""), inputMessage())
         )
-        assertEquals("outer detail", blankRootCause.body?.detail)
+        assertEquals(PlatformErrors.REQUEST_BODY_MALFORMED.safeDetail, blankRootCause.body?.detail)
 
         val nullRootCause = handler.messageNotReadable(
             HttpMessageNotReadableException("outer fallback", Throwable(null as String?), inputMessage())
         )
-        assertEquals("outer fallback", nullRootCause.body?.detail)
+        assertEquals(PlatformErrors.REQUEST_BODY_MALFORMED.safeDetail, nullRootCause.body?.detail)
 
         val blankEverything = handler.messageNotReadable(
             HttpMessageNotReadableException("", IllegalStateException(""), inputMessage())
         )
-        assertEquals("Malformed request payload", blankEverything.body?.detail)
+        assertEquals(PlatformErrors.REQUEST_BODY_MALFORMED.safeDetail, blankEverything.body?.detail)
 
         val mockedException = mock(HttpMessageNotReadableException::class.java)
         `when`(mockedException.rootCause).thenReturn(null)
         `when`(mockedException.message).thenReturn("mocked detail")
-        assertEquals("mocked detail", handler.messageNotReadable(mockedException).body?.detail)
+        assertEquals(PlatformErrors.REQUEST_BODY_MALFORMED.safeDetail, handler.messageNotReadable(mockedException).body?.detail)
 
         `when`(mockedException.message).thenReturn(null)
-        assertEquals("Malformed request payload", handler.messageNotReadable(mockedException).body?.detail)
+        assertEquals(PlatformErrors.REQUEST_BODY_MALFORMED.safeDetail, handler.messageNotReadable(mockedException).body?.detail)
     }
 
     /** Verifies binding and type-mismatch handlers preserve safe fallback text. */
@@ -209,13 +209,13 @@ class GlobalErrorHandlerTest {
         val lockFallback = handler.optimisticLock(OptimisticLockingFailureException(null))
         val argumentFallback = handler.illegalArgument(IllegalArgumentException())
 
-        assertEquals("missing header", binding.body?.detail)
-        assertEquals("Invalid request binding", bindingFallback.body?.detail)
-        assertEquals("Type mismatch for parameter page", mismatch.body?.title)
+        assertEquals(PlatformErrors.REQUEST_VALUE_INVALID.safeDetail, binding.body?.detail)
+        assertEquals(PlatformErrors.REQUEST_VALUE_INVALID.safeDetail, bindingFallback.body?.detail)
+        assertEquals(PlatformErrors.REQUEST_VALUE_INVALID.title, mismatch.body?.title)
         assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, mismatch.statusCode)
-        assertEquals("Type mismatch for parameter page", unknownType.body?.title)
-        assertEquals("Resource was updated by another transaction", lockFallback.body?.detail)
-        assertEquals("Invalid request", argumentFallback.body?.detail)
+        assertEquals(PlatformErrors.REQUEST_VALUE_INVALID.title, unknownType.body?.title)
+        assertEquals(PlatformErrors.RESOURCE_CONFLICT.safeDetail, lockFallback.body?.detail)
+        assertEquals(PlatformErrors.REQUEST_VALUE_INVALID.safeDetail, argumentFallback.body?.detail)
     }
 
     private fun sampleParameter(): MethodParameter = MethodParameter(

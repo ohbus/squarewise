@@ -1,6 +1,8 @@
 package com.subhrodip.squarewise.accounts.auth.provider
 
 import java.util.UUID
+import com.subhrodip.squarewise.errors.catalog.PlatformErrors
+import com.subhrodip.squarewise.security.errors.PlatformDomainException
 
 /**
  * Adapter stub for federating or delegating token issuance to an external OIDC Identity Provider
@@ -35,6 +37,6 @@ class ExternalOidcTokenProvider(
      */
     override fun issueAccessToken(accountId: UUID, subject: String, email: String): IssuedToken {
         // RFC 8693 Token Exchange / Client Credentials delegation hook
-        throw UnsupportedOperationException("External OIDC provider delegation is not enabled in this profile")
+        throw PlatformDomainException(PlatformErrors.PLATFORM_CONFIGURATION_INVALID)
     }
 }
