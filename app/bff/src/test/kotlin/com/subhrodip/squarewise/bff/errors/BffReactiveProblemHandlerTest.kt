@@ -9,7 +9,10 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.springframework.http.HttpHeaders
+import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus
+import org.springframework.http.HttpStatusCode
 import org.springframework.mock.http.server.reactive.MockServerHttpRequest
 import org.springframework.mock.web.server.MockServerWebExchange
 import org.springframework.web.server.ServerWebInputException
@@ -47,6 +50,8 @@ class BffReactiveProblemHandlerTest {
     @Test
     fun `maps HTTP status failures to their catalog definitions`() {
         mapOf(
+            400 to BffErrors.GRAPHQL_INPUT_INVALID,
+            422 to BffErrors.GRAPHQL_INPUT_INVALID,
             401 to PlatformErrors.AUTHENTICATION_REQUIRED,
             403 to PlatformErrors.ACCESS_DENIED,
             404 to PlatformErrors.RESOURCE_NOT_FOUND,
@@ -74,7 +79,7 @@ class BffReactiveProblemHandlerTest {
         handler.handle(
             transport,
             WebClientRequestException(IllegalStateException("secret transport"),
-                org.springframework.http.HttpMethod.GET, URI("https://expense-core"), org.springframework.http.HttpHeaders())
+                HttpMethod.GET, URI("https://expense-core"), HttpHeaders())
         ).block()
         assertTrue(responseBody(transport).contains(BffErrors.UPSTREAM_UNAVAILABLE.safeDetail))
     }
@@ -142,6 +147,18 @@ class BffReactiveProblemHandlerTest {
         }
     }
 
+    @Test
+    fun `writer uses request correlation and default optional arguments`() {
+        val exchange = MockServerWebExchange.from(
+            MockServerHttpRequest.get("/graphql").header("X-Request-Id", "request-42").build()
+        )
+
+        BffReactiveProblemWriter(ObjectMapper()).write(exchange, BffErrors.UPSTREAM_TIMEOUT).block()
+
+        assertEquals("request-42", exchange.response.headers.getFirst("X-Request-Id"))
+        assertTrue(responseBody(exchange).contains(BffErrors.UPSTREAM_TIMEOUT.safeDetail))
+    }
+
     private fun exchange(): MockServerWebExchange =
         MockServerWebExchange.from(MockServerHttpRequest.get("/graphql").build())
 
@@ -150,5 +167,5 @@ class BffReactiveProblemHandlerTest {
 }
 
 private class SemanticInputException : ServerWebInputException("semantic input") {
-    override fun getStatusCode(): org.springframework.http.HttpStatusCode = HttpStatus.UNPROCESSABLE_ENTITY
+    override fun getStatusCode(): HttpStatusCode = HttpStatus.UNPROCESSABLE_ENTITY
 }

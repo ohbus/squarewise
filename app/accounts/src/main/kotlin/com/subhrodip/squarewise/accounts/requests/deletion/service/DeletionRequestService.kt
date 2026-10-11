@@ -2,11 +2,10 @@ package com.subhrodip.squarewise.accounts.requests.deletion.service
 
 import com.subhrodip.squarewise.accounts.requests.deletion.model.DeletionRequest
 import com.subhrodip.squarewise.accounts.requests.deletion.persistence.DeletionRequestStore
-import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 
 @Service
-class DeletionRequestService @Autowired constructor(
+class DeletionRequestService(
     private val store: DeletionRequestStore
 ) {
     fun request(subject: String): DeletionRequest = store.request(subject)

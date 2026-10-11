@@ -25,6 +25,7 @@ class NotificationInboxQueryStoreTest {
         val store = NotificationInboxQueryStore { listOf(cursor, sameTimestampLowerId, older) }
 
         assertEquals(listOf(sameTimestampLowerId, older), store.page("alice", cursor.occurredAt, cursor.notificationId, 10))
+        assertEquals(listOf(cursor, sameTimestampLowerId), store.page("alice", cursor.occurredAt, null, 2))
     }
 
     private fun item(id: Long, occurredAt: Instant) = InboxItem(

@@ -58,6 +58,15 @@ class JpaNotificationInboxStoreTest @Autowired constructor(
     }
 
     @Test
+    fun `treats a partial cursor as the first page`() {
+        inboxRepository.deleteAll()
+        val occurredAt = Instant.parse("2026-09-17T12:00:00Z")
+        store.append("partial", InboxItem(UUID.randomUUID(), "expense.created", "Item", occurredAt))
+
+        assertEquals(1, store.page("partial", occurredAt, null, 10).size)
+    }
+
+    @Test
     fun `persists event id deduplication across adapter calls`() {
         eventRepository.deleteAll()
         val eventId = UUID.fromString("00000000-0000-7000-8000-000000000003")

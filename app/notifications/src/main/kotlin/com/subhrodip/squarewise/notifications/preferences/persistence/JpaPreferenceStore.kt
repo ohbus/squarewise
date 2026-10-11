@@ -5,7 +5,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
 /**
- * JPA implementation of [com.subhrodip.squarewise.notifications.preferences.persistence.PreferenceStore] backed by [com.subhrodip.squarewise.notifications.preferences.persistence.NotificationPreferenceRepository].
+ * JPA implementation of [PreferenceStore] backed by [NotificationPreferenceRepository].
  *
  * Persists and retrieves user delivery preferences, defaulting to enabled preferences
  * if no custom preference record exists yet.

@@ -4,6 +4,8 @@ import com.subhrodip.squarewise.errors.catalog.PlatformErrors
 import com.subhrodip.squarewise.expensecore.expenses.api.response.GroupBalanceItem
 import com.subhrodip.squarewise.expensecore.expenses.api.request.MoneyDto
 import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseRecord
+import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseAllocation
+import com.subhrodip.squarewise.expensecore.expenses.domain.ExpensePayer
 import com.subhrodip.squarewise.expensecore.expenses.service.toRecord
 import com.subhrodip.squarewise.expensecore.expenses.persistence.entity.ExpenseEntity
 import com.subhrodip.squarewise.expensecore.expenses.persistence.entity.ExpensePayerEntity
@@ -433,8 +435,8 @@ class JpaExpenseStore(
         groupId: UUID,
         expenseId: UUID,
         currency: String,
-        payers: List<com.subhrodip.squarewise.expensecore.expenses.domain.ExpensePayer>,
-        allocations: List<com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseAllocation>,
+        payers: List<ExpensePayer>,
+        allocations: List<ExpenseAllocation>,
         timestamp: Instant
     ): List<BalancePostingEntity> {
         val postings = mutableListOf<BalancePostingEntity>()

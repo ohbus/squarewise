@@ -5,6 +5,8 @@ import com.subhrodip.squarewise.security.ratelimit.RateLimitPolicy
 import com.subhrodip.squarewise.security.ratelimit.RateLimitStoreUnavailableException
 import com.subhrodip.squarewise.security.ratelimit.RateLimiter
 import java.time.Duration
+import java.net.InetAddress
+import java.net.InetSocketAddress
 import java.util.concurrent.atomic.AtomicBoolean
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -151,7 +153,7 @@ class GraphQlRateLimitWebFilterTest {
 
         val exchange = MockServerWebExchange.from(
             MockServerHttpRequest.post("/graphql")
-                .remoteAddress(java.net.InetSocketAddress(java.net.InetAddress.getByName("198.51.100.42"), 8080))
+                .remoteAddress(InetSocketAddress(InetAddress.getByName("198.51.100.42"), 8080))
                 .build()
         )
 

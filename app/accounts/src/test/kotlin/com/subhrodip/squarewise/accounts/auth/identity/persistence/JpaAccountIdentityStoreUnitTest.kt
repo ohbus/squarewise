@@ -1,5 +1,6 @@
 package com.subhrodip.squarewise.accounts.auth.identity.persistence
 
+import com.subhrodip.squarewise.accounts.profile.persistence.ProfileEntity
 import com.subhrodip.squarewise.accounts.profile.persistence.ProfileRepository
 import java.time.Instant
 import java.util.Optional
@@ -8,6 +9,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
+import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.mock
 
@@ -92,7 +94,7 @@ class JpaAccountIdentityStoreUnitTest {
         val persistedLegacyIdentity = identity(accountId, email = null).apply {
             providerSubject = "new-subject"
         }
-        `when`(identities.save(org.mockito.ArgumentMatchers.any(AccountIdentityEntity::class.java)))
+        `when`(identities.save(any(AccountIdentityEntity::class.java)))
             .thenReturn(persistedLegacyIdentity)
 
         val enrolled = store.enrollIdentity(
@@ -132,7 +134,7 @@ class JpaAccountIdentityStoreUnitTest {
             updatedAt = Instant.parse("2026-01-01T00:00:00Z")
         )
 
-    private fun profile(accountId: UUID) = com.subhrodip.squarewise.accounts.profile.persistence.ProfileEntity(
+    private fun profile(accountId: UUID) = ProfileEntity(
         accountId = accountId,
         subject = "subject",
         displayName = "Legacy User",

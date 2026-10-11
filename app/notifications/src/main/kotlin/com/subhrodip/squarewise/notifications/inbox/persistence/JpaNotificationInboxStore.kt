@@ -5,6 +5,7 @@ import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.Instant
 import java.util.UUID
 
 /**
@@ -53,7 +54,7 @@ class JpaNotificationInboxStore(
     @Transactional(readOnly = true)
     override fun page(
         subject: String,
-        afterOccurredAt: java.time.Instant?,
+        afterOccurredAt: Instant?,
         afterNotificationId: UUID?,
         limit: Int
     ): List<InboxItem> {

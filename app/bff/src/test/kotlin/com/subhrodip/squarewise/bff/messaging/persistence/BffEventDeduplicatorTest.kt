@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import java.util.UUID
 
 /** Verifies bounded BFF event deduplication rejects unsafe cache capacities. */
 class BffEventDeduplicatorTest {
@@ -22,8 +23,8 @@ class BffEventDeduplicatorTest {
     @Test
     fun `reports and clears bounded duplicate state`() {
         val deduplicator = BffEventDeduplicator(2)
-        val first = java.util.UUID.randomUUID()
-        val second = java.util.UUID.randomUUID()
+        val first = UUID.randomUUID()
+        val second = UUID.randomUUID()
 
         assertFalse(deduplicator.isDuplicateAndMark(first))
         assertFalse(deduplicator.isDuplicateAndMark(second))
@@ -39,7 +40,7 @@ class BffEventDeduplicatorTest {
     @Test
     fun `releases an in-flight claim so a failed delivery can be retried`() {
         val deduplicator = BffEventDeduplicator()
-        val eventId = java.util.UUID.randomUUID()
+        val eventId = UUID.randomUUID()
 
         assertTrue(deduplicator.tryClaim(eventId))
         deduplicator.release(eventId)

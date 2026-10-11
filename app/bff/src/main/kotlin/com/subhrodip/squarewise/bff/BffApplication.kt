@@ -2,6 +2,7 @@ package com.subhrodip.squarewise.bff
 
 import com.subhrodip.squarewise.bff.config.GraphQlAbuseProperties
 import com.subhrodip.squarewise.bff.config.GraphQlRateLimitWebFilter
+import com.subhrodip.squarewise.bff.errors.BffReactiveProblemHandler
 import com.subhrodip.squarewise.bff.realtime.LiveUpdateFanout
 import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
 import com.subhrodip.squarewise.security.OidcConfigurationGuard
@@ -22,6 +23,7 @@ import org.springframework.web.server.WebFilter
 import org.springframework.web.server.WebExceptionHandler
 import org.springframework.data.redis.core.StringRedisTemplate
 import reactor.core.publisher.Mono
+import tools.jackson.databind.ObjectMapper
 
 /** Root Spring Boot composition for the GraphQL BFF application. */
 @SpringBootApplication(excludeName = ["org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration"])
@@ -44,13 +46,13 @@ class BffApplication {
     fun graphqlRateLimitWebFilter(
         rateLimiter: RateLimiter,
         properties: GraphQlAbuseProperties,
-        @org.springframework.beans.factory.annotation.Value("\${squarewise.bff.rate-limit.enabled:true}") enabled: Boolean
+        @Value("\${squarewise.bff.rate-limit.enabled:true}") enabled: Boolean
     ): WebFilter = GraphQlRateLimitWebFilter(rateLimiter, properties, enabled)
 
     /** Registers the catalog-backed reactive REST failure boundary. */
     @Bean
-    fun bffReactiveProblemHandler(objectMapper: tools.jackson.databind.ObjectMapper): WebExceptionHandler =
-        com.subhrodip.squarewise.bff.errors.BffReactiveProblemHandler(objectMapper)
+    fun bffReactiveProblemHandler(objectMapper: ObjectMapper): WebExceptionHandler =
+        BffReactiveProblemHandler(objectMapper)
     @Bean
     fun liveUpdateFanout(properties: GraphQlAbuseProperties): LiveUpdateFanout = LiveUpdateFanout(
         queueCapacity = properties.subscriptionQueueCapacity,

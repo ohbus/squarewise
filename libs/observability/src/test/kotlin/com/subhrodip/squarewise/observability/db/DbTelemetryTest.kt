@@ -1,10 +1,15 @@
 package com.subhrodip.squarewise.observability.db
 
 import com.subhrodip.squarewise.observability.errors.ObservabilityPlatformException
+import io.micrometer.core.instrument.MeterRegistry
+import io.micrometer.core.instrument.Tags
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers.eq
+import org.mockito.Mockito
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 
 class DbTelemetryTest {
@@ -143,17 +148,17 @@ class DbTelemetryTest {
 
     @Test
     fun `acquisition and queryDuration handle null Timer gracefully`() {
-        val mockRegistry = org.mockito.Mockito.mock(io.micrometer.core.instrument.MeterRegistry::class.java)
-        org.mockito.Mockito.`when`(
+        val mockRegistry = Mockito.mock(MeterRegistry::class.java)
+        Mockito.`when`(
             mockRegistry.timer(
-                org.mockito.ArgumentMatchers.eq("squarewise.db.pool.acquisition"),
-                org.mockito.ArgumentMatchers.any(io.micrometer.core.instrument.Tags::class.java)
+                eq("squarewise.db.pool.acquisition"),
+                any(Tags::class.java)
             )
         ).thenReturn(null)
-        org.mockito.Mockito.`when`(
+        Mockito.`when`(
             mockRegistry.timer(
-                org.mockito.ArgumentMatchers.eq("squarewise.db.query.duration"),
-                org.mockito.ArgumentMatchers.any(io.micrometer.core.instrument.Tags::class.java)
+                eq("squarewise.db.query.duration"),
+                any(Tags::class.java)
             )
         ).thenReturn(null)
 

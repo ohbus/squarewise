@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.server.ResponseStatusException
 import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
 import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
 import java.security.Principal
@@ -49,7 +50,7 @@ class SearchController(
      * @param limit maximum number of results to return (1..1000, default 100)
      * @param principal authenticated user principal
      * @return [ExpenseSearchPage] containing matching expenses, cursor, and currency totals
-     * @throws org.springframework.web.server.ResponseStatusException if group not found or user not a member
+     * @throws ResponseStatusException if group not found or user not a member
      */
     @GetMapping(ApiEndpoints.ExpenseCore.V1.SEARCH_SUBPATH)
     fun search(
@@ -100,7 +101,7 @@ class SearchController(
      * @param maxRows maximum number of export rows permitted (1..10000, default 10000)
      * @param principal authenticated user principal
      * @return [ResponseEntity] containing CSV data with Content-Disposition attachment header
-     * @throws org.springframework.web.server.ResponseStatusException if group not found, user not a member, or export exceeds limit
+     * @throws ResponseStatusException if group not found, user not a member, or export exceeds limit
      */
     @GetMapping(ApiEndpoints.ExpenseCore.V1.EXPORT_SUBPATH, produces = [ApiEndpoints.Headers.TEXT_CSV_UTF8])
     fun export(

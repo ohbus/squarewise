@@ -1,5 +1,6 @@
 package com.subhrodip.squarewise.expensecore.groups.persistence.repository
 
+import com.subhrodip.squarewise.expensecore.groups.domain.GroupEntity
 import com.subhrodip.squarewise.expensecore.groups.domain.GroupMembershipEntity
 import java.util.Optional
 import java.util.UUID
@@ -35,7 +36,7 @@ class GroupMembershipRepositoryContractTest {
                 return emptyList()
             }
 
-            override fun findActiveGroupsBySubject(subject: String, status: String): List<com.subhrodip.squarewise.expensecore.groups.domain.GroupEntity> = emptyList()
+            override fun findActiveGroupsBySubject(subject: String, status: String): List<GroupEntity> = emptyList()
 
             override fun findByGroupIdAndStatus(groupId: UUID, status: String): List<GroupMembershipEntity> {
                 findByGroupCalledWith = Pair(groupId, status)

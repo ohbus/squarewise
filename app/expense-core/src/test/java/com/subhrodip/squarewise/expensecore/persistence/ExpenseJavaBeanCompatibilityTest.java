@@ -21,6 +21,7 @@ import com.subhrodip.squarewise.expensecore.recurring.domain.RecurringExpenseSch
 import com.subhrodip.squarewise.expensecore.recurring.domain.RecurrenceFrequency;
 import java.time.LocalDate;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
@@ -46,8 +47,8 @@ class ExpenseJavaBeanCompatibilityTest {
         expense.setCreatedAt(NOW);
         expense.setDeleted(false);
         expense.setUpdatedAt(NOW);
-        expense.setPayers(java.util.List.of());
-        expense.setAllocations(java.util.List.of());
+        expense.setPayers(List.of());
+        expense.setAllocations(List.of());
         assertEquals(expenseId, expense.getExpenseId());
         assertEquals(groupId, expense.getGroupId());
         assertEquals("Dinner", expense.getDescription());

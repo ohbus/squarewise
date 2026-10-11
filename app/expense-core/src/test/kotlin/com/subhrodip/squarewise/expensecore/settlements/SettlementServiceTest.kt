@@ -4,7 +4,9 @@ import com.subhrodip.squarewise.expensecore.settlements.domain.SettlementStatus
 import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseAllocation
 import com.subhrodip.squarewise.expensecore.expenses.domain.ExpensePayer
 import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseRecord
+import com.subhrodip.squarewise.expensecore.expenses.persistence.store.InMemoryExpenseStore
 import com.subhrodip.squarewise.expensecore.settlements.persistence.InMemorySettlementStore
+import com.subhrodip.squarewise.expensecore.settlements.persistence.SettlementStore
 import com.subhrodip.squarewise.expensecore.settlements.service.SettlementService
 import com.subhrodip.squarewise.expensecore.settlements.service.SettlementSuggestionEngine
 
@@ -19,10 +21,10 @@ import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
 
 /** Verifies settlement-service validation, idempotency, reversal, and suggestion delegation. */
 class SettlementServiceTest {
-    private val expenseStore = com.subhrodip.squarewise.expensecore.expenses.persistence.store.InMemoryExpenseStore()
+    private val expenseStore = InMemoryExpenseStore()
     private val engine = SettlementSuggestionEngine(expenseStore)
 
-    private fun createService(store: com.subhrodip.squarewise.expensecore.settlements.persistence.SettlementStore = InMemorySettlementStore()) =
+    private fun createService(store: SettlementStore = InMemorySettlementStore()) =
         SettlementService(store, engine)
 
     @Test

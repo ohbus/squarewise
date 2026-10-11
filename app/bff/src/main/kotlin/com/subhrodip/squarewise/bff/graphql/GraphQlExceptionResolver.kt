@@ -12,6 +12,7 @@ import graphql.GraphQLError
 import graphql.schema.DataFetchingEnvironment
 import org.springframework.graphql.execution.DataFetcherExceptionResolverAdapter
 import org.springframework.stereotype.Component
+import java.util.concurrent.TimeoutException
 
 /** Maps resolver failures to the public GraphQL error-code contract. */
 @Component
@@ -19,7 +20,7 @@ class GraphQlExceptionResolver : DataFetcherExceptionResolverAdapter() {
     private val governedResolver = BffGraphQLErrorResolver()
 
     override fun resolveToSingleError(exception: Throwable, environment: DataFetchingEnvironment): GraphQLError {
-        if (exception is UpstreamProblemException || exception is SquarewiseException || exception is java.util.concurrent.TimeoutException) {
+        if (exception is UpstreamProblemException || exception is SquarewiseException || exception is TimeoutException) {
             return governedResolver.resolve(exception, environment, RequestIdContext.get())
         }
         val definition = when {

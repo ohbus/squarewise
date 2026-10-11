@@ -7,7 +7,7 @@ import org.slf4j.MDC
  *
  * Invariants:
  * - When [with] executes an action, the correlation ID is bound to both a [ThreadLocal]
- *   and [org.slf4j.MDC] using key [MDC_KEY].
+ *   and [MDC] using key [MDC_KEY].
  * - MDC and ThreadLocal bindings are guaranteed to be cleaned up in a `finally` block,
  *   preventing thread-pool contamination across servlet container worker threads.
  */

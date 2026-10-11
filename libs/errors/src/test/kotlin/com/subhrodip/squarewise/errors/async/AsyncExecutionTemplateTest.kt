@@ -2,6 +2,7 @@ package com.subhrodip.squarewise.errors.async
 
 import com.subhrodip.squarewise.errors.catalog.BffErrors
 import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
+import com.subhrodip.squarewise.errors.code.ErrorDefinition
 import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -154,5 +155,5 @@ class AsyncExecutionTemplateTest {
     }
 }
 
-private class TestSquarewiseException(definition: com.subhrodip.squarewise.errors.code.ErrorDefinition) :
+private class TestSquarewiseException(definition: ErrorDefinition) :
     SquarewiseException(definition)

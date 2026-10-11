@@ -18,6 +18,8 @@ import org.hibernate.exception.ConstraintViolationException
 import org.slf4j.LoggerFactory
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Service
+import java.time.Instant
+import java.util.UUID
 /**
  * Broker-facing application boundary. APPLIED and DUPLICATE deliveries may be
  * acknowledged; any exception is deliberately propagated so the delivery can
@@ -100,10 +102,10 @@ class NotificationEventConsumer(
         log.info("Email dispatch outcome for recipientId={} (notificationId={}): {}", opaqueRecipientId(recipientEmail), event.notificationId, deliveryOutcome)
     }
 
-    private fun markDelivery(notificationId: java.util.UUID, status: String) {
+    private fun markDelivery(notificationId: UUID, status: String) {
         emailDeliveries?.findById(notificationId)?.ifPresent { delivery ->
             delivery.status = status
-            delivery.updatedAt = java.time.Instant.now()
+            delivery.updatedAt = Instant.now()
             emailDeliveries.save(delivery)
         }
     }

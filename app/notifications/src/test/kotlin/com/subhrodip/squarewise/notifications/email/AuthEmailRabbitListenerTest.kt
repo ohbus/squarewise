@@ -8,6 +8,7 @@ import com.rabbitmq.client.Channel
 import java.nio.charset.StandardCharsets
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.doThrow
@@ -23,6 +24,7 @@ import com.subhrodip.squarewise.errors.async.AsyncExecutionTemplate
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.times
+import java.util.concurrent.CancellationException
 
 class AuthEmailRabbitListenerTest {
     private val consumer = mock(AuthEmailDeliveryConsumer::class.java)
@@ -285,6 +287,40 @@ class AuthEmailRabbitListenerTest {
         val redeliveredMsg = message(validEvent(), 41L, redelivered = true)
         listener.onMessage(redeliveredMsg, channel2)
         assertEquals(41L, channel2.ackedTag)
+    }
+
+    @Test
+    fun `dead letters terminal consumer outcomes`() {
+        listOf(EmailDeliveryOutcome.RETRYABLE_FAILURE, EmailDeliveryOutcome.PERMANENT_FAILURE)
+            .forEachIndexed { index, outcome ->
+                doReturn(outcome).`when`(consumer).consume(
+                    any(AuthEmailDeliveryEvent::class.java) ?: AuthEmailDeliveryEvent("evt", "user@example.com", "LOGIN_CODE", "cipher", Instant.MAX),
+                    any(Instant::class.java) ?: Instant.EPOCH
+                )
+                val publisher = RecordingDeadLetterPublisher()
+                val boundaryListener = AuthEmailRabbitListener(ObjectMapper(), consumer, deadLetterPublisher = publisher)
+                val channel = TestChannel()
+
+                boundaryListener.onMessage(message(validEvent(), 42L + index, redelivered = true), channel)
+
+                assertEquals(42L + index, channel.ackedTag)
+                assertEquals(1, publisher.records.size)
+            }
+    }
+
+    @Test
+    fun `propagates cancellation without acknowledging or rejecting`() {
+        doThrow(CancellationException("cancelled")).`when`(consumer).consume(
+            any(AuthEmailDeliveryEvent::class.java) ?: AuthEmailDeliveryEvent("evt", "user@example.com", "LOGIN_CODE", "cipher", Instant.MAX),
+            any(Instant::class.java) ?: Instant.EPOCH
+        )
+        val channel = TestChannel()
+
+        assertThrows(CancellationException::class.java) {
+            listener.onMessage(message(validEvent(), 43L), channel)
+        }
+        assertNull(channel.ackedTag)
+        assertNull(channel.rejectedTag)
     }
 
     private fun fieldValue(field: String): String = when (field) {

@@ -8,8 +8,10 @@ import com.subhrodip.squarewise.notifications.consumer.service.NotificationConsu
 import com.subhrodip.squarewise.notifications.consumer.service.NotificationEventConsumer
 import com.subhrodip.squarewise.notifications.consumer.service.TransactionalNotificationEventProcessor
 import com.subhrodip.squarewise.notifications.consumer.transport.BrokerEnvelopeParser
+import com.subhrodip.squarewise.notifications.consumer.transport.BrokerEnvelope
 import com.subhrodip.squarewise.notifications.consumer.transport.RabbitNotificationListener
 import com.subhrodip.squarewise.notifications.consumer.transport.DeadLetterPublisher
+import com.subhrodip.squarewise.notifications.consumer.transport.toNotificationEvent
 import com.subhrodip.squarewise.errors.async.DeadLetterRecord
 import com.subhrodip.squarewise.notifications.preferences.persistence.PreferenceStore
 
@@ -17,6 +19,7 @@ import com.rabbitmq.client.Channel
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
 import org.springframework.amqp.core.Message
@@ -24,6 +27,8 @@ import org.springframework.amqp.core.MessageProperties
 import tools.jackson.databind.ObjectMapper
 import java.nio.charset.StandardCharsets
 import java.util.UUID
+import java.time.Instant
+import java.util.concurrent.CancellationException
 
 class RabbitNotificationListenerTest {
 
@@ -108,6 +113,27 @@ class RabbitNotificationListenerTest {
 
         assertEquals(deliveryTag, channel.ackedTag)
         assertNull(channel.rejectedTag)
+    }
+
+    @Test
+    fun `converts invalid notification ids and description fallbacks safely`() {
+        val aggregateId = UUID.randomUUID()
+        val envelope = BrokerEnvelope(
+            eventId = UUID.randomUUID(),
+            eventType = "expense.created",
+            schemaVersion = 1,
+            aggregateId = aggregateId,
+            groupId = UUID.randomUUID(),
+            groupRevision = 1,
+            occurredAt = Instant.EPOCH,
+            payload = mapOf("notificationId" to "not-a-uuid", "changedBy" to " changed-user ", "message" to " ")
+        )
+
+        val event = envelope.toNotificationEvent()
+
+        assertEquals(aggregateId, event.notificationId)
+        assertEquals(" changed-user ", event.subject)
+        assertEquals("expense.created for group ${envelope.groupId}", event.message)
     }
 
     @Test
@@ -258,6 +284,23 @@ class RabbitNotificationListenerTest {
         listener.onMessage(message, null)
     }
 
+    @Test
+    fun `propagates cancellation without broker disposition`() {
+        val consumer = NotificationConsumer { throw CancellationException("cancelled") }
+        val listener = RabbitNotificationListener(consumer, envelopeParser, deadLetterPublisher = DeadLetterPublisher { })
+
+        assertThrows(CancellationException::class.java) {
+            listener.onMessage(
+                createMessage(
+                    """{"eventId":"00000000-0000-7000-8000-000000000218","eventType":"expense.created","schemaVersion":1,"aggregateId":"00000000-0000-7000-8000-000000000219","groupId":"00000000-0000-7000-8000-000000000220","groupRevision":1,"occurredAt":"2026-09-17T20:00:00Z","payload":{"subject":"cancelled-user"}}""",
+                    82L
+                ),
+                TestChannel()
+            )
+        }
+    }
+
+
     private fun createMessage(content: String, deliveryTag: Long, redelivered: Boolean = false): Message {
         val props = MessageProperties().apply {
             this.deliveryTag = deliveryTag
@@ -288,4 +331,5 @@ class RabbitNotificationListenerTest {
             records += record
         }
     }
+
 }
