@@ -142,17 +142,14 @@ class RabbitBffEventListenerTest {
     }
 
     @Test
-    fun `requeues when terminal record publication fails`() {
+    fun `rejects without requeue when terminal record publication fails`() {
         val message = Message("{ not-valid-json }".toByteArray(Charsets.UTF_8), MessageProperties().apply { deliveryTag = 8L })
-        doThrow(IOException("reject failed"))
-            .`when`(channel)
-            .basicReject(8L, true)
 
         val failingPublisher = DeadLetterPublisher { throw IOException("publish failed") }
         val failingListener = RabbitBffEventListener(eventConsumer, objectMapper, deadLetterPublisher = failingPublisher)
 
         failingListener.onMessage(message, channel)
 
-        verify(channel).basicReject(8L, true)
+        verify(channel).basicReject(8L, false)
     }
 }

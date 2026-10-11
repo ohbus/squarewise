@@ -12,12 +12,14 @@ import java.time.LocalDate
 import java.time.Instant
 import java.util.UUID
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchers.isNull
 import org.mockito.Mockito.doThrow
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.transaction.annotation.Transactional
@@ -65,5 +67,35 @@ class RecurringExpenseFailureTest @Autowired constructor(
             "generation_error",
             outboxStore.snapshot().single { it.aggregateId == schedule.scheduleId }.payload["reason"]
         )
+    }
+
+    @Test
+    fun `rethrows data access failure so the due batch cannot continue`() {
+        doThrow(DataIntegrityViolationException("database unavailable"))
+            .`when`(expenseStore)
+            .create(
+                any(UUID::class.java) ?: UUID(0, 0),
+                any(ExpenseRecord::class.java) ?: ExpenseRecord(
+                    UUID(0, 0), UUID(0, 0), "", "", "", 0, 1, "", Instant.EPOCH, emptyList(), emptyList()
+                ),
+                any(String::class.java) ?: "test-idempotency",
+                isNull(String::class.java)
+            )
+
+        val group = groupStore.create("recurring-data-access", CreateGroupRequest("Data access group", "TRIP", "EUR"))
+        service.createSchedule(
+            group.groupId,
+            CreateRecurringScheduleRequest(
+                description = "Database failure",
+                amountMinor = 1200,
+                currency = "EUR",
+                frequency = RecurrenceFrequency.WEEKLY,
+                startDate = LocalDate.of(2026, 10, 1)
+            )
+        )
+
+        assertThrows(DataIntegrityViolationException::class.java) {
+            service.processDueOccurrences(LocalDate.of(2026, 10, 1))
+        }
     }
 }

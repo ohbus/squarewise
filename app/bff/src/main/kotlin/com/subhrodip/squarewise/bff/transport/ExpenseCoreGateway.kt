@@ -115,7 +115,13 @@ class ExpenseCoreGateway(
             .expand { page ->
                 page.nextCursor?.let { nextCursor ->
                     if (page.pageNumber >= MAX_EXPENSE_PAGES) {
-                        Mono.error(UpstreamServiceException(502, definition = BffErrors.UPSTREAM_PROTOCOL_INVALID))
+                        fetch(nextCursor, page.pageNumber + 1).flatMap { lookahead ->
+                            if (lookahead.expenses.isEmpty()) {
+                                Mono.empty()
+                            } else {
+                                Mono.error(UpstreamServiceException(502, definition = BffErrors.UPSTREAM_PROTOCOL_INVALID))
+                            }
+                        }
                     } else {
                         fetch(nextCursor, page.pageNumber + 1)
                     }

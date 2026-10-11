@@ -155,6 +155,11 @@ def run_chaos_recovery_tests() -> None:
     bob_sub = extract_jwt_subject(user_b)
     alice_id = resolve_membership_id(members, alice_sub, profile_a.get("displayName"), profile_a.get("accountId"))
     bob_id = resolve_membership_id(members, bob_sub, profile_b.get("displayName"), profile_b.get("accountId"))
+
+    status_before, inbox_before = request_json(
+        f"{NOTIFICATIONS_URL}/notifications/v1/inbox", bearer=user_a
+    )
+    assert status_before == 200, f"Failed to read Alice's notification baseline: {inbox_before}"
     print(f"  ✓ Members active: Alice={alice_id}, Bob={bob_id}")
 
     # Verify the GraphQL BFF exposes an upstream outage as a structured error
@@ -261,8 +266,6 @@ def run_chaos_recovery_tests() -> None:
 
     # Step 8: Verify Event Delivery into Downstream Notifications Inbox
     print("\n[Step 8] Verifying downstream event delivery in Notifications inbox...")
-    status_before, inbox_before = request_json(f"{NOTIFICATIONS_URL}/notifications/v1/inbox", bearer=user_a)
-    assert status_before == 200, f"Failed to read Alice's notification baseline: {inbox_before}"
     delivered = False
     for attempt in range(1, NOTIFICATION_DELIVERY_ATTEMPTS + 1):
         status_inbox, inbox_data = request_json(f"{NOTIFICATIONS_URL}/notifications/v1/inbox", bearer=user_a)

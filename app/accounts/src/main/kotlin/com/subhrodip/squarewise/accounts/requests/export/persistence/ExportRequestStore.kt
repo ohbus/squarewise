@@ -33,4 +33,8 @@ interface ExportRequestStore {
 
     /** Lists at most [limit] newest requests without loading unbounded history. */
     fun listBySubject(subject: String, limit: Int): List<ExportRequest> = listBySubject(subject).take(limit)
+
+    /** Lists one bounded newest-first page without loading the complete history. */
+    fun listBySubject(subject: String, page: Int, limit: Int): List<ExportRequest> =
+        listBySubject(subject, limit).drop(page * limit)
 }

@@ -1,7 +1,9 @@
 package com.subhrodip.squarewise.accounts.auth.config
 
 import com.subhrodip.squarewise.security.errors.PlatformDomainException
+import com.subhrodip.squarewise.errors.catalog.PlatformErrors
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.BeanCreationException
 import org.springframework.context.annotation.AnnotationConfigApplicationContext
@@ -40,9 +42,12 @@ class ExternalOidcStartupFailureTest {
         context.register(AuthSessionConfiguration::class.java)
 
         try {
-            assertThrows(BeanCreationException::class.java) {
+            val failure = assertThrows(BeanCreationException::class.java) {
                 context.refresh()
             }
+            assertTrue(generateSequence(failure as Throwable) { it.cause }.any {
+                it is PlatformDomainException && it.definition == PlatformErrors.PLATFORM_CONFIGURATION_INVALID
+            })
         } finally {
             context.close()
         }

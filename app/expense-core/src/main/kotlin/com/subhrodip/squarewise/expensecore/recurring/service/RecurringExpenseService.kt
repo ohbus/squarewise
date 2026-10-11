@@ -37,6 +37,9 @@ import org.springframework.amqp.AmqpException
 import org.springframework.dao.DataAccessException
 import org.slf4j.LoggerFactory
 import tools.jackson.databind.ObjectMapper
+import tools.jackson.databind.json.JsonMapper
+import tools.jackson.module.kotlin.KotlinModule
+import tools.jackson.core.JacksonException
 
 /**
  * Service managing database-backed recurring expense schedule lifecycle operations,
@@ -51,7 +54,9 @@ class RecurringExpenseService(
     @PersistenceContext private val entityManager: EntityManager,
     @Autowired(required = false)
     private val outboxStore: OutboxStore? = null,
-    private val objectMapper: ObjectMapper = ObjectMapper()
+    private val objectMapper: ObjectMapper = JsonMapper.builder()
+        .addModule(KotlinModule.Builder().build())
+        .build()
 ) : RecurringCommandStore, RecurringQueryStore {
     private val log = LoggerFactory.getLogger(RecurringExpenseService::class.java)
 
@@ -223,6 +228,7 @@ class RecurringExpenseService(
                 occurrenceId,
                 error::class.simpleName
             )
+            if (error is DataAccessException) throw error
             return
         }
         schedule.paused = true
@@ -324,7 +330,7 @@ class RecurringExpenseService(
         schedule.customSpecification?.let { encoded ->
             try {
                 objectMapper.readValue(encoded, RecurringExpenseSpecification::class.java)
-            } catch (error: Exception) {
+            } catch (error: JacksonException) {
                 throw ExpenseDomainException(
                     ExpenseErrors.EXPENSE_REQUEST_INVALID,
                     "Recurring expense specification is malformed",

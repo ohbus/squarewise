@@ -239,7 +239,6 @@ class ProfileControllerTest {
         mvc.perform(
             get(ApiEndpoints.Accounts.V1.profileById(bobId))
                 .with(internalService)
-                .header(ApiEndpoints.Headers.WORKLOAD_ROLE, ApiEndpoints.Headers.WORKLOAD_ROLE_INTERNAL)
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.accountId").value(bobId.toString()))

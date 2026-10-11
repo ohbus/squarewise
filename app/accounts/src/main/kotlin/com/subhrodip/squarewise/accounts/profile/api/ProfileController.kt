@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import com.subhrodip.squarewise.accounts.errors.AccountsDomainException
@@ -63,9 +64,13 @@ class ProfileController(
     }
 
     @GetMapping(ApiEndpoints.Accounts.V1.ME_EXPORT_REQUESTS)
-    fun listExportRequests(principal: Principal?): List<ExportRequestResponse> {
+    fun listExportRequests(
+        principal: Principal?,
+        @RequestParam(name = "page", defaultValue = "0") page: Int,
+        @RequestParam(name = "limit", defaultValue = "100") limit: Int,
+    ): List<ExportRequestResponse> {
         val subject = principal?.name ?: throw AccountsDomainException(AccountsErrors.PROFILE_SUBJECT_INVALID)
-        return exportService.listBySubject(subject).map {
+        return exportService.listBySubject(subject, page, limit).map {
             ExportRequestResponse(it.exportId, it.status, it.requestedAt)
         }
     }

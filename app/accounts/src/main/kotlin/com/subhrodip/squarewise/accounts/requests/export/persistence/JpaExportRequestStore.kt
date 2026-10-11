@@ -70,9 +70,16 @@ class JpaExportRequestStore(
     /** Reads a bounded newest-first export history page directly from the database. */
     @Transactional(readOnly = true)
     override fun listBySubject(subject: String, limit: Int): List<ExportRequest> {
+        return listBySubject(subject, 0, limit)
+    }
+
+    /** Reads a bounded newest-first export history page directly from the database. */
+    @Transactional(readOnly = true)
+    override fun listBySubject(subject: String, page: Int, limit: Int): List<ExportRequest> {
+        require(page >= 0) { "export history page must not be negative" }
         require(limit in 1..100) { "export history limit must be between 1 and 100" }
         ProfileRules.requireSubject(subject)
-        return repository.findBySubjectOrderByRequestedAtDesc(subject, PageRequest.of(0, limit)).map { it.toRecord() }
+        return repository.findBySubjectOrderByRequestedAtDesc(subject, PageRequest.of(page, limit)).map { it.toRecord() }
     }
 }
 

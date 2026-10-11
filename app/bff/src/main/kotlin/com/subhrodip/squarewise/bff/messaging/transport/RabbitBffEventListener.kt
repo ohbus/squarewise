@@ -53,10 +53,20 @@ class RabbitBffEventListener(
                 payload = if (message.body.isEmpty()) "<empty>".toByteArray() else message.body,
             ) { eventConsumer.consume(parsed.getOrThrow()) }) {
                 is AsyncExecutionResult.Completed -> channel?.basicAck(deliveryTag, false)
-                is AsyncExecutionResult.Failed -> result.deadLetter?.let { deadLetter ->
-                    deadLetterPublisher.publish(deadLetter)
-                    channel?.basicAck(deliveryTag, false)
-                } ?: reject(channel, deliveryTag, result.disposition == MessageDisposition.NACK_REQUEUE)
+                is AsyncExecutionResult.Failed -> {
+                    val deadLetter = result.deadLetter
+                    if (deadLetter == null) {
+                        reject(channel, deliveryTag, result.disposition == MessageDisposition.NACK_REQUEUE)
+                    } else {
+                        try {
+                            deadLetterPublisher.publish(deadLetter)
+                            channel?.basicAck(deliveryTag, false)
+                        } catch (publishFailure: Exception) {
+                            log.error("Failed BFF dead-letter publication tag={} exceptionType={}", deliveryTag, publishFailure::class.simpleName)
+                            reject(channel, deliveryTag, false)
+                        }
+                    }
+                }
             }
         } catch (exception: Exception) {
             if (exception is CancellationException || FatalErrorClassifier.isFatal(exception)) throw exception

@@ -21,6 +21,7 @@ dependencies {
     implementation(libs.boot.flyway)
     implementation(libs.kotlin.reflect)
     implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.jackson.module.kotlin)
 
     runtimeOnly(libs.micrometer.prometheus)
     runtimeOnly(libs.flyway.postgresql)

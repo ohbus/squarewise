@@ -28,12 +28,14 @@ class JpaExportRequestStoreTest {
     fun `lists maps and retrieves requests for a subject`() {
         doReturn(listOf(request)).`when`(repository).findBySubjectOrderByRequestedAtDesc("alice", PageRequest.of(0, 100))
         doReturn(listOf(request)).`when`(repository).findBySubjectOrderByRequestedAtDesc("alice", PageRequest.of(0, 1))
+        doReturn(listOf(request)).`when`(repository).findBySubjectOrderByRequestedAtDesc("alice", PageRequest.of(1, 1))
         doReturn(Optional.of(request)).`when`(repository).findById(request.exportId)
         val missingId = UUID.randomUUID()
         doReturn(Optional.empty<AccountExportRequestEntity>()).`when`(repository).findById(missingId)
 
         assertEquals(listOf(request.exportId), store.listBySubject("alice").map { it.exportId })
         assertEquals(listOf(request.exportId), store.listBySubject("alice", 1).map { it.exportId })
+        assertEquals(listOf(request.exportId), store.listBySubject("alice", 1, 1).map { it.exportId })
         assertEquals(request.exportId, store.get(request.exportId)?.exportId)
         assertNull(store.get(missingId))
     }
@@ -43,5 +45,6 @@ class JpaExportRequestStoreTest {
         assertThrows(AccountsDomainException::class.java) { store.listBySubject(" ") }
         assertThrows(IllegalArgumentException::class.java) { store.listBySubject("alice", 0) }
         assertThrows(IllegalArgumentException::class.java) { store.listBySubject("alice", 101) }
+        assertThrows(IllegalArgumentException::class.java) { store.listBySubject("alice", -1, 1) }
     }
 }

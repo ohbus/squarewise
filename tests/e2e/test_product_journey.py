@@ -696,6 +696,14 @@ def run_e2e_tests() -> int:
     assert preview.get("allocations") == {alice_id: "5000", bob_id: "5000"}, (
         "Expense Core previewAllocation must split the total equally"
     )
+
+    status_before_notifications, inbox_before_notifications = request_json(
+        f"{NOTIFICATIONS_URL}/notifications/v1/inbox",
+        bearer=user_a,
+    )
+    assert status_before_notifications == 200, (
+        f"Failed to read notification baseline: {inbox_before_notifications}"
+    )
     print("  ✓ Expense Core previewAllocation returns an equal two-member split")
 
     # 5. Add Expense via GraphQL createExpense
@@ -1014,13 +1022,6 @@ def run_e2e_tests() -> int:
     print("\n[Step 11] Verifying Outbox Relay & Notifications Inbox...")
     # Allow background outbox daemon and rabbit listener a few seconds to deliver
     found_notification = False
-    status_before_notifications, inbox_before_notifications = request_json(
-        f"{NOTIFICATIONS_URL}/notifications/v1/inbox",
-        bearer=user_a,
-    )
-    assert status_before_notifications == 200, (
-        f"Failed to read notification baseline: {inbox_before_notifications}"
-    )
     for attempt in range(1, 10):
         status_inbox, inbox_data = request_json(
             f"{NOTIFICATIONS_URL}/notifications/v1/inbox",

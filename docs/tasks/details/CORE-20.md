@@ -27,6 +27,8 @@ tests, related contracts, and required event schemas.
    - Added `updateSchedule(groupId, scheduleId, request)` for updating schedule parameters and custom payers/allocations.
    - Enforced bounded worker catch-up behavior (`maxCatchUpOccurrences: Int = 12`) during `processDueOccurrences` to prevent unbounded execution loops when catching up overdue schedules.
    - Implemented active group membership validation before generating due occurrences. If members leave or custom allocations reference invalid members, schedule generation automatically pauses (`schedule.paused = true`) and appends an outbox message (`eventType = "recurring.schedule.paused"`, `reason = "invalid_membership"`).
+   - The direct-construction ObjectMapper fallback registers the Jackson Kotlin module so durable custom payer/allocation specifications round-trip correctly; only Jackson parse failures are converted to the domain error.
+   - Data-access failures are rethrown from occurrence generation so the transactional due-schedule batch rolls back and cannot continue against a rollback-only transaction.
 
 4. **Scheduled Background Runner (`RecurringExpenseWorker.kt`)**:
    - Injected `@Value("\${squarewise.recurring.max-catch-up-occurrences:12}") var maxCatchUpOccurrences: Int = 12`.
