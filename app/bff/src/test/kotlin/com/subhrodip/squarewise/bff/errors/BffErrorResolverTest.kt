@@ -129,4 +129,32 @@ class BffErrorResolverTest {
         assertEquals(Instant.EPOCH, exception.problem.timestamp)
         assertEquals("UPSTREAM_PROTOCOL_INVALID", exception.problem.errorName)
     }
+
+    @Test
+    fun `decoder validates each optional upstream identity field independently`() {
+        val decoder = UpstreamProblemDecoder(ObjectMapper())
+        val exception = decoder.decode(
+            502,
+            """{"source":"untrusted","requestId":"${"r".repeat(129)}","timestamp":"not-an-instant"}""",
+            "fallback-request",
+            "notifications"
+        )
+
+        assertEquals("notifications", exception.problem.source)
+        assertEquals("fallback-request", exception.problem.requestId)
+        assertEquals(Instant.EPOCH, exception.problem.timestamp)
+    }
+
+    @Test
+    fun `decoder defaults source and request id when both fallbacks are invalid`() {
+        val exception = UpstreamProblemDecoder(ObjectMapper()).decode(
+            502,
+            """{"source":"untrusted","requestId":""}""",
+            "x".repeat(129),
+            "untrusted"
+        )
+
+        assertEquals("squarewise-bff", exception.problem.source)
+        assertEquals("unknown", exception.problem.requestId)
+    }
 }

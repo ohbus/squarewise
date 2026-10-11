@@ -4,7 +4,9 @@ import com.subhrodip.squarewise.errors.catalog.BffErrors
 import com.subhrodip.squarewise.errors.catalog.PlatformErrors
 import com.subhrodip.squarewise.errors.web.ProblemDetailsDto
 import com.subhrodip.squarewise.security.ratelimit.RateLimitStoreUnavailableException
+import com.subhrodip.squarewise.bff.transport.UpstreamServiceException
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.springframework.http.HttpStatus
@@ -101,9 +103,52 @@ class BffReactiveProblemHandlerTest {
         assertTrue(responseBody(exchange).contains("safe detail"))
     }
 
+    @Test
+    fun `preserves semantic input and governed upstream definitions`() {
+        val semantic = exchange()
+        handler.handle(
+            semantic,
+            SemanticInputException()
+        ).block()
+        assertTrue(responseBody(semantic).contains(BffErrors.GRAPHQL_INPUT_INVALID.safeDetail))
+
+        val governed = exchange()
+        handler.handle(
+            governed,
+            UpstreamServiceException(502, definition = BffErrors.UPSTREAM_TIMEOUT)
+        ).block()
+        assertTrue(responseBody(governed).contains(BffErrors.UPSTREAM_TIMEOUT.safeDetail))
+
+        val fallback = exchange()
+        handler.handle(fallback, UpstreamServiceException(418)).block()
+        assertTrue(responseBody(fallback).contains(BffErrors.UPSTREAM_PROTOCOL_INVALID.safeDetail))
+
+        val squarewise = exchange()
+        handler.handle(squarewise, BffDomainException(BffErrors.GRAPHQL_INPUT_INVALID)).block()
+        assertTrue(responseBody(squarewise).contains(BffErrors.GRAPHQL_INPUT_INVALID.safeDetail))
+    }
+
+    @Test
+    fun `propagates fatal failures and failures after response commitment`() {
+        val fatal = exchange()
+        assertThrows(OutOfMemoryError::class.java) {
+            handler.handle(fatal, OutOfMemoryError("fatal")).block()
+        }
+
+        val committed = exchange()
+        committed.response.setComplete().block()
+        assertThrows(Throwable::class.java) {
+            handler.handle(committed, IllegalStateException("already committed")).block()
+        }
+    }
+
     private fun exchange(): MockServerWebExchange =
         MockServerWebExchange.from(MockServerHttpRequest.get("/graphql").build())
 
     private fun responseBody(exchange: MockServerWebExchange): String =
         exchange.response.getBodyAsString().block().orEmpty()
+}
+
+private class SemanticInputException : ServerWebInputException("semantic input") {
+    override fun getStatusCode(): org.springframework.http.HttpStatusCode = HttpStatus.UNPROCESSABLE_ENTITY
 }

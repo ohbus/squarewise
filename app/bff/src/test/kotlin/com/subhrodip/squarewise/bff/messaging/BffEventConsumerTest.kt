@@ -13,11 +13,16 @@ import com.subhrodip.squarewise.bff.realtime.LiveUpdate
 import com.subhrodip.squarewise.bff.realtime.LiveUpdateFanout
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.time.Instant
 import java.util.UUID
+import org.mockito.Mockito.anyLong
+import org.mockito.Mockito.anyString
+import org.mockito.Mockito.doThrow
+import org.mockito.Mockito.mock
 
 class BffEventConsumerTest {
 
@@ -90,6 +95,41 @@ class BffEventConsumerTest {
 
         // Queue must still have only 1 pending update, not 2
         assertEquals(1, fanout.pendingCount(sub.id))
+    }
+
+    @Test
+    fun `uses the default deduplicator when no adapter is supplied`() {
+        val defaultConsumer = BffEventConsumer(fanout)
+        val envelope = BffEventEnvelope(
+            eventId = UUID.randomUUID(),
+            eventType = "expense.created",
+            schemaVersion = 1,
+            aggregateId = UUID.randomUUID(),
+            groupId = UUID.randomUUID(),
+            groupRevision = 1L,
+            occurredAt = Instant.now()
+        )
+
+        assertTrue(defaultConsumer.consume(envelope) is ProcessedConsumptionResult)
+    }
+
+    @Test
+    fun `releases a claimed event when fanout processing fails`() {
+        val failingFanout = mock(LiveUpdateFanout::class.java)
+        doThrow(IllegalStateException("fanout unavailable")).`when`(failingFanout)
+            .emitInvalidation(anyString(), anyLong(), anyString())
+        val failingConsumer = BffEventConsumer(failingFanout, BffEventDeduplicator())
+        val envelope = BffEventEnvelope(
+            eventId = UUID.randomUUID(),
+            eventType = "expense.created",
+            schemaVersion = 1,
+            aggregateId = UUID.randomUUID(),
+            groupId = UUID.randomUUID(),
+            groupRevision = 1L,
+            occurredAt = Instant.now()
+        )
+
+        assertThrows(IllegalStateException::class.java) { failingConsumer.consume(envelope) }
     }
 
     @Test

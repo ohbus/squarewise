@@ -24,6 +24,7 @@ import org.mockito.Mockito.doThrow
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
+import org.mockito.Mockito.`when`
 import org.springframework.dao.DataIntegrityViolationException
 
 /** Verifies the notification consumer's dispatch isolation and duplicate boundary. */
@@ -177,6 +178,56 @@ class NotificationEventConsumerUnitTest {
 
         assertThrows(IllegalStateException::class.java) { consumer.consume(event) }
         verify(processedEvents, never()).existsById(event.eventId)
+    }
+
+    @Test
+    fun `persists a newly created delivery and records skipped dispatch as terminal`() {
+        val deliveries = mock(NotificationEmailDeliveryRepository::class.java)
+        val event = sampleEvent(subject = "skip@example.com")
+        val delivery = NotificationEmailDeliveryEntity(event.notificationId)
+        doReturn(NotificationConsumptionOutcome.APPLIED).`when`(processor).process(event)
+        doReturn(Optional.empty<NotificationEmailDeliveryEntity>(), Optional.of(delivery)).`when`(deliveries)
+            .findById(event.notificationId)
+        doReturn(delivery).`when`(deliveries).save(delivery)
+        doReturn(NotificationPreferences(emailEnabled = true)).`when`(preferenceStore).get("skip@example.com")
+        doReturn(true).`when`(deliveryRateLimiter).allow("skip@example.com")
+        doReturn(EmailDeliveryOutcome.SKIPPED).`when`(emailDispatcher)
+            .send("skip@example.com", "Notification: expense.created", "Dinner was added")
+
+        NotificationEventConsumer(processor, processedEvents, preferenceStore, emailDispatcher, deliveryRateLimiter, deliveries)
+            .consume(event)
+
+        assertEquals(NotificationEmailDeliveryEntity.DELIVERED, delivery.status)
+        verify(deliveries).save(delivery)
+    }
+
+    @Test
+    fun `redelivers only pending state and leaves terminal states untouched`() {
+        val deliveries = mock(NotificationEmailDeliveryRepository::class.java)
+        val pending = sampleEvent(subject = "pending@example.com")
+        val pendingDelivery = NotificationEmailDeliveryEntity(pending.notificationId)
+        doReturn(NotificationConsumptionOutcome.DUPLICATE).`when`(processor).process(pending)
+        doReturn(Optional.of(pendingDelivery)).`when`(deliveries).findById(pending.notificationId)
+        doReturn(NotificationPreferences(emailEnabled = true)).`when`(preferenceStore).get("pending@example.com")
+        doReturn(true).`when`(deliveryRateLimiter).allow("pending@example.com")
+        doReturn(EmailDeliveryOutcome.DELIVERED).`when`(emailDispatcher)
+            .send("pending@example.com", "Notification: expense.created", "Dinner was added")
+
+        NotificationEventConsumer(processor, processedEvents, preferenceStore, emailDispatcher, deliveryRateLimiter, deliveries)
+            .consume(pending)
+        verify(emailDispatcher).send("pending@example.com", "Notification: expense.created", "Dinner was added")
+
+        listOf(NotificationEmailDeliveryEntity.DELIVERED, NotificationEmailDeliveryEntity.SKIPPED).forEachIndexed { index, status ->
+            val terminal = sampleEvent(subject = "terminal-$index@example.com")
+            val delivery = NotificationEmailDeliveryEntity(terminal.notificationId, status = status)
+            doReturn(NotificationConsumptionOutcome.DUPLICATE).`when`(processor).process(terminal)
+            doReturn(Optional.of(delivery)).`when`(deliveries).findById(terminal.notificationId)
+
+            NotificationEventConsumer(processor, processedEvents, preferenceStore, emailDispatcher, deliveryRateLimiter, deliveries)
+                .consume(terminal)
+        }
+        verify(preferenceStore, never()).get("terminal-0@example.com")
+        verify(preferenceStore, never()).get("terminal-1@example.com")
     }
 
     private fun sampleEvent(subject: String, recipientEmail: String? = null): NotificationEvent =

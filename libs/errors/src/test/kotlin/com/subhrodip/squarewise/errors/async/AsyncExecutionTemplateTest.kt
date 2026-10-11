@@ -2,6 +2,7 @@ package com.subhrodip.squarewise.errors.async
 
 import com.subhrodip.squarewise.errors.catalog.BffErrors
 import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
+import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -50,6 +51,26 @@ class AsyncExecutionTemplateTest {
             AsyncExecutionTemplate(AsyncMetricsRecorder { _, _, _ -> })
                 .execute(context, BffErrors.UPSTREAM_TIMEOUT, "events", byteArrayOf(1)) { throw OutOfMemoryError() }
         }
+    }
+
+    @Test
+    fun `cancellation is propagated before retry handling`() {
+        assertThrows(CancellationException::class.java) {
+            AsyncExecutionTemplate(AsyncMetricsRecorder { _, _, _ -> })
+                .execute(context, BffErrors.UPSTREAM_TIMEOUT, "events", byteArrayOf(1)) {
+                    throw CancellationException("cancelled")
+                }
+        }
+    }
+
+    @Test
+    fun `uses the governed definition from a Squarewise exception`() {
+        val result = AsyncExecutionTemplate(AsyncMetricsRecorder { _, _, _ -> })
+            .execute(context, BffErrors.UPSTREAM_TIMEOUT, "events", byteArrayOf(1)) {
+                throw TestSquarewiseException(ExpenseErrors.GROUP_NOT_FOUND)
+            } as AsyncExecutionResult.Failed
+
+        assertEquals(ExpenseErrors.GROUP_NOT_FOUND.errorName, result.deadLetter?.errorName)
     }
 
     @Test
@@ -132,3 +153,6 @@ class AsyncExecutionTemplateTest {
         )
     }
 }
+
+private class TestSquarewiseException(definition: com.subhrodip.squarewise.errors.code.ErrorDefinition) :
+    SquarewiseException(definition)

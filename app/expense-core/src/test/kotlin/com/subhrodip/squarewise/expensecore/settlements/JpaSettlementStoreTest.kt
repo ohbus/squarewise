@@ -186,4 +186,26 @@ class JpaSettlementStoreTest @Autowired constructor(
         assertEquals(ExpenseErrors.GROUP_ARCHIVED.numericCode, archivedReverseError.definition.numericCode)
         assertEquals(0, balancePostingRepository.findBySettlementId(archivedSettlement.id).size)
     }
+
+    @Test
+    fun `rejects inactive actors and invalid settlement participants`() {
+        val groupId = UUID.randomUUID()
+        val from = UUID.randomUUID()
+        val to = UUID.randomUUID()
+        seedGroup(groupId, from, to)
+
+        val accessError = assertThrows(SquarewiseException::class.java) {
+            store.record(groupId, Settlement(UUID.randomUUID(), from, to, 100, "EUR"), "not-a-member")
+        }
+        assertEquals(CategoryCode.NOT_FOUND, accessError.definition.category)
+
+        assertThrows(IllegalArgumentException::class.java) {
+            store.record(groupId, Settlement(UUID.randomUUID(), from, from, 100, "EUR"), "test-actor")
+        }
+
+        val participantError = assertThrows(SquarewiseException::class.java) {
+            store.record(groupId, Settlement(UUID.randomUUID(), UUID.randomUUID(), to, 100, "EUR"), "test-actor")
+        }
+        assertEquals(CategoryCode.NOT_FOUND, participantError.definition.category)
+    }
 }
