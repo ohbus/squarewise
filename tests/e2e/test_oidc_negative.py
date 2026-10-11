@@ -117,7 +117,12 @@ def main() -> int:
         "INVALID_SUBJECT_TOKEN": INVALID_SUBJECT_TOKEN,
     }
     if args.variant == "provider":
-        missing = [name for name, token in provider_tokens.items() if not token]
+        # The invalid-subject token is minted by the isolated fixture later in CI.
+        missing = [
+            name
+            for name in ("WRONG_ISSUER_TOKEN", "EXPIRED_TOKEN")
+            if not provider_tokens[name]
+        ]
         if missing:
             print(f"provider variant requires fixture tokens: {', '.join(missing)}", file=sys.stderr)
             return 2

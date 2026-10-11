@@ -86,6 +86,11 @@ codes, algorithm policy messages, and deployment configuration messages in
 `OidcSecurityConstants`; servlet, reactive, and startup-guard adapters consume
 that single policy vocabulary.
 
+The negative-token harness requires the normal-stack wrong-issuer and expired
+fixtures before running its provider checks. The whitespace-only-subject token
+is intentionally optional until the later isolated issuer fixture is started;
+this preserves the distinction between issuer validation and subject validation.
+
 Provider-neutral temporal regression tests now prove that the default issuer
 validator rejects expired and not-yet-valid JWT claims and accepts a token
 inside its validity window. Live provider-issued expiry is also covered by a
