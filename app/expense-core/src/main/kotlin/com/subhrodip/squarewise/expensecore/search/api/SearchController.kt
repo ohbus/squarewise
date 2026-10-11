@@ -147,8 +147,7 @@ class SearchController(
     }
 
     private fun ensureMembership(groupId: UUID, subject: String) {
-        val groups = groupStore.list(subject)
-        if (groups.none { it.groupId == groupId }) {
+        if (groupStore.get(groupId, subject) == null) {
             throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group $groupId not found")
         }
     }
