@@ -24,6 +24,7 @@ import com.subhrodip.squarewise.ids.generation.UuidGenerator
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
@@ -198,12 +199,16 @@ class RecurringExpenseService(
         scheduleRepository.findById(scheduleId).orElse(null)
 
     @Transactional(readOnly = true)
-    override fun listSchedules(groupId: UUID): List<RecurringExpenseSchedule> =
-        scheduleRepository.findByGroupId(groupId)
+    override fun listSchedules(groupId: UUID, limit: Int): List<RecurringExpenseSchedule> {
+        require(limit in 1..100) { "schedule limit must be between 1 and 100" }
+        return scheduleRepository.findByGroupId(groupId, PageRequest.of(0, limit))
+    }
 
     @Transactional(readOnly = true)
-    override fun getOccurrences(scheduleId: UUID): List<RecurringExpenseOccurrence> =
-        occurrenceRepository.findByScheduleId(scheduleId)
+    override fun getOccurrences(scheduleId: UUID, limit: Int): List<RecurringExpenseOccurrence> {
+        require(limit in 1..100) { "occurrence limit must be between 1 and 100" }
+        return occurrenceRepository.findByScheduleId(scheduleId, PageRequest.of(0, limit))
+    }
 
     private fun processScheduleOccurrences(
         schedule: RecurringExpenseSchedule,

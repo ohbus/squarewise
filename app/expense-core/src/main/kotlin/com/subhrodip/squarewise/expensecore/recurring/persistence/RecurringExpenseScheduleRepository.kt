@@ -1,6 +1,7 @@
 package com.subhrodip.squarewise.expensecore.recurring.persistence
 
 import com.subhrodip.squarewise.expensecore.recurring.domain.RecurringExpenseSchedule
+import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
@@ -15,12 +16,13 @@ import java.util.UUID
 interface RecurringExpenseScheduleRepository : JpaRepository<RecurringExpenseSchedule, UUID> {
 
     /**
-     * Finds all recurring expense schedules associated with the given [groupId].
+     * Finds a bounded page of recurring expense schedules associated with [groupId].
      *
      * @param groupId the unique identifier of the group.
-     * @return a list of schedules for the group.
+     * @param pageable the requested first page and maximum result count.
+     * @return a bounded list of schedules for the group.
      */
-    fun findByGroupId(groupId: UUID): List<RecurringExpenseSchedule>
+    fun findByGroupId(groupId: UUID, pageable: Pageable): List<RecurringExpenseSchedule>
 
     /**
      * Retrieves all active (non-paused) schedules that have a next occurrence date

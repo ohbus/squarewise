@@ -51,6 +51,18 @@ class RecurringExpenseServiceTest @Autowired constructor(
     }
 
     @Test
+    fun `rejects recurring read limits above compatibility cap`() {
+        val groupId = UUID.randomUUID()
+
+        assertThrows(IllegalArgumentException::class.java) {
+            service.listSchedules(groupId, 101)
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            service.getOccurrences(UUID.randomUUID(), 101)
+        }
+    }
+
+    @Test
     fun `creates schedule successfully with weekly frequency and initial next occurrence date`() {
         val group = groupStore.create("alice", CreateGroupRequest("Apartment 4B", "HOUSEHOLD", "EUR"))
         val startDate = LocalDate.of(2026, 9, 1)

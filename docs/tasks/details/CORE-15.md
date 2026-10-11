@@ -41,3 +41,6 @@ rows with `FOR UPDATE SKIP LOCKED`, active members are loaded once per batch, an
 each schedule executes in an independent transaction so one data-access failure
 does not roll back unrelated schedules. Custom payer/allocation totals now use
 checked arithmetic and reject duplicate participants and oversized lists.
+
+Recurring schedule and occurrence reads now use a bounded first page of 1 through
+100 rows. Cursor pagination remains required before exposing deeper history.

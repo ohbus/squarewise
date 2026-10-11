@@ -1,6 +1,7 @@
 package com.subhrodip.squarewise.expensecore.recurring.persistence
 
 import com.subhrodip.squarewise.expensecore.recurring.domain.RecurringExpenseOccurrence
+import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
 import java.time.LocalDate
@@ -13,12 +14,13 @@ import java.util.UUID
 interface RecurringExpenseOccurrenceRepository : JpaRepository<RecurringExpenseOccurrence, UUID> {
 
     /**
-     * Finds all recorded occurrences belonging to the specified [scheduleId].
+     * Finds a bounded page of recorded occurrences belonging to [scheduleId].
      *
      * @param scheduleId the unique identifier of the recurring schedule.
-     * @return a list of occurrences for the schedule.
+     * @param pageable the requested first page and maximum result count.
+     * @return a bounded list of occurrences for the schedule.
      */
-    fun findByScheduleId(scheduleId: UUID): List<RecurringExpenseOccurrence>
+    fun findByScheduleId(scheduleId: UUID, pageable: Pageable): List<RecurringExpenseOccurrence>
 
     /**
      * Checks whether an occurrence record already exists for the given [scheduleId] and [occurrenceDate].
