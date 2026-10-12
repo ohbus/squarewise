@@ -14,6 +14,7 @@ import jakarta.persistence.EntityManager
 import jakarta.persistence.TypedQuery
 import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneOffset
 import java.util.UUID
 import org.springframework.dao.DataIntegrityViolationException
 import org.mockito.ArgumentMatchers.any
@@ -316,6 +317,92 @@ class RecurringExpenseOptionalOutboxTest {
         assertEquals(asOfDate.plusDays(1), schedules[2].nextOccurrenceDate)
         assertEquals(asOfDate, schedules[3].nextOccurrenceDate)
         verify(scheduleRepository).findForUpdate(failingId)
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    @Test
+    fun `skips invalid timezone in active transaction and continues later schedules`() {
+        val scheduleRepository = mock(RecurringExpenseScheduleRepository::class.java)
+        val occurrenceRepository = mock(RecurringExpenseOccurrenceRepository::class.java)
+        val expenseStore = mock(ExpenseStore::class.java)
+        val groupRepository = mock(GroupRepository::class.java)
+        val entityManager = mock(EntityManager::class.java)
+        val query = mock(TypedQuery::class.java) as TypedQuery<UUID>
+        val groupId = UUID.randomUUID()
+        val memberId = UUID.randomUUID()
+        val asOfDate = LocalDate.now(ZoneOffset.UTC).plusDays(1)
+        val occurrenceDate = asOfDate.minusDays(1)
+        val invalid = testSchedule(UUID.randomUUID(), groupId, occurrenceDate).apply { timezone = "Invalid/Zone" }
+        val later = testSchedule(UUID.randomUUID(), groupId, occurrenceDate)
+
+        `when`(scheduleRepository.findDueSchedules(asOfDate)).thenReturn(listOf(invalid, later))
+        `when`(scheduleRepository.save(any(RecurringExpenseSchedule::class.java))).thenAnswer { it.arguments[0] }
+        `when`(occurrenceRepository.existsById(any(UUID::class.java) ?: UUID(0, 0))).thenReturn(false)
+        `when`(
+            occurrenceRepository.existsByScheduleIdAndOccurrenceDate(
+                any(UUID::class.java) ?: UUID(0, 0),
+                any(LocalDate::class.java) ?: asOfDate
+            )
+        ).thenReturn(false)
+        `when`(entityManager.createQuery(anyString(), any(Class::class.java) ?: UUID::class.java)).thenReturn(query)
+        `when`(query.setParameter("groupId", groupId)).thenReturn(query)
+        `when`(query.setMaxResults(101)).thenReturn(query)
+        `when`(query.resultList).thenReturn(listOf(memberId))
+
+        val service = RecurringExpenseService(scheduleRepository, occurrenceRepository, expenseStore, groupRepository, entityManager)
+
+        inActiveTransaction { assertEquals(1, service.processDueOccurrences(12)) }
+
+        assertEquals(occurrenceDate, invalid.nextOccurrenceDate)
+        assertEquals(occurrenceDate.plusWeeks(1), later.nextOccurrenceDate)
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    @Test
+    fun `skips invalid timezone in independent transaction and continues later schedules`() {
+        val scheduleRepository = mock(RecurringExpenseScheduleRepository::class.java)
+        val occurrenceRepository = mock(RecurringExpenseOccurrenceRepository::class.java)
+        val expenseStore = mock(ExpenseStore::class.java)
+        val groupRepository = mock(GroupRepository::class.java)
+        val entityManager = mock(EntityManager::class.java)
+        val query = mock(TypedQuery::class.java) as TypedQuery<UUID>
+        val groupId = UUID.randomUUID()
+        val memberId = UUID.randomUUID()
+        val asOfDate = LocalDate.now(ZoneOffset.UTC).plusDays(1)
+        val occurrenceDate = asOfDate.minusDays(1)
+        val invalid = testSchedule(UUID.randomUUID(), groupId, occurrenceDate).apply { timezone = "Invalid/Zone" }
+        val later = testSchedule(UUID.randomUUID(), groupId, occurrenceDate)
+
+        `when`(scheduleRepository.findDueSchedules(asOfDate)).thenReturn(listOf(invalid, later))
+        `when`(scheduleRepository.findForUpdate(invalid.scheduleId)).thenReturn(invalid)
+        `when`(scheduleRepository.findForUpdate(later.scheduleId)).thenReturn(later)
+        `when`(scheduleRepository.save(any(RecurringExpenseSchedule::class.java))).thenAnswer { it.arguments[0] }
+        `when`(occurrenceRepository.existsById(any(UUID::class.java) ?: UUID(0, 0))).thenReturn(false)
+        `when`(
+            occurrenceRepository.existsByScheduleIdAndOccurrenceDate(
+                any(UUID::class.java) ?: UUID(0, 0),
+                any(LocalDate::class.java) ?: asOfDate
+            )
+        ).thenReturn(false)
+        `when`(entityManager.createQuery(anyString(), any(Class::class.java) ?: UUID::class.java)).thenReturn(query)
+        `when`(query.setParameter("groupId", groupId)).thenReturn(query)
+        `when`(query.setMaxResults(101)).thenReturn(query)
+        `when`(query.resultList).thenReturn(listOf(memberId))
+
+        val service = RecurringExpenseService(
+            scheduleRepository,
+            occurrenceRepository,
+            expenseStore,
+            groupRepository,
+            entityManager,
+            transactionManager = TestTransactionManager()
+        )
+
+        assertEquals(1, service.processDueOccurrences(12))
+
+        assertEquals(occurrenceDate, invalid.nextOccurrenceDate)
+        assertEquals(occurrenceDate.plusWeeks(1), later.nextOccurrenceDate)
+        verify(scheduleRepository).findForUpdate(invalid.scheduleId)
     }
 
     private fun testSchedule(

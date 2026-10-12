@@ -29,6 +29,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
 import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
+import java.time.DateTimeException
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -163,12 +164,17 @@ class RecurringExpenseService(
         val dueSchedules = scheduleRepository.findDueSchedules(asOfDate)
         if (TransactionSynchronizationManager.isActualTransactionActive()) {
             return dueSchedules.sumOf { schedule ->
-                processScheduleOccurrences(
-                    schedule,
-                    occurrenceCutoff(schedule, asOfDate, useScheduleTimezone),
-                    maxCatchUpOccurrences,
-                    mapOf(schedule.groupId to getGroupMembers(schedule.groupId))
-                )
+                try {
+                    processScheduleOccurrences(
+                        schedule,
+                        occurrenceCutoff(schedule, asOfDate, useScheduleTimezone),
+                        maxCatchUpOccurrences,
+                        mapOf(schedule.groupId to getGroupMembers(schedule.groupId))
+                    )
+                } catch (error: DateTimeException) {
+                    logInvalidTimezone(schedule, error)
+                    0
+                }
             }
         }
         val manager = requireNotNull(transactionManager) {
@@ -192,9 +198,20 @@ class RecurringExpenseService(
                 }
             } catch (error: DataAccessException) {
                 log.warn("Recurring schedule failed independently; it remains due for retry", error)
+            } catch (error: DateTimeException) {
+                logInvalidTimezone(claimed, error)
             }
         }
         return count
+    }
+
+    private fun logInvalidTimezone(schedule: RecurringExpenseSchedule, error: DateTimeException) {
+        log.warn(
+            "Recurring schedule has an invalid timezone; it remains due for retry scheduleId={} timezone={}",
+            schedule.scheduleId,
+            schedule.timezone,
+            error
+        )
     }
 
     private fun occurrenceCutoff(
