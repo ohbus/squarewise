@@ -37,7 +37,7 @@ tests, client/contract mapping review, and a dashboard/alert decision.
    dashboard, or runbook surface affected by the new behavior.
 6. Run:
    `uv run python tools/errors/validate_catalog.py`,
-   `./gradlew.bat :libs:errors:test`,
+   `./gradlew :libs:errors:test`,
    `uv run python tools/contracts/validate.py`, and affected service tests.
 
 ## Response and logging policy
@@ -54,7 +54,8 @@ status. Request IDs and resource IDs are for logs/traces, not metric labels.
 ## Review checklist
 
 - Is this a distinct client-remediation scenario?
-- Is the service and feature prefix correct?
+- Is the error name semantically descriptive and globally unique?
+- Is the numeric identity consistent with the authoritative registry?
 - Is HTTP status and retryability explicit?
 - Are field/resource details safe?
 - Is the catalog updated before code is merged?

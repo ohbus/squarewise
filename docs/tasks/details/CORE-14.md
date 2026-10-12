@@ -53,12 +53,12 @@ and deletion (`DELETE`) with double-entry balance posting reversals in `app/expe
   ```
 - Full test suite re-execution:
   ```
+  ./gradlew test --rerun --no-daemon
+  # 30 actionable tasks: 5 executed, 25 up-to-date, BUILD SUCCESSFUL
+  ```
 
 ## 2026-10-11 scale audit remediation
 
 Expense update and delete reversal now consume grouped database aggregates
 instead of materializing the full posting history for the expense. This keeps
 the reversal heap cost proportional to distinct participant/currency pairs.
-  ./gradlew test --rerun --no-daemon
-  # 30 actionable tasks: 5 executed, 25 up-to-date, BUILD SUCCESSFUL
-  ```

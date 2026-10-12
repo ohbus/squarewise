@@ -243,7 +243,7 @@ HTTP status or exception class.
    dashboards, and runbooks.
 5. Run `uv run python tools/errors/validate_catalog.py`,
    `uv run python tools/codegen/generate_error_catalogs.py`,
-   `./gradlew.bat :libs:errors:test`, `uv run python tools/contracts/validate.py`,
+   `./gradlew :libs:errors:test`, `uv run python tools/contracts/validate.py`,
    and the affected service tests.
 
 Never derive a code from an HTTP status, exception class, database vendor code,
