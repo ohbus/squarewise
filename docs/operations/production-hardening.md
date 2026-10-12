@@ -66,6 +66,10 @@ Notifications retain processed event identifiers for the configured
 markers in bounded batches. Set this period no shorter than the approved
 broker replay guarantee; the default `30d` is an application safety baseline,
 not production capacity or retention approval.
+Email dispatch also claims a durable five-minute lease before provider
+dispatch. This prevents concurrent replica sends and recovers crashed
+consumers, but cannot provide provider-level exactly-once delivery after a
+provider accepts mail and the consumer crashes before recording `DELIVERED`.
 
 ## Release gates still required
 
