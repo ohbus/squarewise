@@ -59,6 +59,14 @@ ports through Docker's `host.docker.internal` gateway. The production/staging
 configuration remains `infra/observability/prometheus.yml`, which targets the
 Compose service names.
 
+## Notification deduplication retention
+
+Notifications retain processed event identifiers for the configured
+`SQUAREWISE_NOTIFICATIONS_PROCESSED_EVENT_RETENTION` period and remove old
+markers in bounded batches. Set this period no shorter than the approved
+broker replay guarantee; the default `30d` is an application safety baseline,
+not production capacity or retention approval.
+
 ## Release gates still required
 
 Before public production launch, configure Prometheus retention and alert
