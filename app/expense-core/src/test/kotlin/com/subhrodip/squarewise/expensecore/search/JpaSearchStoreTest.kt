@@ -133,6 +133,45 @@ class JpaSearchStoreTest @Autowired constructor(
         )
     }
 
+    @Test
+    fun `treats SQL wildcard characters as literal search text`() {
+        val groupId = UUID.randomUUID()
+        groupRepository.save(GroupEntity(groupId, "Wildcard", "HOUSEHOLD", "EUR"))
+        expenseRepository.saveAll(
+            listOf(
+                ExpenseEntity(
+                    expenseId = UuidGenerator.next(),
+                    groupId = groupId,
+                    description = "Plain expense",
+                    category = "other",
+                    currency = "EUR",
+                    amountMinor = 1250,
+                    version = 1,
+                    allocationMode = "EQUAL",
+                    createdAt = Instant.now(),
+                    deleted = false
+                ),
+                ExpenseEntity(
+                    expenseId = UuidGenerator.next(),
+                    groupId = groupId,
+                    description = "100% meal",
+                    category = "other",
+                    currency = "EUR",
+                    amountMinor = 1250,
+                    version = 1,
+                    allocationMode = "EQUAL",
+                    createdAt = Instant.now(),
+                    deleted = false
+                )
+            )
+        )
+
+        val results = searchStore.findSearchExpenses(SearchQuery(groupId, text = "%"))
+
+        assertEquals(1, results.size)
+        assertEquals("100% meal", results.single().description)
+    }
+
     /** Verifies the persistent adapter enforces both sides of its bounded query contract. */
     @Test
     fun `rejects search limits outside the export bounds`() {

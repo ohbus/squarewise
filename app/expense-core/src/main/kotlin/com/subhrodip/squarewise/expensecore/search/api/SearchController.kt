@@ -112,6 +112,12 @@ class SearchController(
         @RequestParam(defaultValue = "10000") maxRows: Int,
         principal: Principal
     ): ResponseEntity<String> {
+        if (maxRows !in 1..ExpenseSearch.MAX_EXPORT_ROWS) {
+            throw ExpenseDomainException(
+                ExpenseErrors.EXPENSE_REQUEST_INVALID,
+                "maxRows must be between 1 and ${ExpenseSearch.MAX_EXPORT_ROWS}"
+            )
+        }
         ensureMembership(groupId, principal.name)
         val expenses = dbTelemetry.measureQuery("expense.search.export", "approved-query") {
             DbContextHolder.withContext(
@@ -123,7 +129,7 @@ class SearchController(
                 )
             ) {
                 searchStore.findSearchExpenses(
-                    SearchQuery(groupId, query?.trim().orEmpty(), currency?.trim()?.uppercase(), category, null, ExpenseSearch.MAX_EXPORT_ROWS)
+                    SearchQuery(groupId, query?.trim().orEmpty(), currency?.trim()?.uppercase(), category, null, maxRows)
                 )
             }
         }

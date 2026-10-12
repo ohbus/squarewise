@@ -18,6 +18,7 @@ import com.subhrodip.squarewise.db.routing.DbOperationKind
 import com.subhrodip.squarewise.db.routing.ReadConsistency
 import com.subhrodip.squarewise.expensecore.categories.ExpenseCategory
 import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -265,6 +266,20 @@ class SearchControllerTest {
     }
 
     @Test
+    fun `export forwards requested row bound to persistent search`() {
+        val group = groupStore.create("alice", CreateGroupRequest("Bounded export", "TRIP", "EUR"))
+
+        mvc.perform(
+            get(ApiEndpoints.ExpenseCore.V1.groupExport(group.groupId))
+                .with(alice)
+                .param("maxRows", "2")
+        )
+            .andExpect(status().isOk)
+
+        assertEquals(2, recordingSearchStore.lastQuery?.limit)
+    }
+
+    @Test
     fun `export rejects non-positive maxRows as validation failure`() {
         val group = groupStore.create("alice", CreateGroupRequest("Bounded Export", "TRIP", "EUR"))
 
@@ -292,8 +307,10 @@ class SearchControllerTest {
 
 private class RecordingSearchStore(private val delegate: SearchStore) : SearchStore {
     var context: DbExecutionContext? = null
+    var lastQuery: SearchQuery? = null
 
     override fun findSearchExpenses(query: SearchQuery): List<SearchExpense> {
+        lastQuery = query
         context = DbContextHolder.current()
         return delegate.findSearchExpenses(query)
     }
