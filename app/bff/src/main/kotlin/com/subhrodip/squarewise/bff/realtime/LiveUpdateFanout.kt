@@ -13,7 +13,9 @@ import reactor.core.publisher.Sinks
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
+import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * In-process fanout hub for group real-time invalidations.
@@ -37,7 +39,7 @@ class LiveUpdateFanout(
 
     /** Per-subscription revocation signals: completing the sink terminates the consumer Flux. */
     private val revocationSignals = ConcurrentHashMap<String, Sinks.One<Unit>>()
-    private val subscriptionInvalidations = ConcurrentHashMap<String, Sinks.Many<GroupInvalidation>>()
+    private val subscriptionInvalidations = ConcurrentHashMap<String, SubscriptionInvalidationChannel>()
 
     private val admissionLock = Any()
     /** Delivers only new invalidations to subscribers of this shared stream. */
@@ -48,11 +50,21 @@ class LiveUpdateFanout(
         emitInvalidation(groupId, revision, UuidGenerator.next().toString())
 
     fun emitInvalidation(groupId: String, revision: Long, changeId: String): GroupInvalidation {
+        removeExpired()
         val invalidation = GroupInvalidation(groupId, revision, changeId)
         invalidationSink.tryEmitNext(invalidation)
+        val now = Instant.now(clock)
         subscriptions.forEach { (subscriptionId, subscriber) ->
             if (subscriber.subscription.groupId == groupId) {
-                subscriptionInvalidations[subscriptionId]?.tryEmitNext(invalidation)
+                if (!now.isBefore(subscriber.subscription.expiresAt)) {
+                    unsubscribe(subscriptionId)
+                } else {
+                    val admitted = subscriptionInvalidations[subscriptionId]?.emit(invalidation) == true
+                    if (!admitted) {
+                        // The snapshot is no longer a safe baseline; force a fresh subscription snapshot.
+                        unsubscribe(subscriptionId)
+                    }
+                }
             }
         }
         return invalidation
@@ -62,10 +74,12 @@ class LiveUpdateFanout(
 
     /**
      * Returns the bounded event window admitted for one active subscription.
-     * Events emitted before [subscriptionId] was admitted are never replayed.
+     * Events emitted before [subscriptionId] was admitted are never replayed. If
+     * the snapshot cannot keep up with the bounded window, the subscription ends
+     * so the client must establish a fresh snapshot.
      */
     fun invalidations(subscriptionId: String): Flux<GroupInvalidation> =
-        subscriptionInvalidations[subscriptionId]?.asFlux() ?: Flux.empty()
+        subscriptionInvalidations[subscriptionId]?.flux() ?: Flux.empty()
 
     /**
      * Returns a [Mono] that completes (with no item) when this subscription is revoked.
@@ -95,7 +109,8 @@ class LiveUpdateFanout(
             val subscription = LiveSubscription(
                 UuidGenerator.next().toString(), userId, groupId, Instant.now(clock).plus(subscriptionTtl)
             )
-            subscriptionInvalidations[subscription.id] = Sinks.many().replay().limit(queueCapacity)
+            subscriptionInvalidations[subscription.id] =
+                SubscriptionInvalidationChannel(queueCapacity)
             subscriptions[subscription.id] = Subscriber(subscription, ArrayDeque())
             revocationSignals[subscription.id] = Sinks.one()
             subscription
@@ -105,7 +120,7 @@ class LiveUpdateFanout(
     fun unsubscribe(subscriptionId: String) {
         subscriptions.remove(subscriptionId)
         revocationSignals.remove(subscriptionId)?.tryEmitEmpty()
-        subscriptionInvalidations.remove(subscriptionId)?.tryEmitComplete()
+        subscriptionInvalidations.remove(subscriptionId)?.complete()
     }
 
     fun revokeUser(userId: String): Int {
@@ -116,7 +131,7 @@ class LiveUpdateFanout(
             if (matches) {
                 revoked++
                 revocationSignals.remove(it.key)?.tryEmitEmpty()
-                subscriptionInvalidations.remove(it.key)?.tryEmitComplete()
+                subscriptionInvalidations.remove(it.key)?.complete()
             }
             matches
         }
@@ -143,7 +158,7 @@ class LiveUpdateFanout(
             if (matches) {
                 revoked++
                 revocationSignals.remove(it.key)?.tryEmitEmpty()
-                subscriptionInvalidations.remove(it.key)?.tryEmitComplete()
+                subscriptionInvalidations.remove(it.key)?.complete()
             }
             matches
         }
@@ -179,7 +194,7 @@ class LiveUpdateFanout(
             val expired = !now.isBefore(it.value.subscription.expiresAt)
             if (expired) {
                 revocationSignals.remove(it.key)?.tryEmitEmpty()
-                subscriptionInvalidations.remove(it.key)?.tryEmitComplete()
+                subscriptionInvalidations.remove(it.key)?.complete()
             }
             expired
         }
@@ -198,6 +213,38 @@ class LiveUpdateFanout(
 
         @Synchronized
         fun size(): Int = queue.size
+    }
+
+    /** Bounded per-subscription channel that exposes overflow before a subscriber attaches. */
+    private class SubscriptionInvalidationChannel(private val capacity: Int) {
+        private val pending = AtomicInteger()
+        private val sink: Sinks.Many<GroupInvalidation> =
+            Sinks.many().unicast().onBackpressureBuffer(ArrayBlockingQueue(capacity))
+
+        fun flux(): Flux<GroupInvalidation> = sink.asFlux().doOnNext { pending.decrementAndGet() }
+
+        fun emit(invalidation: GroupInvalidation): Boolean {
+            if (!reserve()) return false
+            return when (sink.tryEmitNext(invalidation)) {
+                Sinks.EmitResult.OK, Sinks.EmitResult.FAIL_ZERO_SUBSCRIBER -> true
+                else -> {
+                    pending.decrementAndGet()
+                    false
+                }
+            }
+        }
+
+        fun complete() {
+            sink.tryEmitComplete()
+        }
+
+        private fun reserve(): Boolean {
+            while (true) {
+                val current = pending.get()
+                if (current >= capacity) return false
+                if (pending.compareAndSet(current, current + 1)) return true
+            }
+        }
     }
 
     companion object {

@@ -145,6 +145,43 @@ class LiveUpdateFanoutTest {
     }
 
     @Test
+    fun `expires reactive subscriptions before invalidation delivery`() {
+        val clock = MutableClock(Instant.parse("2026-01-01T00:00:00Z"))
+        val fanout = LiveUpdateFanout(clock = clock, subscriptionTtl = Duration.ofSeconds(1))
+        val subscription = fanout.subscribe("user-1", "group-1")
+        val events = mutableListOf<GroupInvalidation>()
+        var terminated = false
+
+        fanout.invalidations(subscription.id).subscribe { events.add(it) }
+        fanout.revocationSignal(subscription.id)
+            .doOnTerminate { terminated = true }
+            .subscribe()
+        clock.now = subscription.expiresAt
+
+        fanout.emitInvalidation("group-1", 8L, "expired")
+
+        assertThat(events).isEmpty()
+        assertThat(terminated).isTrue()
+    }
+
+    @Test
+    fun `terminates a subscription when its snapshot buffer overflows`() {
+        val fanout = LiveUpdateFanout(queueCapacity = 1)
+        val subscription = fanout.subscribe("user-1", "group-1")
+        var terminated = false
+
+        fanout.revocationSignal(subscription.id)
+            .doOnTerminate { terminated = true }
+            .subscribe()
+
+        fanout.emitInvalidation("group-1", 1L, "first")
+        fanout.emitInvalidation("group-1", 2L, "overflow")
+
+        assertThat(terminated).isTrue()
+        assertThat(fanout.invalidations(subscription.id).collectList().block()).isEmpty()
+    }
+
+    @Test
     fun `revokes every subscription for a user`() {
         val fanout = LiveUpdateFanout()
         fanout.subscribe("user-1", "group-1")
