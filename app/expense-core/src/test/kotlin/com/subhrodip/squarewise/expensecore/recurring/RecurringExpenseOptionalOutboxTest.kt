@@ -22,6 +22,7 @@ import org.mockito.ArgumentMatchers.isNull
 import org.mockito.Mockito.doThrow
 import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -313,6 +314,8 @@ class RecurringExpenseOptionalOutboxTest {
         assertEquals(asOfDate, schedules[0].nextOccurrenceDate)
         assertEquals(asOfDate, schedules[1].nextOccurrenceDate)
         assertEquals(asOfDate.plusDays(1), schedules[2].nextOccurrenceDate)
+        assertEquals(asOfDate, schedules[3].nextOccurrenceDate)
+        verify(scheduleRepository).findForUpdate(failingId)
     }
 
     private fun testSchedule(
