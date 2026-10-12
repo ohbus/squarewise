@@ -15,6 +15,7 @@ import jakarta.persistence.TypedQuery
 import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
+import org.springframework.dao.DataIntegrityViolationException
 import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchers.anyString
 import org.mockito.ArgumentMatchers.isNull
@@ -23,8 +24,13 @@ import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.transaction.TransactionDefinition
+import org.springframework.transaction.TransactionStatus
+import org.springframework.transaction.support.SimpleTransactionStatus
 import org.springframework.transaction.support.TransactionSynchronizationManager
 
 /** Verifies recurring failure handling remains safe when the optional outbox is absent. */
@@ -233,6 +239,104 @@ class RecurringExpenseOptionalOutboxTest {
         inActiveTransaction { assertEquals(1, service.processDueOccurrences(occurrenceDate)) }
         assertEquals(listOf(ExpensePayer(participantIds.first(), 1200)), created?.payers)
         assertEquals(listOf(ExpenseAllocation(participantIds.first(), 1200)), created?.allocations)
+    }
+
+    @Test
+    fun `requires a transaction manager outside an active transaction`() {
+        val scheduleRepository = mock(RecurringExpenseScheduleRepository::class.java)
+        val service = RecurringExpenseService(
+            scheduleRepository = scheduleRepository,
+            occurrenceRepository = mock(RecurringExpenseOccurrenceRepository::class.java),
+            expenseStore = mock(ExpenseStore::class.java),
+            groupRepository = mock(GroupRepository::class.java),
+            entityManager = mock(EntityManager::class.java),
+            outboxStore = null
+        )
+        val asOfDate = LocalDate.of(2026, 12, 1)
+        `when`(scheduleRepository.findDueSchedules(asOfDate)).thenReturn(emptyList())
+
+        assertThrows(IllegalArgumentException::class.java) {
+            service.processDueOccurrences(asOfDate)
+        }
+    }
+
+    @Test
+    fun `processes due schedules through independent transaction rechecks`() {
+        val scheduleRepository = mock(RecurringExpenseScheduleRepository::class.java)
+        val occurrenceRepository = mock(RecurringExpenseOccurrenceRepository::class.java)
+        val expenseStore = mock(ExpenseStore::class.java)
+        val groupRepository = mock(GroupRepository::class.java)
+        val entityManager = mock(EntityManager::class.java)
+        val query = mock(TypedQuery::class.java) as TypedQuery<UUID>
+        val groupId = UUID.randomUUID()
+        val memberId = UUID.randomUUID()
+        val asOfDate = LocalDate.of(2026, 12, 1)
+        val missingId = UUID.randomUUID()
+        val pausedId = UUID.randomUUID()
+        val staleId = UUID.randomUUID()
+        val failingId = UUID.randomUUID()
+        val schedules = listOf(
+            testSchedule(missingId, groupId, asOfDate),
+            testSchedule(pausedId, groupId, asOfDate).apply { paused = true },
+            testSchedule(staleId, groupId, asOfDate.plusDays(1)),
+            testSchedule(failingId, groupId, asOfDate)
+        )
+
+        `when`(scheduleRepository.findDueSchedules(asOfDate)).thenReturn(schedules)
+        doAnswer {
+            when (it.arguments[0] as UUID) {
+                missingId -> null
+                pausedId -> schedules[1]
+                staleId -> schedules[2]
+                failingId -> throw DataIntegrityViolationException("claim failed")
+                else -> error("unexpected schedule claim")
+            }
+        }.`when`(scheduleRepository).findForUpdate(any(UUID::class.java) ?: UUID(0, 0))
+        `when`(
+            entityManager.createQuery(anyString(), any(Class::class.java) ?: UUID::class.java)
+        ).thenReturn(query)
+        `when`(query.setParameter("groupId", groupId)).thenReturn(query)
+        `when`(query.setMaxResults(101)).thenReturn(query)
+        `when`(query.resultList).thenReturn(listOf(memberId))
+
+        val service = RecurringExpenseService(
+            scheduleRepository = scheduleRepository,
+            occurrenceRepository = occurrenceRepository,
+            expenseStore = expenseStore,
+            groupRepository = groupRepository,
+            entityManager = entityManager,
+            outboxStore = null,
+            transactionManager = TestTransactionManager()
+        )
+
+        assertEquals(0, service.processDueOccurrences(asOfDate))
+        assertEquals(asOfDate, schedules[0].nextOccurrenceDate)
+        assertEquals(asOfDate, schedules[1].nextOccurrenceDate)
+        assertEquals(asOfDate.plusDays(1), schedules[2].nextOccurrenceDate)
+    }
+
+    private fun testSchedule(
+        scheduleId: UUID,
+        groupId: UUID,
+        nextOccurrenceDate: LocalDate
+    ): RecurringExpenseSchedule = RecurringExpenseSchedule(
+        scheduleId = scheduleId,
+        groupId = groupId,
+        description = "Transaction boundary",
+        amountMinor = 1200,
+        currency = "EUR",
+        frequency = RecurrenceFrequency.WEEKLY,
+        startDate = nextOccurrenceDate,
+        nextOccurrenceDate = nextOccurrenceDate,
+        createdAt = Instant.EPOCH
+    )
+
+    private class TestTransactionManager : PlatformTransactionManager {
+        override fun getTransaction(definition: TransactionDefinition?): TransactionStatus = SimpleTransactionStatus()
+
+        override fun commit(status: TransactionStatus) = Unit
+
+        override fun rollback(status: TransactionStatus) = Unit
     }
 
     private fun <T> inActiveTransaction(action: () -> T): T {

@@ -103,6 +103,15 @@ class LiveUpdateFanoutTest {
     }
 
     @Test
+    fun `unknown subscriptions expose empty streams and unsubscribe is idempotent`() {
+        val fanout = LiveUpdateFanout()
+
+        assertThat(fanout.invalidations("unknown-subscription").collectList().block()).isEmpty()
+        fanout.unsubscribe("unknown-subscription")
+        fanout.unsubscribe("unknown-subscription")
+    }
+
+    @Test
     fun `rejects invalid inputs`() {
         assertThrows<IllegalArgumentException> { LiveUpdateFanout(0) }
         assertThrows<IllegalArgumentException> { LiveUpdateFanout(subscriptionTtl = Duration.ZERO) }

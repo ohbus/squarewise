@@ -237,5 +237,15 @@ class ExpenseValidatorTest {
             ExpenseValidator.validateRecord(allocationOverflow)
         }
         assertTrue(overflowError.message?.contains("financial amount exceeds supported range") == true)
+
+        val oversizedPayers = valid.copy(
+            amountMinor = 101,
+            payers = (1..101).map { ExpensePayer(UUID.randomUUID(), 1) },
+            allocations = listOf(ExpenseAllocation(alice, 101))
+        )
+        val oversizedPayerError = assertThrows(SquarewiseException::class.java) {
+            ExpenseValidator.validateRecord(oversizedPayers)
+        }
+        assertTrue(oversizedPayerError.message?.contains("participant count exceeds the maximum") == true)
     }
 }

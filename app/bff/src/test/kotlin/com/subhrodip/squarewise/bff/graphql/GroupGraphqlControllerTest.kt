@@ -189,6 +189,36 @@ class GroupGraphqlControllerTest {
         assertEquals(expected, controller.group(groupId, principal, environment).block())
     }
 
+    @Test
+    fun `routes expenses-only group selection to the bounded gateway`() {
+        val groupId = UUID.randomUUID().toString()
+        val expected = BffGroup(groupId = groupId, name = "Expenses", kind = "TRIP", revision = 3)
+        val environment = mock(DataFetchingEnvironment::class.java)
+        val selectionSet = mock(DataFetchingFieldSelectionSet::class.java)
+        `when`(environment.selectionSet).thenReturn(selectionSet)
+        `when`(selectionSet.contains("balances")).thenReturn(false)
+        `when`(selectionSet.contains("expenses")).thenReturn(true)
+        `when`(selectionSet.contains("members")).thenReturn(false)
+        `when`(gateway.getGroup(groupId, "alice", false, true, false)).thenReturn(Mono.just(expected))
+
+        assertEquals(expected, controller.group(groupId, principal, environment).block())
+    }
+
+    @Test
+    fun `routes members-only group selection to the bounded gateway`() {
+        val groupId = UUID.randomUUID().toString()
+        val expected = BffGroup(groupId = groupId, name = "Members", kind = "TRIP", revision = 3)
+        val environment = mock(DataFetchingEnvironment::class.java)
+        val selectionSet = mock(DataFetchingFieldSelectionSet::class.java)
+        `when`(environment.selectionSet).thenReturn(selectionSet)
+        `when`(selectionSet.contains("balances")).thenReturn(false)
+        `when`(selectionSet.contains("expenses")).thenReturn(false)
+        `when`(selectionSet.contains("members")).thenReturn(true)
+        `when`(gateway.getGroup(groupId, "alice", false, false, true)).thenReturn(Mono.just(expected))
+
+        assertEquals(expected, controller.group(groupId, principal, environment).block())
+    }
+
     /** Verifies an introspection-only selection preserves the legacy full-group gateway call. */
     @Test
     fun `falls back to the simple group lookup when no collection fields are selected`() {
