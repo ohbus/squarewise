@@ -44,6 +44,7 @@ import org.junit.jupiter.api.Test
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.mock
 import reactor.core.publisher.Mono
+import reactor.core.publisher.Sinks
 import java.security.Principal
 import java.util.UUID
 
@@ -111,6 +112,19 @@ class GroupGraphqlControllerTest {
         `when`(gateway.listGroups("alice", 2)).thenReturn(Mono.just(expected))
 
         assertEquals(expected, controller.groups(principal, 2).block())
+    }
+
+    /** Verifies group-list selection controls the optional member fan-out. */
+    @Test
+    fun `passes group member selection to the gateway`() {
+        val expected = listOf(BffGroup(groupId = "group-selected", name = "Selected", kind = "TRIP", revision = 1))
+        val environment = mock(DataFetchingEnvironment::class.java)
+        val selectionSet = mock(DataFetchingFieldSelectionSet::class.java)
+        `when`(environment.selectionSet).thenReturn(selectionSet)
+        `when`(selectionSet.contains("members")).thenReturn(false)
+        `when`(gateway.listGroups("alice", 100, false)).thenReturn(Mono.just(expected))
+
+        assertEquals(expected, controller.groups(principal, environment = environment).block())
     }
 
     @Test
@@ -183,7 +197,7 @@ class GroupGraphqlControllerTest {
         val environment = mock(DataFetchingEnvironment::class.java)
         val selectionSet = mock(DataFetchingFieldSelectionSet::class.java)
         `when`(environment.selectionSet).thenReturn(selectionSet)
-        `when`(gateway.getGroup(groupId, "alice")).thenReturn(Mono.just(expected))
+        `when`(gateway.getGroup(groupId, "alice", false, false, false)).thenReturn(Mono.just(expected))
 
         assertEquals(expected, controller.group(groupId, principal, environment).block())
     }
@@ -423,6 +437,29 @@ class GroupGraphqlControllerTest {
             assertEquals(targetGroupId, events[1].groupId)
             assertEquals(4L, events[1].revision)
             assertNotNull(events[1].changeId)
+        } finally {
+            disposable.dispose()
+        }
+    }
+
+    /** Ensures snapshot-time events are delivered, but events before admission are not replayed. */
+    @Test
+    fun `groupChanged buffers only events admitted during snapshot loading`() {
+        val groupId = UUID.randomUUID().toString()
+        val snapshot = Sinks.one<BffGroup>()
+        `when`(gateway.getGroup(groupId, "alice"))
+            .thenReturn(snapshot.asMono())
+        controller.emitInvalidation(groupId, 1L, "before-subscription")
+
+        val received = mutableListOf<GroupInvalidation>()
+        val disposable = controller.groupChanged(groupId, principal).subscribe { received.add(it) }
+        try {
+            controller.emitInvalidation(groupId, 2L, "during-snapshot")
+            assertTrue(received.isEmpty())
+
+            snapshot.tryEmitValue(BffGroup(groupId, "Trip", "TRIP", "1"))
+
+            assertEquals(listOf("during-snapshot"), received.map { it.changeId })
         } finally {
             disposable.dispose()
         }

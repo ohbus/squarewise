@@ -170,11 +170,45 @@ class LiveUpdateFanoutTest {
     }
 
     @Test
-    fun `replays an invalidation emitted before a subscriber attaches`() {
+    fun `does not replay an invalidation emitted before a shared subscriber attaches`() {
         val fanout = LiveUpdateFanout()
-        val invalidation = fanout.emitInvalidation("group-1", 11L, "change-before-subscribe")
+        fanout.emitInvalidation("group-1", 11L, "change-before-subscribe")
+        val events = mutableListOf<GroupInvalidation>()
+        val disposable = fanout.invalidations().subscribe { events.add(it) }
+        try {
+            assertThat(events).isEmpty()
 
-        assertThat(fanout.invalidations().blockFirst()).isEqualTo(invalidation)
+            val invalidation = fanout.emitInvalidation("group-1", 12L, "change-after-subscribe")
+            assertThat(events).containsExactly(invalidation)
+        } finally {
+            disposable.dispose()
+        }
+    }
+
+    @Test
+    fun `subscription stream replays only events admitted after subscription`() {
+        val fanout = LiveUpdateFanout()
+        fanout.emitInvalidation("group-1", 11L, "change-before-subscribe")
+        val subscription = fanout.subscribe("user-1", "group-1")
+        fanout.emitInvalidation("group-1", 12L, "change-during-snapshot")
+
+        assertThat(fanout.invalidations(subscription.id).blockFirst()).isEqualTo(
+            GroupInvalidation("group-1", 12L, "change-during-snapshot")
+        )
+        fanout.unsubscribe(subscription.id)
+    }
+
+    @Test
+    fun `subscription buffer ignores invalidations for other groups`() {
+        val fanout = LiveUpdateFanout(queueCapacity = 1)
+        val subscription = fanout.subscribe("user-1", "group-1")
+        fanout.emitInvalidation("group-2", 11L, "other-group")
+        fanout.emitInvalidation("group-1", 12L, "target-group")
+
+        assertThat(fanout.invalidations(subscription.id).blockFirst()).isEqualTo(
+            GroupInvalidation("group-1", 12L, "target-group")
+        )
+        fanout.unsubscribe(subscription.id)
     }
 
     // ---------------------------------------------------------------------------

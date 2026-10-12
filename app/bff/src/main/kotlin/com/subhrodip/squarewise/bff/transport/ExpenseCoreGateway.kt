@@ -56,20 +56,28 @@ class ExpenseCoreGateway(
             .onStatus({ it.isError }) { response -> response.toUpstreamException(upstreamProblemDecoder, UPSTREAM_SOURCE) }
             .bodyToMono(UpstreamGroup::class.java).map { it.toBffGroup() }.timeout(timeout)
 
-    fun listGroups(bearer: String?, limit: Int = MAX_GROUPS): Mono<List<BffGroup>> {
+    fun listGroups(bearer: String?, limit: Int = MAX_GROUPS): Mono<List<BffGroup>> =
+        listGroups(bearer, limit, includeMembers = true)
+
+    /** Loads group members only when the GraphQL selection includes that collection. */
+    fun listGroups(bearer: String?, limit: Int, includeMembers: Boolean): Mono<List<BffGroup>> {
         require(limit in 1..MAX_GROUPS) { "group limit must be between 1 and $MAX_GROUPS" }
-        return client.get().uri { builder ->
+        val groups = client.get().uri { builder ->
             builder.path(ApiEndpoints.ExpenseCore.V1.PATH_GROUPS).queryParam("limit", limit).build()
         }
             .headers { headers -> bearer?.let { headers.setBearerAuth(it) } }
             .retrieve()
             .onStatus({ it.isError }) { response -> response.toUpstreamException(upstreamProblemDecoder, UPSTREAM_SOURCE) }
             .bodyToFlux(UpstreamGroup::class.java).map { it.toBffGroup() }.collectList()
-            .flatMap { groups ->
-                Flux.fromIterable(groups).flatMapSequential({ group ->
+        return if (includeMembers) {
+            groups.flatMap { groupList ->
+                Flux.fromIterable(groupList).flatMapSequential({ group ->
                     listMembers(group.groupId, bearer).map { members -> group.copy(members = members) }
                 }, 4).collectList()
-            }.timeout(timeout)
+            }
+        } else {
+            groups
+        }.timeout(timeout)
     }
 
     fun updateGroup(groupId: String, name: String, bearer: String?): Mono<BffGroup> =

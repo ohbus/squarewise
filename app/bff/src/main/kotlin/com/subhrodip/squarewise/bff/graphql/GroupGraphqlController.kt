@@ -58,7 +58,7 @@ class GroupGraphqlController(
                 )
             },
             { subscription ->
-                liveFanout.invalidations()
+                liveFanout.invalidations(subscription.id)
                     .filter { it.groupId == groupId }
                     .takeUntilOther(liveFanout.revocationSignal(subscription.id))
                     .publish { events -> gateway.getGroup(groupId, bearerToken(principal)).thenMany(events) }
@@ -70,11 +70,21 @@ class GroupGraphqlController(
     @QueryMapping
     fun groups(
         @AuthenticationPrincipal(expression = "tokenValue") principal: Any?,
-        @Argument limit: Int = 100
-    ): Mono<List<BffGroup>> = if (limit == 100) {
-        gateway.listGroups(bearerToken(principal))
-    } else {
-        gateway.listGroups(bearerToken(principal), limit)
+        @Argument limit: Int = 100,
+        environment: DataFetchingEnvironment? = null
+    ): Mono<List<BffGroup>> {
+        if (environment == null) {
+            return if (limit == 100) {
+                gateway.listGroups(bearerToken(principal))
+            } else {
+                gateway.listGroups(bearerToken(principal), limit)
+            }
+        }
+        return gateway.listGroups(
+            bearerToken(principal),
+            limit,
+            includeMembers = environment.selectionSet.contains("members")
+        )
     }
 
     @QueryMapping
@@ -89,7 +99,13 @@ class GroupGraphqlController(
         val includeExpenses = selections.contains("expenses")
         val includeMembers = selections.contains("members")
         if (!includeBalances && !includeExpenses && !includeMembers) {
-            return gateway.getGroup(id, bearerToken(principal))
+            return gateway.getGroup(
+                id,
+                bearerToken(principal),
+                includeBalances = false,
+                includeExpenses = false,
+                includeMembers = false
+            )
         }
         return gateway.getGroup(
             id,

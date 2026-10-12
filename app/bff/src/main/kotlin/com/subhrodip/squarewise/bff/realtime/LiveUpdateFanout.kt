@@ -37,11 +37,12 @@ class LiveUpdateFanout(
 
     /** Per-subscription revocation signals: completing the sink terminates the consumer Flux. */
     private val revocationSignals = ConcurrentHashMap<String, Sinks.One<Unit>>()
+    private val subscriptionInvalidations = ConcurrentHashMap<String, Sinks.Many<GroupInvalidation>>()
 
     private val admissionLock = Any()
-    /** Replays a bounded window while a subscriber loads its authorization snapshot. */
+    /** Delivers only new invalidations to subscribers of this shared stream. */
     val invalidationSink: Sinks.Many<GroupInvalidation> =
-        Sinks.many().replay().limit(REPLAY_BUFFER_CAPACITY)
+        Sinks.many().multicast().directAllOrNothing()
 
     fun emitInvalidation(groupId: String, revision: Long): GroupInvalidation =
         emitInvalidation(groupId, revision, UuidGenerator.next().toString())
@@ -49,10 +50,22 @@ class LiveUpdateFanout(
     fun emitInvalidation(groupId: String, revision: Long, changeId: String): GroupInvalidation {
         val invalidation = GroupInvalidation(groupId, revision, changeId)
         invalidationSink.tryEmitNext(invalidation)
+        subscriptions.forEach { (subscriptionId, subscriber) ->
+            if (subscriber.subscription.groupId == groupId) {
+                subscriptionInvalidations[subscriptionId]?.tryEmitNext(invalidation)
+            }
+        }
         return invalidation
     }
 
     fun invalidations(): Flux<GroupInvalidation> = invalidationSink.asFlux()
+
+    /**
+     * Returns the bounded event window admitted for one active subscription.
+     * Events emitted before [subscriptionId] was admitted are never replayed.
+     */
+    fun invalidations(subscriptionId: String): Flux<GroupInvalidation> =
+        subscriptionInvalidations[subscriptionId]?.asFlux() ?: Flux.empty()
 
     /**
      * Returns a [Mono] that completes (with no item) when this subscription is revoked.
@@ -82,6 +95,7 @@ class LiveUpdateFanout(
             val subscription = LiveSubscription(
                 UuidGenerator.next().toString(), userId, groupId, Instant.now(clock).plus(subscriptionTtl)
             )
+            subscriptionInvalidations[subscription.id] = Sinks.many().replay().limit(queueCapacity)
             subscriptions[subscription.id] = Subscriber(subscription, ArrayDeque())
             revocationSignals[subscription.id] = Sinks.one()
             subscription
@@ -91,6 +105,7 @@ class LiveUpdateFanout(
     fun unsubscribe(subscriptionId: String) {
         subscriptions.remove(subscriptionId)
         revocationSignals.remove(subscriptionId)?.tryEmitEmpty()
+        subscriptionInvalidations.remove(subscriptionId)?.tryEmitComplete()
     }
 
     fun revokeUser(userId: String): Int {
@@ -101,6 +116,7 @@ class LiveUpdateFanout(
             if (matches) {
                 revoked++
                 revocationSignals.remove(it.key)?.tryEmitEmpty()
+                subscriptionInvalidations.remove(it.key)?.tryEmitComplete()
             }
             matches
         }
@@ -127,6 +143,7 @@ class LiveUpdateFanout(
             if (matches) {
                 revoked++
                 revocationSignals.remove(it.key)?.tryEmitEmpty()
+                subscriptionInvalidations.remove(it.key)?.tryEmitComplete()
             }
             matches
         }
@@ -160,7 +177,10 @@ class LiveUpdateFanout(
         val now = Instant.now(clock)
         subscriptions.entries.removeIf {
             val expired = !now.isBefore(it.value.subscription.expiresAt)
-            if (expired) revocationSignals.remove(it.key)?.tryEmitEmpty()
+            if (expired) {
+                revocationSignals.remove(it.key)?.tryEmitEmpty()
+                subscriptionInvalidations.remove(it.key)?.tryEmitComplete()
+            }
             expired
         }
     }
@@ -183,7 +203,6 @@ class LiveUpdateFanout(
     companion object {
         const val DEFAULT_QUEUE_CAPACITY = 64
         const val DEFAULT_MAX_SUBSCRIPTIONS_PER_USER = 20
-        const val REPLAY_BUFFER_CAPACITY = 256
         val DEFAULT_SUBSCRIPTION_TTL: Duration = Duration.ofMinutes(30)
     }
 }

@@ -145,6 +145,19 @@ class BffFanoutTest {
         assertThat(recordedPaths).containsExactly(ApiEndpoints.ExpenseCore.V1.PATH_GROUPS)
     }
 
+    @Test
+    fun `skips member requests when group members are not selected`() {
+        registerHandler(ApiEndpoints.ExpenseCore.V1.PATH_GROUPS) { exchange ->
+            respondJson(exchange, 200, "[${groupJson("g-scalars", "Scalars only")}]" )
+        }
+
+        val groups = gateway.listGroups("bearer-token", 100, includeMembers = false).block()
+
+        assertThat(groups).hasSize(1)
+        assertThat(groups!![0].members).isEmpty()
+        assertThat(recordedPaths).containsExactly(ApiEndpoints.ExpenseCore.V1.PATH_GROUPS)
+    }
+
     /**
      * Verifies that when a single group is returned, its members are correctly fetched and attached.
      */
