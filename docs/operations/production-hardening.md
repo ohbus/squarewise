@@ -71,6 +71,16 @@ dispatch. This prevents concurrent replica sends and recovers crashed
 consumers, but cannot provide provider-level exactly-once delivery after a
 provider accepts mail and the consumer crashes before recording `DELIVERED`.
 
+## Aggregate balance result bounds
+
+Expense Core fetches at most 1,001 aggregate participant/currency rows for
+balances and settlement suggestions. Results above the 1,000-row correctness
+bound are rejected with the existing invalid-request error rather than
+truncated, so clients cannot receive incomplete financial state. Pagination for
+larger groups remains a future API contract decision. This bound protects the
+database result window and JVM settlement calculation; it is not a substitute
+for production capacity testing.
+
 ## Release gates still required
 
 Before public production launch, configure Prometheus retention and alert
