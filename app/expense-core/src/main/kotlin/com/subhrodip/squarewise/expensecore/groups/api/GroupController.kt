@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
@@ -29,11 +30,14 @@ class GroupController(private val groups: GroupStore) {
         groups.create(principal.name, request)
 
     @GetMapping
-    fun list(principal: Principal): List<GroupResponse> = groups.list(principal.name)
+    fun list(
+        @RequestParam(defaultValue = "100") limit: Int = 100,
+        principal: Principal
+    ): List<GroupResponse> = groups.list(principal.name, limit)
 
     @GetMapping("/{groupId}")
     fun get(@PathVariable groupId: UUID, principal: Principal): GroupResponse =
-        groups.list(principal.name).find { it.groupId == groupId }
+        groups.get(groupId, principal.name)
             ?: throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group $groupId not found")
 
     @PatchMapping("/{groupId}")
@@ -70,13 +74,15 @@ class GroupController(private val groups: GroupStore) {
     }
 
     @GetMapping("/{groupId}/members")
+    /** Returns the first bounded page of members visible to the authenticated member. */
     fun listMembers(
         @PathVariable groupId: UUID,
         @RequestHeader(ApiEndpoints.Headers.ACCEPTANCE_FAULT, required = false) fault: String?,
+        @RequestParam(defaultValue = "100") limit: Int = 100,
         principal: Principal
     ): List<GroupMemberResponse> {
         if (fault == ApiEndpoints.Bff.ACCEPTANCE_FAULT_FANOUT) throw ExpenseDomainException(BffErrors.UPSTREAM_PROTOCOL_INVALID, "Acceptance fanout fault")
-        return groups.listMembers(groupId, principal.name)
+        return groups.listMembers(groupId, principal.name, limit)
     }
 
     @PostMapping("/{groupId}/invites")

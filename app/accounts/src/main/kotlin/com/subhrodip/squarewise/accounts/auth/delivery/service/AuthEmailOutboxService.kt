@@ -24,7 +24,7 @@ class AuthEmailOutboxService(
     @Transactional
     fun claim(now: Instant, lease: Duration): AuthEmailOutboxEntity? {
         require(!lease.isNegative && !lease.isZero) { "lease must be positive" }
-        val record = repository.findAvailableForClaim(now).firstOrNull() ?: return null
+        val record = repository.findAvailableForClaim(now) ?: return null
         record.status = "CLAIMED"
         record.availableAt = now.plus(lease)
         record.attempts += 1

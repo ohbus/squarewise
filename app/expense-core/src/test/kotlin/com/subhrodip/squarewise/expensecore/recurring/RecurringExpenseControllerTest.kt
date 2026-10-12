@@ -45,6 +45,7 @@ class RecurringExpenseControllerTest @Autowired constructor(
             frequency = RecurrenceFrequency.MONTHLY,
             dayOfMonth = 1,
             startDate = LocalDate.of(2026, 10, 1),
+            timezone = "Europe/Vienna",
             payers = customPayers,
             allocations = customAllocations
         )
@@ -61,6 +62,7 @@ class RecurringExpenseControllerTest @Autowired constructor(
         assertEquals(LocalDate.of(2026, 10, 1), created.startDate)
         assertEquals(null, created.endDate)
         assertEquals(LocalDate.of(2026, 10, 1), created.nextOccurrenceDate)
+        assertEquals("Europe/Vienna", created.timezone)
         assertNotNull(created.createdAt)
         assertEquals(1L, created.version)
         assertFalse(created.paused)
@@ -90,6 +92,15 @@ class RecurringExpenseControllerTest @Autowired constructor(
         assertEquals("Monthly Rent & Water", updated.description)
         assertEquals("270000", updated.amount.minor)
         assertEquals(LocalDate.of(2026, 12, 31), updated.endDate)
+        assertEquals("Europe/Vienna", updated.timezone)
+
+        val explicitlyRetimed = controller.updateSchedule(
+            group.groupId,
+            created.scheduleId,
+            updateRequest.copy(timezone = "UTC"),
+            alice
+        )
+        assertEquals("UTC", explicitlyRetimed.timezone)
 
         // 5. Pause schedule
         val paused = controller.pauseSchedule(group.groupId, created.scheduleId, alice)

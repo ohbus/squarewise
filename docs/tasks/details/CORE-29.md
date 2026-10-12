@@ -55,3 +55,12 @@ Remediate critical multi-currency settlement defects (`AUD-01`, `AUD-02`, `AUD-1
   - `./gradlew :app:expense-core:test --tests "com.subhrodip.squarewise.expensecore.settlements.*" --no-daemon` passed all 32 tests.
   - `make contracts` verified valid JSON, valid GraphQL, 257 valid tasks, 45 operations, 99 six-digit error catalog records.
   - `git diff --check` reported zero trailing whitespace or format issues.
+
+## 2026-10-11 scale audit remediation
+
+Settlement `amountMinor` parsing now uses `toLongOrNull()` and returns the
+catalogued validation error when the decimal string exceeds signed 64-bit range,
+instead of leaking a number-format failure as an internal error. Public expense
+participant authorization now queries only the submitted membership IDs, and the
+shared ledger validator enforces the existing 100-participant limit for internal
+writers as well as HTTP requests.

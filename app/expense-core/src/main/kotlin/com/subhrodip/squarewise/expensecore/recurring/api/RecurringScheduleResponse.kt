@@ -16,6 +16,7 @@ data class RecurringScheduleResponse(
     val dayOfMonth: Int?,
     val startDate: LocalDate,
     val endDate: LocalDate?,
+    val timezone: String,
     val nextOccurrenceDate: LocalDate,
     val paused: Boolean,
     val createdAt: Instant,

@@ -5,9 +5,7 @@ import org.springframework.data.repository.query.Param
 
 import java.util.UUID
 import java.time.Instant
-import jakarta.persistence.LockModeType
 import org.springframework.data.jpa.repository.JpaRepository
-import org.springframework.data.jpa.repository.Lock
 import org.springframework.data.jpa.repository.Query
 
 /** Persistence port for Accounts-owned authentication-email delivery records. */
@@ -16,17 +14,17 @@ interface AuthEmailOutboxRepository : JpaRepository<AuthEmailOutboxEntity, UUID>
     fun findByEventId(eventId: UUID): AuthEmailOutboxEntity?
 
     /** Finds one available delivery while holding a database row lock. */
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query(
-        """
-        select outbox from AuthEmailOutboxEntity outbox
-         where (outbox.status = 'PENDING' or
-                (outbox.status = 'CLAIMED' and outbox.availableAt <= :now))
-           and outbox.availableAt <= :now
-         order by outbox.createdAt asc
-        """
+        value = """
+            SELECT * FROM auth_email_outbox
+            WHERE (status = 'PENDING' OR (status = 'CLAIMED' AND available_at <= :now))
+              AND available_at <= :now
+            ORDER BY created_at ASC
+            LIMIT 1 FOR UPDATE SKIP LOCKED
+        """,
+        nativeQuery = true
     )
-    fun findAvailableForClaim(@Param("now") now: Instant): List<AuthEmailOutboxEntity>
+    fun findAvailableForClaim(@Param("now") now: Instant): AuthEmailOutboxEntity?
 
     /** Acknowledges only the currently claimed event. */
     @Modifying(flushAutomatically = true, clearAutomatically = true)

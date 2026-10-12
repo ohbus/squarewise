@@ -28,7 +28,7 @@ A permanently free, privacy-centric expense-sharing platform for households, cou
   - [Option B: Native Development (IDE / Gradle)](#option-b-native-development-ide--gradle)
 - [Services & Port Mapping](#services--port-mapping)
 - [API & Schema Documentation](#api--schema-documentation)
-- [Six-Digit Error Code Architecture & Roadmap](#six-digit-error-code-architecture--roadmap)
+- [Error Codes](#error-codes)
 - [Quality & Verification](#quality--verification)
 - [Production Readiness](#production-readiness)
 - [Project Structure](#project-structure)
@@ -208,26 +208,47 @@ Repository documentation is indexed in [`docs/README.md`](docs/README.md), with 
 
 ---
 
-## Six-Digit Error Code Architecture & Roadmap
+## Error Codes
 
-Squarewise is migrating from the initial flat 12-error taxonomy (`ERR-01` through `ERR-12`) to the immutable six-digit `DM-L-C-EE` domain/module standard. The workstream is opened and anchored by **[`ERRC-01`](docs/tasks/details/ERRC-01.md)**, establishing enterprise architectural patterns (Value Objects, Ports & Adapters, Exception Shielding, Anti-Corruption Layer, and Transactional Outbox) and common library responsibilities across `libs/errors`, `libs/ids`, `libs/observability`, `libs/security`, and `libs/db`.
+Error handling is implemented through one canonical catalog and static runtime
+definitions. The detailed rules live in the [six-digit standard](docs/architecture/error-code-standard.md);
+the root README keeps only the working map and onboarding path.
 
-The implementation roadmap is partitioned into five sequential phases tracked in [`docs/tasks/board.md`](docs/tasks/board.md) and [`docs/tasks/registry.yaml`](docs/tasks/registry.yaml):
+| Concern | Current implementation |
+|---|---|
+| Taxonomy and allocation | [`contracts/errors/domains.yaml`](contracts/errors/domains.yaml) and [`contracts/errors/error-catalog.yaml`](contracts/errors/error-catalog.yaml) define the frozen domain/module namespace and every allocated code. |
+| Identity and metadata | [`libs/errors`](libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/code/) provides `ErrorCode`, layer/category/severity/retry/disclosure metadata, and governed definitions. |
+| Runtime catalogs | [`tools/codegen/generate_error_catalogs.py`](tools/codegen/generate_error_catalogs.py) compiles the catalog into static `AccountsErrors`, `ExpenseErrors`, `NotificationErrors`, `BffErrors`, and `PlatformErrors` objects; [`ErrorCatalog`](libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/catalog/ErrorCatalog.kt) indexes them without runtime YAML parsing or reflection. |
+| Exceptions and boundaries | [`libs/errors`](libs/errors/src/main/kotlin/com/subhrodip/squarewise/errors/exceptions/) provides governed exceptions and bounded diagnostics; REST, GraphQL, WebSocket, messaging, and service code preserve catalog identity at their boundaries. |
+| Context ownership | The per-context guides under [`docs/architecture/errors/`](docs/architecture/errors/) describe Accounts, Expense Core, Notifications, BFF, and Platform ownership. |
 
-- **Opening & Umbrella Specification**: [`docs/tasks/details/ERRC-01.md`](docs/tasks/details/ERRC-01.md)
-- **Phase 0: Governance & Frozen Evidence (Complete)**: [`ERRC-02`](docs/tasks/details/ERRC-02.md) (freeze audit baseline across 131 throw sites), [`ERRC-03`](docs/tasks/details/ERRC-03.md) (frozen namespace registries & schemas), [`ERRC-04`](docs/tasks/details/ERRC-04.md) (allocated 99 six-digit error codes, retired `ERR-12`)
-- **Phase 1: Contract-First Compatibility**: [`ERRC-05`](docs/tasks/details/ERRC-05.md), [`ERRC-06`](docs/tasks/details/ERRC-06.md), [`ERRC-07`](docs/tasks/details/ERRC-07.md), [`ERRC-08`](docs/tasks/details/ERRC-08.md), [`ERRC-09`](docs/tasks/details/ERRC-09.md)
-- **Phase 2: Static Error Core (Zero Reflection)**: [`ERRC-10`](docs/tasks/details/ERRC-10.md), [`ERRC-11`](docs/tasks/details/ERRC-11.md), [`ERRC-12`](docs/tasks/details/ERRC-12.md), [`ERRC-13`](docs/tasks/details/ERRC-13.md), [`ERRC-14`](docs/tasks/details/ERRC-14.md)
-- **Phase 3: Transport Boundaries**: [`ERRC-15`](docs/tasks/details/ERRC-15.md), [`ERRC-16`](docs/tasks/details/ERRC-16.md), [`ERRC-17`](docs/tasks/details/ERRC-17.md), [`ERRC-18`](docs/tasks/details/ERRC-18.md)
-- **Phase 4: Bounded-Context Migration**: [`ERRC-19`](docs/tasks/details/ERRC-19.md), [`ERRC-20`](docs/tasks/details/ERRC-20.md), [`ERRC-21`](docs/tasks/details/ERRC-21.md), [`ERRC-22`](docs/tasks/details/ERRC-22.md), [`ERRC-23`](docs/tasks/details/ERRC-23.md)
-- **Phase 5: Clients, Scale & Rollout**: [`ERRC-24`](docs/tasks/details/ERRC-24.md), [`ERRC-25`](docs/tasks/details/ERRC-25.md), [`ERRC-26`](docs/tasks/details/ERRC-26.md), [`ERRC-27`](docs/tasks/details/ERRC-27.md), [`ERRC-28`](docs/tasks/details/ERRC-28.md), [`ERRC-29`](docs/tasks/details/ERRC-29.md), [`ERRC-30`](docs/tasks/details/ERRC-30.md), [`ERRC-31`](docs/tasks/details/ERRC-31.md)
+### Existing taxonomy
 
-Key specifications:
-- [Six-digit standard (`DM-L-C-EE`)](docs/architecture/error-code-standard.md)
-- [Domain & module namespace registry](docs/architecture/error-domain-registry.md) (`contracts/errors/domains.yaml`)
-- [Exception & boundary handling guide](docs/architecture/error-handling-guide.md)
-- [Refactoring and migration strategy](docs/architecture/error-code-refactoring.md)
-- [Per-context failure guides](docs/architecture/errors/README.md) ([Accounts](docs/architecture/errors/accounts.md), [Expense Core](docs/architecture/errors/expense-core.md), [Notifications](docs/architecture/errors/notifications.md), [BFF](docs/architecture/errors/bff.md), [Platform](docs/architecture/errors/platform-libraries.md))
+Codes use `DM-L-C-EE`: domain, module, published layer, remediation category,
+and sequence. Domain `1` is Accounts, `2` Expense Core, `3` Notifications,
+`4` BFF, and `9` Platform; `5` through `8` are reserved. The layer and category
+registries, allocation ranges, lifecycle rules, and privacy rules are maintained
+in the [standard](docs/architecture/error-code-standard.md), not inferred from
+HTTP status or exception class.
+
+### Introducing a new code
+
+1. Confirm the condition has distinct remediation, disclosure, retry/idempotency,
+   transport, side-effect, or ownership semantics; otherwise reuse an existing code.
+2. Select the semantic domain/module, layer, and category from the registries,
+   then allocate the next unused sequence in the authoritative YAML catalog.
+3. Add all required catalog metadata and regenerate the static Kotlin catalogs.
+4. Throw the owning catalog definition through a governed exception or typed
+   outcome; update affected REST/GraphQL/event contracts, context docs, tests,
+   dashboards, and runbooks.
+5. Run `uv run python tools/errors/validate_catalog.py`,
+   `uv run python tools/codegen/generate_error_catalogs.py`,
+   `./gradlew :libs:errors:test`, `uv run python tools/contracts/validate.py`,
+   and the affected service tests.
+
+Never derive a code from an HTTP status, exception class, database vendor code,
+ticket, endpoint, region, or runtime counter. Retired identities and names are
+never reused.
 
 ---
 

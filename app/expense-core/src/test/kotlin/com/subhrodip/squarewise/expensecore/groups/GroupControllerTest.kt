@@ -50,6 +50,17 @@ class GroupControllerTest {
             .andExpect(status().isOk).andExpect(jsonPath("$[0].revision").value(0))
     }
 
+    @Test
+    fun `rejects member limit above compatibility cap`() {
+        val created = mvc.perform(post(ApiEndpoints.ExpenseCore.V1.PATH_GROUPS).with(alice).contentType(MediaType.APPLICATION_JSON)
+            .content("{\"name\":\"Member cap\",\"kind\":\"TRIP\",\"currency\":\"EUR\"}"))
+            .andExpect(status().isCreated).andReturn().response.contentAsString
+        val groupId = Regex("\\\"groupId\\\":\\\"([^\\\"]+)\\\"").find(created)!!.groupValues[1]
+
+        mvc.perform(get(ApiEndpoints.ExpenseCore.V1.groupMembers(groupId)).queryParam("limit", "101").with(alice))
+            .andExpect(status().isUnprocessableContent)
+    }
+
     /**
      * Verifies that invalid group creation payloads return 400 Bad Request with ProblemDetail code VALIDATION_FAILED.
      */
@@ -399,5 +410,17 @@ class GroupControllerTest {
 
         testMvc.perform(post(ApiEndpoints.ExpenseCore.V1.inviteClaim(token)).with(bob))
             .andExpect(status().isConflict)
+    }
+
+    /** Verifies Kotlin controller defaults retain the public compatibility limits. */
+    @Test
+    fun `direct controller calls use default group and member limits`() {
+        val store = InMemoryGroupStore()
+        val controller = GroupController(store)
+        val principal = Principal { "default-limit-owner" }
+        val group = store.create(principal.name, CreateGroupRequest("Defaults", "TRIP", "EUR"))
+
+        assertEquals(1, controller.list(principal = principal).size)
+        assertEquals(1, controller.listMembers(group.groupId, fault = null, principal = principal).size)
     }
 }

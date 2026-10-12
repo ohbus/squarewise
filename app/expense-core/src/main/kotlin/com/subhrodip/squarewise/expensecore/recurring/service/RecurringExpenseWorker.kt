@@ -5,7 +5,6 @@ package com.subhrodip.squarewise.expensecore.recurring.service
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
-import java.time.LocalDate
 
 /**
  * Scheduled background worker that periodically polls for due recurring expense schedules
@@ -22,6 +21,6 @@ class RecurringExpenseWorker(
         if (!enabled) {
             return 0
         }
-        return service.processDueOccurrences(LocalDate.now(), maxCatchUpOccurrences)
+        return service.processDueOccurrences(maxCatchUpOccurrences)
     }
 }

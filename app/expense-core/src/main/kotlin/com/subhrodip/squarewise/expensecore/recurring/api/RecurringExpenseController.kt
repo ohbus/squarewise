@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
@@ -56,6 +57,7 @@ class RecurringExpenseController(
             dayOfMonth = request.dayOfMonth,
             startDate = request.startDate,
             endDate = request.endDate,
+            timezone = request.timezone,
             payers = toDomainPayers(request.payers),
             allocations = toDomainAllocations(request.allocations)
         )
@@ -64,12 +66,14 @@ class RecurringExpenseController(
     }
 
     @GetMapping(ApiEndpoints.ExpenseCore.V1.SCHEDULES_SUBPATH)
+    /** Returns the first bounded page of schedules visible to the authenticated member. */
     fun listSchedules(
         @PathVariable groupId: UUID,
-        principal: Principal?
+        principal: Principal?,
+        @RequestParam(defaultValue = "100") limit: Int = 100
     ): List<RecurringScheduleResponse> {
         verifyGroupAndMembership(groupId, principal)
-        return recurringService.listSchedules(groupId).map { it.toResponse() }
+        return recurringService.listSchedules(groupId, limit).map { it.toResponse() }
     }
 
     @GetMapping(ApiEndpoints.ExpenseCore.V1.SCHEDULE_BY_ID_SUBPATH)
@@ -102,6 +106,7 @@ class RecurringExpenseController(
             dayOfMonth = request.dayOfMonth,
             startDate = request.startDate,
             endDate = request.endDate,
+            timezone = request.timezone,
             payers = toDomainPayers(request.payers),
             allocations = toDomainAllocations(request.allocations)
         )

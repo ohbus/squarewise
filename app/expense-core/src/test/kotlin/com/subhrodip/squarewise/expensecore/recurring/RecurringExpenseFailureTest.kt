@@ -11,12 +11,15 @@ import com.subhrodip.squarewise.expensecore.recurring.service.RecurringExpenseSe
 import java.time.LocalDate
 import java.time.Instant
 import java.util.UUID
+import java.util.concurrent.CancellationException
+import java.util.concurrent.TimeoutException
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchers.isNull
+import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.doThrow
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.dao.DataIntegrityViolationException
@@ -97,5 +100,68 @@ class RecurringExpenseFailureTest @Autowired constructor(
         assertThrows(DataIntegrityViolationException::class.java) {
             service.processDueOccurrences(LocalDate.of(2026, 10, 1))
         }
+    }
+
+    @Test
+    fun `leaves schedule due when expense creation times out`() {
+        doAnswer { throw TimeoutException("expense store timed out") }
+            .`when`(expenseStore)
+            .create(
+                any(UUID::class.java) ?: UUID(0, 0),
+                any(ExpenseRecord::class.java) ?: ExpenseRecord(
+                    UUID(0, 0), UUID(0, 0), "", "", "", 0, 1, "", Instant.EPOCH, emptyList(), emptyList()
+                ),
+                any(String::class.java) ?: "test-idempotency",
+                isNull(String::class.java)
+            )
+
+        val group = groupStore.create("recurring-timeout", CreateGroupRequest("Timeout group", "TRIP", "EUR"))
+        val startDate = LocalDate.of(2026, 10, 1)
+        val schedule = service.createSchedule(
+            group.groupId,
+            CreateRecurringScheduleRequest(
+                description = "Timed out recurring expense",
+                amountMinor = 1200,
+                currency = "EUR",
+                frequency = RecurrenceFrequency.WEEKLY,
+                startDate = startDate
+            )
+        )
+
+        assertEquals(0, service.processDueOccurrences(startDate))
+        assertTrue(service.getSchedule(schedule.scheduleId)?.paused == false)
+        assertEquals(startDate, service.getSchedule(schedule.scheduleId)?.nextOccurrenceDate)
+    }
+
+    @Test
+    fun `rethrows cancellation without pausing schedule`() {
+        doThrow(CancellationException("worker cancelled"))
+            .`when`(expenseStore)
+            .create(
+                any(UUID::class.java) ?: UUID(0, 0),
+                any(ExpenseRecord::class.java) ?: ExpenseRecord(
+                    UUID(0, 0), UUID(0, 0), "", "", "", 0, 1, "", Instant.EPOCH, emptyList(), emptyList()
+                ),
+                any(String::class.java) ?: "test-idempotency",
+                isNull(String::class.java)
+            )
+
+        val group = groupStore.create("recurring-cancel", CreateGroupRequest("Cancellation group", "TRIP", "EUR"))
+        val startDate = LocalDate.of(2026, 10, 1)
+        val schedule = service.createSchedule(
+            group.groupId,
+            CreateRecurringScheduleRequest(
+                description = "Cancelled recurring expense",
+                amountMinor = 1200,
+                currency = "EUR",
+                frequency = RecurrenceFrequency.WEEKLY,
+                startDate = startDate
+            )
+        )
+
+        assertThrows(CancellationException::class.java) {
+            service.processDueOccurrences(startDate)
+        }
+        assertTrue(service.getSchedule(schedule.scheduleId)?.paused == false)
     }
 }

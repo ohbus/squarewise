@@ -34,7 +34,7 @@ class SettlementController(
     @ResponseStatus(HttpStatus.CREATED)
     fun record(@PathVariable groupId: UUID, @RequestHeader(ApiEndpoints.Headers.IDEMPOTENCY_KEY) idempotencyKey: String, @Valid @RequestBody request: RecordSettlementRequest, principal: Principal?): Settlement {
         ensureMembership(groupId, principal)
-        return service.record(groupId, request.fromParticipantId, request.toParticipantId, request.amountMinor.toLong(), request.currency, principal!!.name, idempotencyKey)
+        return service.record(groupId, request.fromParticipantId, request.toParticipantId, parseAmount(request.amountMinor), request.currency, principal!!.name, idempotencyKey)
     }
 
     @PostMapping(ApiEndpoints.ExpenseCore.V1.SETTLEMENT_REVERSAL_RELATIVE_SUBPATH)
@@ -56,4 +56,8 @@ class SettlementController(
             throw ExpenseDomainException(ExpenseErrors.GROUP_ACCESS_HIDDEN, "Group $groupId not found")
         }
     }
+
+    private fun parseAmount(amountMinor: String): Long =
+        amountMinor.toLongOrNull()
+            ?: throw ExpenseDomainException(ExpenseErrors.EXPENSE_REQUEST_INVALID, "amountMinor must be a valid integer")
 }

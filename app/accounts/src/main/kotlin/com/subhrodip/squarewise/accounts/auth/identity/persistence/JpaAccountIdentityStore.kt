@@ -33,7 +33,7 @@ class JpaAccountIdentityStore(
     @Transactional(readOnly = true)
     override fun findByAccountId(accountId: UUID): AccountIdentity? {
         val profile = profileRepository.findById(accountId).orElse(null) ?: return null
-        val identity = identityRepository.findByAccountId(accountId).firstOrNull()
+        val identity = identityRepository.findFirstByAccountIdOrderByIdentityIdAsc(accountId)
 
         return AccountIdentity(
             accountId = accountId,
@@ -144,8 +144,7 @@ class JpaAccountIdentityStore(
      */
     @Transactional
     override fun updateEmail(accountId: UUID, email: String, verified: Boolean): AccountIdentity {
-        val identities = identityRepository.findByAccountId(accountId)
-        val identity = identities.firstOrNull()
+        val identity = identityRepository.findFirstByAccountIdOrderByIdentityIdAsc(accountId)
             ?: throw AccountsInputException("No identity found for account $accountId")
 
         identity.email = email

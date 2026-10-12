@@ -46,3 +46,10 @@ Expose a REST endpoint to list members of a group to allow authenticated partici
 - `./gradlew :app:expense-core:test --no-daemon`: 84 tests completed, 0 failures.
 - `python3 tools/contracts/validate.py`: all contract schemas valid (valid JSON and valid task registry).
 - `git diff --check`: passed cleanly with zero whitespace or format issues.
+
+## 2026-10-11 scale audit remediation
+
+Member reads now accept a bounded `limit` from 1 through 100. Both durable and
+in-memory stores enforce the cap, and the BFF passes the bound when expanding
+group details. Cursor pagination remains required before returning deeper member
+history.

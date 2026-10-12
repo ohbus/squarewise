@@ -20,10 +20,14 @@ and deletion (`DELETE`) with double-entry balance posting reversals in `app/expe
 - **Persistence & Entities**:
   - Added `deleted` and `updatedAt` fields to `ExpenseEntity`.
   - Filtered queries in `ExpenseRepository`: `findByGroupIdAndDeletedFalseOrderByCreatedAtDesc` and `findByGroupIdAndCategoryAndDeletedFalseOrderByCreatedAtDesc`.
-  - Added `findByExpenseId(expenseId)` to `BalancePostingRepository`.
+- Added database-side posting aggregation by expense for reversal calculation.
 - **Double-Entry Balance Posting Reversals**:
-  - On update/delete, previous balance postings for the expense are retrieved.
-  - Net sum per participant is inverted and appended as compensatory postings (`amountMinor = -sum`), strictly preserving the immutable ledger history and maintaining zero-sum invariants (`FIN-05`, `FIN-09`).
+- On update/delete, previous balance postings for the expense are aggregated by
+  participant and currency in the database.
+- Each non-zero net sum is inverted and appended as a compensatory posting
+  (`amountMinor = -sum`), strictly preserving immutable ledger history and
+  maintaining zero-sum invariants (`FIN-05`, `FIN-09`) without loading all
+  historical posting rows into application memory.
   - For edits, new postings corresponding to the updated payers and allocations are appended.
   - In-place collection synchronization for `payers` and `allocations` prevents transient unique constraint violations on `(expense_id, participant_id)`.
 - **Group Revision & Event Sinks**:
@@ -52,3 +56,9 @@ and deletion (`DELETE`) with double-entry balance posting reversals in `app/expe
   ./gradlew test --rerun --no-daemon
   # 30 actionable tasks: 5 executed, 25 up-to-date, BUILD SUCCESSFUL
   ```
+
+## 2026-10-11 scale audit remediation
+
+Expense update and delete reversal now consume grouped database aggregates
+instead of materializing the full posting history for the expense. This keeps
+the reversal heap cost proportional to distinct participant/currency pairs.

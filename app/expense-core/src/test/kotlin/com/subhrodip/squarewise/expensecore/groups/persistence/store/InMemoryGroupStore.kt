@@ -124,14 +124,15 @@ class InMemoryGroupStore : GroupStore {
         groups[groupId] = group.copy(revision = group.revision + 1)
     }
 
-    override fun listMembers(groupId: UUID, subject: String): List<GroupMemberResponse> {
+    override fun listMembers(groupId: UUID, subject: String, limit: Int): List<GroupMemberResponse> {
+        require(limit in 1..100) { "member limit must be between 1 and 100" }
         if (groupsByMember[subject]?.contains(groupId) != true) {
             throw ExpenseDomainException(PlatformErrors.RESOURCE_NOT_FOUND, "Group not found")
         }
         if (groups[groupId]?.status != "ACTIVE") {
             throw ExpenseDomainException(PlatformErrors.RESOURCE_NOT_FOUND, "Group not found")
         }
-        return memberships[groupId].orEmpty().filter { it.status == "ACTIVE" }
+        return memberships[groupId].orEmpty().filter { it.status == "ACTIVE" }.take(limit)
     }
 
     override fun invite(groupId: UUID, subject: String, request: CreateInviteRequest): InviteResponse {

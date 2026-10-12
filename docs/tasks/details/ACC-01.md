@@ -50,3 +50,8 @@ Added a JPA-backed profile adapter and Flyway V1 migration behind the
 isolated controller tests use the in-memory adapter. OIDC decoder wiring,
 retention execution, export materialization, and PostgreSQL integration tests
 remain pending.
+
+Account identity projections now use a database-side deterministic first-row
+lookup rather than materializing every identity linked to an account. This
+preserves the existing single-identity projection while bounding authentication
+read memory when an account has multiple provider bindings.

@@ -24,6 +24,8 @@ import com.subhrodip.squarewise.db.routing.DbOperationKind
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
+import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Sort
 import org.springframework.context.annotation.Primary
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -72,11 +74,22 @@ class JpaGroupStore(
      * Lists all groups in which the given user subject is an active member.
      */
     @Transactional(readOnly = true)
-    override fun list(subject: String): List<GroupResponse> =
-        DbContextHolder.withContext(DbExecutionContext("groups.list", DbOperationKind.QUERY)) {
-            memberships.findActiveGroupsBySubject(subject, "ACTIVE")
+    override fun list(subject: String): List<GroupResponse> = list(subject, 100)
+
+    /** Loads a bounded group page without materializing every membership. */
+    @Transactional(readOnly = true)
+    override fun list(subject: String, limit: Int): List<GroupResponse> {
+        require(limit in 1..100) { "group limit must be between 1 and 100" }
+        return DbContextHolder.withContext(DbExecutionContext("groups.list", DbOperationKind.QUERY)) {
+            memberships.findActiveGroupsBySubject(subject, "ACTIVE", PageRequest.of(0, limit))
                 .map { it.toResponse() }
         }
+    }
+
+    /** Resolves one active group through the membership join. */
+    @Transactional(readOnly = true)
+    override fun get(groupId: UUID, subject: String): GroupResponse? =
+        memberships.findActiveGroupBySubjectAndId(groupId, subject, "ACTIVE")?.toResponse()
 
     /**
      * Updates an existing expense group's name and increments its revision.
@@ -197,11 +210,17 @@ class JpaGroupStore(
      * Lists all active members and placeholders registered in the specified group.
      */
     @Transactional(readOnly = true)
-    override fun listMembers(groupId: UUID, subject: String): List<GroupMemberResponse> {
+    override fun listMembers(groupId: UUID, subject: String, limit: Int): List<GroupMemberResponse> {
+        require(limit in 1..100) { "member limit must be between 1 and 100" }
         checkActiveMembership(groupId, subject)
         val group = groups.findById(groupId).orElse(null) ?: notFound()
         if (group.status != "ACTIVE") notFound()
-        return memberships.findByGroupIdAndStatus(groupId, "ACTIVE").map { it.toResponse() }
+        // shortcut: return the first 100 members until the public contract has cursor pagination.
+        return memberships.findByGroupIdAndStatus(
+            groupId,
+            "ACTIVE",
+            PageRequest.of(0, limit, Sort.by(Sort.Direction.ASC, "membershipId"))
+        ).map { it.toResponse() }
     }
 
     /**

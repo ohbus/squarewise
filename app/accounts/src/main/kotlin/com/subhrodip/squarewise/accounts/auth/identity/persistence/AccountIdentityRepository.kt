@@ -19,12 +19,12 @@ interface AccountIdentityRepository : JpaRepository<AccountIdentityEntity, UUID>
     fun findByIssuerAndProviderSubject(issuer: String, providerSubject: String): AccountIdentityEntity?
 
     /**
-     * Finds all identities associated with a given local account ID.
+     * Finds the deterministic first identity associated with a local account ID.
      *
      * @param accountId Unique account identifier.
-     * @return List of mapped identities.
+     * @return First mapped identity or null when the account has no identity.
      */
-    fun findByAccountId(accountId: UUID): List<AccountIdentityEntity>
+    fun findFirstByAccountIdOrderByIdentityIdAsc(accountId: UUID): AccountIdentityEntity?
 
     /**
      * Finds active identities matching a verified contact email (case-insensitive).

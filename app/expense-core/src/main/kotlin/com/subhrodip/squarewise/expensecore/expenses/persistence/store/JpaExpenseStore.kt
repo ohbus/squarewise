@@ -7,6 +7,7 @@ import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseRecord
 import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseAllocation
 import com.subhrodip.squarewise.expensecore.expenses.domain.ExpensePayer
 import com.subhrodip.squarewise.expensecore.expenses.service.toRecord
+import com.subhrodip.squarewise.expensecore.expenses.service.ExpenseValidator
 import com.subhrodip.squarewise.expensecore.expenses.persistence.entity.ExpenseEntity
 import com.subhrodip.squarewise.expensecore.expenses.persistence.entity.ExpensePayerEntity
 import com.subhrodip.squarewise.expensecore.expenses.persistence.entity.ExpenseAllocationEntity
@@ -97,6 +98,8 @@ class JpaExpenseStore(
             }
             throw ExpenseDomainException(ExpenseErrors.EXPENSE_IDEMPOTENCY_CONFLICT, "Expense already exists with different payload")
         }
+
+        ExpenseValidator.validateRecord(expense)
 
         group.revision += 1
         groupRepository.save(group)
@@ -203,7 +206,7 @@ class JpaExpenseStore(
             throw ExpenseDomainException(ExpenseErrors.EXPENSE_REQUEST_INVALID, "Participant IDs must be unique within payers and allocations")
         }
         val participantIds = payerIds + allocationIds
-        val activeIds = membershipRepository.findByGroupIdAndStatus(groupId, "ACTIVE")
+        val activeIds = membershipRepository.findByGroupIdAndMembershipIdInAndStatus(groupId, participantIds.toSet(), "ACTIVE")
             .map { it.membershipId }
             .toSet()
         if (!activeIds.containsAll(participantIds)) {
@@ -242,6 +245,8 @@ class JpaExpenseStore(
         if (entity.version != update.version) {
             throw ExpenseDomainException(ExpenseErrors.EXPENSE_VERSION_CONFLICT, "Stale version: expected ${entity.version}, but got ${update.version}")
         }
+
+        ExpenseValidator.validateRecord(update)
 
         group.revision += 1
         groupRepository.save(group)
@@ -470,21 +475,17 @@ class JpaExpenseStore(
     }
 
     private fun reverseExpensePostings(groupId: UUID, expenseId: UUID, timestamp: Instant) {
-        val previousPostings = balancePostingRepository.findByExpenseId(expenseId)
-        val activePostingSums = previousPostings
-            .groupBy { it.participantId to it.currency }
-            .mapValues { (_, list) -> list.sumOf { it.amountMinor } }
-
-        val reversalPostings = activePostingSums
-            .filter { (_, sum) -> sum != 0L }
-            .map { (key, sum) ->
-                val (participantId, currency) = key
+        val reversalPostings = balancePostingRepository
+            .sumPostingsByGroupAndExpense(groupId, expenseId)
+            .mapNotNull { row ->
+                val sum = (row[2] as Number).toLong()
+                if (sum == 0L) return@mapNotNull null
                 BalancePostingEntity(
                     postingId = UuidGenerator.next(),
                     groupId = groupId,
                     expenseId = expenseId,
-                    participantId = participantId,
-                    currency = currency,
+                    participantId = UUID.fromString(row[0].toString()),
+                    currency = row[1].toString(),
                     amountMinor = -sum,
                     createdAt = timestamp
                 )

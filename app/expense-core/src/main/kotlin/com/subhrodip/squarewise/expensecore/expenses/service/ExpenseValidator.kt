@@ -5,9 +5,11 @@
 package com.subhrodip.squarewise.expensecore.expenses.service
 
 import com.subhrodip.squarewise.expensecore.expenses.api.ExpenseController
+import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseRequestLimits
 import com.subhrodip.squarewise.expensecore.expenses.api.request.PayerDto
 import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseAllocation
 import com.subhrodip.squarewise.expensecore.expenses.domain.ExpensePayer
+import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseRecord
 import com.subhrodip.squarewise.expensecore.expenses.domain.FinancialArithmetic
 
 import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
@@ -15,6 +17,37 @@ import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
 import java.util.UUID
 
 object ExpenseValidator {
+    /** Validates the ledger totals that every expense writer must preserve. */
+    fun validateRecord(expense: ExpenseRecord) {
+        if (expense.amountMinor <= 0) invalid("expense amount must be positive")
+        if (expense.payers.isEmpty()) invalid("expense must contain at least one payer")
+        if (expense.allocations.isEmpty()) invalid("expense must contain at least one allocation")
+        if (expense.payers.size > ExpenseRequestLimits.MAX_PARTICIPANTS ||
+            expense.allocations.size > ExpenseRequestLimits.MAX_PARTICIPANTS
+        ) invalid("participant count exceeds the maximum")
+        if (expense.payers.map { it.participantId }.distinct().size != expense.payers.size) invalid("payer participant IDs must be unique")
+        if (expense.allocations.map { it.participantId }.distinct().size != expense.allocations.size) invalid("allocation participant IDs must be unique")
+        val payerTotal = expense.payers.fold(0L) { total, payer ->
+            if (payer.amountMinor <= 0) invalid("payer amounts must be positive")
+            checkedAdd(total, payer.amountMinor)
+        }
+        val allocationTotal = expense.allocations.fold(0L) { total, allocation ->
+            if (allocation.allocatedMinor < 0) invalid("allocation amounts must not be negative")
+            checkedAdd(total, allocation.allocatedMinor)
+        }
+        if (payerTotal != expense.amountMinor) invalid("payer amounts must equal expense amount")
+        if (allocationTotal != expense.amountMinor) invalid("allocation amounts must equal expense amount")
+    }
+
+    private fun checkedAdd(left: Long, right: Long): Long = try {
+        FinancialArithmetic.add(left, right)
+    } catch (error: IllegalArgumentException) {
+        invalid("financial amount exceeds supported range", error)
+    }
+
+    private fun invalid(message: String, cause: Throwable? = null): Nothing =
+        throw ExpenseDomainException(ExpenseErrors.EXPENSE_REQUEST_INVALID, message, cause)
+
     /** Parse and validate the amount minor unit */
     fun parseAndValidateAmount(minorStr: String, fieldName: String = "amount.minor"): Long {
         val totalMinor = minorStr.toLongOrNull()

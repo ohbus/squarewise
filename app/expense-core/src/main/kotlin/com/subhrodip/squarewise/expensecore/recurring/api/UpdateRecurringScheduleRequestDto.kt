@@ -16,6 +16,7 @@ data class UpdateRecurringScheduleRequestDto(
     val dayOfMonth: Int? = null,
     @field:NotNull val startDate: LocalDate,
     val endDate: LocalDate? = null,
-    val payers: List<@Valid ExpensePayerDto>? = null,
-    val allocations: List<@Valid ExpenseAllocationItemDto>? = null
+    @field:Size(max = 64) val timezone: String? = null,
+    @field:Size(max = 100) val payers: List<@Valid ExpensePayerDto>? = null,
+    @field:Size(max = 100) val allocations: List<@Valid ExpenseAllocationItemDto>? = null
 )

@@ -33,6 +33,8 @@ import com.subhrodip.squarewise.bff.transport.model.input.RepaymentInput
 
 import com.subhrodip.squarewise.bff.transport.UpstreamServiceException
 import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
+import graphql.schema.DataFetchingEnvironment
+import graphql.schema.DataFetchingFieldSelectionSet
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -42,6 +44,7 @@ import org.junit.jupiter.api.Test
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.mock
 import reactor.core.publisher.Mono
+import reactor.core.publisher.Sinks
 import java.security.Principal
 import java.util.UUID
 
@@ -102,6 +105,28 @@ class GroupGraphqlControllerTest {
         assertEquals(403, thrown.status)
     }
 
+    /** Verifies an explicit GraphQL page size reaches the bounded gateway overload. */
+    @Test
+    fun `forwards explicit group limit`() {
+        val expected = listOf(BffGroup(groupId = "group-limited", name = "Limited", kind = "TRIP", revision = 1))
+        `when`(gateway.listGroups("alice", 2)).thenReturn(Mono.just(expected))
+
+        assertEquals(expected, controller.groups(principal, 2).block())
+    }
+
+    /** Verifies group-list selection controls the optional member fan-out. */
+    @Test
+    fun `passes group member selection to the gateway`() {
+        val expected = listOf(BffGroup(groupId = "group-selected", name = "Selected", kind = "TRIP", revision = 1))
+        val environment = mock(DataFetchingEnvironment::class.java)
+        val selectionSet = mock(DataFetchingFieldSelectionSet::class.java)
+        `when`(environment.selectionSet).thenReturn(selectionSet)
+        `when`(selectionSet.contains("members")).thenReturn(false)
+        `when`(gateway.listGroups("alice", 100, false)).thenReturn(Mono.just(expected))
+
+        assertEquals(expected, controller.groups(principal, environment = environment).block())
+    }
+
     @Test
     fun `resolves group by id with balances and expenses`() {
         val groupId = UUID.randomUUID().toString()
@@ -146,6 +171,65 @@ class GroupGraphqlControllerTest {
         assertEquals("mem-1", result?.members?.get(0)?.membershipId)
         assertEquals("alice", result?.members?.get(0)?.subject)
         assertEquals(null, result?.members?.get(0)?.isPlaceholder)
+    }
+
+    /** Verifies GraphQL selection-aware reads request only the fields selected by the client. */
+    @Test
+    fun `routes selected group fields to the bounded gateway`() {
+        val groupId = UUID.randomUUID().toString()
+        val expected = BffGroup(groupId = groupId, name = "Selected", kind = "TRIP", revision = 3)
+        val environment = mock(DataFetchingEnvironment::class.java)
+        val selectionSet = mock(DataFetchingFieldSelectionSet::class.java)
+        `when`(environment.selectionSet).thenReturn(selectionSet)
+        `when`(selectionSet.contains("balances")).thenReturn(true)
+        `when`(selectionSet.contains("expenses")).thenReturn(false)
+        `when`(selectionSet.contains("members")).thenReturn(false)
+        `when`(gateway.getGroup(groupId, "alice", true, false, false)).thenReturn(Mono.just(expected))
+
+        assertEquals(expected, controller.group(groupId, principal, environment).block())
+    }
+
+    @Test
+    fun `routes expenses-only group selection to the bounded gateway`() {
+        val groupId = UUID.randomUUID().toString()
+        val expected = BffGroup(groupId = groupId, name = "Expenses", kind = "TRIP", revision = 3)
+        val environment = mock(DataFetchingEnvironment::class.java)
+        val selectionSet = mock(DataFetchingFieldSelectionSet::class.java)
+        `when`(environment.selectionSet).thenReturn(selectionSet)
+        `when`(selectionSet.contains("balances")).thenReturn(false)
+        `when`(selectionSet.contains("expenses")).thenReturn(true)
+        `when`(selectionSet.contains("members")).thenReturn(false)
+        `when`(gateway.getGroup(groupId, "alice", false, true, false)).thenReturn(Mono.just(expected))
+
+        assertEquals(expected, controller.group(groupId, principal, environment).block())
+    }
+
+    @Test
+    fun `routes members-only group selection to the bounded gateway`() {
+        val groupId = UUID.randomUUID().toString()
+        val expected = BffGroup(groupId = groupId, name = "Members", kind = "TRIP", revision = 3)
+        val environment = mock(DataFetchingEnvironment::class.java)
+        val selectionSet = mock(DataFetchingFieldSelectionSet::class.java)
+        `when`(environment.selectionSet).thenReturn(selectionSet)
+        `when`(selectionSet.contains("balances")).thenReturn(false)
+        `when`(selectionSet.contains("expenses")).thenReturn(false)
+        `when`(selectionSet.contains("members")).thenReturn(true)
+        `when`(gateway.getGroup(groupId, "alice", false, false, true)).thenReturn(Mono.just(expected))
+
+        assertEquals(expected, controller.group(groupId, principal, environment).block())
+    }
+
+    /** Verifies an introspection-only selection preserves the legacy full-group gateway call. */
+    @Test
+    fun `falls back to the simple group lookup when no collection fields are selected`() {
+        val groupId = UUID.randomUUID().toString()
+        val expected = BffGroup(groupId = groupId, name = "Scalar only", kind = "TRIP", revision = 4)
+        val environment = mock(DataFetchingEnvironment::class.java)
+        val selectionSet = mock(DataFetchingFieldSelectionSet::class.java)
+        `when`(environment.selectionSet).thenReturn(selectionSet)
+        `when`(gateway.getGroup(groupId, "alice", false, false, false)).thenReturn(Mono.just(expected))
+
+        assertEquals(expected, controller.group(groupId, principal, environment).block())
     }
 
     @Test
@@ -388,8 +472,31 @@ class GroupGraphqlControllerTest {
         }
     }
 
+    /** Ensures snapshot-time events are delivered, but events before admission are not replayed. */
     @Test
-    fun `createExpense mutation emits invalidation on success`() {
+    fun `groupChanged buffers only events admitted during snapshot loading`() {
+        val groupId = UUID.randomUUID().toString()
+        val snapshot = Sinks.one<BffGroup>()
+        `when`(gateway.getGroup(groupId, "alice"))
+            .thenReturn(snapshot.asMono())
+        controller.emitInvalidation(groupId, 1L, "before-subscription")
+
+        val received = mutableListOf<GroupInvalidation>()
+        val disposable = controller.groupChanged(groupId, principal).subscribe { received.add(it) }
+        try {
+            controller.emitInvalidation(groupId, 2L, "during-snapshot")
+            assertTrue(received.isEmpty())
+
+            snapshot.tryEmitValue(BffGroup(groupId, "Trip", "TRIP", "1"))
+
+            assertEquals(listOf("during-snapshot"), received.map { it.changeId })
+        } finally {
+            disposable.dispose()
+        }
+    }
+
+    @Test
+    fun `createExpense mutation waits for committed outbox invalidation`() {
         val groupId = UUID.randomUUID().toString()
         val expenseId = UUID.randomUUID().toString()
         val participantId = UUID.randomUUID().toString()
@@ -419,17 +526,14 @@ class GroupGraphqlControllerTest {
         try {
             val result = controller.createExpense(groupId, input, "idemp-exp-2", principal).block()
             assertNotNull(result)
-            assertEquals(1, events.size)
-            assertEquals(groupId, events[0].groupId)
-            assertEquals(3L, events[0].revision)
-            assertNotNull(events[0].changeId)
+            assertTrue(events.isEmpty())
         } finally {
             disposable.dispose()
         }
     }
 
     @Test
-    fun `recordRepayment mutation emits invalidation on success`() {
+    fun `recordRepayment mutation waits for committed outbox invalidation`() {
         val groupId = UUID.randomUUID().toString()
         val settlementId = UUID.randomUUID().toString()
         val fromId = UUID.randomUUID().toString()
@@ -461,10 +565,7 @@ class GroupGraphqlControllerTest {
         try {
             val result = controller.recordRepayment(input, principal).block()
             assertNotNull(result)
-            assertEquals(1, events.size)
-            assertEquals(groupId, events[0].groupId)
-            assertEquals(1L, events[0].revision)
-            assertNotNull(events[0].changeId)
+            assertTrue(events.isEmpty())
         } finally {
             disposable.dispose()
         }

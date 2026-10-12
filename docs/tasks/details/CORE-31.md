@@ -50,6 +50,14 @@ done
 - Enforced uniform currency validation across schedule amount, payers, and allocations in `RecurringExpenseController.validateCurrencyMatch`.
 - Updated test suites in `RecurringExpenseServiceTest` and `RecurringExpenseControllerTest` to assert against actual member UUIDs and verify error handling for currency mismatches and non-positive amounts.
 
+## 2026-10-11 scale audit remediation
+
+Recurring processing now reads at most 101 active members per group, using the
+extra row to detect the existing 100-participant expense limit before ledger
+generation. Explicit custom participants outside that first page are checked by
+their submitted membership IDs, so large groups do not cause unbounded reads or
+incorrectly reject valid targeted schedules.
+
 ## Verification evidence
 
 - Ran `./gradlew :app:expense-core:test --tests "com.subhrodip.squarewise.expensecore.recurring.*" --no-daemon`: BUILD SUCCESSFUL (all 34 tests passed).

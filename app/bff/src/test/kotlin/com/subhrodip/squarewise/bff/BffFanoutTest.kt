@@ -145,6 +145,19 @@ class BffFanoutTest {
         assertThat(recordedPaths).containsExactly(ApiEndpoints.ExpenseCore.V1.PATH_GROUPS)
     }
 
+    @Test
+    fun `skips member requests when group members are not selected`() {
+        registerHandler(ApiEndpoints.ExpenseCore.V1.PATH_GROUPS) { exchange ->
+            respondJson(exchange, 200, "[${groupJson("g-scalars", "Scalars only")}]" )
+        }
+
+        val groups = gateway.listGroups("bearer-token", 100, includeMembers = false).block()
+
+        assertThat(groups).hasSize(1)
+        assertThat(groups!![0].members).isEmpty()
+        assertThat(recordedPaths).containsExactly(ApiEndpoints.ExpenseCore.V1.PATH_GROUPS)
+    }
+
     /**
      * Verifies that when a single group is returned, its members are correctly fetched and attached.
      */
@@ -370,6 +383,35 @@ class BffFanoutTest {
         assertThat(group.expenses).hasSize(1)
         assertThat(group.members).hasSize(1)
         assertThat(group.members[0].subject).isEqualTo("alice")
+    }
+
+    /** Verifies the gateway rejects an unbounded group request before any HTTP call. */
+    @Test
+    fun `rejects group list limits outside the compatibility cap`() {
+        assertThrows<IllegalArgumentException> { gateway.listGroups("bearer-token", 0) }
+        assertThrows<IllegalArgumentException> { gateway.listGroups("bearer-token", 101) }
+    }
+
+    /** Verifies GraphQL-style field selection avoids unnecessary balance, expense, and member calls. */
+    @Test
+    fun `getGroup skips unselected collection fanout`() {
+        registerHandler(ApiEndpoints.ExpenseCore.V1.groupById("g-scalars")) { exchange ->
+            respondJson(exchange, 200, groupJson("g-scalars", "Scalars only"))
+        }
+
+        val group = gateway.getGroup(
+            "g-scalars",
+            "bearer-token",
+            includeBalances = false,
+            includeExpenses = false,
+            includeMembers = false
+        ).block()
+
+        assertThat(group).isNotNull
+        assertThat(group!!.groupId).isEqualTo("g-scalars")
+        assertThat(group.balances).isEmpty()
+        assertThat(group.expenses).isEmpty()
+        assertThat(group.members).isEmpty()
     }
 
     /** Verifies the bounded look-ahead accepts exactly the configured 1,000-expense cap. */

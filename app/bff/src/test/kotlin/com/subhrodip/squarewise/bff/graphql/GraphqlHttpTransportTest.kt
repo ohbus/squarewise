@@ -117,7 +117,7 @@ class GraphqlHttpTransportTest {
     @Test
     fun `graphql route exposes group and settlement suggestion queries`() {
         val group = BffGroup("group-1", "Trip", "TRIP", revision = 2)
-        `when`(expenseCoreGateway.listGroups(null)).thenReturn(Mono.just(listOf(group)))
+        `when`(expenseCoreGateway.listGroups(null, 100, false)).thenReturn(Mono.just(listOf(group)))
         `when`(expenseCoreGateway.getSettlementSuggestions("group-1", null)).thenReturn(
             Mono.just(listOf(BffSuggestedSettlement("alice", "bob", 1250, "EUR")))
         )
@@ -357,7 +357,7 @@ class GraphqlHttpTransportTest {
 
     @Test
     fun `upstream authorization failure remains a GraphQL error without leaking detail`() {
-        `when`(expenseCoreGateway.getGroup("group-1", null))
+        `when`(expenseCoreGateway.getGroup("group-1", null, false, false, false))
             .thenReturn(Mono.error(UpstreamServiceException(403, "private authorization detail")))
 
         client.post().uri(ApiEndpoints.Bff.GRAPHQL)
@@ -373,7 +373,7 @@ class GraphqlHttpTransportTest {
 
     @Test
     fun `upstream rate limiting is exposed as the GraphQL rate limited code`() {
-        `when`(expenseCoreGateway.getGroup("group-rate-limited", null))
+        `when`(expenseCoreGateway.getGroup("group-rate-limited", null, false, false, false))
             .thenReturn(Mono.error(UpstreamServiceException(429, "private rate limit detail")))
 
         client.post().uri(ApiEndpoints.Bff.GRAPHQL)
@@ -402,7 +402,7 @@ class GraphqlHttpTransportTest {
                 assert(!message.contains("private validation detail"))
             }
 
-        `when`(expenseCoreGateway.getGroup("group-2", null))
+        `when`(expenseCoreGateway.getGroup("group-2", null, false, false, false))
             .thenReturn(Mono.error(TimeoutException("private timeout detail")))
 
         client.post().uri(ApiEndpoints.Bff.GRAPHQL)
@@ -418,7 +418,7 @@ class GraphqlHttpTransportTest {
 
     @Test
     fun `malformed upstream response is represented by a GraphQL error`() {
-        `when`(expenseCoreGateway.getGroup("group-3", null))
+        `when`(expenseCoreGateway.getGroup("group-3", null, false, false, false))
             .thenReturn(Mono.error(IllegalStateException("private malformed payload")))
 
         client.post().uri(ApiEndpoints.Bff.GRAPHQL)
@@ -442,7 +442,7 @@ class GraphqlHttpTransportTest {
             privateDetail = "private profile timeout"
         )
 
-        `when`(expenseCoreGateway.listGroups(null))
+        `when`(expenseCoreGateway.listGroups(null, 100, false))
             .thenReturn(Mono.error(TimeoutException("private groups timeout")))
         expectGraphqlError(
             query = "{ groups { id } }",

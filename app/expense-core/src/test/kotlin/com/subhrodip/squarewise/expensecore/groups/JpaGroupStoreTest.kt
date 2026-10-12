@@ -54,6 +54,20 @@ class JpaGroupStoreTest @Autowired constructor(
         assertTrue(store.list("bob").isEmpty())
     }
 
+    /** Verifies direct bounded query behavior, including hidden and invalid reads. */
+    @Test
+    fun `bounds group and member reads and hides unauthorized lookup`() {
+        val group = store.create("bounded-owner", CreateGroupRequest("Bounded", "TRIP", "EUR"))
+
+        assertEquals(listOf(group), store.list("bounded-owner", 1))
+        assertEquals(group, store.get(group.groupId, "bounded-owner"))
+        assertEquals(null, store.get(group.groupId, "bounded-outsider"))
+        assertThrows<IllegalArgumentException> { store.list("bounded-owner", 0) }
+        assertThrows<IllegalArgumentException> { store.list("bounded-owner", 101) }
+        assertThrows<IllegalArgumentException> { store.listMembers(group.groupId, "bounded-owner", 0) }
+        assertThrows<IllegalArgumentException> { store.listMembers(group.groupId, "bounded-owner", 101) }
+    }
+
     /**
      * Verifies that concurrent attempts to claim the same invitation token result in exactly
      * one successful claim and one membership addition.
@@ -151,6 +165,10 @@ class JpaGroupStoreTest @Autowired constructor(
         val membersAfterClaim = store.listMembers(group.groupId, "member-bob")
         assertEquals(2, membersAfterClaim.size)
         assertEquals(setOf("member-alice", "member-bob"), membersAfterClaim.map { it.subject }.toSet())
+        assertEquals(
+            membersAfterClaim.map { it.membershipId }.sorted(),
+            membersAfterClaim.map { it.membershipId }
+        )
 
         val err = assertThrows<SquarewiseException> {
             store.listMembers(group.groupId, "intruder")

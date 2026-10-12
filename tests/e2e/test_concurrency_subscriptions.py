@@ -270,6 +270,27 @@ def wait_for_subscription_complete(
     )
 
 
+def wait_for_subscription_event(
+    client: SimpleGraphQLWSClient,
+    subscription_id: str,
+    timeout_seconds: float = 10.0,
+) -> dict[str, Any]:
+    """Wait for a data event from one subscription instead of using a fixed delay."""
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline:
+        for message in client.messages:
+            if message.get("type") != "next" or message.get("id") != subscription_id:
+                continue
+            payload = message.get("payload")
+            if isinstance(payload, dict) and isinstance(payload.get("data"), dict):
+                return payload
+        time.sleep(0.1)
+    raise AssertionError(
+        f"Subscription {subscription_id} did not receive a data event within {timeout_seconds:g}s: "
+        f"{client.messages}"
+    )
+
+
 def run_concurrency_and_subscriptions_test() -> None:
     """Run concurrency and subscription checks with explicit UTF-8 output."""
     if isinstance(sys.stdout, io.TextIOWrapper):
@@ -370,8 +391,8 @@ def run_concurrency_and_subscriptions_test() -> None:
     ws_client.subscribe("reconnected-sub", sub_query, {"groupId": group_id})
     ws_client.subscribe("cancelled-sub", sub_query, {"groupId": group_id})
     time.sleep(0.3)
+    cancelled_message_cutoff = len(ws_client.messages)
     ws_client.complete("cancelled-sub")
-    time.sleep(0.2)
 
     bob_ws = SimpleGraphQLWSClient(WS_HOST, WS_PORT, GRAPHQL_PATH, user_b)
     bob_ws.connect()
@@ -418,14 +439,14 @@ def run_concurrency_and_subscriptions_test() -> None:
     assert status == 200 and "data" in exp_res, f"Failed to create expense: {exp_res}"
     print(f"  ✓ Expense created: '{exp_res['data']['createExpense']['description']}', version={exp_res['data']['createExpense']['version']}")
 
-    # Wait for subscription event
-    time.sleep(0.5)
-    assert len(ws_client.events) >= 1, f"Expected at least 1 subscription event after reconnect, got {len(ws_client.events)}"
+    # Wait for the exact active subscription event; snapshot loading and broker
+    # delivery are asynchronous and must not be represented by a fixed sleep.
+    event_payload = wait_for_subscription_event(ws_client, "reconnected-sub")
     assert not any(
         message.get("type") == "next" and message.get("id") == "cancelled-sub"
-        for message in ws_client.messages
+        for message in ws_client.messages[cancelled_message_cutoff:]
     ), "Completed subscription must not receive later invalidations"
-    first_event = ws_client.events[-1]["data"]["groupChanged"]
+    first_event = event_payload["data"]["groupChanged"]
     assert first_event["groupId"] == group_id, f"Wrong groupId in event: {first_event}"
     print(f"  ✓ Real-time invalidation received via WebSocket: revision={first_event['revision']}, changeId={first_event['changeId']}")
 

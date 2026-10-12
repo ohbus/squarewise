@@ -51,6 +51,24 @@ class RecurringExpenseServiceTest @Autowired constructor(
     }
 
     @Test
+    fun `rejects recurring read limits above compatibility cap`() {
+        val groupId = UUID.randomUUID()
+
+        assertThrows(IllegalArgumentException::class.java) {
+            service.listSchedules(groupId, 101)
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            service.getOccurrences(UUID.randomUUID(), 101)
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            service.listSchedules(groupId, 0)
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            service.getOccurrences(UUID.randomUUID(), 0)
+        }
+    }
+
+    @Test
     fun `creates schedule successfully with weekly frequency and initial next occurrence date`() {
         val group = groupStore.create("alice", CreateGroupRequest("Apartment 4B", "HOUSEHOLD", "EUR"))
         val startDate = LocalDate.of(2026, 9, 1)
@@ -974,6 +992,41 @@ class RecurringExpenseServiceTest @Autowired constructor(
         }
         assertThrows(IllegalArgumentException::class.java) {
             service.createSchedule(group.groupId, valid.copy(allocations = listOf(ExpenseAllocation(UUID.randomUUID(), 999))))
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            service.createSchedule(group.groupId, valid.copy(timezone = "Not/AZone"))
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            service.createSchedule(group.groupId, valid.copy(payers = listOf(ExpensePayer(UUID.randomUUID(), -1))))
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            service.createSchedule(
+                group.groupId,
+                valid.copy(payers = (1..101).map { ExpensePayer(UUID.randomUUID(), 1) })
+            )
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            val participant = UUID.randomUUID()
+            service.createSchedule(
+                group.groupId,
+                valid.copy(payers = listOf(ExpensePayer(participant, 500), ExpensePayer(participant, 500)))
+            )
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            service.createSchedule(
+                group.groupId,
+                valid.copy(allocations = (1..101).map { ExpenseAllocation(UUID.randomUUID(), 1) })
+            )
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            service.createSchedule(group.groupId, valid.copy(allocations = listOf(ExpenseAllocation(UUID.randomUUID(), -1))))
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            val participant = UUID.randomUUID()
+            service.createSchedule(
+                group.groupId,
+                valid.copy(allocations = listOf(ExpenseAllocation(participant, 500), ExpenseAllocation(participant, 500)))
+            )
         }
 
         assertEquals(0, scheduleRepository.count())

@@ -4,8 +4,9 @@ import com.subhrodip.squarewise.expensecore.expenses.domain.AllocationCalculator
 import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseAllocation
 import com.subhrodip.squarewise.expensecore.expenses.domain.ExpensePayer
 import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseRecord
+import com.subhrodip.squarewise.expensecore.expenses.domain.FinancialArithmetic
+import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseRequestLimits
 import com.subhrodip.squarewise.expensecore.expenses.persistence.store.ExpenseStore
-import com.subhrodip.squarewise.expensecore.groups.domain.GroupMembershipEntity
 import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupRepository
 import com.subhrodip.squarewise.expensecore.messaging.outbox.model.OutboxMessage
 import com.subhrodip.squarewise.expensecore.messaging.outbox.persistence.OutboxStore
@@ -23,18 +24,26 @@ import com.subhrodip.squarewise.ids.generation.UuidGenerator
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
 import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
+import java.time.DateTimeException
 import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
+import java.time.ZoneOffset
 import java.util.UUID
 import java.util.concurrent.CancellationException
 import java.util.concurrent.TimeoutException
 import com.subhrodip.squarewise.errors.exceptions.FatalErrorClassifier
 import org.springframework.amqp.AmqpException
 import org.springframework.dao.DataAccessException
+import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.transaction.support.TransactionTemplate
+import org.springframework.transaction.TransactionDefinition
+import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.slf4j.LoggerFactory
 import tools.jackson.databind.ObjectMapper
 import tools.jackson.databind.json.JsonMapper
@@ -56,7 +65,9 @@ class RecurringExpenseService(
     private val outboxStore: OutboxStore? = null,
     private val objectMapper: ObjectMapper = JsonMapper.builder()
         .addModule(KotlinModule.Builder().build())
-        .build()
+        .build(),
+    @Autowired(required = false)
+    private val transactionManager: PlatformTransactionManager? = null
 ) : RecurringCommandStore, RecurringQueryStore {
     private val log = LoggerFactory.getLogger(RecurringExpenseService::class.java)
 
@@ -79,6 +90,7 @@ class RecurringExpenseService(
             dayOfMonth = request.dayOfMonth,
             startDate = request.startDate,
             endDate = request.endDate,
+            timezone = request.timezone,
             nextOccurrenceDate = request.startDate,
             paused = false,
             createdAt = Instant.now(),
@@ -103,7 +115,8 @@ class RecurringExpenseService(
             throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Schedule $scheduleId not in group $groupId")
         }
 
-        validateSchedule(request)
+        val effectiveTimezone = request.timezone ?: schedule.timezone
+        validateSchedule(request, effectiveTimezone)
 
         schedule.description = request.description.trim()
         schedule.amountMinor = request.amountMinor
@@ -112,6 +125,7 @@ class RecurringExpenseService(
         schedule.dayOfMonth = request.dayOfMonth
         schedule.startDate = request.startDate
         schedule.endDate = request.endDate
+        schedule.timezone = effectiveTimezone
 
         schedule.customSpecification = encodeSpecification(request.payers, request.allocations)
 
@@ -136,20 +150,78 @@ class RecurringExpenseService(
         return scheduleRepository.save(schedule)
     }
 
-    @Transactional
-    fun processDueOccurrences(): Int = processDueOccurrences(LocalDate.now(), 12)
+    fun processDueOccurrences(): Int = processDueOccurrences(LocalDate.now(ZoneOffset.UTC).plusDays(1), 12, true)
 
-    @Transactional
+    fun processDueOccurrences(maxCatchUpOccurrences: Int): Int =
+        processDueOccurrences(LocalDate.now(ZoneOffset.UTC).plusDays(1), maxCatchUpOccurrences, true)
+
     override fun processDueOccurrences(
         asOfDate: LocalDate,
         maxCatchUpOccurrences: Int
-    ): Int {
+    ): Int = processDueOccurrences(asOfDate, maxCatchUpOccurrences, false)
+
+    private fun processDueOccurrences(asOfDate: LocalDate, maxCatchUpOccurrences: Int, useScheduleTimezone: Boolean): Int {
         val dueSchedules = scheduleRepository.findDueSchedules(asOfDate)
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+            return dueSchedules.sumOf { schedule ->
+                try {
+                    processScheduleOccurrences(
+                        schedule,
+                        occurrenceCutoff(schedule, asOfDate, useScheduleTimezone),
+                        maxCatchUpOccurrences,
+                        mapOf(schedule.groupId to getGroupMembers(schedule.groupId))
+                    )
+                } catch (error: DateTimeException) {
+                    logInvalidTimezone(schedule, error)
+                    0
+                }
+            }
+        }
+        val manager = requireNotNull(transactionManager) {
+            "transactionManager is required when due occurrences run outside a transaction"
+        }
+        val membersByGroup = getGroupMembers(dueSchedules.map { it.groupId }.toSet())
+        val transactionTemplate = TransactionTemplate(manager).apply {
+            propagationBehavior = TransactionDefinition.PROPAGATION_REQUIRES_NEW
+        }
         var count = 0
-        for (schedule in dueSchedules) {
-            count += processScheduleOccurrences(schedule, asOfDate, maxCatchUpOccurrences)
+        for (claimed in dueSchedules) {
+            try {
+                count += transactionTemplate.execute {
+                    val schedule = scheduleRepository.findForUpdate(claimed.scheduleId) ?: return@execute 0
+                    val cutoff = occurrenceCutoff(schedule, asOfDate, useScheduleTimezone)
+                    if (schedule.paused || schedule.nextOccurrenceDate.isAfter(cutoff)) {
+                        0
+                    } else {
+                        processScheduleOccurrences(schedule, cutoff, maxCatchUpOccurrences, membersByGroup)
+                    }
+                }
+            } catch (error: DataAccessException) {
+                log.warn("Recurring schedule failed independently; it remains due for retry", error)
+            } catch (error: DateTimeException) {
+                logInvalidTimezone(claimed, error)
+            }
         }
         return count
+    }
+
+    private fun logInvalidTimezone(schedule: RecurringExpenseSchedule, error: DateTimeException) {
+        log.warn(
+            "Recurring schedule has an invalid timezone; it remains due for retry scheduleId={} timezone={}",
+            schedule.scheduleId,
+            schedule.timezone,
+            error
+        )
+    }
+
+    private fun occurrenceCutoff(
+        schedule: RecurringExpenseSchedule,
+        asOfDate: LocalDate,
+        useScheduleTimezone: Boolean
+    ): LocalDate = if (useScheduleTimezone) {
+        LocalDate.now(ZoneId.of(schedule.timezone))
+    } else {
+        asOfDate
     }
 
     @Transactional(readOnly = true)
@@ -157,17 +229,22 @@ class RecurringExpenseService(
         scheduleRepository.findById(scheduleId).orElse(null)
 
     @Transactional(readOnly = true)
-    override fun listSchedules(groupId: UUID): List<RecurringExpenseSchedule> =
-        scheduleRepository.findByGroupId(groupId)
+    override fun listSchedules(groupId: UUID, limit: Int): List<RecurringExpenseSchedule> {
+        require(limit in 1..100) { "schedule limit must be between 1 and 100" }
+        return scheduleRepository.findByGroupId(groupId, PageRequest.of(0, limit))
+    }
 
     @Transactional(readOnly = true)
-    override fun getOccurrences(scheduleId: UUID): List<RecurringExpenseOccurrence> =
-        occurrenceRepository.findByScheduleId(scheduleId)
+    override fun getOccurrences(scheduleId: UUID, limit: Int): List<RecurringExpenseOccurrence> {
+        require(limit in 1..100) { "occurrence limit must be between 1 and 100" }
+        return occurrenceRepository.findByScheduleId(scheduleId, PageRequest.of(0, limit))
+    }
 
     private fun processScheduleOccurrences(
         schedule: RecurringExpenseSchedule,
         asOfDate: LocalDate,
-        maxCatchUpOccurrences: Int
+        maxCatchUpOccurrences: Int,
+        membersByGroup: Map<UUID, List<UUID>>
     ): Int {
         var generated = 0
         while (!schedule.paused && !schedule.nextOccurrenceDate.isAfter(asOfDate) && generated < maxCatchUpOccurrences) {
@@ -175,7 +252,7 @@ class RecurringExpenseService(
                 break
             }
 
-            val members = activeMembersOrPause(schedule) ?: break
+            val members = activeMembersOrPause(schedule, membersByGroup[schedule.groupId].orEmpty()) ?: break
 
             val occurrenceDate = schedule.nextOccurrenceDate
             val occurrenceId = OccurrenceIdentity.id(schedule.scheduleId, occurrenceDate)
@@ -210,9 +287,13 @@ class RecurringExpenseService(
         return generated
     }
 
-    private fun activeMembersOrPause(schedule: RecurringExpenseSchedule): List<UUID>? {
-        val members = getGroupMembers(schedule.groupId)
-        if (members.isNotEmpty() && validateMembership(schedule, members)) return members
+    private fun activeMembersOrPause(schedule: RecurringExpenseSchedule, members: List<UUID>): List<UUID>? {
+        val custom = readSpecification(schedule)
+        val requiresAllMembers = custom == null || custom.allocations.isEmpty()
+        if (members.size <= ExpenseRequestLimits.MAX_PARTICIPANTS &&
+            members.isNotEmpty() && validateMembership(schedule, members)
+        ) return members
+        if (!requiresAllMembers && members.isNotEmpty() && validateMembership(schedule, members)) return members
         schedule.paused = true
         scheduleRepository.save(schedule)
         emitSchedulePausedNotification(schedule, "invalid_membership")
@@ -241,13 +322,17 @@ class RecurringExpenseService(
         val memberSet = members.toSet()
         val custom = readSpecification(schedule) ?: return true
         val (payers, allocations) = custom
-        if (payers.isNotEmpty() && payers.any { it.participantId !in memberSet }) {
-            return false
-        }
-        if (allocations.isNotEmpty() && allocations.any { it.participantId !in memberSet }) {
-            return false
-        }
-        return true
+        val requestedIds = (payers.map { it.participantId } + allocations.map { it.participantId }).toSet()
+        val missingIds = requestedIds - memberSet
+        if (missingIds.isEmpty()) return true
+        val activeMissingIds = entityManager.createQuery(
+            "SELECT m.membershipId FROM GroupMembershipEntity m WHERE m.groupId = :groupId AND m.membershipId IN :membershipIds AND m.status = 'ACTIVE'",
+            UUID::class.java
+        ).setParameter("groupId", schedule.groupId)
+            .setParameter("membershipIds", missingIds)
+            .resultList
+            .toSet()
+        return missingIds == activeMissingIds
     }
 
     private fun emitSchedulePausedNotification(schedule: RecurringExpenseSchedule, reason: String) {
@@ -346,12 +431,17 @@ class RecurringExpenseService(
         }
     }
 
-    private fun getGroupMembers(groupId: UUID): List<UUID> {
-        return entityManager.createQuery(
-            "SELECT m.membershipId FROM GroupMembershipEntity m WHERE m.groupId = :groupId AND m.status = 'ACTIVE' ORDER BY m.membershipId ASC",
-            UUID::class.java
-        ).setParameter("groupId", groupId).resultList
+    private fun getGroupMembers(groupIds: Set<UUID>): Map<UUID, List<UUID>> {
+        if (groupIds.isEmpty()) return emptyMap()
+        return groupIds.associateWith { getGroupMembers(it) }
     }
+
+    private fun getGroupMembers(groupId: UUID): List<UUID> = entityManager.createQuery(
+        "SELECT m.membershipId FROM GroupMembershipEntity m WHERE m.groupId = :groupId AND m.status = 'ACTIVE' ORDER BY m.membershipId ASC",
+        UUID::class.java
+    ).setParameter("groupId", groupId)
+        .setMaxResults(ExpenseRequestLimits.MAX_PARTICIPANTS + 1)
+        .resultList
 
     private fun validateSchedule(request: CreateRecurringScheduleRequest) {
         validateScheduleValues(
@@ -360,24 +450,28 @@ class RecurringExpenseService(
             currency = request.currency,
             frequency = request.frequency,
             dayOfMonth = request.dayOfMonth,
-            startDate = request.startDate,
-            endDate = request.endDate
+            window = ScheduleWindow(request.startDate, request.endDate, request.timezone)
         )
         validateCustomSpecifications(request.amountMinor, request.payers, request.allocations)
     }
 
-    private fun validateSchedule(request: UpdateRecurringScheduleRequest) {
+    private fun validateSchedule(request: UpdateRecurringScheduleRequest, timezone: String) {
         validateScheduleValues(
             description = request.description,
             amountMinor = request.amountMinor,
             currency = request.currency,
             frequency = request.frequency,
             dayOfMonth = request.dayOfMonth,
-            startDate = request.startDate,
-            endDate = request.endDate
+            window = ScheduleWindow(request.startDate, request.endDate, timezone)
         )
         validateCustomSpecifications(request.amountMinor, request.payers, request.allocations)
     }
+
+    private data class ScheduleWindow(
+        val startDate: LocalDate,
+        val endDate: LocalDate?,
+        val timezone: String
+    )
 
     private fun validateScheduleValues(
         description: String,
@@ -385,8 +479,7 @@ class RecurringExpenseService(
         currency: String,
         frequency: RecurrenceFrequency,
         dayOfMonth: Int?,
-        startDate: LocalDate,
-        endDate: LocalDate?
+        window: ScheduleWindow
     ) {
         require(description.isNotBlank()) { "description must not be blank" }
         require(amountMinor > 0) { "amountMinor must be positive" }
@@ -397,10 +490,13 @@ class RecurringExpenseService(
         require(frequency == RecurrenceFrequency.MONTHLY || dayOfMonth == null) {
             "dayOfMonth is only supported for monthly schedules"
         }
-        if (endDate != null) {
-            require(!endDate.isBefore(startDate)) {
+        if (window.endDate != null) {
+            require(!window.endDate.isBefore(window.startDate)) {
                 "endDate must not be before startDate"
             }
+        }
+        require(runCatching { ZoneId.of(window.timezone) }.isSuccess) {
+            "timezone must be a valid IANA zone"
         }
     }
 
@@ -410,16 +506,24 @@ class RecurringExpenseService(
         allocations: List<ExpenseAllocation>?
     ) {
         if (payers != null) {
+            require(payers.size <= ExpenseRequestLimits.MAX_PARTICIPANTS) { "payer count exceeds the maximum" }
             require(payers.isNotEmpty()) { "payers must not be empty if provided" }
             require(payers.all { it.amountMinor > 0 }) { "all payer amounts must be positive" }
-            require(payers.sumOf { it.amountMinor } == amountMinor) {
+            require(payers.map { it.participantId }.distinct().size == payers.size) { "payer participant IDs must be unique" }
+            val payerTotal = payers.fold(0L) { total, payer -> FinancialArithmetic.add(total, payer.amountMinor) }
+            require(payerTotal == amountMinor) {
                 "sum of payer amounts must equal schedule amount"
             }
         }
         if (allocations != null) {
+            require(allocations.size <= ExpenseRequestLimits.MAX_PARTICIPANTS) { "allocation count exceeds the maximum" }
             require(allocations.isNotEmpty()) { "allocations must not be empty if provided" }
             require(allocations.all { it.allocatedMinor > 0 }) { "all allocation amounts must be positive" }
-            require(allocations.sumOf { it.allocatedMinor } == amountMinor) {
+            require(allocations.map { it.participantId }.distinct().size == allocations.size) { "allocation participant IDs must be unique" }
+            val allocationTotal = allocations.fold(0L) { total, allocation ->
+                FinancialArithmetic.add(total, allocation.allocatedMinor)
+            }
+            require(allocationTotal == amountMinor) {
                 "sum of allocation amounts must equal schedule amount"
             }
         }

@@ -8,6 +8,7 @@ import jakarta.persistence.LockModeType
 import org.springframework.stereotype.Repository
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
+import org.springframework.data.domain.Pageable
 import com.subhrodip.squarewise.expensecore.groups.domain.GroupEntity
 
 /**
@@ -45,6 +46,22 @@ interface GroupMembershipRepository : JpaRepository<GroupMembershipEntity, UUID>
     @Query("select g from GroupEntity g, GroupMembershipEntity m where m.groupId = g.groupId and m.subject = :subject and m.status = :status and g.status = 'ACTIVE' order by g.groupId")
     fun findActiveGroupsBySubject(@Param("subject") subject: String, @Param("status") status: String): List<GroupEntity>
 
+    /** Loads only the requested group page directly from the database. */
+    @Query("select g from GroupEntity g, GroupMembershipEntity m where m.groupId = g.groupId and m.subject = :subject and m.status = :status and g.status = 'ACTIVE' order by g.groupId")
+    fun findActiveGroupsBySubject(
+        @Param("subject") subject: String,
+        @Param("status") status: String,
+        pageable: Pageable
+    ): List<GroupEntity>
+
+    /** Resolves one active group by its member subject and identifier. */
+    @Query("select g from GroupEntity g, GroupMembershipEntity m where m.groupId = g.groupId and g.groupId = :groupId and m.subject = :subject and m.status = :status and g.status = 'ACTIVE'")
+    fun findActiveGroupBySubjectAndId(
+        @Param("groupId") groupId: UUID,
+        @Param("subject") subject: String,
+        @Param("status") status: String
+    ): GroupEntity?
+
     /**
      * Convenience method to find all active memberships for a subject.
      */
@@ -59,6 +76,17 @@ interface GroupMembershipRepository : JpaRepository<GroupMembershipEntity, UUID>
      * @return list of memberships associated with the group
      */
     fun findByGroupIdAndStatus(groupId: UUID, status: String): List<GroupMembershipEntity>
+
+    /** Finds only the requested first page of members for a group. */
+    fun findByGroupIdAndStatus(groupId: UUID, status: String, pageable: Pageable): List<GroupMembershipEntity>
+
+    /** Finds active memberships only for the requested participant identifiers. */
+    @Query("select m from GroupMembershipEntity m where m.groupId = :groupId and m.membershipId in :membershipIds and m.status = :status")
+    fun findByGroupIdAndMembershipIdInAndStatus(
+        @Param("groupId") groupId: UUID,
+        @Param("membershipIds") membershipIds: Collection<UUID>,
+        @Param("status") status: String
+    ): List<GroupMembershipEntity>
 
     /**
      * Convenience method to find active member records belonging to the specified group.

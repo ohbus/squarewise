@@ -8,6 +8,8 @@ import com.subhrodip.squarewise.expensecore.search.model.SearchExpense
 import com.subhrodip.squarewise.expensecore.search.persistence.InMemorySearchStore
 import com.subhrodip.squarewise.expensecore.search.persistence.SearchStore
 import com.subhrodip.squarewise.expensecore.groups.api.CreateGroupRequest
+import com.subhrodip.squarewise.expensecore.groups.api.GroupResponse
+import com.subhrodip.squarewise.expensecore.groups.persistence.store.GroupStore
 import com.subhrodip.squarewise.expensecore.groups.persistence.store.InMemoryGroupStore
 
 import com.subhrodip.squarewise.errors.http.GlobalErrorHandler
@@ -19,6 +21,10 @@ import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.mockito.Mockito.`when`
+import org.mockito.Mockito.mock
+import org.mockito.Mockito.never
+import org.mockito.Mockito.verify
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.RequestPostProcessor
@@ -28,6 +34,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPat
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.test.web.servlet.setup.MockMvcBuilders
 import java.security.Principal
+import java.util.UUID
 
 /**
  * Unit and standalone integration tests for [SearchController].
@@ -68,6 +75,20 @@ class SearchControllerTest {
         assertTrue(recordingSearchStore.context?.kind == DbOperationKind.QUERY)
         assertTrue(recordingSearchStore.context?.consistency == ReadConsistency.EVENTUAL)
         assertTrue(recordingSearchStore.context?.readerEligible == true)
+    }
+
+    @Test
+    fun `search authorizes through direct group lookup instead of loading every group`() {
+        val groupId = UUID.randomUUID()
+        val directGroupStore = mock(GroupStore::class.java)
+        `when`(directGroupStore.get(groupId, "alice"))
+            .thenReturn(GroupResponse(groupId, "Direct lookup", "TRIP", 0))
+        val controller = SearchController(directGroupStore, recordingSearchStore)
+
+        controller.search(groupId, null, null, null, null, 100, Principal { "alice" })
+
+        verify(directGroupStore).get(groupId, "alice")
+        verify(directGroupStore, never()).list("alice")
     }
 
     @Test

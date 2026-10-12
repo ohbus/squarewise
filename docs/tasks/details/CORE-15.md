@@ -13,7 +13,7 @@ Implement database-backed recurring expense scheduling, frozen occurrence unique
 ## Implementation details
 
 - **Flyway Migration `V7__add_recurring_expenses.sql`**:
-  - `recurring_expense_schedules`: stores recurring configurations with `next_occurrence_date`, `frequency` (WEEKLY/MONTHLY), `day_of_month`, `paused`, `version`.
+- `recurring_expense_schedules`: stores recurring configurations with `next_occurrence_date`, `frequency` (WEEKLY/MONTHLY), `day_of_month`, `timezone`, `paused`, `version`.
   - `recurring_expense_occurrences`: stores historical occurrence executions with unique constraint `(schedule_id, occurrence_date)` and foreign key to `expenses(expense_id)`.
 - **Entities & Repositories (`RecurringEntities.kt`)**:
   - `RecurringExpenseSchedule` and `RecurringExpenseOccurrence` mapped with Spring Data JPA repositories.
@@ -32,3 +32,15 @@ Implement database-backed recurring expense scheduling, frozen occurrence unique
 
 - `./gradlew :app:expense-core:test --no-daemon`: 79 tests completed, 0 failures.
 - `git diff --check`: passed cleanly.
+
+## 2026-10-11 audit remediation
+
+Added `V14__add_recurring_schedule_timezone.sql` with an IANA timezone default of
+`UTC`. Worker runs use each schedule's local date, due claims are bounded to 100
+rows with `FOR UPDATE SKIP LOCKED`, active members are loaded once per batch, and
+each schedule executes in an independent transaction so one data-access failure
+does not roll back unrelated schedules. Custom payer/allocation totals now use
+checked arithmetic and reject duplicate participants and oversized lists.
+
+Recurring schedule and occurrence reads now use a bounded first page of 1 through
+100 rows. Cursor pagination remains required before exposing deeper history.
