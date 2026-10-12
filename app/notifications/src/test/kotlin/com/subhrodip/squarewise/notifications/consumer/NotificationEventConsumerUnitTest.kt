@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers.anyString
+import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.doThrow
 import org.mockito.Mockito.mock
@@ -95,6 +96,11 @@ class NotificationEventConsumerUnitTest {
     @Test
     fun `persists skipped delivery when recipient cannot be resolved or rate is denied`() {
         val deliveries = mock(NotificationEmailDeliveryRepository::class.java)
+        doReturn(1).`when`(deliveries).claimForDispatch(
+            any(UUID::class.java) ?: UUID(0, 0),
+            any(Instant::class.java) ?: Instant.EPOCH,
+            any(Instant::class.java) ?: Instant.EPOCH
+        )
         val invalidRecipient = sampleEvent(subject = "opaque-subject")
         val invalidDelivery = NotificationEmailDeliveryEntity(invalidRecipient.notificationId)
         doReturn(NotificationConsumptionOutcome.APPLIED).`when`(processor).process(invalidRecipient)
@@ -195,6 +201,11 @@ class NotificationEventConsumerUnitTest {
     @Test
     fun `persists a newly created delivery and records skipped dispatch as terminal`() {
         val deliveries = mock(NotificationEmailDeliveryRepository::class.java)
+        doReturn(1).`when`(deliveries).claimForDispatch(
+            any(UUID::class.java) ?: UUID(0, 0),
+            any(Instant::class.java) ?: Instant.EPOCH,
+            any(Instant::class.java) ?: Instant.EPOCH
+        )
         val event = sampleEvent(subject = "skip@example.com")
         val delivery = NotificationEmailDeliveryEntity(event.notificationId)
         doReturn(NotificationConsumptionOutcome.APPLIED).`when`(processor).process(event)
@@ -216,6 +227,11 @@ class NotificationEventConsumerUnitTest {
     @Test
     fun `redelivers only pending state and leaves terminal states untouched`() {
         val deliveries = mock(NotificationEmailDeliveryRepository::class.java)
+        doReturn(1).`when`(deliveries).claimForDispatch(
+            any(UUID::class.java) ?: UUID(0, 0),
+            any(Instant::class.java) ?: Instant.EPOCH,
+            any(Instant::class.java) ?: Instant.EPOCH
+        )
         val pending = sampleEvent(subject = "pending@example.com")
         val pendingDelivery = NotificationEmailDeliveryEntity(pending.notificationId)
         doReturn(NotificationConsumptionOutcome.DUPLICATE).`when`(processor).process(pending)

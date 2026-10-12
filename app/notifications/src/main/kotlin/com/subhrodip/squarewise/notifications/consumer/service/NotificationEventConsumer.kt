@@ -18,6 +18,7 @@ import org.hibernate.exception.ConstraintViolationException
 import org.slf4j.LoggerFactory
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Service
+import java.time.Duration
 import java.time.Instant
 import java.util.UUID
 /**
@@ -60,11 +61,26 @@ class NotificationEventConsumer(
         } else {
             emailDeliveries?.let { repository -> repository.findById(event.notificationId).orElse(null) }
         }
-        if (outcome == NotificationConsumptionOutcome.APPLIED || delivery?.status == NotificationEmailDeliveryEntity.PENDING) {
+        if (
+            outcome == NotificationConsumptionOutcome.APPLIED ||
+            delivery?.status == NotificationEmailDeliveryEntity.PENDING ||
+            delivery?.status == NotificationEmailDeliveryEntity.DISPATCHING
+        ) {
             if (delivery?.status == NotificationEmailDeliveryEntity.DELIVERED || delivery?.status == NotificationEmailDeliveryEntity.SKIPPED) {
                 return outcome
             }
-            dispatchEmailIfEnabled(event)
+            emailDeliveries?.let { repository ->
+                val now = Instant.now()
+                if (repository.claimForDispatch(event.notificationId, now, now.minus(DISPATCH_LEASE)) == 0) {
+                    return outcome
+                }
+            }
+            try {
+                dispatchEmailIfEnabled(event)
+            } catch (failure: RuntimeException) {
+                markDelivery(event.notificationId, NotificationEmailDeliveryEntity.PENDING)
+                throw failure
+            }
         }
 
         return outcome
@@ -116,6 +132,14 @@ class NotificationEventConsumer(
         }
         val recipient = event.subject.trim()
         return recipient.takeIf { it.contains("@") }
+    }
+
+    private companion object {
+        /**
+         * Bounds recovery time for a consumer that crashes after claiming a dispatch.
+         * A provider may still receive one duplicate if the process crashes after SMTP accepts the mail.
+         */
+        val DISPATCH_LEASE: Duration = Duration.ofMinutes(5)
     }
 }
 

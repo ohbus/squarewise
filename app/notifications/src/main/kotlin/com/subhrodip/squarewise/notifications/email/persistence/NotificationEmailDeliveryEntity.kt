@@ -23,6 +23,7 @@ class NotificationEmailDeliveryEntity(
 ) {
     companion object {
         const val PENDING = "PENDING"
+        const val DISPATCHING = "DISPATCHING"
         const val DELIVERED = "DELIVERED"
         const val SKIPPED = "SKIPPED"
     }
