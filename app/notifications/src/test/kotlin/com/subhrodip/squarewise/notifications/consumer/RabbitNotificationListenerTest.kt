@@ -430,6 +430,22 @@ class RabbitNotificationListenerTest {
     }
 
 
+    @Test
+    fun `rejects notification fields that exceed durable inbox limits`() {
+        val base = BrokerEnvelope(
+            eventId = UUID.randomUUID(),
+            eventType = "expense.created",
+            schemaVersion = 1,
+            aggregateId = UUID.randomUUID(),
+            groupId = UUID.randomUUID(),
+            groupRevision = 1,
+            occurredAt = Instant.EPOCH,
+            payload = mapOf("subject" to "user", "message" to "m".repeat(2001)),
+        )
+
+        assertThrows(InvalidEnvelopeException::class.java) { base.toNotificationEvent() }
+    }
+
     private fun createMessage(content: String, deliveryTag: Long, redelivered: Boolean = false): Message {
         val props = MessageProperties().apply {
             this.deliveryTag = deliveryTag
