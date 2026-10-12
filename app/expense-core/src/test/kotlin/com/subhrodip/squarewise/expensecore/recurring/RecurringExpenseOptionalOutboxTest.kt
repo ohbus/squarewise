@@ -25,6 +25,7 @@ import org.mockito.Mockito.`when`
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.springframework.transaction.support.TransactionSynchronizationManager
 
 /** Verifies recurring failure handling remains safe when the optional outbox is absent. */
 class RecurringExpenseOptionalOutboxTest {
@@ -105,7 +106,7 @@ class RecurringExpenseOptionalOutboxTest {
             outboxStore = null
         )
 
-        assertEquals(0, service.processDueOccurrences(occurrenceDate))
+        inActiveTransaction { assertEquals(0, service.processDueOccurrences(occurrenceDate)) }
         assertTrue(schedule.paused)
         assertEquals(occurrenceDate, schedule.nextOccurrenceDate)
     }
@@ -166,7 +167,7 @@ class RecurringExpenseOptionalOutboxTest {
 
         val service = RecurringExpenseService(scheduleRepository, occurrenceRepository, expenseStore, groupRepository, entityManager)
 
-        assertEquals(1, service.processDueOccurrences(occurrenceDate))
+        inActiveTransaction { assertEquals(1, service.processDueOccurrences(occurrenceDate)) }
         assertEquals(listOf(ExpensePayer(payerId, 1200)), created?.payers)
         assertEquals(
             listOf(ExpenseAllocation(payerId, 600), ExpenseAllocation(otherId, 600)),
@@ -229,8 +230,17 @@ class RecurringExpenseOptionalOutboxTest {
 
         val service = RecurringExpenseService(scheduleRepository, occurrenceRepository, expenseStore, groupRepository, entityManager)
 
-        assertEquals(1, service.processDueOccurrences(occurrenceDate))
+        inActiveTransaction { assertEquals(1, service.processDueOccurrences(occurrenceDate)) }
         assertEquals(listOf(ExpensePayer(participantIds.first(), 1200)), created?.payers)
         assertEquals(listOf(ExpenseAllocation(participantIds.first(), 1200)), created?.allocations)
+    }
+
+    private fun <T> inActiveTransaction(action: () -> T): T {
+        TransactionSynchronizationManager.setActualTransactionActive(true)
+        return try {
+            action()
+        } finally {
+            TransactionSynchronizationManager.clear()
+        }
     }
 }

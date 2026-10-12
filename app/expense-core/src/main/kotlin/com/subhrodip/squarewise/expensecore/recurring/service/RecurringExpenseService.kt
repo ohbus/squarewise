@@ -114,7 +114,8 @@ class RecurringExpenseService(
             throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Schedule $scheduleId not in group $groupId")
         }
 
-        validateSchedule(request)
+        val effectiveTimezone = request.timezone ?: schedule.timezone
+        validateSchedule(request, effectiveTimezone)
 
         schedule.description = request.description.trim()
         schedule.amountMinor = request.amountMinor
@@ -123,7 +124,7 @@ class RecurringExpenseService(
         schedule.dayOfMonth = request.dayOfMonth
         schedule.startDate = request.startDate
         schedule.endDate = request.endDate
-        schedule.timezone = request.timezone
+        schedule.timezone = effectiveTimezone
 
         schedule.customSpecification = encodeSpecification(request.payers, request.allocations)
 
@@ -160,19 +161,21 @@ class RecurringExpenseService(
 
     private fun processDueOccurrences(asOfDate: LocalDate, maxCatchUpOccurrences: Int, useScheduleTimezone: Boolean): Int {
         val dueSchedules = scheduleRepository.findDueSchedules(asOfDate)
-        if (transactionManager == null || TransactionSynchronizationManager.isActualTransactionActive()) {
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
             return dueSchedules.sumOf { schedule ->
-                if (useScheduleTimezone && schedule.nextOccurrenceDate.isAfter(LocalDate.now(ZoneId.of(schedule.timezone)))) 0
-                else processScheduleOccurrences(
+                processScheduleOccurrences(
                     schedule,
-                    asOfDate,
+                    occurrenceCutoff(schedule, asOfDate, useScheduleTimezone),
                     maxCatchUpOccurrences,
                     mapOf(schedule.groupId to getGroupMembers(schedule.groupId))
                 )
             }
         }
+        val manager = requireNotNull(transactionManager) {
+            "transactionManager is required when due occurrences run outside a transaction"
+        }
         val membersByGroup = getGroupMembers(dueSchedules.map { it.groupId }.toSet())
-        val transactionTemplate = TransactionTemplate(transactionManager).apply {
+        val transactionTemplate = TransactionTemplate(manager).apply {
             propagationBehavior = TransactionDefinition.PROPAGATION_REQUIRES_NEW
         }
         var count = 0
@@ -180,11 +183,11 @@ class RecurringExpenseService(
             try {
                 count += transactionTemplate.execute {
                     val schedule = scheduleRepository.findForUpdate(claimed.scheduleId) ?: return@execute 0
-                    if (schedule.paused || schedule.nextOccurrenceDate.isAfter(asOfDate) ||
-                        (useScheduleTimezone && schedule.nextOccurrenceDate.isAfter(LocalDate.now(ZoneId.of(schedule.timezone))))) {
+                    val cutoff = occurrenceCutoff(schedule, asOfDate, useScheduleTimezone)
+                    if (schedule.paused || schedule.nextOccurrenceDate.isAfter(cutoff)) {
                         0
                     } else {
-                        processScheduleOccurrences(schedule, asOfDate, maxCatchUpOccurrences, membersByGroup)
+                        processScheduleOccurrences(schedule, cutoff, maxCatchUpOccurrences, membersByGroup)
                     }
                 }
             } catch (error: DataAccessException) {
@@ -192,6 +195,16 @@ class RecurringExpenseService(
             }
         }
         return count
+    }
+
+    private fun occurrenceCutoff(
+        schedule: RecurringExpenseSchedule,
+        asOfDate: LocalDate,
+        useScheduleTimezone: Boolean
+    ): LocalDate = if (useScheduleTimezone) {
+        LocalDate.now(ZoneId.of(schedule.timezone))
+    } else {
+        asOfDate
     }
 
     @Transactional(readOnly = true)
@@ -427,7 +440,7 @@ class RecurringExpenseService(
         validateCustomSpecifications(request.amountMinor, request.payers, request.allocations)
     }
 
-    private fun validateSchedule(request: UpdateRecurringScheduleRequest) {
+    private fun validateSchedule(request: UpdateRecurringScheduleRequest, timezone: String = request.timezone ?: "UTC") {
         validateScheduleValues(
             description = request.description,
             amountMinor = request.amountMinor,
@@ -436,7 +449,7 @@ class RecurringExpenseService(
             dayOfMonth = request.dayOfMonth,
             startDate = request.startDate,
             endDate = request.endDate,
-            timezone = request.timezone
+            timezone = timezone
         )
         validateCustomSpecifications(request.amountMinor, request.payers, request.allocations)
     }

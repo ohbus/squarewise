@@ -32,7 +32,7 @@ object ExpenseValidator {
             checkedAdd(total, payer.amountMinor)
         }
         val allocationTotal = expense.allocations.fold(0L) { total, allocation ->
-            if (allocation.allocatedMinor <= 0) invalid("allocation amounts must be positive")
+            if (allocation.allocatedMinor < 0) invalid("allocation amounts must not be negative")
             checkedAdd(total, allocation.allocatedMinor)
         }
         if (payerTotal != expense.amountMinor) invalid("payer amounts must equal expense amount")

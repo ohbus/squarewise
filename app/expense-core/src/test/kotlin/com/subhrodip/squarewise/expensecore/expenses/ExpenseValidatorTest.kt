@@ -207,12 +207,18 @@ class ExpenseValidatorTest {
                 allocations = (1..101).map { ExpenseAllocation(UUID.randomUUID(), 1) }
             ),
             "payer amounts must be positive" to valid.copy(payers = listOf(ExpensePayer(alice, -1))),
-            "allocation amounts must be positive" to valid.copy(allocations = listOf(ExpenseAllocation(alice, -1))),
+            "allocation amounts must not be negative" to valid.copy(allocations = listOf(ExpenseAllocation(alice, -1))),
             "payer amounts must equal expense amount" to valid.copy(payers = listOf(ExpensePayer(alice, 99))),
             "allocation amounts must equal expense amount" to valid.copy(allocations = listOf(ExpenseAllocation(alice, 99)))
         )
 
         ExpenseValidator.validateRecord(valid)
+        ExpenseValidator.validateRecord(
+            valid.copy(
+                payers = listOf(ExpensePayer(alice, 100)),
+                allocations = listOf(ExpenseAllocation(alice, 0), ExpenseAllocation(bob, 100))
+            )
+        )
 
         invalidRecords.forEach { (message, record) ->
             val error = assertThrows(SquarewiseException::class.java) {

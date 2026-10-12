@@ -25,6 +25,7 @@ import java.time.Duration
 import java.time.Instant
 import java.util.UUID
 import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Sort
 import org.springframework.context.annotation.Primary
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -215,7 +216,11 @@ class JpaGroupStore(
         val group = groups.findById(groupId).orElse(null) ?: notFound()
         if (group.status != "ACTIVE") notFound()
         // shortcut: return the first 100 members until the public contract has cursor pagination.
-        return memberships.findByGroupIdAndStatus(groupId, "ACTIVE", PageRequest.of(0, limit)).map { it.toResponse() }
+        return memberships.findByGroupIdAndStatus(
+            groupId,
+            "ACTIVE",
+            PageRequest.of(0, limit, Sort.by(Sort.Direction.ASC, "membershipId"))
+        ).map { it.toResponse() }
     }
 
     /**

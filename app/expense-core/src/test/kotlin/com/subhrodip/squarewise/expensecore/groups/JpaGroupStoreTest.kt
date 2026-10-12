@@ -165,6 +165,10 @@ class JpaGroupStoreTest @Autowired constructor(
         val membersAfterClaim = store.listMembers(group.groupId, "member-bob")
         assertEquals(2, membersAfterClaim.size)
         assertEquals(setOf("member-alice", "member-bob"), membersAfterClaim.map { it.subject }.toSet())
+        assertEquals(
+            membersAfterClaim.map { it.membershipId }.sorted(),
+            membersAfterClaim.map { it.membershipId }
+        )
 
         val err = assertThrows<SquarewiseException> {
             store.listMembers(group.groupId, "intruder")
