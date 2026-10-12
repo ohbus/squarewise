@@ -6,6 +6,7 @@ import com.subhrodip.squarewise.expensecore.expenses.api.request.MoneyDto
 import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseRecord
 import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseAllocation
 import com.subhrodip.squarewise.expensecore.expenses.domain.ExpensePayer
+import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseRequestLimits
 import com.subhrodip.squarewise.expensecore.expenses.service.toRecord
 import com.subhrodip.squarewise.expensecore.expenses.service.ExpenseValidator
 import com.subhrodip.squarewise.expensecore.expenses.persistence.entity.ExpenseEntity
@@ -422,9 +423,19 @@ class JpaExpenseStore(
 
     /**
      * Calculates net balances per participant and currency across all postings in a group.
+     * Oversized result sets are rejected rather than truncated to preserve financial correctness.
      */
     override fun balances(groupId: UUID): List<GroupBalanceItem> {
-        val rows = balancePostingRepository.sumBalancesByGroup(groupId)
+        val rows = balancePostingRepository.sumBalancesByGroup(
+            groupId,
+            PageRequest.of(0, ExpenseRequestLimits.MAX_BALANCE_ROWS + 1),
+        )
+        if (rows.size > ExpenseRequestLimits.MAX_BALANCE_ROWS) {
+            throw ExpenseDomainException(
+                ExpenseErrors.EXPENSE_REQUEST_INVALID,
+                "Group balance result exceeds ${ExpenseRequestLimits.MAX_BALANCE_ROWS} rows",
+            )
+        }
         return rows.map { row ->
             val participantId = row[0].toString()
             val currency = row[1].toString()

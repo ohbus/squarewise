@@ -7,10 +7,13 @@ import com.subhrodip.squarewise.expensecore.expenses.api.request.MoneyDto
 import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseAllocation
 import com.subhrodip.squarewise.expensecore.expenses.domain.ExpensePayer
 import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseRecord
+import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseRequestLimits
 import com.subhrodip.squarewise.expensecore.expenses.persistence.store.ExpenseStore
 import com.subhrodip.squarewise.expensecore.expenses.persistence.store.InMemoryExpenseStore
+import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.time.Instant
@@ -132,6 +135,17 @@ class SettlementSuggestionTest {
     fun `empty balances produce empty suggestions`() {
         val suggestions = engine.calculateSuggestions(emptyList())
         assertTrue(suggestions.isEmpty())
+    }
+
+    @Test
+    fun `rejects oversized balance input`() {
+        val balance = GroupBalanceItem(UUID.randomUUID().toString(), MoneyDto("EUR", "1"))
+
+        val error = assertThrows(SquarewiseException::class.java) {
+            engine.calculateSuggestions(List(ExpenseRequestLimits.MAX_BALANCE_ROWS + 1) { balance })
+        }
+
+        assertEquals("EXPENSE_REQUEST_INVALID", error.definition.errorName)
     }
 
     /** Verifies an imbalanced snapshot with only debtors cannot invent a recipient. */
