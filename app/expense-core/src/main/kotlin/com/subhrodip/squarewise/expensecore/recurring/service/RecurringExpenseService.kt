@@ -433,26 +433,28 @@ class RecurringExpenseService(
             currency = request.currency,
             frequency = request.frequency,
             dayOfMonth = request.dayOfMonth,
-            startDate = request.startDate,
-            endDate = request.endDate,
-            timezone = request.timezone
+            window = ScheduleWindow(request.startDate, request.endDate, request.timezone)
         )
         validateCustomSpecifications(request.amountMinor, request.payers, request.allocations)
     }
 
-    private fun validateSchedule(request: UpdateRecurringScheduleRequest, timezone: String = request.timezone ?: "UTC") {
+    private fun validateSchedule(request: UpdateRecurringScheduleRequest, timezone: String) {
         validateScheduleValues(
             description = request.description,
             amountMinor = request.amountMinor,
             currency = request.currency,
             frequency = request.frequency,
             dayOfMonth = request.dayOfMonth,
-            startDate = request.startDate,
-            endDate = request.endDate,
-            timezone = timezone
+            window = ScheduleWindow(request.startDate, request.endDate, timezone)
         )
         validateCustomSpecifications(request.amountMinor, request.payers, request.allocations)
     }
+
+    private data class ScheduleWindow(
+        val startDate: LocalDate,
+        val endDate: LocalDate?,
+        val timezone: String
+    )
 
     private fun validateScheduleValues(
         description: String,
@@ -460,9 +462,7 @@ class RecurringExpenseService(
         currency: String,
         frequency: RecurrenceFrequency,
         dayOfMonth: Int?,
-        startDate: LocalDate,
-        endDate: LocalDate?,
-        timezone: String
+        window: ScheduleWindow
     ) {
         require(description.isNotBlank()) { "description must not be blank" }
         require(amountMinor > 0) { "amountMinor must be positive" }
@@ -473,12 +473,12 @@ class RecurringExpenseService(
         require(frequency == RecurrenceFrequency.MONTHLY || dayOfMonth == null) {
             "dayOfMonth is only supported for monthly schedules"
         }
-        if (endDate != null) {
-            require(!endDate.isBefore(startDate)) {
+        if (window.endDate != null) {
+            require(!window.endDate.isBefore(window.startDate)) {
                 "endDate must not be before startDate"
             }
         }
-        require(runCatching { ZoneId.of(timezone) }.isSuccess) {
+        require(runCatching { ZoneId.of(window.timezone) }.isSuccess) {
             "timezone must be a valid IANA zone"
         }
     }

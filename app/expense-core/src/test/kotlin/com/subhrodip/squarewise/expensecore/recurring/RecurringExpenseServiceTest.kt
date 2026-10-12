@@ -1000,10 +1000,22 @@ class RecurringExpenseServiceTest @Autowired constructor(
             service.createSchedule(group.groupId, valid.copy(payers = listOf(ExpensePayer(UUID.randomUUID(), -1))))
         }
         assertThrows(IllegalArgumentException::class.java) {
+            service.createSchedule(
+                group.groupId,
+                valid.copy(payers = (1..101).map { ExpensePayer(UUID.randomUUID(), 1) })
+            )
+        }
+        assertThrows(IllegalArgumentException::class.java) {
             val participant = UUID.randomUUID()
             service.createSchedule(
                 group.groupId,
                 valid.copy(payers = listOf(ExpensePayer(participant, 500), ExpensePayer(participant, 500)))
+            )
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            service.createSchedule(
+                group.groupId,
+                valid.copy(allocations = (1..101).map { ExpenseAllocation(UUID.randomUUID(), 1) })
             )
         }
         assertThrows(IllegalArgumentException::class.java) {

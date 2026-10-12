@@ -248,4 +248,26 @@ class ExpenseValidatorTest {
         }
         assertTrue(oversizedPayerError.message?.contains("participant count exceeds the maximum") == true)
     }
+
+    @Test
+    fun `shared record validation accepts multiple payers and zero allocations`() {
+        ExpenseValidator.validateRecord(
+            ExpenseRecord(
+                expenseId = UUID.randomUUID(),
+                groupId = UUID.randomUUID(),
+                description = "multi-payer",
+                category = "expense",
+                currency = "EUR",
+                amountMinor = 100,
+                version = 1,
+                allocationMode = "EXACT",
+                createdAt = Instant.EPOCH,
+                payers = listOf(ExpensePayer(alice, 40), ExpensePayer(bob, 60)),
+                allocations = listOf(
+                    ExpenseAllocation(alice, 0),
+                    ExpenseAllocation(bob, 100)
+                )
+            )
+        )
+    }
 }

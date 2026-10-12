@@ -29,4 +29,21 @@ class GroupQueryStoreTest {
         assertThrows(IllegalArgumentException::class.java) { store.list("alice", 0) }
         assertThrows(IllegalArgumentException::class.java) { store.list("alice", 101) }
     }
+
+    @Test
+    fun `default member limit is forwarded as one hundred`() {
+        var requestedLimit = 0
+        val capturingStore = object : GroupQueryStore {
+            override fun list(subject: String): List<GroupResponse> = emptyList()
+
+            override fun listMembers(groupId: UUID, subject: String, limit: Int): List<GroupMemberResponse> {
+                requestedLimit = limit
+                return emptyList()
+            }
+        }
+
+        capturingStore.listMembers(firstGroup.groupId, "alice")
+
+        assertEquals(100, requestedLimit)
+    }
 }

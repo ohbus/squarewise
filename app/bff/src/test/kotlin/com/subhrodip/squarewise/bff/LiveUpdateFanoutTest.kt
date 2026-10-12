@@ -165,6 +165,25 @@ class LiveUpdateFanoutTest {
     }
 
     @Test
+    fun `expires a subscription if it reaches its deadline during invalidation delivery`() {
+        val start = Instant.parse("2026-01-01T00:00:00Z")
+        val expiry = start.plusSeconds(1)
+        val clock = SequenceClock(start, start, start, expiry)
+        val fanout = LiveUpdateFanout(clock = clock, subscriptionTtl = Duration.ofSeconds(1))
+        val subscription = fanout.subscribe("user-1", "group-1")
+        var terminated = false
+
+        fanout.revocationSignal(subscription.id)
+            .doOnTerminate { terminated = true }
+            .subscribe()
+
+        fanout.emitInvalidation("group-1", 8L, "expired-during-delivery")
+
+        assertThat(terminated).isTrue()
+        assertThat(fanout.invalidations(subscription.id).collectList().block()).isEmpty()
+    }
+
+    @Test
     fun `terminates a subscription when its snapshot buffer overflows`() {
         val fanout = LiveUpdateFanout(queueCapacity = 1)
         val subscription = fanout.subscribe("user-1", "group-1")
@@ -176,6 +195,24 @@ class LiveUpdateFanoutTest {
 
         fanout.emitInvalidation("group-1", 1L, "first")
         fanout.emitInvalidation("group-1", 2L, "overflow")
+
+        assertThat(terminated).isTrue()
+        assertThat(fanout.invalidations(subscription.id).collectList().block()).isEmpty()
+    }
+
+    @Test
+    fun `terminates a subscription when its snapshot stream is cancelled`() {
+        val fanout = LiveUpdateFanout()
+        val subscription = fanout.subscribe("user-1", "group-1")
+        val snapshotStream = fanout.invalidations(subscription.id).subscribe()
+        var terminated = false
+
+        fanout.revocationSignal(subscription.id)
+            .doOnTerminate { terminated = true }
+            .subscribe()
+        snapshotStream.dispose()
+
+        fanout.emitInvalidation("group-1", 1L, "cancelled")
 
         assertThat(terminated).isTrue()
         assertThat(fanout.invalidations(subscription.id).collectList().block()).isEmpty()
@@ -345,5 +382,15 @@ class LiveUpdateFanoutTest {
         override fun withZone(zone: ZoneId): Clock = this
 
         override fun instant(): Instant = now
+    }
+
+    private class SequenceClock(private vararg val instants: Instant) : Clock() {
+        private var index = 0
+
+        override fun getZone(): ZoneOffset = ZoneOffset.UTC
+
+        override fun withZone(zone: ZoneId): Clock = this
+
+        override fun instant(): Instant = instants[index++]
     }
 }
