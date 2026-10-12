@@ -1,0 +1,75 @@
+package com.subhrodip.squarewise.notifications.consumer
+
+import com.subhrodip.squarewise.notifications.consumer.config.NotificationMessagingProperties
+import com.subhrodip.squarewise.notifications.consumer.persistence.ProcessedNotificationEventEntity
+import com.subhrodip.squarewise.notifications.consumer.persistence.ProcessedNotificationEventRepository
+import com.subhrodip.squarewise.notifications.consumer.service.ProcessedNotificationEventCleanup
+import java.time.Clock
+import java.time.Duration
+import java.time.Instant
+import java.time.ZoneOffset
+import java.util.UUID
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Test
+import org.mockito.Mockito.mock
+import org.mockito.Mockito.verify
+import org.mockito.Mockito.`when`
+import org.springframework.data.domain.PageRequest
+
+/** Verifies bounded retention cleanup for notification deduplication markers. */
+class ProcessedNotificationEventCleanupTest {
+    @Test
+    fun `deletes one bounded expired marker batch`() {
+        val repository = mock(ProcessedNotificationEventRepository::class.java)
+        val now = Instant.parse("2026-10-13T00:00:00Z")
+        val marker = ProcessedNotificationEventEntity(
+            UUID.randomUUID(),
+            now.minus(Duration.ofDays(31))
+        )
+        val properties = NotificationMessagingProperties(
+            processedEventRetention = Duration.ofDays(30),
+            processedEventCleanupBatchSize = 1
+        )
+        `when`(
+            repository.findByProcessedAtBefore(
+                now.minus(Duration.ofDays(30)),
+                PageRequest.of(0, 1)
+            )
+        ).thenReturn(listOf(marker))
+
+        val cleanup = ProcessedNotificationEventCleanup(
+            repository,
+            properties,
+            Clock.fixed(now, ZoneOffset.UTC)
+        )
+
+        assertEquals(1, cleanup.cleanupExpired())
+        verify(repository).deleteAllById(listOf(marker.eventId))
+    }
+
+    @Test
+    fun `rejects non-positive retention and batch settings`() {
+        val repository = mock(ProcessedNotificationEventRepository::class.java)
+        val clock = Clock.fixed(Instant.EPOCH, ZoneOffset.UTC)
+
+        assertThrows(IllegalArgumentException::class.java) {
+            ProcessedNotificationEventCleanup(
+                repository,
+                NotificationMessagingProperties(),
+                clock,
+                Duration.ZERO,
+                1
+            )
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            ProcessedNotificationEventCleanup(
+                repository,
+                NotificationMessagingProperties(),
+                clock,
+                Duration.ofDays(1),
+                0
+            )
+        }
+    }
+}
