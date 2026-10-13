@@ -1,5 +1,6 @@
 package com.subhrodip.squarewise.notifications.email.delivery
 
+import com.subhrodip.squarewise.db.routing.DbWriter
 import com.subhrodip.squarewise.notifications.email.persistence.NotificationEmailDeliveryRepository
 import java.time.Clock
 import java.time.Duration
@@ -40,6 +41,7 @@ class NotificationEmailDeliveryRetentionCleanup(
 
     /** Purges completed email delivery records older than [retention] across bounded batches. */
     @Scheduled(fixedDelayString = "\${squarewise.notifications.email-delivery-cleanup-delay-ms:3600000}")
+    @DbWriter("notifications.email-delivery.cleanup")
     fun cleanupCompleted(): Int {
         val cutoff: Instant = clock.instant().minus(retention)
         var totalDeleted = 0

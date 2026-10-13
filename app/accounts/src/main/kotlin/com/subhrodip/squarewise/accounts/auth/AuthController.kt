@@ -20,6 +20,7 @@ import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.Valid
 import java.security.Principal
 import java.time.Instant
+import com.subhrodip.squarewise.db.routing.DbWriter
 import org.springframework.http.HttpStatus
 import org.springframework.http.HttpHeaders
 import org.springframework.http.CacheControl
@@ -65,6 +66,7 @@ class AuthController(
      * @throws AccountsDomainException when the login policy is exhausted.
      */
     @PostMapping(ApiEndpoints.Accounts.V1.LOGIN_START)
+    @DbWriter("auth.login.start")
     fun startLogin(
         @Valid @RequestBody request: LoginStartRequest,
         servletRequest: HttpServletRequest
@@ -95,6 +97,7 @@ class AuthController(
      * is exhausted or its fail-closed store cannot decide.
      */
     @PostMapping(ApiEndpoints.Accounts.V1.LOGIN_VERIFY)
+    @DbWriter("auth.login.verify")
     fun verifyLogin(
         @Valid @RequestBody request: LoginVerifyRequest,
         servletRequest: HttpServletRequest
@@ -118,6 +121,7 @@ class AuthController(
      * @return 200 OK with [TokenResponse].
      */
     @PostMapping(ApiEndpoints.Accounts.V1.TOKEN_REFRESH)
+    @DbWriter("auth.token.refresh")
     fun refreshToken(
         @Valid @RequestBody request: RefreshTokenRequest,
         servletRequest: HttpServletRequest
@@ -146,6 +150,7 @@ class AuthController(
      */
     @PostMapping(ApiEndpoints.Accounts.V1.LOGOUT)
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @DbWriter("auth.logout")
     fun logout(
         principal: Principal?,
         @Valid @RequestBody request: LogoutRequest

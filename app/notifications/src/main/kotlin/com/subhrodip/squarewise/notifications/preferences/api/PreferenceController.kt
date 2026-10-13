@@ -16,6 +16,7 @@ import com.subhrodip.squarewise.errors.catalog.PlatformErrors
 import java.security.Principal
 
 import com.subhrodip.squarewise.db.routing.DbReader
+import com.subhrodip.squarewise.db.routing.DbWriter
 import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
 
 @RestController
@@ -27,6 +28,7 @@ class PreferenceController(private val store: PreferenceStore) {
 
     @PutMapping
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @DbWriter("notifications.preferences.update")
     fun update(principal: Principal?, @Valid @RequestBody preferences: NotificationPreferences) {
         store.put(subject(principal), preferences)
     }

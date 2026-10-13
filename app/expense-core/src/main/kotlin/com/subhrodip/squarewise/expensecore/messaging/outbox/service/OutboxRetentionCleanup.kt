@@ -1,6 +1,7 @@
 package com.subhrodip.squarewise.expensecore.messaging.outbox.service
 
 import com.subhrodip.squarewise.db.cleanup.AbstractRetentionCleanup
+import com.subhrodip.squarewise.db.routing.DbWriter
 import com.subhrodip.squarewise.expensecore.messaging.outbox.persistence.OutboxRepository
 import java.time.Clock
 import java.time.Duration
@@ -38,6 +39,7 @@ class OutboxRetentionCleanup(
      * @return total count of purged outbox records
      */
     @Scheduled(fixedDelayString = "\${squarewise.outbox.cleanup-delay-ms:3600000}")
+    @DbWriter("outbox.cleanup")
     fun cleanupPublished(): Int = executeBatchCleanup()
 
     override fun purgeBatch(cutoff: Instant, limit: Int): Int =

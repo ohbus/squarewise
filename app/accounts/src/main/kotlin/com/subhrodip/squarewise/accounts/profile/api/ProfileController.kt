@@ -22,6 +22,7 @@ import com.subhrodip.squarewise.db.routing.DbContextHolder
 import com.subhrodip.squarewise.db.routing.DbExecutionContext
 import com.subhrodip.squarewise.db.routing.DbOperationKind
 import com.subhrodip.squarewise.db.routing.DbReader
+import com.subhrodip.squarewise.db.routing.DbWriter
 import com.subhrodip.squarewise.db.routing.ReadConsistency
 import com.subhrodip.squarewise.observability.db.DbTelemetry
 import com.subhrodip.squarewise.accounts.profile.persistence.ProfileStore
@@ -38,10 +39,12 @@ class ProfileController(
     private val dbTelemetry: DbTelemetry = DbTelemetry()
 ) {
     @GetMapping(ApiEndpoints.Accounts.V1.ME)
+    @DbReader(operation = "profile.me", target = "profile")
     fun get(principal: Principal): ProfileResponse =
         profiles.get(principal.name) ?: throw AccountsDomainException(AccountsErrors.AUTHENTICATED_PROFILE_NOT_FOUND)
 
     @PatchMapping(ApiEndpoints.Accounts.V1.ME)
+    @DbWriter("profile.update")
     fun update(
         principal: Principal,
         @Valid @RequestBody request: ProfilePatchRequest
@@ -52,12 +55,14 @@ class ProfileController(
 
     @PostMapping(ApiEndpoints.Accounts.V1.ME_DELETION_REQUEST)
     @ResponseStatus(HttpStatus.ACCEPTED)
+    @DbWriter("profile.deletion.request")
     fun requestDeletion(principal: Principal) {
         deletionService.request(principal.name)
     }
 
     @PostMapping(ApiEndpoints.Accounts.V1.ME_EXPORT_REQUEST)
     @ResponseStatus(HttpStatus.ACCEPTED)
+    @DbWriter("profile.export.request")
     fun requestExport(principal: Principal?): ExportRequestResponse {
         val subject = principal?.name ?: throw AccountsDomainException(AccountsErrors.PROFILE_SUBJECT_INVALID)
         val request = exportService.request(subject)

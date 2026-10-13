@@ -2,6 +2,7 @@
 
 package com.subhrodip.squarewise.expensecore.expenses.service
 
+import com.subhrodip.squarewise.db.routing.DbWriter
 import com.subhrodip.squarewise.expensecore.expenses.persistence.repository.ExpenseIdempotencyRepository
 
 import java.time.Clock
@@ -38,6 +39,7 @@ class ExpenseIdempotencyCleanup(
 
     /** Deletes claims older than the configured replay window across bounded batches. */
     @Scheduled(fixedDelayString = "\${squarewise.expense-idempotency.cleanup-delay-ms:3600000}")
+    @DbWriter("expense.idempotency.cleanup")
     fun cleanupExpired(): Int {
         val cutoff: Instant = clock.instant().minus(retention)
         var totalDeleted = 0

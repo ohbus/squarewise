@@ -1,5 +1,6 @@
 package com.subhrodip.squarewise.notifications.consumer.service
 
+import com.subhrodip.squarewise.db.routing.DbWriter
 import com.subhrodip.squarewise.notifications.consumer.config.NotificationMessagingProperties
 import com.subhrodip.squarewise.notifications.consumer.persistence.ProcessedNotificationEventRepository
 import java.time.Clock
@@ -49,6 +50,7 @@ class ProcessedNotificationEventCleanup(
 
     /** Deletes markers older than the configured replay window across bounded batches. */
     @Scheduled(fixedDelayString = "\${squarewise.notifications.processed-event-cleanup-delay-ms:3600000}")
+    @DbWriter("notifications.processed-event.cleanup")
     fun cleanupExpired(): Int {
         val cutoff = clock.instant().minus(retention)
         var totalDeleted = 0

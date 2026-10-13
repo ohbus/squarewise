@@ -4,6 +4,7 @@ package com.subhrodip.squarewise.accounts.auth.delivery.outbox
 
 import com.subhrodip.squarewise.accounts.auth.delivery.model.AuthEmailPublishOutcome
 import com.subhrodip.squarewise.accounts.auth.delivery.service.AuthEmailOutboxPublisher
+import com.subhrodip.squarewise.db.routing.DbWriter
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.scheduling.annotation.Scheduled
@@ -25,6 +26,7 @@ class AuthEmailOutboxRelay(
      * Returns the outcome of the last attempted publish or EMPTY if no items were available.
      */
     @Scheduled(fixedDelayString = "\${squarewise.auth-email-outbox.poll-delay-ms:1000}")
+    @DbWriter("auth.email-outbox.relay")
     fun poll(): AuthEmailPublishOutcome {
         var lastOutcome = AuthEmailPublishOutcome.EMPTY
         for (i in 0 until maxBatchSize) {

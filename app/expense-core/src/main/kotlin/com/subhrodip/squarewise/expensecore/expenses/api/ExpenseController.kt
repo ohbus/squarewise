@@ -22,6 +22,7 @@ import java.time.Instant
 import java.security.Principal
 import java.util.UUID
 import com.subhrodip.squarewise.db.routing.DbReader
+import com.subhrodip.squarewise.db.routing.DbWriter
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
@@ -55,6 +56,7 @@ class ExpenseController(
 
     @PostMapping(ApiEndpoints.ExpenseCore.V1.EXPENSES_SUBPATH)
     @ResponseStatus(HttpStatus.CREATED)
+    @DbWriter("expense.create")
     fun createExpense(
         @PathVariable groupId: UUID,
         @RequestHeader(ApiEndpoints.Headers.IDEMPOTENCY_KEY)
@@ -97,6 +99,7 @@ class ExpenseController(
     }
 
     @PutMapping(ApiEndpoints.ExpenseCore.V1.EXPENSE_BY_ID_SUBPATH)
+    @DbWriter("expense.update")
     fun updateExpense(
         @PathVariable groupId: UUID,
         @PathVariable expenseId: UUID,
@@ -138,6 +141,7 @@ class ExpenseController(
 
     @DeleteMapping(ApiEndpoints.ExpenseCore.V1.EXPENSE_BY_ID_SUBPATH)
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @DbWriter("expense.delete")
     fun deleteExpense(
         @PathVariable groupId: UUID,
         @PathVariable expenseId: UUID,

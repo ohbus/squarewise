@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
 import java.security.Principal
 import com.subhrodip.squarewise.db.routing.DbReader
+import com.subhrodip.squarewise.db.routing.DbWriter
 import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
 import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
 
@@ -37,12 +38,14 @@ class SettlementController(
 ) {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @DbWriter("settlement.record")
     fun record(@PathVariable groupId: UUID, @RequestHeader(ApiEndpoints.Headers.IDEMPOTENCY_KEY) idempotencyKey: String, @Valid @RequestBody request: RecordSettlementRequest, principal: Principal?): Settlement {
         ensureMembership(groupId, principal)
         return service.record(groupId, request.fromParticipantId, request.toParticipantId, parseAmount(request.amountMinor), request.currency, principal!!.name, idempotencyKey)
     }
 
     @PostMapping(ApiEndpoints.ExpenseCore.V1.SETTLEMENT_REVERSAL_RELATIVE_SUBPATH)
+    @DbWriter("settlement.reverse")
     fun reverse(@PathVariable groupId: UUID, @PathVariable settlementId: UUID, @Valid @RequestBody request: ReverseSettlementRequest, principal: Principal?): Settlement {
         ensureMembership(groupId, principal)
         return service.reverse(groupId, settlementId, request.reason, principal!!.name)

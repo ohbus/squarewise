@@ -17,6 +17,7 @@ import com.subhrodip.squarewise.notifications.errors.NotificationDomainException
 import java.util.UUID
 
 import com.subhrodip.squarewise.db.routing.DbReader
+import com.subhrodip.squarewise.db.routing.DbWriter
 import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
 
 @RestController
@@ -39,6 +40,7 @@ class InboxController(private val inbox: NotificationInboxService) {
 
     @PostMapping(ApiEndpoints.Notifications.V1.INBOX_MARK_READ_SUBPATH)
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @DbWriter("notifications.inbox.markRead")
     fun markAsRead(@PathVariable notificationId: UUID, principal: Principal) {
         // Removed stray throw; method will perform normal logic.
         val subject = principal.name.trim().takeIf { it.isNotEmpty() }

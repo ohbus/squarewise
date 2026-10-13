@@ -1,6 +1,7 @@
 package com.subhrodip.squarewise.accounts.auth.delivery.outbox
 
 import com.subhrodip.squarewise.db.cleanup.AbstractRetentionCleanup
+import com.subhrodip.squarewise.db.routing.DbWriter
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -37,6 +38,7 @@ class AuthEmailOutboxRetentionCleanup(
      * @return total count of purged auth-email outbox records
      */
     @Scheduled(fixedDelayString = "\${squarewise.auth-email-outbox.cleanup-delay-ms:3600000}")
+    @DbWriter("auth.email-outbox.cleanup")
     fun cleanupPublished(): Int = executeBatchCleanup()
 
     override fun purgeBatch(cutoff: Instant, limit: Int): Int =

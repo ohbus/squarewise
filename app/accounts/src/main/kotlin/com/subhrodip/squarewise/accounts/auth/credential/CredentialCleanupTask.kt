@@ -2,6 +2,7 @@ package com.subhrodip.squarewise.accounts.auth.credential
 
 import java.time.Duration
 import java.time.Instant
+import com.subhrodip.squarewise.db.routing.DbWriter
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
@@ -41,6 +42,7 @@ class CredentialCleanupTask(
      * credentials older than [consumedRetentionHours] hours across bounded batches.
      */
     @Scheduled(cron = "\${squarewise.auth.credential-cleanup-cron:0 0 * * * *}")
+    @DbWriter("auth.credential.cleanup")
     fun executeCleanup(): Int {
         val now = Instant.now()
         val expiredCutoff = now.minus(Duration.ofDays(expiredRetentionDays))

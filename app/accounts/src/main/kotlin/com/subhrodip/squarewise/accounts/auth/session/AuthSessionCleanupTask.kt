@@ -2,6 +2,7 @@ package com.subhrodip.squarewise.accounts.auth.session
 
 import java.time.Duration
 import java.time.Instant
+import com.subhrodip.squarewise.db.routing.DbWriter
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
@@ -38,6 +39,7 @@ class AuthSessionCleanupTask(
      * Purges expired or revoked sessions older than [retentionDays] days across bounded batches.
      */
     @Scheduled(cron = "\${squarewise.auth.session-cleanup-cron:0 30 * * * *}")
+    @DbWriter("auth.session.cleanup")
     fun executeCleanup(): Int {
         val cutoff = Instant.now().minus(Duration.ofDays(retentionDays))
         var totalDeleted = 0
