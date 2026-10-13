@@ -102,15 +102,16 @@ class LiveUpdateFanout(
         require(userId.isNotBlank()) { "userId must not be blank" }
         require(groupId.isNotBlank()) { "groupId must not be blank" }
         val now = Instant.now(clock)
-        val userSubs = userSubscriptions.computeIfAbsent(userId) { ConcurrentHashMap.newKeySet() }
-        return synchronized(userSubs) {
-            for (subId in userSubs.toList()) {
+        val lock = userSubscriptions.computeIfAbsent(userId) { ConcurrentHashMap.newKeySet() }
+        return synchronized(lock) {
+            for (subId in userSubscriptions[userId]?.toList().orEmpty()) {
                 val sub = subscriptions[subId]
                 if (sub != null && !now.isBefore(sub.subscription.expiresAt)) {
                     unsubscribe(subId)
                 }
             }
-            if (userSubs.size >= maxSubscriptionsPerUser) {
+            val activeUserSubs = userSubscriptions.computeIfAbsent(userId) { ConcurrentHashMap.newKeySet() }
+            if (activeUserSubs.size >= maxSubscriptionsPerUser) {
                 throw BffDomainException(BffErrors.SUBSCRIPTION_LIMIT_EXCEEDED, "subscription limit exceeded")
             }
             val subscription = LiveSubscription(
@@ -120,8 +121,10 @@ class LiveUpdateFanout(
                 SubscriptionInvalidationChannel(queueCapacity)
             subscriptions[subscription.id] = Subscriber(subscription, ArrayDeque())
             revocationSignals[subscription.id] = Sinks.one()
-            userSubs.add(subscription.id)
-            groupSubscriptions.computeIfAbsent(groupId) { ConcurrentHashMap.newKeySet() }.add(subscription.id)
+            activeUserSubs.add(subscription.id)
+            groupSubscriptions.compute(groupId) { _, set ->
+                (set ?: ConcurrentHashMap.newKeySet()).apply { add(subscription.id) }
+            }
             subscription
         }
     }
@@ -132,13 +135,13 @@ class LiveUpdateFanout(
         subscriptionInvalidations.remove(subscriptionId)?.complete()
         if (subscriber != null) {
             val sub = subscriber.subscription
-            userSubscriptions[sub.userId]?.let { set ->
+            userSubscriptions.computeIfPresent(sub.userId) { _, set ->
                 set.remove(subscriptionId)
-                if (set.isEmpty()) userSubscriptions.remove(sub.userId, set)
+                if (set.isEmpty()) null else set
             }
-            groupSubscriptions[sub.groupId]?.let { set ->
+            groupSubscriptions.computeIfPresent(sub.groupId) { _, set ->
                 set.remove(subscriptionId)
-                if (set.isEmpty()) groupSubscriptions.remove(sub.groupId, set)
+                if (set.isEmpty()) null else set
             }
         }
     }
@@ -228,13 +231,13 @@ class LiveUpdateFanout(
                 val sub = entry.value.subscription
                 revocationSignals.remove(subId)?.tryEmitEmpty()
                 subscriptionInvalidations.remove(subId)?.complete()
-                userSubscriptions[sub.userId]?.let { set ->
+                userSubscriptions.computeIfPresent(sub.userId) { _, set ->
                     set.remove(subId)
-                    if (set.isEmpty()) userSubscriptions.remove(sub.userId, set)
+                    if (set.isEmpty()) null else set
                 }
-                groupSubscriptions[sub.groupId]?.let { set ->
+                groupSubscriptions.computeIfPresent(sub.groupId) { _, set ->
                     set.remove(subId)
-                    if (set.isEmpty()) groupSubscriptions.remove(sub.groupId, set)
+                    if (set.isEmpty()) null else set
                 }
             }
             expired
