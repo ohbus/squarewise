@@ -4,6 +4,7 @@ package com.subhrodip.squarewise.accounts.auth.delivery.outbox
 
 import com.subhrodip.squarewise.accounts.auth.delivery.model.AuthEmailPublishOutcome
 import com.subhrodip.squarewise.accounts.auth.delivery.service.AuthEmailOutboxPublisher
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
@@ -13,7 +14,7 @@ import org.springframework.stereotype.Component
 @ConditionalOnProperty(prefix = "squarewise.auth-email-outbox", name = ["enabled"], havingValue = "true")
 class AuthEmailOutboxRelay(
     private val publisher: AuthEmailOutboxPublisher,
-    @org.springframework.beans.factory.annotation.Value("\${squarewise.auth-email-outbox.max-batch-size:100}") private val maxBatchSize: Int = 100
+    @Value("\${squarewise.auth-email-outbox.max-batch-size:100}") private val maxBatchSize: Int = 100
 ) {
     init {
         require(maxBatchSize > 0) { "maxBatchSize must be positive" }

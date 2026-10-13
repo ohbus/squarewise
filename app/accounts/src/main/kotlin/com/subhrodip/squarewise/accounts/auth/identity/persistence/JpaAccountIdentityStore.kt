@@ -25,8 +25,7 @@ import org.springframework.beans.factory.annotation.Autowired
 class JpaAccountIdentityStore(
     private val identityRepository: AccountIdentityRepository,
     private val profileRepository: ProfileRepository,
-    @Autowired(required = false)
-    private val referenceValidator: AccountReferenceValidator? = null
+    private val referenceValidator: AccountReferenceValidator
 ) : AccountIdentityStore {
 
     /**
@@ -109,8 +108,7 @@ class JpaAccountIdentityStore(
         verified: Boolean
     ): AccountIdentity {
         val existing = identityRepository.findByIssuerAndProviderSubject(issuer, providerSubject)
-        val profile = referenceValidator?.validateActiveAccount(accountId)
-            ?: profileRepository.findById(accountId).orElse(null)
+        val profile = referenceValidator.validateActiveAccount(accountId)
 
         val entity = if (existing != null) {
             existing.email = email
@@ -136,7 +134,7 @@ class JpaAccountIdentityStore(
             accountId = entity.accountId,
             subject = entity.providerSubject,
             email = entity.email ?: email,
-            deletionRequested = profile?.deletionRequested ?: false,
+            deletionRequested = profile.deletionRequested,
             issuer = entity.issuer
         )
     }
@@ -153,8 +151,7 @@ class JpaAccountIdentityStore(
         val identity = identityRepository.findFirstByAccountIdOrderByIdentityIdAsc(accountId)
             ?: throw AccountsInputException("No identity found for account $accountId")
 
-        val profile = referenceValidator?.validateActiveAccount(accountId)
-            ?: profileRepository.findById(accountId).orElse(null)
+        val profile = referenceValidator.validateActiveAccount(accountId)
 
         identity.email = email
         identity.emailVerified = verified
@@ -165,7 +162,7 @@ class JpaAccountIdentityStore(
             accountId = accountId,
             subject = identity.providerSubject,
             email = email,
-            deletionRequested = profile?.deletionRequested ?: false,
+            deletionRequested = profile.deletionRequested,
             issuer = identity.issuer
         )
     }

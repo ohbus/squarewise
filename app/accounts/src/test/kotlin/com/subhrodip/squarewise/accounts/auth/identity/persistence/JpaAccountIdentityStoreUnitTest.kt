@@ -26,7 +26,8 @@ import org.mockito.Mockito.verify
 class JpaAccountIdentityStoreUnitTest {
     private val identities = mock(AccountIdentityRepository::class.java)
     private val profiles = mock(ProfileRepository::class.java)
-    private val store = JpaAccountIdentityStore(identities, profiles)
+    private val validator = mock(AccountReferenceValidator::class.java)
+    private val store = JpaAccountIdentityStore(identities, profiles, validator)
 
     @Test
     fun `issuer lookup returns null when the identity profile is missing`() {
@@ -69,10 +70,11 @@ class JpaAccountIdentityStoreUnitTest {
     fun `re-enrollment keeps a false deletion flag when the profile is missing`() {
         val accountId = UUID.randomUUID()
         val entity = identity(accountId, email = "old@example.com")
+        val profile = profile(accountId).apply { deletionRequested = false }
         `when`(identities.findByIssuerAndProviderSubject("issuer", "subject"))
             .thenReturn(entity)
         `when`(identities.save(entity)).thenReturn(entity)
-        `when`(profiles.findById(accountId)).thenReturn(Optional.empty())
+        `when`(validator.validateActiveAccount(accountId)).thenReturn(profile)
 
         val enrolled = store.enrollIdentity(
             accountId = accountId,
@@ -92,7 +94,7 @@ class JpaAccountIdentityStoreUnitTest {
         val profile = profile(accountId).apply { deletionRequested = true }
         `when`(identities.findByIssuerAndProviderSubject("issuer", "new-subject"))
             .thenReturn(null)
-        `when`(profiles.findById(accountId)).thenReturn(Optional.of(profile))
+        `when`(validator.validateActiveAccount(accountId)).thenReturn(profile)
         val persistedLegacyIdentity = identity(accountId, email = null).apply {
             providerSubject = "new-subject"
         }
@@ -112,24 +114,44 @@ class JpaAccountIdentityStoreUnitTest {
     }
 
     @Test
-    fun `email update keeps a false deletion flag when the profile is missing`() {
+    fun `updateEmail propagates rejection when validateActiveAccount throws and does not save`() {
         val accountId = UUID.randomUUID()
         val entity = identity(accountId, email = "old@example.com")
         `when`(identities.findFirstByAccountIdOrderByIdentityIdAsc(accountId)).thenReturn(entity)
-        `when`(identities.save(entity)).thenReturn(entity)
-        `when`(profiles.findById(accountId)).thenReturn(Optional.empty())
+        `when`(validator.validateActiveAccount(accountId)).thenThrow(
+            com.subhrodip.squarewise.accounts.errors.AccountsDomainException(
+                com.subhrodip.squarewise.errors.catalog.AccountsErrors.AUTHENTICATED_PROFILE_NOT_FOUND
+            )
+        )
 
-        val updated = store.updateEmail(accountId, "new@example.com", verified = true)
+        org.junit.jupiter.api.Assertions.assertThrows(
+            com.subhrodip.squarewise.accounts.errors.AccountsDomainException::class.java
+        ) {
+            store.updateEmail(accountId, "new@example.com", verified = true)
+        }
+        verify(identities, org.mockito.Mockito.never()).save(any())
+    }
 
-        assertEquals("new@example.com", updated.email)
-        assertFalse(updated.deletionRequested)
+    @Test
+    fun `enrollIdentity propagates rejection when validateActiveAccount throws and does not save`() {
+        val accountId = UUID.randomUUID()
+        `when`(validator.validateActiveAccount(accountId)).thenThrow(
+            com.subhrodip.squarewise.accounts.errors.AccountsDomainException(
+                com.subhrodip.squarewise.errors.catalog.AccountsErrors.AUTHENTICATED_PROFILE_NOT_FOUND
+            )
+        )
+
+        org.junit.jupiter.api.Assertions.assertThrows(
+            com.subhrodip.squarewise.accounts.errors.AccountsDomainException::class.java
+        ) {
+            store.enrollIdentity(accountId, "issuer", "subject", "test@example.com", true)
+        }
+        verify(identities, org.mockito.Mockito.never()).save(any())
     }
 
     @Test
     fun `email update validates active account via reference validator when present`() {
         val accountId = UUID.randomUUID()
-        val validator = mock(AccountReferenceValidator::class.java)
-        val customStore = JpaAccountIdentityStore(identities, profiles, validator)
         val entity = identity(accountId, email = "old@example.com")
         val profile = profile(accountId)
 
@@ -137,7 +159,7 @@ class JpaAccountIdentityStoreUnitTest {
         `when`(identities.save(entity)).thenReturn(entity)
         `when`(validator.validateActiveAccount(accountId)).thenReturn(profile)
 
-        val updated = customStore.updateEmail(accountId, "new@example.com", verified = true)
+        val updated = store.updateEmail(accountId, "new@example.com", verified = true)
 
         assertEquals("new@example.com", updated.email)
         verify(validator).validateActiveAccount(accountId)
