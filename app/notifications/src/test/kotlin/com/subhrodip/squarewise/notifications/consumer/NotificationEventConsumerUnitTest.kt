@@ -220,7 +220,7 @@ class NotificationEventConsumerUnitTest {
         NotificationEventConsumer(processor, processedEvents, preferenceStore, emailDispatcher, deliveryRateLimiter, deliveries)
             .consume(event)
 
-        assertEquals(NotificationEmailDeliveryEntity.DELIVERED, delivery.status)
+        assertEquals(NotificationEmailDeliveryEntity.SKIPPED, delivery.status)
         verify(deliveries).save(delivery)
     }
 

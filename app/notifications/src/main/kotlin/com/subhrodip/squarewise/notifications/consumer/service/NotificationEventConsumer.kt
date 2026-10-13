@@ -108,13 +108,19 @@ class NotificationEventConsumer(
         }
         val deliveryOutcome = emailDispatcher.send(recipientEmail, "Notification: ${event.title}", event.body)
         when (deliveryOutcome) {
-            EmailDeliveryOutcome.DELIVERED, EmailDeliveryOutcome.SKIPPED -> Unit
+            EmailDeliveryOutcome.DELIVERED -> markDelivery(
+                event.notificationId,
+                NotificationEmailDeliveryEntity.DELIVERED
+            )
+            EmailDeliveryOutcome.SKIPPED -> markDelivery(
+                event.notificationId,
+                NotificationEmailDeliveryEntity.SKIPPED
+            )
             EmailDeliveryOutcome.RETRYABLE_FAILURE,
             EmailDeliveryOutcome.PERMANENT_FAILURE -> throw NotificationDomainException(
                 NotificationErrors.EMAIL_DISPATCH_FAILED
             )
         }
-        markDelivery(event.notificationId, NotificationEmailDeliveryEntity.DELIVERED)
         log.info("Email dispatch outcome for recipientId={} (notificationId={}): {}", opaqueRecipientId(recipientEmail), event.notificationId, deliveryOutcome)
     }
 
