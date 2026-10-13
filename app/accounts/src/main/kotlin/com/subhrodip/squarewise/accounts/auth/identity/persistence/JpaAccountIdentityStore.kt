@@ -153,12 +153,14 @@ class JpaAccountIdentityStore(
         val identity = identityRepository.findFirstByAccountIdOrderByIdentityIdAsc(accountId)
             ?: throw AccountsInputException("No identity found for account $accountId")
 
+        val profile = referenceValidator?.validateActiveAccount(accountId)
+            ?: profileRepository.findById(accountId).orElse(null)
+
         identity.email = email
         identity.emailVerified = verified
         identity.updatedAt = Instant.now()
         identityRepository.save(identity)
 
-        val profile = profileRepository.findById(accountId).orElse(null)
         return AccountIdentity(
             accountId = accountId,
             subject = identity.providerSubject,

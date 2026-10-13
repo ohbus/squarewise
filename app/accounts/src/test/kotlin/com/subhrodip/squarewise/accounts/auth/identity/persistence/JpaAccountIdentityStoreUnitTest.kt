@@ -12,6 +12,8 @@ import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.mock
+import com.subhrodip.squarewise.accounts.validation.AccountReferenceValidator
+import org.mockito.Mockito.verify
 
 /**
  * Unit coverage for defensive identity projections that are not constructible through the
@@ -121,6 +123,24 @@ class JpaAccountIdentityStoreUnitTest {
 
         assertEquals("new@example.com", updated.email)
         assertFalse(updated.deletionRequested)
+    }
+
+    @Test
+    fun `email update validates active account via reference validator when present`() {
+        val accountId = UUID.randomUUID()
+        val validator = mock(AccountReferenceValidator::class.java)
+        val customStore = JpaAccountIdentityStore(identities, profiles, validator)
+        val entity = identity(accountId, email = "old@example.com")
+        val profile = profile(accountId)
+
+        `when`(identities.findFirstByAccountIdOrderByIdentityIdAsc(accountId)).thenReturn(entity)
+        `when`(identities.save(entity)).thenReturn(entity)
+        `when`(validator.validateActiveAccount(accountId)).thenReturn(profile)
+
+        val updated = customStore.updateEmail(accountId, "new@example.com", verified = true)
+
+        assertEquals("new@example.com", updated.email)
+        verify(validator).validateActiveAccount(accountId)
     }
 
     private fun identity(accountId: UUID, email: String?): AccountIdentityEntity =
