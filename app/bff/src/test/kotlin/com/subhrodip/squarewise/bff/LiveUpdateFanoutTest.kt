@@ -382,16 +382,22 @@ class LiveUpdateFanoutTest {
         val clock = MutableClock(start)
         val fanout = LiveUpdateFanout(clock = clock, subscriptionTtl = Duration.ofMinutes(5))
 
-        val sub = fanout.subscribe("user-exp", "group-exp")
-        fanout.publish(LiveUpdate("group-exp", 1))
+        val sub1 = fanout.subscribe("user-exp-1", "group-exp-1")
+        val sub2 = fanout.subscribe("user-exp-2", "group-exp-2")
+        fanout.publish(LiveUpdate("group-exp-1", 1))
+        fanout.publish(LiveUpdate("group-exp-2", 1))
 
-        assertThat(fanout.pendingCount(sub.id)).isEqualTo(1)
+        assertThat(fanout.pendingCount(sub1.id)).isEqualTo(1)
+        assertThat(fanout.pendingCount(sub2.id)).isEqualTo(1)
 
         // Advance past expiration
         clock.now = start.plus(Duration.ofMinutes(10))
 
-        assertThat(fanout.pendingCount(sub.id)).isEqualTo(0)
-        assertThat(fanout.poll(sub.id)).isNull()
+        // sub1 triggers expiration via pendingCount
+        assertThat(fanout.pendingCount(sub1.id)).isEqualTo(0)
+
+        // sub2 triggers expiration via poll
+        assertThat(fanout.poll(sub2.id)).isNull()
     }
 
     @Test
