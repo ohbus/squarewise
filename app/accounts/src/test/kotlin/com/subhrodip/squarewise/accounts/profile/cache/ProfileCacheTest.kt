@@ -79,6 +79,22 @@ class ProfileCacheTest {
     }
 
     @Test
+    fun `invalidate using subject only evicts mapped accountId entry`() {
+        val accountId = UUID.randomUUID()
+        val subject = "internal:single-evict@example.com"
+        val profile = ProfileResponse(accountId, "Single Evict User", "UTC", "EUR")
+
+        cache.getBySubject(subject) { profile }
+        // Verify accountId cache is also populated
+        assertEquals(profile, cache.peekByAccountId(accountId))
+
+        // Invalidate without providing accountId parameter
+        cache.invalidate(subject)
+
+        assertEquals(null, cache.peekByAccountId(accountId))
+    }
+
+    @Test
     fun `put and peekByAccountId store and retrieve profile without invocation`() {
         val accountId = UUID.randomUUID()
         val profile = ProfileResponse(accountId, "Direct Put", "UTC", "USD")
