@@ -276,4 +276,26 @@ class EntityReferenceValidatorTest {
         assertTrue(cachedValidator.isActiveMember(groupId, subject))
         assertTrue(cachedValidator.isActiveGroup(groupId))
     }
+
+    @Test
+    fun `validateFinancialParticipants and validateSettlementParticipants leverage cached memberIds`() {
+        val cache = com.subhrodip.squarewise.expensecore.groups.cache.GroupAccessCache()
+        val cachedValidator = EntityReferenceValidator(groupRepository, membershipRepository, cache)
+        val groupId = UUID.randomUUID()
+        val p1 = UUID.randomUUID()
+        val p2 = UUID.randomUUID()
+        val m1 = GroupMembershipEntity(p1, groupId, "alice")
+        val m2 = GroupMembershipEntity(p2, groupId, "bob")
+
+        `when`(membershipRepository.findByGroupIdAndStatus(groupId, "ACTIVE")).thenReturn(listOf(m1, m2))
+
+        val participants = cachedValidator.validateFinancialParticipants(groupId, listOf(p1), listOf(p2))
+        assertEquals(setOf(p1, p2), participants)
+
+        // Second call uses cached activeMemberIds and does not query repository again
+        val active = cachedValidator.validateActiveParticipants(groupId, listOf(p1, p2))
+        assertEquals(setOf(p1, p2), active)
+
+        cachedValidator.validateSettlementParticipants(groupId, p1, p2)
+    }
 }

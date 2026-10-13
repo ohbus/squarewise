@@ -53,9 +53,9 @@ class JpaExpenseStore(
     private val membershipRepository: GroupMembershipRepository,
     private val outboxStore: OutboxStore,
     private val syncStore: SynchronizationStore,
-    private val referenceValidator: EntityReferenceValidator = EntityReferenceValidator(groupRepository, membershipRepository),
     @Autowired(required = false)
-    private val groupAccessCache: GroupAccessCache? = null
+    private val groupAccessCache: GroupAccessCache? = null,
+    private val referenceValidator: EntityReferenceValidator = EntityReferenceValidator(groupRepository, membershipRepository, groupAccessCache)
 ) : ExpenseStore {
 
     /**
@@ -200,7 +200,9 @@ class JpaExpenseStore(
 
     private fun requireActiveMembership(groupId: UUID, actorSubject: String?) {
         if (actorSubject != null) {
-            referenceValidator.validateActiveMembership(groupId, actorSubject)
+            if (!referenceValidator.isActiveMember(groupId, actorSubject)) {
+                throw ExpenseDomainException(ExpenseErrors.GROUP_ACCESS_HIDDEN, "Group $groupId not found")
+            }
         }
     }
 

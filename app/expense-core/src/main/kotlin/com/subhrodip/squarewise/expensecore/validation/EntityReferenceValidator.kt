@@ -108,11 +108,18 @@ class EntityReferenceValidator(
         val allParticipantIds = (payerIds + allocationIds).toSet()
         if (allParticipantIds.isEmpty()) return emptySet()
 
-        val activeMembers = membershipRepository.findByGroupIdAndMembershipIdInAndStatus(
-            groupId,
-            allParticipantIds,
-            "ACTIVE"
-        ).map { it.membershipId }.toSet()
+        val activeMembers = if (groupAccessCache != null) {
+            groupAccessCache.activeMemberIds(groupId) {
+                membershipRepository.findByGroupIdAndStatus(groupId, "ACTIVE")
+                    .map { it.membershipId }.toSet()
+            }
+        } else {
+            membershipRepository.findByGroupIdAndMembershipIdInAndStatus(
+                groupId,
+                allParticipantIds,
+                "ACTIVE"
+            ).map { it.membershipId }.toSet()
+        }
 
         if (!activeMembers.containsAll(allParticipantIds)) {
             throw ExpenseDomainException(
@@ -120,7 +127,7 @@ class EntityReferenceValidator(
                 "Every financial participant must be an active group member"
             )
         }
-        return activeMembers
+        return activeMembers.filter { allParticipantIds.contains(it) }.toSet()
     }
 
     /**
@@ -143,11 +150,18 @@ class EntityReferenceValidator(
         }
         if (distinctIds.isEmpty()) return emptySet()
 
-        val activeMembers = membershipRepository.findByGroupIdAndMembershipIdInAndStatus(
-            groupId,
-            distinctIds,
-            "ACTIVE"
-        ).map { it.membershipId }.toSet()
+        val activeMembers = if (groupAccessCache != null) {
+            groupAccessCache.activeMemberIds(groupId) {
+                membershipRepository.findByGroupIdAndStatus(groupId, "ACTIVE")
+                    .map { it.membershipId }.toSet()
+            }
+        } else {
+            membershipRepository.findByGroupIdAndMembershipIdInAndStatus(
+                groupId,
+                distinctIds,
+                "ACTIVE"
+            ).map { it.membershipId }.toSet()
+        }
 
         if (!activeMembers.containsAll(distinctIds)) {
             throw ExpenseDomainException(
@@ -155,7 +169,7 @@ class EntityReferenceValidator(
                 "Every financial participant must be an active group member"
             )
         }
-        return activeMembers
+        return activeMembers.filter { distinctIds.contains(it) }.toSet()
     }
 
     /**
@@ -168,12 +182,19 @@ class EntityReferenceValidator(
      */
     fun validateSettlementParticipants(groupId: UUID, fromParticipantId: UUID, toParticipantId: UUID) {
         require(fromParticipantId != toParticipantId) { "Participants must differ" }
-        val members = membershipRepository.findByGroupIdAndMembershipIdInAndStatus(
-            groupId,
-            setOf(fromParticipantId, toParticipantId),
-            "ACTIVE"
-        )
-        if (members.size != 2) {
+        val activeMembers = if (groupAccessCache != null) {
+            groupAccessCache.activeMemberIds(groupId) {
+                membershipRepository.findByGroupIdAndStatus(groupId, "ACTIVE")
+                    .map { it.membershipId }.toSet()
+            }
+        } else {
+            membershipRepository.findByGroupIdAndMembershipIdInAndStatus(
+                groupId,
+                setOf(fromParticipantId, toParticipantId),
+                "ACTIVE"
+            ).map { it.membershipId }.toSet()
+        }
+        if (!activeMembers.contains(fromParticipantId) || !activeMembers.contains(toParticipantId)) {
             throw ExpenseDomainException(
                 ExpenseErrors.GROUP_NOT_FOUND,
                 "Settlement participants must be active group members"

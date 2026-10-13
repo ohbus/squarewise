@@ -114,6 +114,5 @@ interface GroupMembershipRepository : JpaRepository<GroupMembershipEntity, UUID>
      * @param status the membership status
      * @return the membership entity if found, null otherwise
      */
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
     fun findByGroupIdAndSubjectAndStatus(groupId: UUID, subject: String, status: String): GroupMembershipEntity?
 }

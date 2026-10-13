@@ -136,6 +136,42 @@ class GroupAccessCacheTest {
     }
 
     @Test
+    fun `activeMemberIds caches member UUIDs and invalidates on invalidateMembers`() {
+        val groupId = UUID.randomUUID()
+        val calls = AtomicInteger(0)
+        val memberIds = setOf(UUID.randomUUID(), UUID.randomUUID())
+
+        val res1 = cache.activeMemberIds(groupId) { calls.incrementAndGet(); memberIds }
+        val res2 = cache.activeMemberIds(groupId) { calls.incrementAndGet(); memberIds }
+
+        assertEquals(memberIds, res1)
+        assertEquals(memberIds, res2)
+        assertEquals(1, calls.get())
+
+        cache.invalidateMembers(groupId)
+        val res3 = cache.activeMemberIds(groupId) { calls.incrementAndGet(); memberIds }
+        assertEquals(2, calls.get())
+    }
+
+    @Test
+    fun `groupDetails caches group entity and invalidates on invalidateGroup`() {
+        val groupId = UUID.randomUUID()
+        val calls = AtomicInteger(0)
+        val details = "group-details-$groupId"
+
+        val res1 = cache.groupDetails(groupId) { calls.incrementAndGet(); details }
+        val res2 = cache.groupDetails(groupId) { calls.incrementAndGet(); details }
+
+        assertEquals(details, res1)
+        assertEquals(details, res2)
+        assertEquals(1, calls.get())
+
+        cache.invalidateGroup(groupId)
+        val res3 = cache.groupDetails(groupId) { calls.incrementAndGet(); details }
+        assertEquals(2, calls.get())
+    }
+
+    @Test
     fun `clear purges all cached categories`() {
         val groupId = UUID.randomUUID()
         val subject = "user-clear"

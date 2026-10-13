@@ -44,9 +44,9 @@ class JpaSettlementStore(
     private val audit: GroupAuditCommandStore,
     private val synchronization: SynchronizationStore,
     private val outbox: OutboxStore,
-    private val referenceValidator: EntityReferenceValidator = EntityReferenceValidator(groupRepository, membershipRepository),
     @Autowired(required = false)
-    private val groupAccessCache: GroupAccessCache? = null
+    private val groupAccessCache: GroupAccessCache? = null,
+    private val referenceValidator: EntityReferenceValidator = EntityReferenceValidator(groupRepository, membershipRepository, groupAccessCache)
 ) : SettlementStore {
 
     /**
