@@ -35,6 +35,15 @@ class NotificationConfigurationPropertiesTest {
         assertThrows(IllegalArgumentException::class.java) {
             NotificationMessagingProperties(deliveryWindowSeconds = 86_401)
         }
+        assertThrows(IllegalArgumentException::class.java) {
+            NotificationMessagingProperties(processedEventRetention = java.time.Duration.ZERO)
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            NotificationMessagingProperties(processedEventRetention = java.time.Duration.ofSeconds(-1))
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            NotificationMessagingProperties(processedEventCleanupBatchSize = 0)
+        }
         NotificationMessagingProperties(deliveryMaxPermits = 1_000_000, deliveryWindowSeconds = 86_400)
     }
 
@@ -62,6 +71,11 @@ class NotificationConfigurationPropertiesTest {
         messaging.deadLetterQueue = "notifications.test.dlq"
         messaging.authEmailDeadLetterQueue = "auth-email.test.dlq"
 
+        messaging.deliveryMaxPermits = 20
+        messaging.deliveryWindowSeconds = 120
+        messaging.processedEventRetention = java.time.Duration.ofDays(7)
+        messaging.processedEventCleanupBatchSize = 100
+
         assertEquals("mail.example.test", email.host)
         assertEquals(1025, email.port)
         assertEquals("noreply@example.test", email.fromAddress)
@@ -73,5 +87,9 @@ class NotificationConfigurationPropertiesTest {
         assertEquals("events.test.dlx", messaging.deadLetterExchange)
         assertEquals("notifications.test.dlq", messaging.deadLetterQueue)
         assertEquals("auth-email.test.dlq", messaging.authEmailDeadLetterQueue)
+        assertEquals(20, messaging.deliveryMaxPermits)
+        assertEquals(120, messaging.deliveryWindowSeconds)
+        assertEquals(java.time.Duration.ofDays(7), messaging.processedEventRetention)
+        assertEquals(100, messaging.processedEventCleanupBatchSize)
     }
 }
