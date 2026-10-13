@@ -23,8 +23,11 @@ class ExpenseIdempotencyCleanup(
     private val clock: Clock = Clock.systemUTC(),
     private val retention: Duration = DEFAULT_RETENTION,
     private val batchSize: Int = DEFAULT_BATCH_SIZE,
-    private val maxBatches: Int = DEFAULT_MAX_BATCHES
+    private val maxBatches: Int = DEFAULT_MAX_BATCHES,
+    @org.springframework.beans.factory.annotation.Autowired(required = false) transactionManager: org.springframework.transaction.PlatformTransactionManager? = null
 ) {
+    private val transactionTemplate = transactionManager?.let { org.springframework.transaction.support.TransactionTemplate(it) }
+
     init {
         require(!retention.isNegative && !retention.isZero) { "idempotency retention must be positive" }
         require(batchSize > 0) { "idempotency cleanup batch size must be positive" }
@@ -33,12 +36,13 @@ class ExpenseIdempotencyCleanup(
 
     /** Deletes claims older than the configured replay window across bounded batches. */
     @Scheduled(fixedDelayString = "\${squarewise.expense-idempotency.cleanup-delay-ms:3600000}")
-    @org.springframework.transaction.annotation.Transactional
     fun cleanupExpired(): Int {
         val cutoff: Instant = clock.instant().minus(retention)
         var totalDeleted = 0
         for (batch in 0 until maxBatches) {
-            val deleted = repository.purgeOlderThan(cutoff, batchSize)
+            val deleted = transactionTemplate?.execute {
+                repository.purgeOlderThan(cutoff, batchSize)
+            } ?: repository.purgeOlderThan(cutoff, batchSize)
             totalDeleted += deleted
             if (deleted < batchSize) break
         }

@@ -20,9 +20,11 @@ class CredentialCleanupTask(
     @Value("\${squarewise.auth.credential-retention-expired-days:7}") private val expiredRetentionDays: Long = 7,
     @Value("\${squarewise.auth.credential-retention-consumed-hours:24}") private val consumedRetentionHours: Long = 24,
     @Value("\${squarewise.auth.credential-cleanup-batch-size:500}") private val batchSize: Int = 500,
-    @Value("\${squarewise.auth.credential-cleanup-max-batches:50}") private val maxBatches: Int = 50
+    @Value("\${squarewise.auth.credential-cleanup-max-batches:50}") private val maxBatches: Int = 50,
+    @org.springframework.beans.factory.annotation.Autowired(required = false) transactionManager: org.springframework.transaction.PlatformTransactionManager? = null
 ) {
     private val log = LoggerFactory.getLogger(CredentialCleanupTask::class.java)
+    private val transactionTemplate = transactionManager?.let { org.springframework.transaction.support.TransactionTemplate(it) }
 
     init {
         require(expiredRetentionDays > 0) { "expired retention days must be positive" }
@@ -36,7 +38,6 @@ class CredentialCleanupTask(
      * credentials older than [consumedRetentionHours] hours across bounded batches.
      */
     @Scheduled(cron = "\${squarewise.auth.credential-cleanup-cron:0 0 * * * *}")
-    @Transactional
     fun executeCleanup(): Int {
         val now = Instant.now()
         val expiredCutoff = now.minus(Duration.ofDays(expiredRetentionDays))
@@ -44,7 +45,9 @@ class CredentialCleanupTask(
 
         var totalDeleted = 0
         for (batch in 0 until maxBatches) {
-            val deletedCount = loginCredentialRepository.purgeExpiredOrConsumed(expiredCutoff, consumedCutoff, batchSize)
+            val deletedCount = transactionTemplate?.execute {
+                loginCredentialRepository.purgeExpiredOrConsumed(expiredCutoff, consumedCutoff, batchSize)
+            } ?: loginCredentialRepository.purgeExpiredOrConsumed(expiredCutoff, consumedCutoff, batchSize)
             totalDeleted += deletedCount
             if (deletedCount < batchSize) break
         }

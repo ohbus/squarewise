@@ -28,7 +28,10 @@ class ProcessedNotificationEventCleanup(
     private val retention: Duration = properties.processedEventRetention,
     private val batchSize: Int = properties.processedEventCleanupBatchSize,
     private val maxBatches: Int = DEFAULT_MAX_BATCHES,
+    @org.springframework.beans.factory.annotation.Autowired(required = false) transactionManager: org.springframework.transaction.PlatformTransactionManager? = null
 ) {
+    private val transactionTemplate = transactionManager?.let { org.springframework.transaction.support.TransactionTemplate(it) }
+
     init {
         require(!retention.isNegative && !retention.isZero) {
             "processed event retention must be positive"
@@ -43,12 +46,13 @@ class ProcessedNotificationEventCleanup(
 
     /** Deletes markers older than the configured replay window across bounded batches. */
     @Scheduled(fixedDelayString = "\${squarewise.notifications.processed-event-cleanup-delay-ms:3600000}")
-    @org.springframework.transaction.annotation.Transactional
     fun cleanupExpired(): Int {
         val cutoff = clock.instant().minus(retention)
         var totalDeleted = 0
         for (batch in 0 until maxBatches) {
-            val deleted = repository.purgeProcessedOlderThan(cutoff, batchSize)
+            val deleted = transactionTemplate?.execute {
+                repository.purgeProcessedOlderThan(cutoff, batchSize)
+            } ?: repository.purgeProcessedOlderThan(cutoff, batchSize)
             totalDeleted += deleted
             if (deleted < batchSize) break
         }

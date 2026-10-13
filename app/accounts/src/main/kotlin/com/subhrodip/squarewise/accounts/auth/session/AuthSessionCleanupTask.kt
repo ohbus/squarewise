@@ -19,9 +19,11 @@ class AuthSessionCleanupTask(
     private val authSessionRepository: AuthSessionRepository,
     @Value("\${squarewise.auth.session-retention-days:30}") private val retentionDays: Long = 30,
     @Value("\${squarewise.auth.session-cleanup-batch-size:500}") private val batchSize: Int = 500,
-    @Value("\${squarewise.auth.session-cleanup-max-batches:50}") private val maxBatches: Int = 50
+    @Value("\${squarewise.auth.session-cleanup-max-batches:50}") private val maxBatches: Int = 50,
+    @org.springframework.beans.factory.annotation.Autowired(required = false) transactionManager: org.springframework.transaction.PlatformTransactionManager? = null
 ) {
     private val log = LoggerFactory.getLogger(AuthSessionCleanupTask::class.java)
+    private val transactionTemplate = transactionManager?.let { org.springframework.transaction.support.TransactionTemplate(it) }
 
     init {
         require(retentionDays > 0) { "session retention days must be positive" }
@@ -33,12 +35,13 @@ class AuthSessionCleanupTask(
      * Purges expired or revoked sessions older than [retentionDays] days across bounded batches.
      */
     @Scheduled(cron = "\${squarewise.auth.session-cleanup-cron:0 30 * * * *}")
-    @Transactional
     fun executeCleanup(): Int {
         val cutoff = Instant.now().minus(Duration.ofDays(retentionDays))
         var totalDeleted = 0
         for (batch in 0 until maxBatches) {
-            val deletedCount = authSessionRepository.purgeExpiredOrRevokedOlderThan(cutoff, batchSize)
+            val deletedCount = transactionTemplate?.execute {
+                authSessionRepository.purgeExpiredOrRevokedOlderThan(cutoff, batchSize)
+            } ?: authSessionRepository.purgeExpiredOrRevokedOlderThan(cutoff, batchSize)
             totalDeleted += deletedCount
             if (deletedCount < batchSize) break
         }

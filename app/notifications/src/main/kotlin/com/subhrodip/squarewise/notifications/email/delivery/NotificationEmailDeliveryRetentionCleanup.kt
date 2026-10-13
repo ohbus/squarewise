@@ -22,10 +22,12 @@ class NotificationEmailDeliveryRetentionCleanup(
     private val clock: Clock = Clock.systemUTC(),
     @Value("\${squarewise.notifications.email-delivery-retention-days:30}") retentionDays: Long = 30,
     @Value("\${squarewise.notifications.email-delivery-cleanup-batch-size:500}") private val batchSize: Int = DEFAULT_BATCH_SIZE,
-    @Value("\${squarewise.notifications.email-delivery-cleanup-max-batches:50}") private val maxBatches: Int = DEFAULT_MAX_BATCHES
+    @Value("\${squarewise.notifications.email-delivery-cleanup-max-batches:50}") private val maxBatches: Int = DEFAULT_MAX_BATCHES,
+    @org.springframework.beans.factory.annotation.Autowired(required = false) transactionManager: org.springframework.transaction.PlatformTransactionManager? = null
 ) {
     private val log = LoggerFactory.getLogger(NotificationEmailDeliveryRetentionCleanup::class.java)
     private val retention: Duration = Duration.ofDays(retentionDays)
+    private val transactionTemplate = transactionManager?.let { org.springframework.transaction.support.TransactionTemplate(it) }
 
     init {
         require(!retention.isNegative && !retention.isZero) { "email delivery retention must be positive" }
@@ -35,12 +37,13 @@ class NotificationEmailDeliveryRetentionCleanup(
 
     /** Purges completed email delivery records older than [retention] across bounded batches. */
     @Scheduled(fixedDelayString = "\${squarewise.notifications.email-delivery-cleanup-delay-ms:3600000}")
-    @Transactional
     fun cleanupCompleted(): Int {
         val cutoff: Instant = clock.instant().minus(retention)
         var totalDeleted = 0
         for (batch in 0 until maxBatches) {
-            val deleted = repository.purgeDeliveredOrSkippedOlderThan(cutoff, batchSize)
+            val deleted = transactionTemplate?.execute {
+                repository.purgeDeliveredOrSkippedOlderThan(cutoff, batchSize)
+            } ?: repository.purgeDeliveredOrSkippedOlderThan(cutoff, batchSize)
             totalDeleted += deleted
             if (deleted < batchSize) break
         }

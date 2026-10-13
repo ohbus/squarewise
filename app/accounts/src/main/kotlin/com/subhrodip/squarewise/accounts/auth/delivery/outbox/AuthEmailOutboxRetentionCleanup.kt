@@ -21,8 +21,11 @@ class AuthEmailOutboxRetentionCleanup(
     private val clock: Clock = Clock.systemUTC(),
     private val retention: Duration = DEFAULT_RETENTION,
     private val batchSize: Int = DEFAULT_BATCH_SIZE,
-    private val maxBatches: Int = DEFAULT_MAX_BATCHES
+    private val maxBatches: Int = DEFAULT_MAX_BATCHES,
+    @org.springframework.beans.factory.annotation.Autowired(required = false) transactionManager: org.springframework.transaction.PlatformTransactionManager? = null
 ) {
+    private val transactionTemplate = transactionManager?.let { org.springframework.transaction.support.TransactionTemplate(it) }
+
     init {
         require(!retention.isNegative && !retention.isZero) { "auth-email outbox retention must be positive" }
         require(batchSize > 0) { "auth-email outbox cleanup batch size must be positive" }
@@ -33,12 +36,13 @@ class AuthEmailOutboxRetentionCleanup(
      * Purges published messages older than [retention] across bounded batches.
      */
     @Scheduled(fixedDelayString = "\${squarewise.auth-email-outbox.cleanup-delay-ms:3600000}")
-    @Transactional
     fun cleanupPublished(): Int {
         val cutoff: Instant = clock.instant().minus(retention)
         var totalDeleted = 0
         for (batch in 0 until maxBatches) {
-            val deleted = repository.purgePublishedOlderThan(cutoff, batchSize)
+            val deleted = transactionTemplate?.execute {
+                repository.purgePublishedOlderThan(cutoff, batchSize)
+            } ?: repository.purgePublishedOlderThan(cutoff, batchSize)
             totalDeleted += deleted
             if (deleted < batchSize) break
         }
