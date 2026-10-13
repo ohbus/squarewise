@@ -38,9 +38,8 @@ class DbRouteAspectTest {
         @Transactional(readOnly = true)
         open fun readOnlyTx(): String {
             val ctx = DbContextHolder.current()
-            assertTrue(ctx.readerEligible)
-            assertEquals(DbOperationKind.QUERY, ctx.kind)
-            assertEquals(ReadConsistency.EVENTUAL, ctx.consistency)
+            assertFalse(ctx.readerEligible)
+            assertEquals(DbOperationKind.COMMAND, ctx.kind)
             return "ok-tx-read"
         }
 
@@ -111,8 +110,8 @@ class DbRouteAspectTest {
 
     @Test
     fun `pins inner read-only method to writer when executing inside active writer transaction`() {
-        val target = SampleService()
-        val method = SampleService::class.java.getMethod("readOnlyTx")
+        val target = BlankTargetReaderService()
+        val method = BlankTargetReaderService::class.java.getMethod("readBlank")
         val joinPoint = mock(ProceedingJoinPoint::class.java)
         val signature = mock(MethodSignature::class.java)
 
@@ -121,7 +120,7 @@ class DbRouteAspectTest {
         `when`(joinPoint.target).thenReturn(target)
         `when`(joinPoint.proceed()).thenAnswer {
             val ctx = DbContextHolder.current()
-            // Invariant: must remain on writer despite readOnly = true
+            // Invariant: must remain on writer despite readBlank being @DbReader
             assertFalse(ctx.readerEligible)
             assertEquals(DbOperationKind.COMMAND, ctx.kind)
             "pinned-to-writer"
@@ -140,8 +139,8 @@ class DbRouteAspectTest {
 
     @Test
     fun `inherits parent targetReader when inner read context leaves target blank`() {
-        val target = SampleService()
-        val method = SampleService::class.java.getMethod("readOnlyTx")
+        val target = BlankTargetReaderService()
+        val method = BlankTargetReaderService::class.java.getMethod("readBlank")
         val joinPoint = mock(ProceedingJoinPoint::class.java)
         val signature = mock(MethodSignature::class.java)
 
@@ -165,6 +164,22 @@ class DbRouteAspectTest {
             aspect.aroundRoutedMethod(joinPoint)
         }
         assertEquals("inherited-target", result)
+    }
+
+    @Test
+    fun `plain Transactional readOnly does not create reader context and preserves default writer route`() {
+        val target = SampleService()
+        val method = SampleService::class.java.getMethod("readOnlyTx")
+        val joinPoint = mock(ProceedingJoinPoint::class.java)
+        val signature = mock(MethodSignature::class.java)
+
+        `when`(joinPoint.signature).thenReturn(signature)
+        `when`(signature.method).thenReturn(method)
+        `when`(joinPoint.target).thenReturn(target)
+        `when`(joinPoint.proceed()).thenAnswer { target.readOnlyTx() }
+
+        val result = aspect.aroundRoutedMethod(joinPoint)
+        assertEquals("ok-tx-read", result)
     }
 
     @Test

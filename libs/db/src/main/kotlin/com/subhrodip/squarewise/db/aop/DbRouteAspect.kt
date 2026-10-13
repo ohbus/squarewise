@@ -101,25 +101,18 @@ class DbRouteAspect {
         return null
     }
 
-    private fun resolveTxContext(tx: Transactional, method: Method?, targetClass: Class<*>?): DbExecutionContext {
-        val opName = resolveOperationName("", method, targetClass)
-        return if (tx.readOnly) {
-            DbExecutionContext(
-                operationName = opName,
-                kind = DbOperationKind.QUERY,
-                consistency = ReadConsistency.EVENTUAL,
-                readerEligible = true,
-                targetReader = null
-            )
-        } else {
-            DbExecutionContext(
-                operationName = opName,
-                kind = DbOperationKind.COMMAND,
-                consistency = ReadConsistency.STRONG,
-                readerEligible = false,
-                targetReader = null
-            )
+    private fun resolveTxContext(tx: Transactional, method: Method?, targetClass: Class<*>?): DbExecutionContext? {
+        if (tx.readOnly) {
+            return null
         }
+        val opName = resolveOperationName("", method, targetClass)
+        return DbExecutionContext(
+            operationName = opName,
+            kind = DbOperationKind.COMMAND,
+            consistency = ReadConsistency.STRONG,
+            readerEligible = false,
+            targetReader = null
+        )
     }
 
     private fun applyContextInheritance(
