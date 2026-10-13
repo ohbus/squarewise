@@ -13,6 +13,8 @@ import java.sql.SQLException
 import javax.sql.DataSource
 import org.springframework.jdbc.datasource.AbstractDataSource
 
+import com.subhrodip.squarewise.db.health.DbReaderState
+
 /** Routes connections to the writer or a named read pool at acquisition time. */
 class DbRoutingDataSource(
     private val writer: DataSource,
@@ -23,12 +25,18 @@ class DbRoutingDataSource(
 ) : AbstractDataSource() {
     init { readers.keys.forEach(readerHealth::register) }
 
-    override fun getConnection(): Connection = connection(routeForCurrentContext())
+    override fun getConnection(): Connection {
+        val (route, readerName) = routeForCurrentContext()
+        return connection(route, readerName)
+    }
 
-    override fun getConnection(username: String?, password: String?): Connection = connection(routeForCurrentContext())
+    override fun getConnection(username: String?, password: String?): Connection {
+        val (route, readerName) = routeForCurrentContext()
+        return connection(route, readerName)
+    }
 
     /** Returns a connection for an explicit route. */
-    fun connection(route: DbRoute, readerName: String = readers.keys.firstOrNull() ?: ""): Connection {
+    fun connection(route: DbRoute, readerName: String = resolveReaderName()): Connection {
         val context = DbContextHolder.current()
         routeGuard.validate(context, route)
         val operation = context.operationName
@@ -39,7 +47,8 @@ class DbRoutingDataSource(
                 telemetry.acquisition(operation, "writer", (System.nanoTime() - started) / 1_000_000)
             }
         }
-        val reader = readers[readerName] ?: throw DbPlatformException(
+        val targetName = if (readerName.isNotBlank()) readerName else resolveReaderName()
+        val reader = readers[targetName] ?: throw DbPlatformException(
             PlatformErrors.PLATFORM_CONFIGURATION_INVALID,
             "No configured reader pool is available"
         )
@@ -52,8 +61,8 @@ class DbRoutingDataSource(
                 telemetry.acquisition(operation, "reader", (System.nanoTime() - started) / 1_000_000)
             }
         } catch (failure: SQLException) {
-            readerHealth.markFailure(readerName)
-            telemetry.failure(readerName)
+            readerHealth.markFailure(targetName)
+            telemetry.failure(targetName)
             throw DbPlatformException(PlatformErrors.DATABASE_UNAVAILABLE, cause = failure)
         }
     }
@@ -61,12 +70,32 @@ class DbRoutingDataSource(
     /** Returns the configured reader pools for health probing and diagnostics. */
     fun readerDataSources(): Map<String, DataSource> = readers.toMap()
 
-    private fun routeForCurrentContext(): DbRoute = when (readerHealth.route(DbContextHolder.current(), readers.keys.firstOrNull() ?: "")) {
-        DbReaderDecision.Reader -> DbRoute.READER
-        DbReaderDecision.Writer -> DbRoute.WRITER
-        DbReaderDecision.Fail -> throw DbPlatformException(
-            PlatformErrors.DATABASE_UNAVAILABLE,
-            "No healthy reader is available"
-        )
+    /** Resolves the target reader pool name based on context target or first healthy reader. */
+    fun resolveReaderName(): String {
+        val target = DbContextHolder.current().targetReader?.takeIf { it.isNotBlank() }
+        if (target != null) {
+            return target
+        }
+        for (candidate in readers.keys) {
+            if (readerHealth.state(candidate) == DbReaderState.HEALTHY) {
+                return candidate
+            }
+        }
+        return readers.keys.firstOrNull() ?: ""
+    }
+
+    private fun routeForCurrentContext(): Pair<DbRoute, String> {
+        val context = DbContextHolder.current()
+        val readerName = resolveReaderName()
+        val decision = readerHealth.route(context, readerName)
+        val route = when (decision) {
+            DbReaderDecision.Reader -> DbRoute.READER
+            DbReaderDecision.Writer -> DbRoute.WRITER
+            DbReaderDecision.Fail -> throw DbPlatformException(
+                PlatformErrors.DATABASE_UNAVAILABLE,
+                "No healthy reader is available"
+            )
+        }
+        return route to readerName
     }
 }

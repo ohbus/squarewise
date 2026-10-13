@@ -147,4 +147,45 @@ class DbRoutingDataSourceTest {
             assertFailsWith<DbPlatformException> { routing.getConnection() }
         }
     }
+
+    @Test
+    fun `implicit query routes to targeted reader when targetReader is specified`() {
+        val writer = mock(DataSource::class.java)
+        val reader1 = mock(DataSource::class.java)
+        val reader2 = mock(DataSource::class.java)
+        val conn2 = mock(Connection::class.java)
+        `when`(reader2.connection).thenReturn(conn2)
+        val routing = DbRoutingDataSource(writer, mapOf("replica-1" to reader1, "replica-2" to reader2))
+
+        DbContextHolder.withContext(
+            DbExecutionContext(
+                operationName = "expense.search",
+                kind = DbOperationKind.QUERY,
+                consistency = ReadConsistency.EVENTUAL,
+                readerEligible = true,
+                targetReader = "replica-2"
+            )
+        ) {
+            assertSame(conn2, routing.getConnection())
+        }
+    }
+
+    @Test
+    fun `implicit query selects second healthy reader when first reader fails`() {
+        val writer = mock(DataSource::class.java)
+        val reader1 = mock(DataSource::class.java)
+        val reader2 = mock(DataSource::class.java)
+        val conn2 = mock(Connection::class.java)
+        `when`(reader2.connection).thenReturn(conn2)
+        val health = DbReaderHealth(failureThreshold = 1)
+        health.markFailure("replica-1")
+        val routing = DbRoutingDataSource(writer, mapOf("replica-1" to reader1, "replica-2" to reader2), health)
+
+        DbContextHolder.withContext(
+            DbExecutionContext("expense.search", DbOperationKind.QUERY, ReadConsistency.EVENTUAL, readerEligible = true)
+        ) {
+            assertSame(conn2, routing.getConnection())
+        }
+    }
 }
+

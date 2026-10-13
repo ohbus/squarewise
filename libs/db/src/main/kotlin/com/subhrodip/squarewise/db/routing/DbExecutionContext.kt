@@ -13,7 +13,9 @@ data class DbExecutionContext(
     /** Whether the named operation has been approved for replica execution. */
     val readerEligible: Boolean = false,
     /** Optional writer watermark required before a replica may answer. */
-    val requiredWatermark: String? = null
+    val requiredWatermark: String? = null,
+    /** Optional explicit reader instance name to route queries to. */
+    val targetReader: String? = null
 ) {
     init {
         if (!operationName.matches(OPERATION_NAME)) {

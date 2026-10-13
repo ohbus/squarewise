@@ -21,12 +21,18 @@ import io.micrometer.core.instrument.MeterRegistry
 import org.springframework.scheduling.annotation.EnableScheduling
 import org.springframework.boot.web.servlet.FilterRegistrationBean
 
+import com.subhrodip.squarewise.db.aop.DbRouteAspect
+
 /** Provides the writer/reader datasource topology when explicitly enabled. */
 @AutoConfiguration
 @EnableConfigurationProperties(DbProperties::class)
 @EnableScheduling
 @ConditionalOnProperty(prefix = "squarewise.db", name = ["enabled"], havingValue = "true")
 class DbAutoConfiguration {
+    /** Registers declarative routing aspect for @DbRouteContext and @Transactional methods. */
+    @Bean
+    fun squarewiseDbRouteAspect(): DbRouteAspect = DbRouteAspect()
+
     /** Creates telemetry even when an application has no metrics registry, preserving diagnostics. */
     @Bean
     fun squarewiseDbTelemetry(registry: ObjectProvider<MeterRegistry>): DbTelemetry = DbTelemetry(registry.getIfAvailable())
