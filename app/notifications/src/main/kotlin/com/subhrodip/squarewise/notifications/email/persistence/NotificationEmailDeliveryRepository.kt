@@ -25,4 +25,25 @@ interface NotificationEmailDeliveryRepository : JpaRepository<NotificationEmailD
         nativeQuery = true
     )
     fun claimForDispatch(notificationId: UUID, now: Instant, leaseCutoff: Instant): Int
+
+    /**
+     * Purges delivered or skipped email delivery records older than [cutoff] in bounded batches.
+     */
+    @Modifying
+    @Query(
+        value = """
+            DELETE FROM notification_email_deliveries
+            WHERE notification_id IN (
+                SELECT notification_id FROM notification_email_deliveries
+                WHERE (status = 'DELIVERED' OR status = 'SKIPPED')
+                  AND updated_at < :cutoff
+                LIMIT :limit
+            )
+        """,
+        nativeQuery = true
+    )
+    fun purgeDeliveredOrSkippedOlderThan(
+        @org.springframework.data.repository.query.Param("cutoff") cutoff: Instant,
+        @org.springframework.data.repository.query.Param("limit") limit: Int
+    ): Int
 }
