@@ -13,6 +13,7 @@ import com.subhrodip.squarewise.notifications.email.delivery.EmailDeliveryOutcom
 import com.subhrodip.squarewise.notifications.errors.NotificationDomainException
 import com.subhrodip.squarewise.notifications.preferences.persistence.PreferenceStore
 import com.subhrodip.squarewise.errors.catalog.NotificationErrors
+import com.subhrodip.squarewise.errors.code.RetryPolicy
 
 import org.hibernate.exception.ConstraintViolationException
 import org.slf4j.LoggerFactory
@@ -77,6 +78,13 @@ class NotificationEventConsumer(
             }
             try {
                 dispatchEmailIfEnabled(event)
+            } catch (failure: NotificationDomainException) {
+                if (failure.definition.retryPolicy == RetryPolicy.NEVER) {
+                    markDelivery(event.notificationId, NotificationEmailDeliveryEntity.SKIPPED)
+                } else {
+                    markDelivery(event.notificationId, NotificationEmailDeliveryEntity.PENDING)
+                }
+                throw failure
             } catch (failure: RuntimeException) {
                 markDelivery(event.notificationId, NotificationEmailDeliveryEntity.PENDING)
                 throw failure

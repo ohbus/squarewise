@@ -5,6 +5,8 @@ import com.subhrodip.squarewise.notifications.preferences.model.NotificationPref
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.transaction.support.TransactionSynchronization
+import org.springframework.transaction.support.TransactionSynchronizationManager
 
 /**
  * JPA implementation of [PreferenceStore] backed by [NotificationPreferenceRepository].
@@ -33,7 +35,9 @@ class JpaPreferenceStore(
     @Transactional(readOnly = true)
     override fun get(subject: String): NotificationPreferences {
         val validatedSubject = requireSubject(subject)
-        return if (preferenceCache != null) {
+        val inWriteTransaction = TransactionSynchronizationManager.isActualTransactionActive() &&
+            !TransactionSynchronizationManager.isCurrentTransactionReadOnly()
+        return if (preferenceCache != null && !inWriteTransaction) {
             preferenceCache.get(validatedSubject) { loadPreferences(validatedSubject) }
         } else {
             loadPreferences(validatedSubject)
@@ -61,7 +65,21 @@ class JpaPreferenceStore(
         entity.emailEnabled = value.emailEnabled
         entity.pushEnabled = value.pushEnabled
         repository.save(entity)
-        preferenceCache?.invalidate(validatedSubject)
+        invalidateAfterCommit(validatedSubject)
+    }
+
+    private fun invalidateAfterCommit(subject: String) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(
+                object : TransactionSynchronization {
+                    override fun afterCommit() {
+                        preferenceCache?.invalidate(subject)
+                    }
+                }
+            )
+        } else {
+            preferenceCache?.invalidate(subject)
+        }
     }
 
     private fun requireSubject(subject: String): String {

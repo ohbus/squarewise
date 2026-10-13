@@ -1,6 +1,9 @@
 package com.subhrodip.squarewise.notifications.consumer.persistence
 
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Modifying
+import org.springframework.data.jpa.repository.Query
+import org.springframework.data.repository.query.Param
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Repository
 import java.time.Instant
@@ -15,8 +18,8 @@ interface ProcessedNotificationEventRepository : JpaRepository<ProcessedNotifica
     fun findByProcessedAtBefore(processedAt: Instant, pageable: Pageable): List<ProcessedNotificationEventEntity>
 
     /** Purges notification deduplication markers older than [cutoff] in bounded batches directly in the database. */
-    @org.springframework.data.jpa.repository.Modifying
-    @org.springframework.data.jpa.repository.Query(
+    @Modifying
+    @Query(
         value = """
             DELETE FROM notification_processed_events
             WHERE event_id IN (
@@ -28,8 +31,8 @@ interface ProcessedNotificationEventRepository : JpaRepository<ProcessedNotifica
         nativeQuery = true
     )
     fun purgeProcessedOlderThan(
-        @org.springframework.data.repository.query.Param("cutoff") cutoff: Instant,
-        @org.springframework.data.repository.query.Param("limit") limit: Int
+        @Param("cutoff") cutoff: Instant,
+        @Param("limit") limit: Int
     ): Int
 }
 

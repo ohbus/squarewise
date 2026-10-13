@@ -21,6 +21,7 @@ class PreferenceCache(
     }
 
     private val cache = ConcurrentHashMap<String, Entry>()
+    private val invalidationTimestamps = ConcurrentHashMap<String, Instant>()
 
     /**
      * Resolves notification preferences for a user, using cached state if valid.
@@ -35,9 +36,13 @@ class PreferenceCache(
         if (cached != null && !cached.isExpired(now)) {
             return cached.preferences
         }
+        val loadStart = Instant.now()
         val computed = loader()
-        evictIfOversized()
-        cache[subject] = Entry(computed, now.plus(ttl))
+        val invalidatedAt = invalidationTimestamps[subject]
+        if (invalidatedAt == null || !invalidatedAt.isAfter(loadStart)) {
+            evictIfOversized()
+            cache[subject] = Entry(computed, now.plus(ttl))
+        }
         return computed
     }
 
@@ -47,18 +52,30 @@ class PreferenceCache(
      * @param subject user subject identifier.
      */
     fun invalidate(subject: String) {
+        invalidationTimestamps[subject] = Instant.now()
         cache.remove(subject)
     }
 
     /** Clears all cached preferences. */
     fun clear() {
         cache.clear()
+        invalidationTimestamps.clear()
     }
 
     private fun evictIfOversized() {
         if (cache.size > maxEntries) {
             val now = Instant.now()
             cache.entries.removeIf { it.value.isExpired(now) }
+            if (cache.size > maxEntries) {
+                val iter = cache.keys.iterator()
+                var removed = 0
+                val target = maxEntries / 4
+                while (iter.hasNext() && removed < target) {
+                    iter.next()
+                    iter.remove()
+                    removed++
+                }
+            }
         }
     }
 }
