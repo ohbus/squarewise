@@ -13,17 +13,21 @@ import com.subhrodip.squarewise.expensecore.recurring.api.CreateRecurringSchedul
 import com.subhrodip.squarewise.expensecore.recurring.api.UpdateRecurringScheduleRequest
 import com.subhrodip.squarewise.expensecore.recurring.domain.RecurringExpenseOccurrence
 import com.subhrodip.squarewise.expensecore.recurring.domain.RecurrenceFrequency
+import com.subhrodip.squarewise.expensecore.recurring.domain.RecurringExpenseSchedule
 import com.subhrodip.squarewise.expensecore.recurring.persistence.RecurringExpenseOccurrenceRepository
 import com.subhrodip.squarewise.expensecore.recurring.persistence.RecurringExpenseScheduleRepository
 import com.subhrodip.squarewise.expensecore.recurring.service.RecurringExpenseService
+import java.lang.reflect.Method
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.springframework.amqp.AmqpException
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.test.util.AopTestUtils
 import org.springframework.transaction.annotation.Transactional
 import jakarta.persistence.EntityManager
 import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
@@ -48,6 +52,7 @@ class RecurringExpenseServiceTest @Autowired constructor(
     @Test
     fun `default due-occurrence entrypoint uses current date and bounded catch-up`() {
         assertEquals(0, service.processDueOccurrences())
+        assertEquals(0, service.processDueOccurrences(5))
     }
 
     @Test
@@ -169,6 +174,20 @@ class RecurringExpenseServiceTest @Autowired constructor(
 
         assertEquals("Biweekly Deep Clean", updated.description)
         assertEquals(8000, updated.amountMinor)
+
+        val updatedWithTimezone = service.updateSchedule(
+            group.groupId,
+            schedule.scheduleId,
+            UpdateRecurringScheduleRequest(
+                description = "Biweekly Deep Clean",
+                amountMinor = 8000,
+                currency = "EUR",
+                frequency = RecurrenceFrequency.WEEKLY,
+                startDate = startDate,
+                timezone = "America/New_York"
+            )
+        )
+        assertEquals("America/New_York", updatedWithTimezone.timezone)
     }
 
     @Test
@@ -1078,5 +1097,100 @@ class RecurringExpenseServiceTest @Autowired constructor(
         val expenseId = service.getOccurrences(schedule.scheduleId).single().expenseId
         val expense = expenseStore.findById(expenseId!!)
         assertEquals(listOf(member.membershipId), expense?.allocations?.map { it.participantId })
+    }
+
+    @Test
+    fun `processDueOccurrences respects maxCatchUpOccurrences limit`() {
+        val group = groupStore.create("alice", CreateGroupRequest("Catchup", "HOUSEHOLD", "EUR"))
+        val startDate = LocalDate.of(2026, 1, 1)
+        service.createSchedule(
+            group.groupId,
+            CreateRecurringScheduleRequest(
+                description = "Catchup schedule",
+                amountMinor = 1000,
+                currency = "EUR",
+                frequency = RecurrenceFrequency.WEEKLY,
+                startDate = startDate
+            )
+        )
+        val generated = service.processDueOccurrences(maxCatchUpOccurrences = 2, asOfDate = startDate.plusWeeks(5))
+        assertEquals(2, generated)
+    }
+
+    @Test
+    fun `buildExpenseRecord with custom allocations only defaults payers to group member`() {
+        val group = groupStore.create("alice", CreateGroupRequest("Custom Alloc Only", "HOUSEHOLD", "EUR"))
+        val member = groupStore.listMembers(group.groupId, "alice").single()
+        val startDate = LocalDate.of(2026, 10, 1)
+        val schedule = service.createSchedule(
+            group.groupId,
+            CreateRecurringScheduleRequest(
+                description = "Alloc only",
+                amountMinor = 1000,
+                currency = "EUR",
+                frequency = RecurrenceFrequency.MONTHLY,
+                startDate = startDate,
+                payers = null,
+                allocations = listOf(ExpenseAllocation(member.membershipId, 1000))
+            )
+        )
+        assertEquals(1, service.processDueOccurrences(asOfDate = startDate))
+        val occurrence = service.getOccurrences(schedule.scheduleId).single()
+        val expense = expenseStore.findById(occurrence.expenseId!!)
+        assertEquals(member.membershipId, expense?.payers?.single()?.participantId)
+    }
+
+    @Test
+    fun `buildExpenseRecord with custom payers only defaults allocations to split equally`() {
+        val group = groupStore.create("alice", CreateGroupRequest("Custom Payer Only", "HOUSEHOLD", "EUR"))
+        val member = groupStore.listMembers(group.groupId, "alice").single()
+        val startDate = LocalDate.of(2026, 10, 1)
+        val schedule = service.createSchedule(
+            group.groupId,
+            CreateRecurringScheduleRequest(
+                description = "Payer only",
+                amountMinor = 1000,
+                currency = "EUR",
+                frequency = RecurrenceFrequency.MONTHLY,
+                startDate = startDate,
+                payers = listOf(ExpensePayer(member.membershipId, 1000)),
+                allocations = null
+            )
+        )
+        assertEquals(1, service.processDueOccurrences(asOfDate = startDate))
+        val occurrence = service.getOccurrences(schedule.scheduleId).single()
+        val expense = expenseStore.findById(occurrence.expenseId!!)
+        assertEquals(member.membershipId, expense?.allocations?.single()?.participantId)
+    }
+
+    @Test
+    fun `handleGenerationFailure suppresses AmqpException without pausing schedule`() {
+        val group = groupStore.create("alice", CreateGroupRequest("Failure Handling", "HOUSEHOLD", "EUR"))
+        val schedule = scheduleRepository.save(
+            RecurringExpenseSchedule(
+                scheduleId = UUID.randomUUID(),
+                groupId = group.groupId,
+                description = "Fail test",
+                amountMinor = 100,
+                currency = "EUR",
+                frequency = RecurrenceFrequency.MONTHLY,
+                startDate = LocalDate.now(),
+                nextOccurrenceDate = LocalDate.now(),
+                paused = false
+            )
+        )
+        val targetService = AopTestUtils.getTargetObject<RecurringExpenseService>(service)
+        val failureMethod: Method = RecurringExpenseService::class.java.getDeclaredMethod(
+            "handleGenerationFailure",
+            RecurringExpenseSchedule::class.java,
+            UUID::class.java,
+            Exception::class.java
+        ).apply { isAccessible = true }
+
+        failureMethod.invoke(targetService, schedule, UUID.randomUUID(), AmqpException("broker down"))
+        assertFalse(schedule.paused)
+
+        failureMethod.invoke(targetService, schedule, UUID.randomUUID(), IllegalStateException("business failure"))
+        assertTrue(schedule.paused)
     }
 }

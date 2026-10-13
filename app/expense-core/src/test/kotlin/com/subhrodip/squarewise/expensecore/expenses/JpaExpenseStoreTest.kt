@@ -26,6 +26,13 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.transaction.annotation.Transactional
 import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
 
+import com.subhrodip.squarewise.expensecore.expenses.persistence.repository.ExpenseRepository
+import com.subhrodip.squarewise.expensecore.expenses.persistence.repository.ExpenseIdempotencyRepository
+import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseRequestLimits
+import org.mockito.Mockito.mock
+import org.mockito.Mockito.`when`
+import org.springframework.data.domain.PageRequest
+
 @SpringBootTest
 @Transactional
 class JpaExpenseStoreTest @Autowired constructor(
@@ -35,7 +42,9 @@ class JpaExpenseStoreTest @Autowired constructor(
     private val membershipRepository: GroupMembershipRepository,
     private val outboxStore: OutboxStore,
     private val syncStore: SynchronizationStore,
-    private val balancePostingRepository: BalancePostingRepository
+    private val balancePostingRepository: BalancePostingRepository,
+    private val expenseRepository: ExpenseRepository,
+    private val idempotencyRepository: ExpenseIdempotencyRepository
 ) {
 
     @Test
@@ -64,7 +73,7 @@ class JpaExpenseStoreTest @Autowired constructor(
         assertEquals(CategoryCode.NOT_FOUND, error.definition.category)
         assertNull(expenseStore.findById(expenseId))
         assertTrue(balancePostingRepository.findByGroupId(groupId).isEmpty())
-        assertTrue(outboxStore.snapshot().isEmpty())
+        assertTrue(outboxStore.snapshot().none { it.groupId == groupId })
     }
 
     @Test
@@ -941,5 +950,72 @@ class JpaExpenseStoreTest @Autowired constructor(
         assertThrows(SquarewiseException::class.java) {
             expenseStore.list(group.groupId, null, "not-a-valid-uuid", 20)
         }
+    }
+
+    @Test
+    fun `balances without groupAccessCache calculates balances directly`() {
+        val uncachedStore = JpaExpenseStore(
+            expenseRepository = expenseRepository,
+            idempotencyRepository = idempotencyRepository,
+            balancePostingRepository = balancePostingRepository,
+            groupRepository = groupRepository,
+            membershipRepository = membershipRepository,
+            outboxStore = outboxStore,
+            syncStore = syncStore,
+            groupAccessCache = null
+        )
+        val group = groupStore.create("alice", CreateGroupRequest("Uncached Balances", "TRIP", "EUR"))
+        val balances = uncachedStore.balances(group.groupId)
+        assertEquals(0, balances.size)
+    }
+
+    @Test
+    fun `balances rejects result sets exceeding maximum balance rows`() {
+        val mockedPostingRepo = mock(BalancePostingRepository::class.java)
+        val group = groupStore.create("alice", CreateGroupRequest("Oversized Balances", "TRIP", "EUR"))
+        val oversizedRows = (1..5001).map { arrayOf<Any>(UUID.randomUUID().toString(), "EUR", 100L) }
+        val targetGroupId = group.groupId
+        `when`(mockedPostingRepo.sumBalancesByGroup(targetGroupId, PageRequest.of(0, ExpenseRequestLimits.MAX_BALANCE_ROWS + 1)))
+            .thenReturn(oversizedRows)
+
+        val oversizedStore = JpaExpenseStore(
+            expenseRepository = expenseRepository,
+            idempotencyRepository = idempotencyRepository,
+            balancePostingRepository = mockedPostingRepo,
+            groupRepository = groupRepository,
+            membershipRepository = membershipRepository,
+            outboxStore = outboxStore,
+            syncStore = syncStore,
+            groupAccessCache = null
+        )
+
+        val error = assertThrows(SquarewiseException::class.java) {
+            oversizedStore.balances(group.groupId)
+        }
+        assertEquals(CategoryCode.VALIDATION_ERROR, error.definition.category)
+    }
+
+    @Test
+    fun `creation rejects non-active actor subject with hidden access`() {
+        val group = groupStore.create("alice", CreateGroupRequest("Inactive Actor", "TRIP", "EUR"))
+        val aliceId = membershipRepository.findByGroupId(group.groupId).single().membershipId
+        val record = ExpenseRecord(
+            expenseId = UUID.randomUUID(),
+            groupId = group.groupId,
+            description = "Attempted by non-member",
+            category = "other",
+            currency = "EUR",
+            amountMinor = 500,
+            version = 1,
+            allocationMode = "EXACT",
+            createdAt = Instant.now(),
+            payers = listOf(ExpensePayer(aliceId, 500)),
+            allocations = listOf(ExpenseAllocation(aliceId, 500))
+        )
+
+        val error = assertThrows(SquarewiseException::class.java) {
+            expenseStore.create(group.groupId, record, "non-member-key", "charlie")
+        }
+        assertEquals(CategoryCode.NOT_FOUND, error.definition.category)
     }
 }

@@ -39,8 +39,14 @@ class JpaGroupStoreBoundaryTest {
         assertNotFound { store.update(groupId, "alice", UpdateGroupRequest("Renamed")) }
         assertNotFound { store.archive(groupId, "alice") }
         assertNotFound { store.addPlaceholder(groupId, "alice", CreatePlaceholderRequest("Placeholder")) }
-        assertNotFound { store.removeMember(groupId, "alice", UUID.randomUUID()) }
+        val memberId = UUID.randomUUID()
+        `when`(memberships.findByMembershipIdAndGroupId(memberId, groupId)).thenReturn(
+            GroupMembershipEntity(memberId, groupId, subject = "bob", status = "ACTIVE")
+        )
+        assertNotFound { store.removeMember(groupId, "alice", memberId) }
         assertNotFound { store.revokeInvite(groupId, "alice", "a".repeat(64)) }
+        `when`(groups.findById(groupId)).thenReturn(Optional.empty())
+        assertNotFound { store.invite(groupId, "alice", CreateInviteRequest(24)) }
     }
 
     @Test

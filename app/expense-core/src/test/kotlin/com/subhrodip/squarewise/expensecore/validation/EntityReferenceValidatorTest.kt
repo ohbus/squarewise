@@ -299,4 +299,54 @@ class EntityReferenceValidatorTest {
 
         cachedValidator.validateSettlementParticipants(groupId, p1, p2)
     }
+
+    @Test
+    fun `validateFinancialParticipants and validateActiveParticipants return empty set on empty input`() {
+        val groupId = UUID.randomUUID()
+        assertEquals(emptySet<UUID>(), validator.validateFinancialParticipants(groupId, emptyList(), emptyList()))
+        assertEquals(emptySet<UUID>(), validator.validateActiveParticipants(groupId, emptyList()))
+    }
+
+    @Test
+    fun `isActiveMember and isActiveGroup function correctly without cache`() {
+        val groupId = UUID.randomUUID()
+        val subject = "uncached-user"
+        `when`(membershipRepository.existsByGroupIdAndSubjectAndStatus(groupId, subject, "ACTIVE")).thenReturn(true)
+        `when`(groupRepository.findById(groupId)).thenReturn(Optional.of(GroupEntity(groupId, "Trip", "TRIP", "USD", status = "ACTIVE")))
+
+        assertTrue(validator.isActiveMember(groupId, subject))
+        assertTrue(validator.isActiveGroup(groupId))
+    }
+
+    @Test
+    fun `validateSettlementParticipants rejects when recipient counterparty is missing`() {
+        val groupId = UUID.randomUUID()
+        val from = UUID.randomUUID()
+        val to = UUID.randomUUID()
+        val mTo = GroupMembershipEntity(to, groupId, "to-user")
+
+        `when`(membershipRepository.findByGroupIdAndMembershipIdInAndStatus(groupId, setOf(from, to), "ACTIVE"))
+            .thenReturn(listOf(mTo))
+
+        val ex = assertThrows(ExpenseDomainException::class.java) {
+            validator.validateSettlementParticipants(groupId, from, to)
+        }
+        assertSame(ExpenseErrors.GROUP_NOT_FOUND, ex.definition)
+    }
+
+    @Test
+    fun `validateSettlementParticipants rejects with cached memberIds when counterparty not in group`() {
+        val cache = GroupAccessCache()
+        val cachedValidator = EntityReferenceValidator(groupRepository, membershipRepository, cache)
+        val groupId = UUID.randomUUID()
+        val from = UUID.randomUUID()
+        val to = UUID.randomUUID()
+        val mFrom = GroupMembershipEntity(from, groupId, "alice")
+        `when`(membershipRepository.findByGroupIdAndStatus(groupId, "ACTIVE")).thenReturn(listOf(mFrom))
+
+        val ex = assertThrows(ExpenseDomainException::class.java) {
+            cachedValidator.validateSettlementParticipants(groupId, from, to)
+        }
+        assertSame(ExpenseErrors.GROUP_NOT_FOUND, ex.definition)
+    }
 }

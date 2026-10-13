@@ -9,6 +9,7 @@ import com.subhrodip.squarewise.expensecore.expenses.domain.ExpensePayer
 import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseRecord
 import com.subhrodip.squarewise.expensecore.expenses.persistence.store.InMemoryExpenseStore
 import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupMembershipRepository
+import com.subhrodip.squarewise.expensecore.groups.cache.GroupAccessCache
 
 import org.junit.jupiter.api.Test
 import org.springframework.http.MediaType
@@ -205,5 +206,38 @@ class SettlementControllerTest {
             .contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"unknown\"}"))
             .andExpect(status().isNotFound)
             .andExpect(jsonPath("$.code").value("NOT_FOUND"))
+    }
+
+    @Test
+    fun `controller with groupAccessCache validates and caches active membership`() {
+        val cache = GroupAccessCache()
+        val cachedController = SettlementController(service, memberships, cache)
+        val cachedMvc = MockMvcBuilders.standaloneSetup(cachedController)
+            .setControllerAdvice(GlobalErrorAdvice()).build()
+
+        val groupId = UUID.randomUUID()
+        // Suggestions call checks membership via cache
+        cachedMvc.perform(get(ApiEndpoints.ExpenseCore.V1.groupSettlementSuggestions(groupId)).with(user))
+            .andExpect(status().isOk)
+
+        // Subsequent call exercises cache hit in GroupAccessCache.isMember
+        cachedMvc.perform(get(ApiEndpoints.ExpenseCore.V1.groupSettlementSuggestions(groupId)).with(user))
+            .andExpect(status().isOk)
+
+        // Non-member request
+        val nonMember = RequestPostProcessor { request -> request.userPrincipal = Principal { "other-user" }; request }
+        cachedMvc.perform(get(ApiEndpoints.ExpenseCore.V1.groupSettlementSuggestions(groupId)).with(nonMember))
+            .andExpect(status().isNotFound)
+    }
+
+    @Test
+    fun `rejects requests when principal is missing or blank`() {
+        val groupId = UUID.randomUUID()
+        mvc.perform(get(ApiEndpoints.ExpenseCore.V1.groupSettlementSuggestions(groupId)))
+            .andExpect(status().isUnauthorized)
+
+        val blankUser = RequestPostProcessor { request -> request.userPrincipal = Principal { "   " }; request }
+        mvc.perform(get(ApiEndpoints.ExpenseCore.V1.groupSettlementSuggestions(groupId)).with(blankUser))
+            .andExpect(status().isUnauthorized)
     }
 }

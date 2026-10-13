@@ -8,9 +8,12 @@ import java.time.ZoneOffset
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
+import org.mockito.Mockito.any
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
+import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.transaction.TransactionStatus
 
 class OutboxRetentionCleanupTest {
     private val repository = mock(OutboxRepository::class.java)
@@ -52,6 +55,41 @@ class OutboxRetentionCleanupTest {
         val deleted = cleanup.cleanupPublished()
 
         assertEquals(233, deleted)
+    }
+
+    @Test
+    fun `cleanupPublished wraps batch in transaction when transaction manager is present`() {
+        val tm = mock(PlatformTransactionManager::class.java)
+        val status = mock(TransactionStatus::class.java)
+        `when`(tm.getTransaction(any())).thenReturn(status)
+
+        val retention = Duration.ofDays(7)
+        val expectedCutoff = now.minus(retention)
+        `when`(repository.purgePublishedOlderThan(expectedCutoff, 100)).thenReturn(10)
+
+        val cleanup = OutboxRetentionCleanup(
+            repository = repository,
+            clock = clock,
+            retention = retention,
+            batchSize = 100,
+            transactionManager = tm
+        )
+
+        val purged = cleanup.cleanupPublished()
+
+        assertEquals(10, purged)
+        verify(tm).commit(status)
+    }
+
+    @Test
+    fun `default constructor and companion constants have expected values`() {
+        assertEquals(Duration.ofDays(7), OutboxRetentionCleanup.DEFAULT_RETENTION)
+        assertEquals(500, OutboxRetentionCleanup.DEFAULT_BATCH_SIZE)
+        assertEquals(50, OutboxRetentionCleanup.DEFAULT_MAX_BATCHES)
+
+        val defaultCleanup = OutboxRetentionCleanup(repository)
+        `when`(repository.purgePublishedOlderThan(any(Instant::class.java) ?: Instant.EPOCH, any(Int::class.java) ?: 500)).thenReturn(0)
+        assertEquals(0, defaultCleanup.cleanupPublished())
     }
 
     @Test

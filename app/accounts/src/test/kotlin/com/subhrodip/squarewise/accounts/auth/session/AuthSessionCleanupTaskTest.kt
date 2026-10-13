@@ -9,6 +9,8 @@ import org.mockito.Mockito.eq
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
+import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.transaction.TransactionStatus
 
 class AuthSessionCleanupTaskTest {
     private val repository = mock(AuthSessionRepository::class.java)
@@ -35,6 +37,31 @@ class AuthSessionCleanupTaskTest {
         val count = task.executeCleanup()
 
         assertEquals(242, count)
+    }
+
+    @Test
+    fun `executeCleanup with transaction manager wraps batch in transaction`() {
+        val tm = mock(PlatformTransactionManager::class.java)
+        val status = mock(TransactionStatus::class.java)
+        `when`(tm.getTransaction(any())).thenReturn(status)
+
+        val task = AuthSessionCleanupTask(repository, retentionDays = 14, batchSize = 100, transactionManager = tm)
+        `when`(repository.purgeExpiredOrRevokedOlderThan(any(Instant::class.java) ?: Instant.EPOCH, eq(100))).thenReturn(25)
+
+        val count = task.executeCleanup()
+
+        assertEquals(25, count)
+        verify(tm).commit(status)
+    }
+
+    @Test
+    fun `executeCleanup returns zero when no expired sessions exist`() {
+        val task = AuthSessionCleanupTask(repository)
+        `when`(repository.purgeExpiredOrRevokedOlderThan(any(Instant::class.java) ?: Instant.EPOCH, eq(500))).thenReturn(0)
+
+        val count = task.executeCleanup()
+
+        assertEquals(0, count)
     }
 
     @Test

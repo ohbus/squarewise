@@ -424,11 +424,12 @@ class RabbitNotificationListenerTest {
     fun `bounds an explicit broker attempt header`() {
         val consumer = NotificationConsumer { NotificationConsumptionOutcome.APPLIED }
         val listener = RabbitNotificationListener(consumer, envelopeParser, deadLetterPublisher = DeadLetterPublisher { })
-        val message = createMessage("{}", 84L).also { it.messageProperties.setHeader("x-attempt", 99) }
+        val messageHigh = createMessage("{}", 84L).also { it.messageProperties.setHeader("x-attempt", 99) }
+        listener.onMessage(messageHigh, TestChannel())
 
-        listener.onMessage(message, TestChannel())
+        val messageLow = createMessage("{}", 85L).also { it.messageProperties.setHeader("x-attempt", 0) }
+        listener.onMessage(messageLow, TestChannel())
     }
-
 
     @Test
     fun `rejects notification fields that exceed durable inbox limits`() {
@@ -444,6 +445,28 @@ class RabbitNotificationListenerTest {
         )
 
         assertThrows(InvalidEnvelopeException::class.java) { base.toNotificationEvent() }
+        assertThrows(InvalidEnvelopeException::class.java) {
+            base.copy(payload = mapOf("subject" to "", "message" to "hello")).toNotificationEvent()
+        }
+        assertThrows(InvalidEnvelopeException::class.java) {
+            base.copy(eventType = "", payload = mapOf("subject" to "user")).toNotificationEvent()
+        }
+        assertThrows(InvalidEnvelopeException::class.java) {
+            base.copy(payload = mapOf("subject" to "s".repeat(201))).toNotificationEvent()
+        }
+        assertThrows(InvalidEnvelopeException::class.java) {
+            base.copy(eventType = "e".repeat(201), payload = mapOf("subject" to "user")).toNotificationEvent()
+        }
+    }
+
+    @Test
+    fun `handles transient exception when channel is null`() {
+        val consumer = NotificationConsumer {
+            throw IllegalStateException("Transient database connectivity failure")
+        }
+        val listener = RabbitNotificationListener(consumer, envelopeParser, deadLetterPublisher = DeadLetterPublisher { })
+        val message = createMessage("{}", 88L)
+        listener.onMessage(message, null)
     }
 
     private fun createMessage(content: String, deliveryTag: Long, redelivered: Boolean = false): Message {

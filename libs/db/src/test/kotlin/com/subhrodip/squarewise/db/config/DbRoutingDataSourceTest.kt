@@ -3,6 +3,7 @@ package com.subhrodip.squarewise.db.config
 import com.subhrodip.squarewise.db.errors.DbPlatformException
 import com.subhrodip.squarewise.db.health.DbReaderState
 import com.subhrodip.squarewise.db.health.DbReaderHealth
+import com.subhrodip.squarewise.db.health.DbReaderDecision
 
 import com.subhrodip.squarewise.db.routing.DbContextHolder
 import com.subhrodip.squarewise.db.routing.DbExecutionContext
@@ -214,6 +215,93 @@ class DbRoutingDataSourceTest {
             )
         ) {
             assertSame(conn2, routing.getConnection())
+        }
+    }
+
+    @Test
+    fun `getConnection with credentials routes to appropriate datasource`() {
+        val writer = mock(DataSource::class.java)
+        val conn = mock(Connection::class.java)
+        `when`(writer.connection).thenReturn(conn)
+        val routing = DbRoutingDataSource(writer, emptyMap())
+
+        DbContextHolder.withContext(DbExecutionContext("expense.create", DbOperationKind.COMMAND)) {
+            assertSame(conn, routing.getConnection("user", "pass"))
+        }
+    }
+
+    @Test
+    fun `explicit connection with blank readerName resolves reader automatically`() {
+        val writer = mock(DataSource::class.java)
+        val reader = mock(DataSource::class.java)
+        val conn = mock(Connection::class.java)
+        `when`(reader.connection).thenReturn(conn)
+        val routing = DbRoutingDataSource(writer, mapOf("replica" to reader))
+
+        DbContextHolder.withContext(
+            DbExecutionContext("expense.search", DbOperationKind.QUERY, ReadConsistency.EVENTUAL, readerEligible = true)
+        ) {
+            assertSame(conn, routing.connection(DbRoute.READER, ""))
+        }
+    }
+
+    @Test
+    fun `readerDataSources exposes map of configured reader datasources`() {
+        val writer = mock(DataSource::class.java)
+        val reader = mock(DataSource::class.java)
+        val routing = DbRoutingDataSource(writer, mapOf("replica" to reader))
+
+        assertEquals(mapOf("replica" to reader), routing.readerDataSources())
+    }
+
+    @Test
+    fun `throws database unavailable when reader health decision is Fail`() {
+        val writer = mock(DataSource::class.java)
+        val reader = mock(DataSource::class.java)
+        val health = mock(DbReaderHealth::class.java)
+        val context = DbExecutionContext("expense.search", DbOperationKind.QUERY, ReadConsistency.EVENTUAL, readerEligible = true)
+        `when`(health.route(context, "replica")).thenReturn(DbReaderDecision.Fail)
+        val routing = DbRoutingDataSource(writer, mapOf("replica" to reader), health)
+
+        DbContextHolder.withContext(context) {
+            assertFailsWith<DbPlatformException> { routing.getConnection() }
+        }
+    }
+
+    @Test
+    fun `resolveReaderName returns target when target is unhealthy and no healthy replicas exist`() {
+        val writer = mock(DataSource::class.java)
+        val reader = mock(DataSource::class.java)
+        val health = mock(DbReaderHealth::class.java)
+        `when`(health.state("unhealthy-replica")).thenReturn(DbReaderState.DISCONNECTED)
+        val routing = DbRoutingDataSource(writer, mapOf("unhealthy-replica" to reader), health)
+        DbContextHolder.withContext(
+            DbExecutionContext("query", DbOperationKind.QUERY, targetReader = "unhealthy-replica")
+        ) {
+            assertEquals("unhealthy-replica", routing.resolveReaderName())
+        }
+    }
+
+    @Test
+    fun `resolveReaderName returns first configured reader when target is blank and all replicas are unhealthy`() {
+        val writer = mock(DataSource::class.java)
+        val reader = mock(DataSource::class.java)
+        val health = mock(DbReaderHealth::class.java)
+        `when`(health.state("replica")).thenReturn(DbReaderState.DISCONNECTED)
+        val routing = DbRoutingDataSource(writer, mapOf("replica" to reader), health)
+        DbContextHolder.withContext(
+            DbExecutionContext("query", DbOperationKind.QUERY, targetReader = "   ")
+        ) {
+            assertEquals("replica", routing.resolveReaderName())
+        }
+    }
+
+    @Test
+    fun `resolveReaderName returns empty string when no readers are configured`() {
+        val writer = mock(DataSource::class.java)
+        val routing = DbRoutingDataSource(writer, emptyMap())
+        DbContextHolder.withContext(DbExecutionContext("query", DbOperationKind.QUERY)) {
+            assertEquals("", routing.resolveReaderName())
         }
     }
 }

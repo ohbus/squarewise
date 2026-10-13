@@ -20,13 +20,22 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.transaction.annotation.Transactional
 
+import com.subhrodip.squarewise.expensecore.settlements.persistence.SettlementRepository
+import com.subhrodip.squarewise.expensecore.groups.persistence.store.GroupAuditCommandStore
+import com.subhrodip.squarewise.expensecore.sync.persistence.SynchronizationStore
+import com.subhrodip.squarewise.expensecore.messaging.outbox.persistence.OutboxStore
+
 @SpringBootTest
 @Transactional
 class JpaSettlementStoreTest @Autowired constructor(
     private val store: JpaSettlementStore,
     private val groupRepository: GroupRepository,
     private val membershipRepository: GroupMembershipRepository,
-    private val balancePostingRepository: BalancePostingRepository
+    private val balancePostingRepository: BalancePostingRepository,
+    private val settlementRepository: SettlementRepository,
+    private val audit: GroupAuditCommandStore,
+    private val synchronization: SynchronizationStore,
+    private val outbox: OutboxStore
 ) {
     private fun seedGroup(groupId: UUID, from: UUID, to: UUID) {
         groupRepository.save(GroupEntity(groupId, "Test group", "HOUSEHOLD", "EUR"))
@@ -207,5 +216,30 @@ class JpaSettlementStoreTest @Autowired constructor(
             store.record(groupId, Settlement(UUID.randomUUID(), UUID.randomUUID(), to, 100, "EUR"), "test-actor")
         }
         assertEquals(CategoryCode.NOT_FOUND, participantError.definition.category)
+    }
+
+    @Test
+    fun `record and reverse without groupAccessCache succeeds`() {
+        val uncachedStore = JpaSettlementStore(
+            repository = settlementRepository,
+            groupRepository = groupRepository,
+            membershipRepository = membershipRepository,
+            balancePostingRepository = balancePostingRepository,
+            audit = audit,
+            synchronization = synchronization,
+            outbox = outbox,
+            groupAccessCache = null
+        )
+        val groupId = UUID.randomUUID()
+        val from = UUID.randomUUID()
+        val to = UUID.randomUUID()
+        seedGroup(groupId, from, to)
+        val settlement = Settlement(UUID.randomUUID(), from, to, 500, "EUR")
+
+        val recorded = uncachedStore.record(groupId, settlement, "test-actor")
+        assertEquals(SettlementStatus.RECORDED, recorded.status)
+
+        val reversed = uncachedStore.reverse(groupId, settlement.id, "uncached-test", "test-actor")
+        assertEquals(SettlementStatus.REVERSED, reversed.status)
     }
 }

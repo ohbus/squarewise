@@ -136,12 +136,10 @@ class ProfileCache(
             bySubject.entries.removeIf { it.value.isExpired(now) }
             byAccountId.entries.removeIf { it.value.isExpired(now) }
             while (bySubject.size > maxEntries) {
-                val key = bySubject.keys().nextElement() ?: break
-                bySubject.remove(key)
+                bySubject.remove(bySubject.keys().nextElement())
             }
             while (byAccountId.size > maxEntries) {
-                val key = byAccountId.keys().nextElement() ?: break
-                byAccountId.remove(key)
+                byAccountId.remove(byAccountId.keys().nextElement())
             }
         }
     }

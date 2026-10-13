@@ -189,6 +189,11 @@ class JpaRequestStoresTest @Autowired constructor(
         assertEquals("UTC", displayNameOnly.timezone)
         assertEquals("USD", displayNameOnly.defaultCurrency)
 
+        val currencyOnly = profileStore.update(subject, ProfilePatchRequest(defaultCurrency = "GBP"))
+        assertEquals("Alice Again", currencyOnly.displayName)
+        assertEquals("UTC", currencyOnly.timezone)
+        assertEquals("GBP", currencyOnly.defaultCurrency)
+
         assertThrows(SquarewiseException::class.java) {
             profileStore.update(subject, ProfilePatchRequest(timezone = "Not/AZone"))
         }
@@ -206,6 +211,11 @@ class JpaRequestStoresTest @Autowired constructor(
         val batchResult = profileStore.findByIds(listOf(profile.accountId, UUID.randomUUID()))
         assertEquals(1, batchResult.size)
         assertEquals(profile.accountId, batchResult.first().accountId)
+
+        // Repeat findByIds when all requested are already in cache
+        val allCachedResult = profileStore.findByIds(listOf(profile.accountId))
+        assertEquals(1, allCachedResult.size)
+        assertEquals(profile.accountId, allCachedResult.first().accountId)
 
         // Store without cache coverage
         val uncachedStore = JpaProfileStore(profileRepository, profileCache = null)

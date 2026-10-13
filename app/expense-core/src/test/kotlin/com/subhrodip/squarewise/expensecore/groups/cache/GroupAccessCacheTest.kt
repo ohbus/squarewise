@@ -208,4 +208,68 @@ class GroupAccessCacheTest {
             smallLiveCache.isMember(UUID.randomUUID(), "live-$i") { true }
         }
     }
+
+    @Test
+    fun `reloads expired entries across all cached types`() {
+        val fastCache = GroupAccessCache(ttl = Duration.ofMillis(1), maxEntries = 10)
+        val groupId = UUID.randomUUID()
+        val subject = "expiring-user"
+
+        var memberLoads = 0
+        fastCache.isMember(groupId, subject) { memberLoads++; true }
+        Thread.sleep(10)
+        fastCache.isMember(groupId, subject) { memberLoads++; true }
+        assertEquals(2, memberLoads)
+
+        var statusLoads = 0
+        fastCache.groupStatus(groupId) { statusLoads++; "ACTIVE" }
+        Thread.sleep(10)
+        fastCache.groupStatus(groupId) { statusLoads++; "ACTIVE" }
+        assertEquals(2, statusLoads)
+
+        var rosterLoads = 0
+        fastCache.members(groupId, 10) { rosterLoads++; listOf("alice") }
+        Thread.sleep(10)
+        fastCache.members(groupId, 10) { rosterLoads++; listOf("alice") }
+        assertEquals(2, rosterLoads)
+
+        var balanceLoads = 0
+        fastCache.balances(groupId) { balanceLoads++; listOf("b1") }
+        Thread.sleep(10)
+        fastCache.balances(groupId) { balanceLoads++; listOf("b1") }
+        assertEquals(2, balanceLoads)
+
+        var idsLoads = 0
+        fastCache.activeMemberIds(groupId) { idsLoads++; setOf(UUID.randomUUID()) }
+        Thread.sleep(10)
+        fastCache.activeMemberIds(groupId) { idsLoads++; setOf(UUID.randomUUID()) }
+        assertEquals(2, idsLoads)
+
+        var detailsLoads = 0
+        fastCache.groupDetails(groupId) { detailsLoads++; "details" }
+        Thread.sleep(10)
+        fastCache.groupDetails(groupId) { detailsLoads++; "details" }
+        assertEquals(2, detailsLoads)
+    }
+
+    @Test
+    fun `does not cache stale membership if invalidation occurred during load`() {
+        val groupId = UUID.randomUUID()
+        val subject = "race-user"
+        val res = cache.isMember(groupId, subject) {
+            cache.invalidateMember(groupId, subject)
+            true
+        }
+        assertTrue(res)
+        var secondLoads = 0
+        cache.isMember(groupId, subject) { secondLoads++; true }
+        assertEquals(1, secondLoads)
+    }
+
+    @Test
+    fun `default constructor initializes with standard ttl and capacity`() {
+        val defaultCache = GroupAccessCache()
+        val groupId = UUID.randomUUID()
+        assertTrue(defaultCache.isMember(groupId, "user") { true })
+    }
 }

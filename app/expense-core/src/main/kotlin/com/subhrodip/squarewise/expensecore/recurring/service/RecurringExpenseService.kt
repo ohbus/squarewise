@@ -295,10 +295,9 @@ class RecurringExpenseService(
     private fun activeMembersOrPause(schedule: RecurringExpenseSchedule, members: List<UUID>): List<UUID>? {
         val custom = readSpecification(schedule)
         val requiresAllMembers = custom == null || custom.allocations.isEmpty()
-        if (members.size <= ExpenseRequestLimits.MAX_PARTICIPANTS &&
-            members.isNotEmpty() && validateMembership(schedule, members)
-        ) return members
-        if (!requiresAllMembers && members.isNotEmpty() && validateMembership(schedule, members)) return members
+        val isValid = members.isNotEmpty() && validateMembership(schedule, members) &&
+            (!requiresAllMembers || members.size <= ExpenseRequestLimits.MAX_PARTICIPANTS)
+        if (isValid) return members
         schedule.paused = true
         scheduleRepository.save(schedule)
         emitSchedulePausedNotification(schedule, "invalid_membership")
@@ -373,17 +372,15 @@ class RecurringExpenseService(
         val custom = readSpecification(schedule)
         val (payers, allocations) = if (custom != null && (custom.payers.isNotEmpty() || custom.allocations.isNotEmpty())) {
             val customPayers = custom.payers.ifEmpty {
-                val payerId = members.firstOrNull() ?: schedule.groupId
-                listOf(ExpensePayer(payerId, schedule.amountMinor))
+                listOf(ExpensePayer(members.first(), schedule.amountMinor))
             }
             val customAllocations = custom.allocations.ifEmpty {
-                splitEqually(schedule.amountMinor, members.ifEmpty { listOf(schedule.groupId) })
+                splitEqually(schedule.amountMinor, members)
             }
             customPayers to customAllocations
         } else {
-            val participantIds = members.ifEmpty { listOf(schedule.groupId) }
-            val payers = listOf(ExpensePayer(participantIds.first(), schedule.amountMinor))
-            val allocations = splitEqually(schedule.amountMinor, participantIds)
+            val payers = listOf(ExpensePayer(members.first(), schedule.amountMinor))
+            val allocations = splitEqually(schedule.amountMinor, members)
             payers to allocations
         }
 

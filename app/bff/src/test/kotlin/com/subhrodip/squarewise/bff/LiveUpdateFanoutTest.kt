@@ -24,6 +24,7 @@ import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 
@@ -441,11 +442,205 @@ class LiveUpdateFanoutTest {
     }
 
     @Test
-    fun `poll and pendingCount return null and zero for unknown subscription`() {
-        val fanout = LiveUpdateFanout()
-        assertThat(fanout.poll("unknown-sub")).isNull()
-        assertThat(fanout.pendingCount("unknown-sub")).isZero()
+    fun `emitInvalidation drops and unsubscribes expired subscription`() {
+        val start = Instant.parse("2026-01-01T00:00:00Z")
+        val clock = MutableClock(start)
+        val fanout = LiveUpdateFanout(clock = clock, subscriptionTtl = Duration.ofMinutes(5))
+
+        val sub = fanout.subscribe("user-1", "group-1")
+        clock.now = start.plus(Duration.ofMinutes(10))
+
+        fanout.emitInvalidation("group-1", 1)
+        assertThat(fanout.poll(sub.id)).isNull()
     }
+
+    @Test
+    fun `emitInvalidation unsubscribes when subscriber invalidation queue overflows`() {
+        val fanout = LiveUpdateFanout(queueCapacity = 1)
+        val sub = fanout.subscribe("user-1", "group-1")
+
+        // First emit is admitted
+        fanout.emitInvalidation("group-1", 1)
+        // Second emit without consumer overflows the bounded sink buffer, evicting the subscription
+        fanout.emitInvalidation("group-1", 2)
+        assertThat(fanout.poll(sub.id)).isNull()
+    }
+
+    @Test
+    fun `publish drops update and unsubscribes expired subscriber`() {
+        val start = Instant.parse("2026-01-01T00:00:00Z")
+        val clock = MutableClock(start)
+        val fanout = LiveUpdateFanout(clock = clock, subscriptionTtl = Duration.ofMinutes(5))
+
+        val sub = fanout.subscribe("user-1", "group-1")
+        clock.now = start.plus(Duration.ofMinutes(10))
+
+        val delivered = fanout.publish(LiveUpdate("group-1", 1))
+        assertThat(delivered).isZero()
+        assertThat(fanout.poll(sub.id)).isNull()
+    }
+
+    @Test
+    fun `revokeUserFromGroup only revokes subscriptions for the specified group`() {
+        val fanout = LiveUpdateFanout()
+        val sub1 = fanout.subscribe("user-1", "group-1")
+        val sub2 = fanout.subscribe("user-1", "group-2")
+
+        val revoked = fanout.revokeUserFromGroup("user-1", "group-1")
+        assertThat(revoked).isEqualTo(1)
+        assertThat(fanout.poll(sub1.id)).isNull()
+        assertThat(fanout.pendingCount(sub2.id)).isZero()
+    }
+
+    @Test
+    fun `unsubscribe preserves other subscriptions for the same user and group`() {
+        val fanout = LiveUpdateFanout(maxSubscriptionsPerUser = 5)
+        val sub1 = fanout.subscribe("user-1", "group-1")
+        val sub2 = fanout.subscribe("user-1", "group-1")
+
+        fanout.unsubscribe(sub1.id)
+        assertThat(fanout.publish(LiveUpdate("group-1", 1))).isEqualTo(1)
+        assertThat(fanout.poll(sub2.id)).isNotNull()
+    }
+
+    @Test
+    fun `unsubscribe on unknown subscription is safe no-op`() {
+        val fanout = LiveUpdateFanout()
+        fanout.unsubscribe("non-existent-sub")
+    }
+
+    @Test
+    fun `invalidations and revocationSignal return empty reactive streams for unknown subscription`() {
+        val fanout = LiveUpdateFanout()
+        assertThat(fanout.invalidations("unknown").blockFirst(Duration.ofMillis(50))).isNull()
+        assertThat(fanout.revocationSignal("unknown").block(Duration.ofMillis(50))).isNull()
+    }
+
+    @Test
+    fun `emitInvalidation unexpired and expired subscriber handling`() {
+        val clock = MutableClock(Instant.parse("2026-10-13T10:00:00Z"))
+        val fanout = LiveUpdateFanout(clock = clock, subscriptionTtl = Duration.ofMinutes(10), queueCapacity = 1)
+        val sub1 = fanout.subscribe("user-1", "group-1")
+        fanout.subscribe("user-2", "group-1")
+
+        // Advance clock so sub1 expires
+        clock.now = Instant.parse("2026-10-13T10:15:00Z")
+        fanout.emitInvalidation("group-1", 1L)
+
+        // sub1 was expired so unsubscribed
+        assertThat(fanout.poll(sub1.id)).isNull()
+    }
+
+    @Test
+    fun `emitInvalidation drops subscriber when invalidation channel overflows`() {
+        val clock = MutableClock(Instant.parse("2026-10-13T10:00:00Z"))
+        val fanout = LiveUpdateFanout(clock = clock, queueCapacity = 1)
+        val sub = fanout.subscribe("user-1", "group-1")
+
+        // Fill channel
+        fanout.emitInvalidation("group-1", 1L)
+        // Second invalidation exceeds capacity and triggers forced unsubscribe
+        fanout.emitInvalidation("group-1", 2L)
+
+        assertThat(fanout.pendingCount(sub.id)).isZero()
+    }
+
+    @Test
+    fun `subscribe evicts expired subscriptions of the user during admission`() {
+        val clock = MutableClock(Instant.parse("2026-10-13T10:00:00Z"))
+        val fanout = LiveUpdateFanout(clock = clock, maxSubscriptionsPerUser = 2, subscriptionTtl = Duration.ofMinutes(10))
+        val sub1 = fanout.subscribe("user-1", "group-1")
+
+        // Advance clock past ttl
+        clock.now = Instant.parse("2026-10-13T10:15:00Z")
+        val sub2 = fanout.subscribe("user-1", "group-2")
+
+        assertThat(sub2).isNotNull
+        // sub1 should have been cleaned up during subscribe
+        assertThat(fanout.pendingCount(sub1.id)).isZero()
+    }
+
+    @Test
+    fun `revokeUser and revokeUserFromGroup handle non-existent and mixed group subscriptions`() {
+        val fanout = LiveUpdateFanout(maxSubscriptionsPerUser = 5)
+        assertThat(fanout.revokeUser("missing-user")).isZero()
+        assertThat(fanout.revokeUserFromGroup("missing-user", "group-1")).isZero()
+
+        val sub1 = fanout.subscribe("user-1", "group-1")
+        val sub2 = fanout.subscribe("user-1", "group-2")
+
+        // Revoke only from group-1
+        val revoked = fanout.revokeUserFromGroup("user-1", "group-1")
+        assertThat(revoked).isEqualTo(1)
+        assertThat(fanout.pendingCount(sub1.id)).isZero()
+        assertThat(fanout.publish(LiveUpdate("group-2", 5))).isEqualTo(1)
+    }
+
+    @Test
+    fun `removeExpired cleanly sweeps expired while preserving unexpired across users and groups`() {
+        val clock = MutableClock(Instant.parse("2026-10-13T10:00:00Z"))
+        val fanout = LiveUpdateFanout(clock = clock, subscriptionTtl = Duration.ofMinutes(10))
+        fanout.subscribe("user-1", "group-1")
+
+        // Advance clock by 5 minutes, add second sub
+        clock.now = Instant.parse("2026-10-13T10:05:00Z")
+        fanout.subscribe("user-1", "group-1")
+        fanout.subscribe("user-2", "group-2")
+
+        // Advance clock to 10:12:00 -> subExpired expires, but active subs are still valid
+        clock.now = Instant.parse("2026-10-13T10:12:00Z")
+        fanout.removeExpired()
+
+        assertThat(fanout.publish(LiveUpdate("group-1", 1))).isEqualTo(1)
+        assertThat(fanout.publish(LiveUpdate("group-2", 1))).isEqualTo(1)
+    }
+
+    @Test
+    fun `pendingCount on nonexistent subscription returns 0`() {
+        val fanout = LiveUpdateFanout()
+        assertThat(fanout.pendingCount("nonexistent")).isZero()
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    @Test
+    fun `gracefully ignores phantom or dangling subscription entries in internal indexes`() {
+        val fanout = LiveUpdateFanout(maxSubscriptionsPerUser = 5)
+        val userSubsField = LiveUpdateFanout::class.java.getDeclaredField("userSubscriptions").apply { isAccessible = true }
+        val userSubs = userSubsField.get(fanout) as ConcurrentHashMap<String, MutableSet<String>>
+        userSubs.computeIfAbsent("user-phantom") { ConcurrentHashMap.newKeySet() }.add("phantom-id")
+
+        val groupSubsField = LiveUpdateFanout::class.java.getDeclaredField("groupSubscriptions").apply { isAccessible = true }
+        val groupSubs = groupSubsField.get(fanout) as ConcurrentHashMap<String, MutableSet<String>>
+        groupSubs.computeIfAbsent("group-phantom") { ConcurrentHashMap.newKeySet() }.add("phantom-id")
+
+        // emitInvalidation continues past null subscriber
+        fanout.emitInvalidation("group-phantom", 1L)
+
+        // revokeUser handles phantom id where subscriptions does not contain it
+        assertThat(fanout.revokeUser("user-phantom")).isZero()
+
+        // revokeUserFromGroup handles phantom id where subscriptions[id] is null
+        userSubs.computeIfAbsent("user-phantom") { ConcurrentHashMap.newKeySet() }.add("phantom-id")
+        assertThat(fanout.revokeUserFromGroup("user-phantom", "group-phantom")).isZero()
+
+        // subscribe handles existing unexpired and phantom sub IDs in userSubscriptions
+        userSubs.computeIfAbsent("user-phantom") { ConcurrentHashMap.newKeySet() }.add("phantom-id")
+        val newSub = fanout.subscribe("user-phantom", "group-1")
+        assertThat(newSub).isNotNull
+
+        // calling subscribe again while previous is unexpired covers the false condition of !now.isBefore
+        val secondSub = fanout.subscribe("user-phantom", "group-2")
+        assertThat(secondSub).isNotNull
+    }
+
+    @Test
+    fun `validates constructor parameters`() {
+        assertThrows<IllegalArgumentException> { LiveUpdateFanout(queueCapacity = 0) }
+        assertThrows<IllegalArgumentException> { LiveUpdateFanout(subscriptionTtl = Duration.ZERO) }
+        assertThrows<IllegalArgumentException> { LiveUpdateFanout(subscriptionTtl = Duration.ofSeconds(-1)) }
+        assertThrows<IllegalArgumentException> { LiveUpdateFanout(maxSubscriptionsPerUser = 0) }
+    }
+
 
     private class MutableClock(var now: Instant) : Clock() {
         override fun getZone(): ZoneOffset = ZoneOffset.UTC

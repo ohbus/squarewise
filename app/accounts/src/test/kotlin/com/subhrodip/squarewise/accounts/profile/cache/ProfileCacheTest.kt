@@ -3,6 +3,7 @@ package com.subhrodip.squarewise.accounts.profile.cache
 import com.subhrodip.squarewise.accounts.profile.api.ProfileResponse
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.time.Duration
@@ -134,6 +135,64 @@ class ProfileCacheTest {
     }
 
     @Test
+    fun `peekByAccountId returns null for expired entry`() {
+        val fastTtlCache = ProfileCache(ttl = Duration.ofMillis(1), maxEntries = 10)
+        val accountId = UUID.randomUUID()
+        fastTtlCache.put(ProfileResponse(accountId, "Fast Expire", "UTC", "USD"))
+        Thread.sleep(10)
+        assertNull(fastTtlCache.peekByAccountId(accountId))
+    }
+
+    @Test
+    fun `getBySubject and getByAccountId reload expired entries`() {
+        val fastTtlCache = ProfileCache(ttl = Duration.ofMillis(1), maxEntries = 10)
+        val accountId1 = UUID.randomUUID()
+        val subject = "fast:expire@example.com"
+        val profile1 = ProfileResponse(accountId1, "User 1", "UTC", "USD")
+        var subjectLoads = 0
+        fastTtlCache.getBySubject(subject) { subjectLoads++; profile1 }
+        Thread.sleep(10)
+        fastTtlCache.getBySubject(subject) { subjectLoads++; profile1 }
+        assertEquals(2, subjectLoads)
+
+        val accountId2 = UUID.randomUUID()
+        val profile2 = ProfileResponse(accountId2, "User 2", "UTC", "USD")
+        var accountLoads = 0
+        fastTtlCache.getByAccountId(accountId2) { accountLoads++; profile2 }
+        Thread.sleep(10)
+        fastTtlCache.getByAccountId(accountId2) { accountLoads++; profile2 }
+        assertEquals(2, accountLoads)
+    }
+
+    @Test
+    fun `does not cache stale result if invalidation occurred during load`() {
+        val accountId1 = UUID.randomUUID()
+        val subject1 = "race:user1@example.com"
+        val profile1 = ProfileResponse(accountId1, "Race User 1", "UTC", "USD")
+
+        val res = cache.getBySubject(subject1) {
+            cache.invalidate(subject1, accountId1)
+            profile1
+        }
+        assertEquals(profile1, res)
+        var nextLoads = 0
+        cache.getBySubject(subject1) { nextLoads++; profile1 }
+        assertEquals(1, nextLoads)
+
+        val accountId2 = UUID.randomUUID()
+        val subject2 = "race:user2@example.com"
+        val profile2 = ProfileResponse(accountId2, "Race User 2", "UTC", "USD")
+        val resAcc = cache.getByAccountId(accountId2) {
+            cache.invalidate(subject2, accountId2)
+            profile2
+        }
+        assertEquals(profile2, resAcc)
+        var nextAccLoads = 0
+        cache.getByAccountId(accountId2) { nextAccLoads++; profile2 }
+        assertEquals(1, nextAccLoads)
+    }
+
+    @Test
     fun `evicts oversized entries when limit is exceeded`() {
         val smallCache = ProfileCache(ttl = Duration.ofMillis(1), maxEntries = 4)
         for (i in 1..6) {
@@ -157,5 +216,34 @@ class ProfileCacheTest {
         var liveReloadCalls = 0
         smallLiveCache.getBySubject("live-1") { liveReloadCalls++; ProfileResponse(initialIds[0], "Live 1 Reloaded", "UTC", "EUR") }
         assertEquals(1, liveReloadCalls)
+    }
+
+    @Test
+    fun `invalidate on non-cached subject with null accountId is safe no-op`() {
+        val defaultCache = ProfileCache()
+        defaultCache.invalidate("missing-subject", null)
+        defaultCache.invalidate("missing-subject-2")
+    }
+
+    @Test
+    fun `put overflows byAccountId and triggers eviction of byAccountId entries`() {
+        val smallCache = ProfileCache(ttl = Duration.ofMinutes(10), maxEntries = 2)
+        val id1 = UUID.randomUUID()
+        val id2 = UUID.randomUUID()
+        val id3 = UUID.randomUUID()
+        smallCache.put(ProfileResponse(id1, "User 1", "UTC", "EUR"))
+        smallCache.put(ProfileResponse(id2, "User 2", "UTC", "EUR"))
+        smallCache.put(ProfileResponse(id3, "User 3", "UTC", "EUR"))
+        assertEquals(ProfileResponse(id3, "User 3", "UTC", "EUR"), smallCache.peekByAccountId(id3))
+    }
+
+    @Test
+    fun `evicts bySubject when multiple subjects map to same accountId`() {
+        val smallCache = ProfileCache(ttl = Duration.ofMinutes(10), maxEntries = 2)
+        val sharedAccountId = UUID.randomUUID()
+        smallCache.getBySubject("sub-1") { ProfileResponse(sharedAccountId, "User", "UTC", "EUR") }
+        smallCache.getBySubject("sub-2") { ProfileResponse(sharedAccountId, "User", "UTC", "EUR") }
+        smallCache.getBySubject("sub-3") { ProfileResponse(sharedAccountId, "User", "UTC", "EUR") }
+        assertEquals(ProfileResponse(sharedAccountId, "User", "UTC", "EUR"), smallCache.getBySubject("sub-3") { null })
     }
 }

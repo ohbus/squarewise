@@ -242,4 +242,22 @@ class AccountReferenceValidatorTest {
         // Serves from cache without repository call
         assertTrue(cachedValidator.isActiveAccount(accountId))
     }
+
+    @Test
+    fun `isActiveAccount falls back to repository when cache misses`() {
+        val cache = ProfileCache()
+        val cachedValidator = AccountReferenceValidator(profileRepository, sessionRepository, cache)
+        val accountId = UUID.randomUUID()
+        val profile = ProfileEntity(
+            accountId = accountId,
+            subject = "fallback@example.com",
+            displayName = "Fallback User",
+            timezone = "UTC",
+            defaultCurrency = "EUR",
+            deletionRequested = false
+        )
+        `when`(profileRepository.findById(accountId)).thenReturn(Optional.of(profile))
+
+        assertTrue(cachedValidator.isActiveAccount(accountId))
+    }
 }
