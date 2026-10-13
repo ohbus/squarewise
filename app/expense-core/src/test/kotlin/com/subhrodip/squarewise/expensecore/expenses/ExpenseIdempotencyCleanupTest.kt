@@ -22,13 +22,12 @@ class ExpenseIdempotencyCleanupTest {
     fun `deletes one bounded expired claim batch`() {
         val repository = mock(ExpenseIdempotencyRepository::class.java)
         val now = Instant.parse("2026-09-21T00:00:00Z")
-        val claim = ExpenseIdempotencyEntity(UUID.randomUUID(), UUID.randomUUID(), "alice", "CREATE", "key", "hash", UUID.randomUUID(), now.minusSeconds(90_000))
-        `when`(repository.findByCreatedAtBefore(now.minus(Duration.ofHours(24)), PageRequest.of(0, 1)))
-            .thenReturn(listOf(claim), emptyList())
+        val cutoff = now.minus(Duration.ofHours(24))
+        `when`(repository.purgeOlderThan(cutoff, 1)).thenReturn(1, 0)
         val cleanup = ExpenseIdempotencyCleanup(repository, Clock.fixed(now, ZoneOffset.UTC), Duration.ofHours(24), 1)
 
         assertEquals(1, cleanup.cleanupExpired())
-        verify(repository).deleteAllById(listOf(claim.idempotencyId))
+        verify(repository, org.mockito.Mockito.times(2)).purgeOlderThan(cutoff, 1)
     }
 
     /** Verifies an empty expired-claim page is a bounded no-op. */
@@ -36,29 +35,28 @@ class ExpenseIdempotencyCleanupTest {
     fun `returns zero and does not delete when no claims are expired`() {
         val repository = mock(ExpenseIdempotencyRepository::class.java)
         val now = Instant.parse("2026-09-21T00:00:00Z")
-        `when`(repository.findByCreatedAtBefore(now.minus(Duration.ofHours(24)), PageRequest.of(0, 10)))
-            .thenReturn(emptyList())
+        val cutoff = now.minus(Duration.ofHours(24))
+        `when`(repository.purgeOlderThan(cutoff, 10)).thenReturn(0)
         val cleanup = ExpenseIdempotencyCleanup(repository, Clock.fixed(now, ZoneOffset.UTC), Duration.ofHours(24), 10)
 
         assertEquals(0, cleanup.cleanupExpired())
+        verify(repository).purgeOlderThan(cutoff, 10)
     }
 
     @Test
     fun `drains multiple batches of expired claims`() {
         val repository = mock(ExpenseIdempotencyRepository::class.java)
         val now = Instant.parse("2026-09-21T00:00:00Z")
-        val claim1 = ExpenseIdempotencyEntity(UUID.randomUUID(), UUID.randomUUID(), "alice", "CREATE", "k1", "h1", UUID.randomUUID(), now.minusSeconds(90_000))
-        val claim2 = ExpenseIdempotencyEntity(UUID.randomUUID(), UUID.randomUUID(), "alice", "CREATE", "k2", "h2", UUID.randomUUID(), now.minusSeconds(90_000))
-        `when`(repository.findByCreatedAtBefore(now.minus(Duration.ofHours(24)), PageRequest.of(0, 1)))
-            .thenReturn(listOf(claim1))
-            .thenReturn(listOf(claim2))
-            .thenReturn(emptyList())
+        val cutoff = now.minus(Duration.ofHours(24))
+        `when`(repository.purgeOlderThan(cutoff, 1))
+            .thenReturn(1)
+            .thenReturn(1)
+            .thenReturn(0)
 
         val cleanup = ExpenseIdempotencyCleanup(repository, Clock.fixed(now, ZoneOffset.UTC), Duration.ofHours(24), 1, 5)
 
         assertEquals(2, cleanup.cleanupExpired())
-        verify(repository).deleteAllById(listOf(claim1.idempotencyId))
-        verify(repository).deleteAllById(listOf(claim2.idempotencyId))
+        verify(repository, org.mockito.Mockito.times(3)).purgeOlderThan(cutoff, 1)
     }
 
     /** Verifies cleanup refuses replay-retention and batch configurations that cannot be safe. */

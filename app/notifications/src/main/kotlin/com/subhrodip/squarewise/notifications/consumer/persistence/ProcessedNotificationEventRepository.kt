@@ -13,4 +13,23 @@ import java.util.UUID
 interface ProcessedNotificationEventRepository : JpaRepository<ProcessedNotificationEventEntity, UUID> {
     /** Finds one bounded batch of deduplication markers older than the replay retention window. */
     fun findByProcessedAtBefore(processedAt: Instant, pageable: Pageable): List<ProcessedNotificationEventEntity>
+
+    /** Purges notification deduplication markers older than [cutoff] in bounded batches directly in the database. */
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query(
+        value = """
+            DELETE FROM notification_processed_events
+            WHERE event_id IN (
+                SELECT event_id FROM notification_processed_events
+                WHERE processed_at < :cutoff
+                LIMIT :limit
+            )
+        """,
+        nativeQuery = true
+    )
+    fun purgeProcessedOlderThan(
+        @org.springframework.data.repository.query.Param("cutoff") cutoff: Instant,
+        @org.springframework.data.repository.query.Param("limit") limit: Int
+    ): Int
 }
+

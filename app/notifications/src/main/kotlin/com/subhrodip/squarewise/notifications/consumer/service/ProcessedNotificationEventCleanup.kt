@@ -43,15 +43,14 @@ class ProcessedNotificationEventCleanup(
 
     /** Deletes markers older than the configured replay window across bounded batches. */
     @Scheduled(fixedDelayString = "\${squarewise.notifications.processed-event-cleanup-delay-ms:3600000}")
+    @org.springframework.transaction.annotation.Transactional
     fun cleanupExpired(): Int {
         val cutoff = clock.instant().minus(retention)
         var totalDeleted = 0
         for (batch in 0 until maxBatches) {
-            val expired = repository.findByProcessedAtBefore(cutoff, PageRequest.of(0, batchSize))
-            if (expired.isEmpty()) break
-            repository.deleteAllById(expired.map { it.eventId })
-            totalDeleted += expired.size
-            if (expired.size < batchSize) break
+            val deleted = repository.purgeProcessedOlderThan(cutoff, batchSize)
+            totalDeleted += deleted
+            if (deleted < batchSize) break
         }
         return totalDeleted
     }

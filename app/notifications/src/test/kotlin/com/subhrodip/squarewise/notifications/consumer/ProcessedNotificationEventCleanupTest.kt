@@ -23,20 +23,12 @@ class ProcessedNotificationEventCleanupTest {
     fun `deletes one bounded expired marker batch`() {
         val repository = mock(ProcessedNotificationEventRepository::class.java)
         val now = Instant.parse("2026-10-13T00:00:00Z")
-        val marker = ProcessedNotificationEventEntity(
-            UUID.randomUUID(),
-            now.minus(Duration.ofDays(31))
-        )
+        val cutoff = now.minus(Duration.ofDays(30))
         val properties = NotificationMessagingProperties(
             processedEventRetention = Duration.ofDays(30),
             processedEventCleanupBatchSize = 1
         )
-        `when`(
-            repository.findByProcessedAtBefore(
-                now.minus(Duration.ofDays(30)),
-                PageRequest.of(0, 1)
-            )
-        ).thenReturn(listOf(marker), emptyList())
+        `when`(repository.purgeProcessedOlderThan(cutoff, 1)).thenReturn(1, 0)
 
         val cleanup = ProcessedNotificationEventCleanup(
             repository,
@@ -45,28 +37,22 @@ class ProcessedNotificationEventCleanupTest {
         )
 
         assertEquals(1, cleanup.cleanupExpired())
-        verify(repository).deleteAllById(listOf(marker.eventId))
+        verify(repository, org.mockito.Mockito.times(2)).purgeProcessedOlderThan(cutoff, 1)
     }
 
     @Test
     fun `drains multiple batches of expired markers`() {
         val repository = mock(ProcessedNotificationEventRepository::class.java)
         val now = Instant.parse("2026-10-13T00:00:00Z")
-        val m1 = ProcessedNotificationEventEntity(UUID.randomUUID(), now.minus(Duration.ofDays(31)))
-        val m2 = ProcessedNotificationEventEntity(UUID.randomUUID(), now.minus(Duration.ofDays(31)))
+        val cutoff = now.minus(Duration.ofDays(30))
         val properties = NotificationMessagingProperties(
             processedEventRetention = Duration.ofDays(30),
             processedEventCleanupBatchSize = 1
         )
-        `when`(
-            repository.findByProcessedAtBefore(
-                now.minus(Duration.ofDays(30)),
-                PageRequest.of(0, 1)
-            )
-        )
-            .thenReturn(listOf(m1))
-            .thenReturn(listOf(m2))
-            .thenReturn(emptyList())
+        `when`(repository.purgeProcessedOlderThan(cutoff, 1))
+            .thenReturn(1)
+            .thenReturn(1)
+            .thenReturn(0)
 
         val cleanup = ProcessedNotificationEventCleanup(
             repository,
@@ -76,8 +62,7 @@ class ProcessedNotificationEventCleanupTest {
         )
 
         assertEquals(2, cleanup.cleanupExpired())
-        verify(repository).deleteAllById(listOf(m1.eventId))
-        verify(repository).deleteAllById(listOf(m2.eventId))
+        verify(repository, org.mockito.Mockito.times(3)).purgeProcessedOlderThan(cutoff, 1)
     }
 
     @Test

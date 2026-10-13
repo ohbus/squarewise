@@ -38,11 +38,9 @@ class ExpenseIdempotencyCleanup(
         val cutoff: Instant = clock.instant().minus(retention)
         var totalDeleted = 0
         for (batch in 0 until maxBatches) {
-            val expired = repository.findByCreatedAtBefore(cutoff, PageRequest.of(0, batchSize))
-            if (expired.isEmpty()) break
-            repository.deleteAllById(expired.map { it.idempotencyId })
-            totalDeleted += expired.size
-            if (expired.size < batchSize) break
+            val deleted = repository.purgeOlderThan(cutoff, batchSize)
+            totalDeleted += deleted
+            if (deleted < batchSize) break
         }
         return totalDeleted
     }
