@@ -23,7 +23,7 @@ interface OutboxRepository : JpaRepository<OutboxEntity, UUID> {
     fun findForUpdate(@Param("eventId") eventId: UUID): OutboxEntity?
 
     /**
-     * Retrieves all outbox entities ordered chronologically by occurrence time and event ID.
+     * Retrieves a bounded page of outbox entities ordered chronologically by occurrence time and event ID.
      */
-    fun findAllByOrderByOccurredAtAscEventIdAsc(): List<OutboxEntity>
+    fun findAllByOrderByOccurredAtAscEventIdAsc(pageable: org.springframework.data.domain.Pageable): List<OutboxEntity>
 }

@@ -85,11 +85,12 @@ class JpaOutboxStore(
     }
 
     /**
-     * Returns a snapshot of all messages ordered chronologically.
+     * Returns a bounded snapshot of messages ordered chronologically.
      */
     @Transactional(readOnly = true)
     override fun snapshot(): List<OutboxMessage> =
-        repository.findAllByOrderByOccurredAtAscEventIdAsc().map { it.toDomain(objectMapper) }
+        repository.findAllByOrderByOccurredAtAscEventIdAsc(org.springframework.data.domain.PageRequest.of(0, 100))
+            .map { it.toDomain(objectMapper) }
 
     private companion object {
         const val CLAIM_QUERY = """
