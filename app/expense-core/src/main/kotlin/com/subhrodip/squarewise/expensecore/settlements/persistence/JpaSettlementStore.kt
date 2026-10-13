@@ -22,6 +22,8 @@ import org.springframework.transaction.annotation.Transactional
 import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
 import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
 
+import com.subhrodip.squarewise.expensecore.validation.EntityReferenceValidator
+
 /**
  * JPA persistence adapter implementing [SettlementStore] to record settlements and execute reversals.
  *
@@ -39,7 +41,8 @@ class JpaSettlementStore(
     private val balancePostingRepository: BalancePostingRepository,
     private val audit: GroupAuditCommandStore,
     private val synchronization: SynchronizationStore,
-    private val outbox: OutboxStore
+    private val outbox: OutboxStore,
+    private val referenceValidator: EntityReferenceValidator = EntityReferenceValidator(groupRepository, membershipRepository)
 ) : SettlementStore {
 
     /**
@@ -134,12 +137,7 @@ class JpaSettlementStore(
     } ?: throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group $groupId not found")
 
     private fun validateParticipants(groupId: UUID, settlement: Settlement) {
-        require(settlement.fromParticipantId != settlement.toParticipantId) { "Participants must differ" }
-        if (membershipRepository.findByMembershipIdAndGroupIdAndStatus(settlement.fromParticipantId, groupId, "ACTIVE") == null ||
-            membershipRepository.findByMembershipIdAndGroupIdAndStatus(settlement.toParticipantId, groupId, "ACTIVE") == null
-        ) {
-            throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Settlement participants must be active group members")
-        }
+        referenceValidator.validateSettlementParticipants(groupId, settlement.fromParticipantId, settlement.toParticipantId)
     }
 
     private fun recordMutation(group: GroupEntity, actorSubject: String, action: String, settlement: Settlement) {

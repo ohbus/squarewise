@@ -22,6 +22,7 @@ import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupR
 import com.subhrodip.squarewise.expensecore.messaging.outbox.model.OutboxMessage
 import com.subhrodip.squarewise.expensecore.messaging.outbox.persistence.OutboxStore
 
+import com.subhrodip.squarewise.expensecore.validation.EntityReferenceValidator
 import com.subhrodip.squarewise.expensecore.sync.persistence.SynchronizationStore
 import com.subhrodip.squarewise.ids.generation.UuidGenerator
 import java.time.Instant
@@ -49,7 +50,8 @@ class JpaExpenseStore(
     private val groupRepository: GroupRepository,
     private val membershipRepository: GroupMembershipRepository,
     private val outboxStore: OutboxStore,
-    private val syncStore: SynchronizationStore
+    private val syncStore: SynchronizationStore,
+    private val referenceValidator: EntityReferenceValidator = EntityReferenceValidator(groupRepository, membershipRepository)
 ) : ExpenseStore {
 
     /**
@@ -192,8 +194,8 @@ class JpaExpenseStore(
     }
 
     private fun requireActiveMembership(groupId: UUID, actorSubject: String?) {
-        if (actorSubject != null && membershipRepository.findByGroupIdAndSubjectAndStatus(groupId, actorSubject, "ACTIVE") == null) {
-            throw ExpenseDomainException(ExpenseErrors.GROUP_ACCESS_HIDDEN, "Group $groupId not found")
+        if (actorSubject != null) {
+            referenceValidator.validateActiveMembership(groupId, actorSubject)
         }
     }
 
@@ -201,18 +203,11 @@ class JpaExpenseStore(
     /** Rejects public postings for arbitrary or duplicate participant identifiers. */
     private fun validateFinancialParticipants(groupId: UUID, expense: ExpenseRecord, actorSubject: String?) {
         if (actorSubject == null) return
-        val payerIds = expense.payers.map { it.participantId }
-        val allocationIds = expense.allocations.map { it.participantId }
-        if (payerIds.size != payerIds.toSet().size || allocationIds.size != allocationIds.toSet().size) {
-            throw ExpenseDomainException(ExpenseErrors.EXPENSE_REQUEST_INVALID, "Participant IDs must be unique within payers and allocations")
-        }
-        val participantIds = payerIds + allocationIds
-        val activeIds = membershipRepository.findByGroupIdAndMembershipIdInAndStatus(groupId, participantIds.toSet(), "ACTIVE")
-            .map { it.membershipId }
-            .toSet()
-        if (!activeIds.containsAll(participantIds)) {
-            throw ExpenseDomainException(ExpenseErrors.PARTICIPANT_SET_INVALID, "Every financial participant must be an active group member")
-        }
+        referenceValidator.validateFinancialParticipants(
+            groupId,
+            expense.payers.map { it.participantId },
+            expense.allocations.map { it.participantId }
+        )
     }
 
     fun update(groupId: UUID, expenseId: UUID, update: ExpenseRecord): ExpenseRecord =

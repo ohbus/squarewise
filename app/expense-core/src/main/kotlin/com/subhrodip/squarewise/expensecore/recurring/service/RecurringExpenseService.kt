@@ -67,7 +67,9 @@ class RecurringExpenseService(
         .addModule(KotlinModule.Builder().build())
         .build(),
     @Autowired(required = false)
-    private val transactionManager: PlatformTransactionManager? = null
+    private val transactionManager: PlatformTransactionManager? = null,
+    @Autowired(required = false)
+    private val referenceValidator: com.subhrodip.squarewise.expensecore.validation.EntityReferenceValidator? = null
 ) : RecurringCommandStore, RecurringQueryStore {
     private val log = LoggerFactory.getLogger(RecurringExpenseService::class.java)
 
@@ -75,7 +77,9 @@ class RecurringExpenseService(
     override fun createSchedule(groupId: UUID, request: CreateRecurringScheduleRequest): RecurringExpenseSchedule {
         validateSchedule(request)
 
-        if (!groupRepository.existsById(groupId)) {
+        if (referenceValidator != null) {
+            referenceValidator.validateActiveGroup(groupId)
+        } else if (!groupRepository.existsById(groupId)) {
             throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group $groupId not found")
         }
 
