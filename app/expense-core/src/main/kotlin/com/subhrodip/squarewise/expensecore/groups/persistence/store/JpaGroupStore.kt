@@ -32,6 +32,9 @@ import org.springframework.transaction.annotation.Transactional
 import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
 import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
 
+import com.subhrodip.squarewise.expensecore.groups.cache.GroupAccessCache
+import org.springframework.beans.factory.annotation.Autowired
+
 /**
  * JPA persistence adapter implementing [GroupStore] for group lifecycle operations,
  * memberships, placeholders, invitations, audit logging, synchronization records, and transactional outbox events.
@@ -49,7 +52,9 @@ class JpaGroupStore(
     private val invitations: GroupInvitationRepository,
     private val audit: GroupAuditCommandStore,
     private val synchronization: SynchronizationStore,
-    private val outbox: OutboxStore
+    private val outbox: OutboxStore,
+    @Autowired(required = false)
+    private val groupAccessCache: GroupAccessCache? = null
 ) : GroupStore {
 
     /**
@@ -111,6 +116,7 @@ class JpaGroupStore(
             "changedBy" to subject
         )
         recordMutation(groupId, subject, "group.renamed", saved.revision, payload, occurredAt, "group.renamed.v1")
+        groupAccessCache?.invalidateGroup(groupId)
         return saved.toResponse()
     }
 
@@ -136,6 +142,7 @@ class JpaGroupStore(
             "changedBy" to subject
         )
         recordMutation(groupId, subject, "group.archived", saved.revision, payload, occurredAt, "group.archived.v1")
+        groupAccessCache?.invalidateGroup(groupId)
         return saved.toResponse()
     }
 
@@ -174,6 +181,7 @@ class JpaGroupStore(
             "changedBy" to subject
         )
         recordMutation(groupId, subject, "member.placeholder_added", group.revision, payload, occurredAt, "member.placeholder_added.v1")
+        groupAccessCache?.invalidateGroup(groupId)
         return entity.toResponse()
     }
 
@@ -204,6 +212,8 @@ class JpaGroupStore(
             "changedBy" to subject
         )
         recordMutation(groupId, subject, "member.removed", group.revision, payload, occurredAt, "member.removed.v1")
+        groupAccessCache?.invalidateGroup(groupId)
+        target.subject?.let { groupAccessCache?.invalidateMember(groupId, it) }
     }
 
     /**

@@ -1,0 +1,101 @@
+package com.subhrodip.squarewise.expensecore.groups.cache
+
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import java.time.Duration
+import java.util.UUID
+import java.util.concurrent.atomic.AtomicInteger
+
+/**
+ * Unit tests verifying [GroupAccessCache] hit/miss behavior, TTL expiration, and invalidation.
+ */
+class GroupAccessCacheTest {
+
+    private lateinit var cache: GroupAccessCache
+
+    @BeforeEach
+    fun setUp() {
+        cache = GroupAccessCache(ttl = Duration.ofSeconds(10), maxEntries = 100)
+    }
+
+    @Test
+    fun `isMember returns cached value and invokes loader only once on repeat calls`() {
+        val groupId = UUID.randomUUID()
+        val subject = "user-1"
+        val loaderCalls = AtomicInteger(0)
+
+        val result1 = cache.isMember(groupId, subject) {
+            loaderCalls.incrementAndGet()
+            true
+        }
+        val result2 = cache.isMember(groupId, subject) {
+            loaderCalls.incrementAndGet()
+            true
+        }
+
+        assertTrue(result1)
+        assertTrue(result2)
+        assertEquals(1, loaderCalls.get())
+    }
+
+    @Test
+    fun `groupStatus caches result and serves subsequent lookups from memory`() {
+        val groupId = UUID.randomUUID()
+        val loaderCalls = AtomicInteger(0)
+
+        val status1 = cache.groupStatus(groupId) {
+            loaderCalls.incrementAndGet()
+            "ACTIVE"
+        }
+        val status2 = cache.groupStatus(groupId) {
+            loaderCalls.incrementAndGet()
+            "ACTIVE"
+        }
+
+        assertEquals("ACTIVE", status1)
+        assertEquals("ACTIVE", status2)
+        assertEquals(1, loaderCalls.get())
+    }
+
+    @Test
+    fun `invalidateGroup evicts status and memberships for target group`() {
+        val groupId = UUID.randomUUID()
+        val subject = "user-1"
+        val memberCalls = AtomicInteger(0)
+        val statusCalls = AtomicInteger(0)
+
+        cache.isMember(groupId, subject) { memberCalls.incrementAndGet(); true }
+        cache.groupStatus(groupId) { statusCalls.incrementAndGet(); "ACTIVE" }
+
+        cache.invalidateGroup(groupId)
+
+        cache.isMember(groupId, subject) { memberCalls.incrementAndGet(); true }
+        cache.groupStatus(groupId) { statusCalls.incrementAndGet(); "ARCHIVED" }
+
+        assertEquals(2, memberCalls.get())
+        assertEquals(2, statusCalls.get())
+    }
+
+    @Test
+    fun `invalidateMember evicts only specific user membership`() {
+        val groupId = UUID.randomUUID()
+        val subjectA = "user-A"
+        val subjectB = "user-B"
+        val callsA = AtomicInteger(0)
+        val callsB = AtomicInteger(0)
+
+        cache.isMember(groupId, subjectA) { callsA.incrementAndGet(); true }
+        cache.isMember(groupId, subjectB) { callsB.incrementAndGet(); true }
+
+        cache.invalidateMember(groupId, subjectA)
+
+        cache.isMember(groupId, subjectA) { callsA.incrementAndGet(); true }
+        cache.isMember(groupId, subjectB) { callsB.incrementAndGet(); true }
+
+        assertEquals(2, callsA.get())
+        assertEquals(1, callsB.get())
+    }
+}

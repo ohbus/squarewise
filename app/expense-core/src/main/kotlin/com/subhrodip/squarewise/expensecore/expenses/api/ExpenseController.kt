@@ -38,6 +38,8 @@ import org.springframework.validation.annotation.Validated
 
 import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
 import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
+import com.subhrodip.squarewise.expensecore.groups.cache.GroupAccessCache
+import org.springframework.beans.factory.annotation.Autowired
 
 import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
 @RestController
@@ -46,7 +48,9 @@ import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
 class ExpenseController(
     private val expenseStore: ExpenseStore,
     private val membershipRepository: GroupMembershipRepository,
-    private val groupRepository: GroupRepository
+    private val groupRepository: GroupRepository,
+    @Autowired(required = false)
+    private val groupAccessCache: GroupAccessCache? = null
 ) {
 
     @PostMapping(ApiEndpoints.ExpenseCore.V1.EXPENSES_SUBPATH)
@@ -173,10 +177,24 @@ class ExpenseController(
         val subject = principal?.name?.trim()
             ?.takeIf { it.isNotEmpty() }
             ?: throw ExpenseDomainException(PlatformErrors.AUTHENTICATION_REQUIRED, "Authenticated subject is required")
-        if (!membershipRepository.existsByGroupIdAndSubject(groupId, subject)) {
+        val isMember = if (groupAccessCache != null) {
+            groupAccessCache.isMember(groupId, subject) {
+                membershipRepository.existsByGroupIdAndSubject(groupId, subject)
+            }
+        } else {
+            membershipRepository.existsByGroupIdAndSubject(groupId, subject)
+        }
+        if (!isMember) {
             throw ExpenseDomainException(ExpenseErrors.GROUP_ACCESS_HIDDEN, "Group $groupId not found")
         }
-        if (groupRepository.findById(groupId).map { it.status }.orElse(null) != "ACTIVE") {
+        val status = if (groupAccessCache != null) {
+            groupAccessCache.groupStatus(groupId) {
+                groupRepository.findById(groupId).map { it.status }.orElse(null)
+            }
+        } else {
+            groupRepository.findById(groupId).map { it.status }.orElse(null)
+        }
+        if (status != "ACTIVE") {
             throw ExpenseDomainException(ExpenseErrors.GROUP_ARCHIVED, "Group $groupId is archived")
         }
     }

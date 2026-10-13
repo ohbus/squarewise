@@ -1,6 +1,8 @@
 package com.subhrodip.squarewise.notifications.preferences.persistence
 
+import com.subhrodip.squarewise.notifications.preferences.cache.PreferenceCache
 import com.subhrodip.squarewise.notifications.preferences.model.NotificationPreferences
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -11,10 +13,13 @@ import org.springframework.transaction.annotation.Transactional
  * if no custom preference record exists yet.
  *
  * @property repository Spring Data JPA repository for notification preferences.
+ * @property preferenceCache Optional in-memory cache for fast hot-path preference lookups.
  */
 @Service
 class JpaPreferenceStore(
-    private val repository: NotificationPreferenceRepository
+    private val repository: NotificationPreferenceRepository,
+    @Autowired(required = false)
+    private val preferenceCache: PreferenceCache? = null
 ) : PreferenceStore {
 
     /**
@@ -26,8 +31,17 @@ class JpaPreferenceStore(
      * @throws IllegalArgumentException if subject validation fails.
      */
     @Transactional(readOnly = true)
-    override fun get(subject: String): NotificationPreferences =
-        repository.findById(requireSubject(subject))
+    override fun get(subject: String): NotificationPreferences {
+        val validatedSubject = requireSubject(subject)
+        return if (preferenceCache != null) {
+            preferenceCache.get(validatedSubject) { loadPreferences(validatedSubject) }
+        } else {
+            loadPreferences(validatedSubject)
+        }
+    }
+
+    private fun loadPreferences(validatedSubject: String): NotificationPreferences =
+        repository.findById(validatedSubject)
             .map(NotificationPreferenceEntity::toPreferences)
             .orElseGet(::NotificationPreferences)
 
@@ -47,6 +61,7 @@ class JpaPreferenceStore(
         entity.emailEnabled = value.emailEnabled
         entity.pushEnabled = value.pushEnabled
         repository.save(entity)
+        preferenceCache?.invalidate(validatedSubject)
     }
 
     private fun requireSubject(subject: String): String {

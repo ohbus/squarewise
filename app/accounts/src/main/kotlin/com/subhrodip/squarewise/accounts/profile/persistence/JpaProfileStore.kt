@@ -5,6 +5,8 @@ import com.subhrodip.squarewise.accounts.profile.api.ProfileResponse
 import com.subhrodip.squarewise.accounts.profile.service.ProfileRules
 import com.subhrodip.squarewise.accounts.errors.AccountsDomainException
 import com.subhrodip.squarewise.errors.catalog.AccountsErrors
+import com.subhrodip.squarewise.accounts.profile.cache.ProfileCache
+import org.springframework.beans.factory.annotation.Autowired
 import java.util.UUID
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -16,7 +18,11 @@ import org.springframework.transaction.annotation.Transactional
  * separation: queries never provision or mutate profiles on lookup (closing SEC-002).
  */
 @Service
-class JpaProfileStore(private val repository: ProfileRepository) : ProfileStore {
+class JpaProfileStore(
+    private val repository: ProfileRepository,
+    @Autowired(required = false)
+    private val profileCache: ProfileCache? = null
+) : ProfileStore {
 
     /**
      * Retrieves the profile associated with the given subject, returning null if absent.
@@ -28,7 +34,11 @@ class JpaProfileStore(private val repository: ProfileRepository) : ProfileStore 
     @Transactional(readOnly = true)
     override fun get(subject: String): ProfileResponse? {
         ProfileRules.requireSubject(subject)
-        return repository.findBySubject(subject)?.toResponse()
+        return if (profileCache != null) {
+            profileCache.getBySubject(subject) { repository.findBySubject(subject)?.toResponse() }
+        } else {
+            repository.findBySubject(subject)?.toResponse()
+        }
     }
 
     /**
@@ -59,7 +69,11 @@ class JpaProfileStore(private val repository: ProfileRepository) : ProfileStore 
      */
     @Transactional(readOnly = true)
     override fun findById(accountId: UUID): ProfileResponse? =
-        repository.findById(accountId).orElse(null)?.toResponse()
+        if (profileCache != null) {
+            profileCache.getByAccountId(accountId) { repository.findById(accountId).orElse(null)?.toResponse() }
+        } else {
+            repository.findById(accountId).orElse(null)?.toResponse()
+        }
 
     /**
      * Finds profiles by a batch of account IDs.
@@ -79,7 +93,9 @@ class JpaProfileStore(private val repository: ProfileRepository) : ProfileStore 
         entity.displayName = patch.displayName ?: entity.displayName
         entity.timezone = patch.timezone?.also(ProfileRules::requireTimezone) ?: entity.timezone
         entity.defaultCurrency = patch.defaultCurrency ?: entity.defaultCurrency
-        return repository.save(entity).toResponse()
+        val saved = repository.save(entity).toResponse()
+        profileCache?.invalidate(subject, entity.accountId)
+        return saved
     }
 
     /**
@@ -92,6 +108,7 @@ class JpaProfileStore(private val repository: ProfileRepository) : ProfileStore 
             ?: throw AccountsDomainException(AccountsErrors.AUTHENTICATED_PROFILE_NOT_FOUND)
         entity.deletionRequested = true
         repository.save(entity)
+        profileCache?.invalidate(subject, entity.accountId)
     }
 }
 
