@@ -14,7 +14,7 @@ import com.subhrodip.squarewise.expensecore.groups.domain.GroupEntity
 import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupMembershipRepository
 import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupRepository
 
-import com.subhrodip.squarewise.errors.http.GlobalErrorHandler
+import com.subhrodip.squarewise.errors.web.GlobalErrorAdvice
 import java.util.UUID
 import java.security.Principal
 import java.util.Optional
@@ -65,7 +65,7 @@ class ExpenseControllerTest {
         chain.doFilter(authenticatedRequest, response)
     }
     private val mvcBuilder: StandaloneMockMvcBuilder = MockMvcBuilders.standaloneSetup(controller)
-        .setControllerAdvice(GlobalErrorHandler())
+        .setControllerAdvice(GlobalErrorAdvice())
     private val mvc: MockMvc =
         (mvcBuilder.addFilters(authenticatedPrincipalFilter) as StandaloneMockMvcBuilder).build()
 

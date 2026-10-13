@@ -123,12 +123,6 @@ class GlobalErrorAdvice(
         return ResponseEntity.status(status).headers(responseHeaders).body(body)
     }
 
-    /** Compatibility name retained for standalone MVC tests during the handler migration. */
-    fun governedException(exception: SquarewiseException): ResponseEntity<ProblemDetailsDto> = governed(exception)
-
-    /** Compatibility name retained for standalone MVC tests during the handler migration. */
-    fun messageNotReadable(exception: HttpMessageNotReadableException): ResponseEntity<ProblemDetailsDto> = malformed(exception)
-
     private fun sanitizeRejectedValue(field: String, value: Any?): Any? {
         if (value == null) return null
         val lowerField = field.lowercase()

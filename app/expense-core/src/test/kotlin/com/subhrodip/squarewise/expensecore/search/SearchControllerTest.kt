@@ -12,7 +12,7 @@ import com.subhrodip.squarewise.expensecore.groups.api.GroupResponse
 import com.subhrodip.squarewise.expensecore.groups.persistence.store.GroupStore
 import com.subhrodip.squarewise.expensecore.groups.persistence.store.InMemoryGroupStore
 
-import com.subhrodip.squarewise.errors.http.GlobalErrorHandler
+import com.subhrodip.squarewise.errors.web.GlobalErrorAdvice
 import com.subhrodip.squarewise.db.routing.DbContextHolder
 import com.subhrodip.squarewise.db.routing.DbOperationKind
 import com.subhrodip.squarewise.db.routing.ReadConsistency
@@ -60,7 +60,7 @@ class SearchControllerTest {
         recordingSearchStore = RecordingSearchStore(searchStore)
         val controller = SearchController(groupStore, recordingSearchStore)
         mvc = MockMvcBuilders.standaloneSetup(controller)
-            .setControllerAdvice(GlobalErrorHandler())
+            .setControllerAdvice(GlobalErrorAdvice())
             .build()
     }
 

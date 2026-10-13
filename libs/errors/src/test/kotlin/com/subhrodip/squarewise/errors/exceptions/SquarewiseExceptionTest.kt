@@ -12,7 +12,7 @@ import com.subhrodip.squarewise.errors.diagnostics.MapDiagnostics
 import com.subhrodip.squarewise.errors.diagnostics.ResourceIdentifier
 import com.subhrodip.squarewise.errors.diagnostics.ErrorDiagnostics
 import com.subhrodip.squarewise.errors.code.ErrorDefinition
-import com.subhrodip.squarewise.errors.http.FieldViolation
+import com.subhrodip.squarewise.errors.web.ViolationDto
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -34,7 +34,7 @@ class SquarewiseExceptionTest {
 
     @Test
     fun `leaf exceptions produce governed definitions and bounded diagnostics`() {
-        val validation = DomainValidationException(listOf(FieldViolation("name", "required")))
+        val validation = DomainValidationException(listOf(ViolationDto("name", "required")))
         val notFound = EntityNotFoundException(ResourceIdentifier("group"))
 
         assertEquals("REQUEST_VALIDATION_FAILED", validation.definition.errorName)
