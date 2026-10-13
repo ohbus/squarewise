@@ -112,6 +112,20 @@ class RedisRateLimiterTest {
         assertThrows(PlatformDomainException::class.java) { limiter.consume("x".repeat(257), policy) }
     }
 
+    @Test
+    fun `rethrows SquarewiseException directly and stops timer`() {
+        val registry = SimpleMeterRegistry()
+        val redis = mock(StringRedisTemplate::class.java)
+        val domainEx = PlatformDomainException(com.subhrodip.squarewise.errors.catalog.PlatformErrors.PLATFORM_CONFIGURATION_INVALID, "boom")
+        `when`(redis.execute<String>(any<DefaultRedisScript<String>>(), anyList(), any(), any(), any()))
+            .thenThrow(domainEx)
+
+        val thrown = assertThrows(PlatformDomainException::class.java) {
+            RedisRateLimiter(redis, deriver, registry).consume("alice", policy)
+        }
+        assertEquals(domainEx, thrown)
+    }
+
     private fun redisReturning(result: String?): StringRedisTemplate {
         val redis = mock(StringRedisTemplate::class.java)
         `when`(redis.execute<String>(any<DefaultRedisScript<String>>(), anyList(), any(), any(), any()))
