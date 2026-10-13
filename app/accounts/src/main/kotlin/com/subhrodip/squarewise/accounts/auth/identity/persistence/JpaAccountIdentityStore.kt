@@ -12,7 +12,6 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
 import com.subhrodip.squarewise.accounts.validation.AccountReferenceValidator
-import org.springframework.beans.factory.annotation.Autowired
 
 /**
  * JPA-backed implementation of [AccountIdentityStore] managing durable account identity records.
