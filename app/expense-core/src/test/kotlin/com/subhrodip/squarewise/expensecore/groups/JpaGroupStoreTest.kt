@@ -706,4 +706,21 @@ class JpaGroupStoreTest @Autowired constructor(
             store.invite(group.groupId, "placeholder-owner", CreateInviteRequest(24, placeholder.membershipId))
         }
     }
+
+    /** Verifies that modifying, inviting to, or adding placeholders to an archived group is rejected. */
+    @Test
+    fun `rejects operations on archived group`() {
+        val group = store.create("arch-owner", CreateGroupRequest("To Archive", "HOUSEHOLD", "EUR"))
+        store.archive(group.groupId, "arch-owner")
+
+        assertThrows<SquarewiseException> {
+            store.update(group.groupId, "arch-owner", UpdateGroupRequest("Renamed"))
+        }
+        assertThrows<SquarewiseException> {
+            store.invite(group.groupId, "arch-owner", CreateInviteRequest(24))
+        }
+        assertThrows<SquarewiseException> {
+            store.addPlaceholder(group.groupId, "arch-owner", CreatePlaceholderRequest("Charlie"))
+        }
+    }
 }
