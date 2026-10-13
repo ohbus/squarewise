@@ -6,10 +6,13 @@ import com.subhrodip.squarewise.expensecore.messaging.outbox.persistence.OutboxR
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
+import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.transaction.support.TransactionTemplate
 
 /**
  * Scheduled background task that purges published outbox events older than the retention threshold
@@ -23,9 +26,9 @@ class OutboxRetentionCleanup(
     private val retention: Duration = DEFAULT_RETENTION,
     private val batchSize: Int = DEFAULT_BATCH_SIZE,
     private val maxBatches: Int = DEFAULT_MAX_BATCHES,
-    @org.springframework.beans.factory.annotation.Autowired(required = false) transactionManager: org.springframework.transaction.PlatformTransactionManager? = null
+    @Autowired(required = false) transactionManager: PlatformTransactionManager? = null
 ) {
-    private val transactionTemplate = transactionManager?.let { org.springframework.transaction.support.TransactionTemplate(it) }
+    private val transactionTemplate = transactionManager?.let { TransactionTemplate(it) }
 
     init {
         require(!retention.isNegative && !retention.isZero) { "outbox retention must be positive" }

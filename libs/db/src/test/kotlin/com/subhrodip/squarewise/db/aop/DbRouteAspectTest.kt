@@ -1,8 +1,11 @@
 package com.subhrodip.squarewise.db.aop
 
 import com.subhrodip.squarewise.db.routing.DbContextHolder
+import com.subhrodip.squarewise.db.routing.DbExecutionContext
 import com.subhrodip.squarewise.db.routing.DbOperationKind
+import com.subhrodip.squarewise.db.routing.DbReader
 import com.subhrodip.squarewise.db.routing.DbRouteContext
+import com.subhrodip.squarewise.db.routing.DbWriter
 import com.subhrodip.squarewise.db.routing.ReadConsistency
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.reflect.MethodSignature
@@ -48,7 +51,7 @@ class DbRouteAspectTest {
             return "ok-tx-write"
         }
 
-        @com.subhrodip.squarewise.db.routing.DbReader(target = "search", operation = "search.items")
+        @DbReader(target = "search", operation = "search.items")
         open fun dbReaderMethod(): String {
             val ctx = DbContextHolder.current()
             assertEquals("search.items", ctx.operationName)
@@ -58,7 +61,7 @@ class DbRouteAspectTest {
             return "ok-db-reader"
         }
 
-        @com.subhrodip.squarewise.db.routing.DbWriter(operation = "persist.item")
+        @DbWriter(operation = "persist.item")
         open fun dbWriterMethod(): String {
             val ctx = DbContextHolder.current()
             assertEquals("persist.item", ctx.operationName)
@@ -122,7 +125,7 @@ class DbRouteAspectTest {
             "pinned-to-writer"
         }
 
-        val writerContext = com.subhrodip.squarewise.db.routing.DbExecutionContext(
+        val writerContext = DbExecutionContext(
             operationName = "outer.command",
             kind = DbOperationKind.COMMAND,
             readerEligible = false
@@ -150,7 +153,7 @@ class DbRouteAspectTest {
             "inherited-target"
         }
 
-        val parentContext = com.subhrodip.squarewise.db.routing.DbExecutionContext(
+        val parentContext = DbExecutionContext(
             operationName = "outer.read",
             kind = DbOperationKind.QUERY,
             readerEligible = true,
@@ -210,7 +213,7 @@ class DbRouteAspectTest {
         assertEquals("plain", result)
     }
 
-    @com.subhrodip.squarewise.db.routing.DbReader
+    @DbReader
     open class ClassAnnotatedReader {
         open fun queryWithoutMethodAnnotation(): String {
             val ctx = DbContextHolder.current()

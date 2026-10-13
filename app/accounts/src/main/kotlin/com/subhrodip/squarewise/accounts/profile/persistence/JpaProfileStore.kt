@@ -10,6 +10,8 @@ import org.springframework.beans.factory.annotation.Autowired
 import java.util.UUID
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.transaction.support.TransactionSynchronization
+import org.springframework.transaction.support.TransactionSynchronizationManager
 
 /**
  * JPA-backed implementation of [ProfileStore] for managing user account profiles.
@@ -131,9 +133,9 @@ class JpaProfileStore(
     }
 
     private fun invalidateAfterCommit(subject: String, accountId: UUID) {
-        if (org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive()) {
-            org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
-                object : org.springframework.transaction.support.TransactionSynchronization {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(
+                object : TransactionSynchronization {
                     override fun afterCommit() {
                         profileCache?.invalidate(subject, accountId)
                     }

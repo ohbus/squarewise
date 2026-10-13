@@ -10,7 +10,9 @@ import com.subhrodip.squarewise.notifications.inbox.persistence.NotificationInbo
 
 import com.subhrodip.squarewise.notifications.inbox.api.InboxController
 import com.subhrodip.squarewise.notifications.inbox.model.InboxItem
+import com.subhrodip.squarewise.notifications.inbox.model.InboxPage
 import com.subhrodip.squarewise.notifications.inbox.persistence.InMemoryNotificationInboxStore
+import com.subhrodip.squarewise.notifications.inbox.persistence.NotificationInboxEntity
 import com.subhrodip.squarewise.notifications.inbox.persistence.NotificationInboxStore
 import com.subhrodip.squarewise.notifications.inbox.service.NotificationInboxService
 
@@ -209,7 +211,7 @@ class InboxControllerTest {
 
     @Test
     fun `InboxPage data class and NotificationInboxEntity properties work as expected`() {
-        val page = com.subhrodip.squarewise.notifications.inbox.model.InboxPage(emptyList())
+        val page = InboxPage(emptyList())
         assertEquals(emptyList<InboxItem>(), page.items)
         assertEquals(null, page.nextCursor)
         val copy = page.copy(nextCursor = "cursor-1")
@@ -218,7 +220,7 @@ class InboxControllerTest {
         assertEquals(page.hashCode(), page.copy().hashCode())
         assertTrue(page.toString().contains("InboxPage"))
 
-        val entity = com.subhrodip.squarewise.notifications.inbox.persistence.NotificationInboxEntity(
+        val entity = NotificationInboxEntity(
             notificationId = UUID.randomUUID(),
             subject = "alice",
             eventType = "expense.created",

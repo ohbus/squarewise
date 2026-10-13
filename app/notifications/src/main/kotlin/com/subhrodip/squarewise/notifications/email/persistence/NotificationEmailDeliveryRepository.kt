@@ -5,6 +5,7 @@ import java.util.UUID
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
+import org.springframework.data.repository.query.Param
 import org.springframework.transaction.annotation.Transactional
 
 /** Repository for durable notification email delivery state. */
@@ -43,7 +44,7 @@ interface NotificationEmailDeliveryRepository : JpaRepository<NotificationEmailD
         nativeQuery = true
     )
     fun purgeDeliveredOrSkippedOlderThan(
-        @org.springframework.data.repository.query.Param("cutoff") cutoff: Instant,
-        @org.springframework.data.repository.query.Param("limit") limit: Int
+        @Param("cutoff") cutoff: Instant,
+        @Param("limit") limit: Int
     ): Int
 }

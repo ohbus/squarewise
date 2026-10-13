@@ -5,11 +5,14 @@ import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
+import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.transaction.support.TransactionTemplate
 
 /**
  * Scheduled background task that purges delivered or skipped notification email delivery records
@@ -23,11 +26,11 @@ class NotificationEmailDeliveryRetentionCleanup(
     @Value("\${squarewise.notifications.email-delivery-retention-days:30}") retentionDays: Long = 30,
     @Value("\${squarewise.notifications.email-delivery-cleanup-batch-size:500}") private val batchSize: Int = DEFAULT_BATCH_SIZE,
     @Value("\${squarewise.notifications.email-delivery-cleanup-max-batches:50}") private val maxBatches: Int = DEFAULT_MAX_BATCHES,
-    @org.springframework.beans.factory.annotation.Autowired(required = false) transactionManager: org.springframework.transaction.PlatformTransactionManager? = null
+    @Autowired(required = false) transactionManager: PlatformTransactionManager? = null
 ) {
     private val log = LoggerFactory.getLogger(NotificationEmailDeliveryRetentionCleanup::class.java)
     private val retention: Duration = Duration.ofDays(retentionDays)
-    private val transactionTemplate = transactionManager?.let { org.springframework.transaction.support.TransactionTemplate(it) }
+    private val transactionTemplate = transactionManager?.let { TransactionTemplate(it) }
 
     init {
         require(!retention.isNegative && !retention.isZero) { "email delivery retention must be positive" }

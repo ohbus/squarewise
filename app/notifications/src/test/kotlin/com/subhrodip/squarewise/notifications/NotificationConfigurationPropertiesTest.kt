@@ -2,6 +2,7 @@ package com.subhrodip.squarewise.notifications
 
 import com.subhrodip.squarewise.notifications.consumer.config.NotificationMessagingProperties
 import com.subhrodip.squarewise.notifications.email.config.EmailProperties
+import java.time.Duration
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
@@ -36,10 +37,10 @@ class NotificationConfigurationPropertiesTest {
             NotificationMessagingProperties(deliveryWindowSeconds = 86_401)
         }
         assertThrows(IllegalArgumentException::class.java) {
-            NotificationMessagingProperties(processedEventRetention = java.time.Duration.ZERO)
+            NotificationMessagingProperties(processedEventRetention = Duration.ZERO)
         }
         assertThrows(IllegalArgumentException::class.java) {
-            NotificationMessagingProperties(processedEventRetention = java.time.Duration.ofSeconds(-1))
+            NotificationMessagingProperties(processedEventRetention = Duration.ofSeconds(-1))
         }
         assertThrows(IllegalArgumentException::class.java) {
             NotificationMessagingProperties(processedEventCleanupBatchSize = 0)
@@ -73,7 +74,7 @@ class NotificationConfigurationPropertiesTest {
 
         messaging.deliveryMaxPermits = 20
         messaging.deliveryWindowSeconds = 120
-        messaging.processedEventRetention = java.time.Duration.ofDays(7)
+        messaging.processedEventRetention = Duration.ofDays(7)
         messaging.processedEventCleanupBatchSize = 100
 
         assertEquals("mail.example.test", email.host)
@@ -89,7 +90,7 @@ class NotificationConfigurationPropertiesTest {
         assertEquals("auth-email.test.dlq", messaging.authEmailDeadLetterQueue)
         assertEquals(20, messaging.deliveryMaxPermits)
         assertEquals(120, messaging.deliveryWindowSeconds)
-        assertEquals(java.time.Duration.ofDays(7), messaging.processedEventRetention)
+        assertEquals(Duration.ofDays(7), messaging.processedEventRetention)
         assertEquals(100, messaging.processedEventCleanupBatchSize)
     }
 }

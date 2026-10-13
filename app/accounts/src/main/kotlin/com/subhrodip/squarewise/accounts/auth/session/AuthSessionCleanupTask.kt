@@ -3,11 +3,14 @@ package com.subhrodip.squarewise.accounts.auth.session
 import java.time.Duration
 import java.time.Instant
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
+import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.transaction.support.TransactionTemplate
 
 /**
  * Scheduled background task that purges expired and revoked authentication sessions
@@ -20,10 +23,10 @@ class AuthSessionCleanupTask(
     @Value("\${squarewise.auth.session-retention-days:30}") private val retentionDays: Long = 30,
     @Value("\${squarewise.auth.session-cleanup-batch-size:500}") private val batchSize: Int = 500,
     @Value("\${squarewise.auth.session-cleanup-max-batches:50}") private val maxBatches: Int = 50,
-    @org.springframework.beans.factory.annotation.Autowired(required = false) transactionManager: org.springframework.transaction.PlatformTransactionManager? = null
+    @Autowired(required = false) transactionManager: PlatformTransactionManager? = null
 ) {
     private val log = LoggerFactory.getLogger(AuthSessionCleanupTask::class.java)
-    private val transactionTemplate = transactionManager?.let { org.springframework.transaction.support.TransactionTemplate(it) }
+    private val transactionTemplate = transactionManager?.let { TransactionTemplate(it) }
 
     init {
         require(retentionDays > 0) { "session retention days must be positive" }

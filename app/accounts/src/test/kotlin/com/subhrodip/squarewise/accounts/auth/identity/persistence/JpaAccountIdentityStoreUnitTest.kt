@@ -8,12 +8,16 @@ import java.util.UUID
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.mock
-import com.subhrodip.squarewise.accounts.validation.AccountReferenceValidator
+import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
+import com.subhrodip.squarewise.accounts.errors.AccountsDomainException
+import com.subhrodip.squarewise.accounts.validation.AccountReferenceValidator
+import com.subhrodip.squarewise.errors.catalog.AccountsErrors
 
 /**
  * Unit coverage for defensive identity projections that are not constructible through the
@@ -119,34 +123,34 @@ class JpaAccountIdentityStoreUnitTest {
         val entity = identity(accountId, email = "old@example.com")
         `when`(identities.findFirstByAccountIdOrderByIdentityIdAsc(accountId)).thenReturn(entity)
         `when`(validator.validateActiveAccount(accountId)).thenThrow(
-            com.subhrodip.squarewise.accounts.errors.AccountsDomainException(
-                com.subhrodip.squarewise.errors.catalog.AccountsErrors.AUTHENTICATED_PROFILE_NOT_FOUND
+            AccountsDomainException(
+                AccountsErrors.AUTHENTICATED_PROFILE_NOT_FOUND
             )
         )
 
-        org.junit.jupiter.api.Assertions.assertThrows(
-            com.subhrodip.squarewise.accounts.errors.AccountsDomainException::class.java
+        assertThrows(
+            AccountsDomainException::class.java
         ) {
             store.updateEmail(accountId, "new@example.com", verified = true)
         }
-        verify(identities, org.mockito.Mockito.never()).save(any())
+        verify(identities, never()).save(any())
     }
 
     @Test
     fun `enrollIdentity propagates rejection when validateActiveAccount throws and does not save`() {
         val accountId = UUID.randomUUID()
         `when`(validator.validateActiveAccount(accountId)).thenThrow(
-            com.subhrodip.squarewise.accounts.errors.AccountsDomainException(
-                com.subhrodip.squarewise.errors.catalog.AccountsErrors.AUTHENTICATED_PROFILE_NOT_FOUND
+            AccountsDomainException(
+                AccountsErrors.AUTHENTICATED_PROFILE_NOT_FOUND
             )
         )
 
-        org.junit.jupiter.api.Assertions.assertThrows(
-            com.subhrodip.squarewise.accounts.errors.AccountsDomainException::class.java
+        assertThrows(
+            AccountsDomainException::class.java
         ) {
             store.enrollIdentity(accountId, "issuer", "subject", "test@example.com", true)
         }
-        verify(identities, org.mockito.Mockito.never()).save(any())
+        verify(identities, never()).save(any())
     }
 
     @Test

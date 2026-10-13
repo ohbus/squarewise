@@ -3,6 +3,8 @@ package com.subhrodip.squarewise.accounts.validation
 import com.subhrodip.squarewise.accounts.auth.session.AuthSessionEntity
 import com.subhrodip.squarewise.accounts.auth.session.AuthSessionRepository
 import com.subhrodip.squarewise.accounts.errors.AccountsDomainException
+import com.subhrodip.squarewise.accounts.profile.api.ProfileResponse
+import com.subhrodip.squarewise.accounts.profile.cache.ProfileCache
 import com.subhrodip.squarewise.accounts.profile.persistence.ProfileEntity
 import com.subhrodip.squarewise.accounts.profile.persistence.ProfileRepository
 import com.subhrodip.squarewise.errors.catalog.AccountsErrors
@@ -226,10 +228,10 @@ class AccountReferenceValidatorTest {
 
     @Test
     fun `isActiveAccount leverages ProfileCache when available`() {
-        val cache = com.subhrodip.squarewise.accounts.profile.cache.ProfileCache()
+        val cache = ProfileCache()
         val cachedValidator = AccountReferenceValidator(profileRepository, sessionRepository, cache)
         val accountId = UUID.randomUUID()
-        val profileResponse = com.subhrodip.squarewise.accounts.profile.api.ProfileResponse(
+        val profileResponse = ProfileResponse(
             accountId = accountId,
             displayName = "Cached",
             timezone = "UTC",

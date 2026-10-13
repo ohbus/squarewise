@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.springframework.data.domain.PageRequest
@@ -27,7 +28,7 @@ class ExpenseIdempotencyCleanupTest {
         val cleanup = ExpenseIdempotencyCleanup(repository, Clock.fixed(now, ZoneOffset.UTC), Duration.ofHours(24), 1)
 
         assertEquals(1, cleanup.cleanupExpired())
-        verify(repository, org.mockito.Mockito.times(2)).purgeOlderThan(cutoff, 1)
+        verify(repository, times(2)).purgeOlderThan(cutoff, 1)
     }
 
     /** Verifies an empty expired-claim page is a bounded no-op. */
@@ -56,7 +57,7 @@ class ExpenseIdempotencyCleanupTest {
         val cleanup = ExpenseIdempotencyCleanup(repository, Clock.fixed(now, ZoneOffset.UTC), Duration.ofHours(24), 1, 5)
 
         assertEquals(2, cleanup.cleanupExpired())
-        verify(repository, org.mockito.Mockito.times(3)).purgeOlderThan(cutoff, 1)
+        verify(repository, times(3)).purgeOlderThan(cutoff, 1)
     }
 
     /** Verifies cleanup refuses replay-retention and batch configurations that cannot be safe. */

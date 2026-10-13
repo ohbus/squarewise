@@ -1,5 +1,6 @@
 package com.subhrodip.squarewise.db.config
 
+import com.subhrodip.squarewise.db.aop.DbRouteAspect
 import com.subhrodip.squarewise.db.errors.DbPlatformException
 import com.subhrodip.squarewise.db.health.DbReaderHealth
 import com.subhrodip.squarewise.observability.db.DbTelemetry
@@ -25,7 +26,7 @@ class DbAutoConfigurationTest {
 
         assertEquals(DbTelemetry::class, configuration.squarewiseDbTelemetry(registryProvider)::class)
         assertEquals(DbReaderHealth::class, configuration.squarewiseReaderHealth()::class)
-        assertEquals(com.subhrodip.squarewise.db.aop.DbRouteAspect::class, configuration.squarewiseDbRouteAspect()::class)
+        assertEquals(DbRouteAspect::class, configuration.squarewiseDbRouteAspect()::class)
     }
 
     @Test

@@ -2,6 +2,7 @@ package com.subhrodip.squarewise.expensecore.validation
 
 import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
 import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
+import com.subhrodip.squarewise.expensecore.groups.cache.GroupAccessCache
 import com.subhrodip.squarewise.expensecore.groups.domain.GroupEntity
 import com.subhrodip.squarewise.expensecore.groups.domain.GroupMembershipEntity
 import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupMembershipRepository
@@ -261,7 +262,7 @@ class EntityReferenceValidatorTest {
 
     @Test
     fun `isActiveMember and isActiveGroup leverage GroupAccessCache`() {
-        val cache = com.subhrodip.squarewise.expensecore.groups.cache.GroupAccessCache()
+        val cache = GroupAccessCache()
         val cachedValidator = EntityReferenceValidator(groupRepository, membershipRepository, cache)
         val groupId = UUID.randomUUID()
         val subject = "cached-user"
@@ -279,7 +280,7 @@ class EntityReferenceValidatorTest {
 
     @Test
     fun `validateFinancialParticipants and validateSettlementParticipants leverage cached memberIds`() {
-        val cache = com.subhrodip.squarewise.expensecore.groups.cache.GroupAccessCache()
+        val cache = GroupAccessCache()
         val cachedValidator = EntityReferenceValidator(groupRepository, membershipRepository, cache)
         val groupId = UUID.randomUUID()
         val p1 = UUID.randomUUID()

@@ -7,6 +7,7 @@ import java.time.Instant
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 /** Unit test for [CredentialCleanupTask] utilizing dynamic reflection proxy. */
 class CredentialCleanupTaskTest {
@@ -107,16 +108,16 @@ class CredentialCleanupTaskTest {
             arrayOf(LoginCredentialRepository::class.java)
         ) { _, _, _ -> null } as LoginCredentialRepository
 
-        org.junit.jupiter.api.assertThrows<IllegalArgumentException> {
+        assertThrows<IllegalArgumentException> {
             CredentialCleanupTask(proxyRepo, expiredRetentionDays = 0, consumedRetentionHours = 24)
         }
-        org.junit.jupiter.api.assertThrows<IllegalArgumentException> {
+        assertThrows<IllegalArgumentException> {
             CredentialCleanupTask(proxyRepo, expiredRetentionDays = 7, consumedRetentionHours = 0)
         }
-        org.junit.jupiter.api.assertThrows<IllegalArgumentException> {
+        assertThrows<IllegalArgumentException> {
             CredentialCleanupTask(proxyRepo, expiredRetentionDays = 7, consumedRetentionHours = 24, batchSize = 0)
         }
-        org.junit.jupiter.api.assertThrows<IllegalArgumentException> {
+        assertThrows<IllegalArgumentException> {
             CredentialCleanupTask(proxyRepo, expiredRetentionDays = 7, consumedRetentionHours = 24, maxBatches = 0)
         }
     }

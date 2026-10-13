@@ -4,9 +4,12 @@ import com.subhrodip.squarewise.notifications.consumer.config.NotificationMessag
 import com.subhrodip.squarewise.notifications.consumer.persistence.ProcessedNotificationEventRepository
 import java.time.Clock
 import java.time.Duration
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.data.domain.PageRequest
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
+import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.transaction.support.TransactionTemplate
 
 /**
  * Reclaims old notification deduplication markers in bounded batches.
@@ -28,9 +31,9 @@ class ProcessedNotificationEventCleanup(
     private val retention: Duration = properties.processedEventRetention,
     private val batchSize: Int = properties.processedEventCleanupBatchSize,
     private val maxBatches: Int = DEFAULT_MAX_BATCHES,
-    @org.springframework.beans.factory.annotation.Autowired(required = false) transactionManager: org.springframework.transaction.PlatformTransactionManager? = null
+    @Autowired(required = false) transactionManager: PlatformTransactionManager? = null
 ) {
-    private val transactionTemplate = transactionManager?.let { org.springframework.transaction.support.TransactionTemplate(it) }
+    private val transactionTemplate = transactionManager?.let { TransactionTemplate(it) }
 
     init {
         require(!retention.isNegative && !retention.isZero) {

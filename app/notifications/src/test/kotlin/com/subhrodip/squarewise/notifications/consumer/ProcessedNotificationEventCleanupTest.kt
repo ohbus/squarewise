@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.springframework.data.domain.PageRequest
@@ -37,7 +38,7 @@ class ProcessedNotificationEventCleanupTest {
         )
 
         assertEquals(1, cleanup.cleanupExpired())
-        verify(repository, org.mockito.Mockito.times(2)).purgeProcessedOlderThan(cutoff, 1)
+        verify(repository, times(2)).purgeProcessedOlderThan(cutoff, 1)
     }
 
     @Test
@@ -62,7 +63,7 @@ class ProcessedNotificationEventCleanupTest {
         )
 
         assertEquals(2, cleanup.cleanupExpired())
-        verify(repository, org.mockito.Mockito.times(3)).purgeProcessedOlderThan(cutoff, 1)
+        verify(repository, times(3)).purgeProcessedOlderThan(cutoff, 1)
     }
 
     @Test
