@@ -20,6 +20,7 @@ import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
 import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
 import java.security.Principal
 import java.util.UUID
+import com.subhrodip.squarewise.db.routing.DbRouteContext
 
 @RestController
 @RequestMapping(ApiEndpoints.ExpenseCore.V1.PATH_GROUPS)
@@ -30,12 +31,14 @@ class GroupController(private val groups: GroupStore) {
         groups.create(principal.name, request)
 
     @GetMapping
+    @DbRouteContext("group.list", readerEligible = true)
     fun list(
         @RequestParam(defaultValue = "100") limit: Int = 100,
         principal: Principal
     ): List<GroupResponse> = groups.list(principal.name, limit)
 
     @GetMapping("/{groupId}")
+    @DbRouteContext("group.get", readerEligible = true)
     fun get(@PathVariable groupId: UUID, principal: Principal): GroupResponse =
         groups.get(groupId, principal.name)
             ?: throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group $groupId not found")
@@ -75,6 +78,7 @@ class GroupController(private val groups: GroupStore) {
 
     @GetMapping("/{groupId}/members")
     /** Returns the first bounded page of members visible to the authenticated member. */
+    @DbRouteContext("group.members.list", readerEligible = true)
     fun listMembers(
         @PathVariable groupId: UUID,
         @RequestHeader(ApiEndpoints.Headers.ACCEPTANCE_FAULT, required = false) fault: String?,

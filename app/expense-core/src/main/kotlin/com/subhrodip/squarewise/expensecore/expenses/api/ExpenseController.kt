@@ -21,6 +21,7 @@ import jakarta.validation.Valid
 import java.time.Instant
 import java.security.Principal
 import java.util.UUID
+import com.subhrodip.squarewise.db.routing.DbRouteContext
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
@@ -144,6 +145,7 @@ class ExpenseController(
     }
 
     @GetMapping(ApiEndpoints.ExpenseCore.V1.EXPENSES_SUBPATH)
+    @DbRouteContext("expense.list", readerEligible = true)
     fun listExpenses(
         @PathVariable groupId: UUID,
         @RequestParam(required = false) category: String?,
@@ -160,6 +162,7 @@ class ExpenseController(
     }
 
     @GetMapping(ApiEndpoints.ExpenseCore.V1.BALANCES_SUBPATH)
+    @DbRouteContext("expense.balances", readerEligible = true)
     fun getBalances(@PathVariable groupId: UUID, principal: Principal?): GroupBalancesResponse {
         ensureActiveMember(groupId, principal)
         val balances = expenseStore.balances(groupId)

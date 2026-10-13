@@ -23,6 +23,7 @@ import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
 import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
 import java.security.Principal
 import java.util.UUID
+import com.subhrodip.squarewise.db.routing.DbRouteContext
 
 /**
  * REST controller exposing authenticated recurring expense schedule management transport.
@@ -67,6 +68,7 @@ class RecurringExpenseController(
 
     @GetMapping(ApiEndpoints.ExpenseCore.V1.SCHEDULES_SUBPATH)
     /** Returns the first bounded page of schedules visible to the authenticated member. */
+    @DbRouteContext("recurring.schedules.list", readerEligible = true)
     fun listSchedules(
         @PathVariable groupId: UUID,
         principal: Principal?,
@@ -77,6 +79,7 @@ class RecurringExpenseController(
     }
 
     @GetMapping(ApiEndpoints.ExpenseCore.V1.SCHEDULE_BY_ID_SUBPATH)
+    @DbRouteContext("recurring.schedules.get", readerEligible = true)
     fun getSchedule(
         @PathVariable groupId: UUID,
         @PathVariable scheduleId: UUID,
