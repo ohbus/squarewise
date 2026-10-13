@@ -64,7 +64,7 @@ class ExpenseController(
         principal: Principal?
     ): ExpenseResponse {
         validateRequestBounds(request, idempotencyKey)
-        ensureActiveMember(groupId, principal)
+        val subject = ensureActiveMember(groupId, principal)
         val totalMinor = ExpenseValidator.parseAndValidateAmount(request.amount.minor)
 
         val payerSum = ExpenseValidator.validatePayers(request.payers, request.amount.currency)
@@ -91,7 +91,7 @@ class ExpenseController(
             allocations = domainAllocations
         )
 
-        val saved = expenseStore.create(groupId, record, idempotencyKey, principal?.name)
+        val saved = expenseStore.create(groupId, record, idempotencyKey, subject)
 
         return toResponse(saved)
     }
@@ -104,7 +104,7 @@ class ExpenseController(
         principal: Principal?
     ): ExpenseResponse {
         validateRequestBounds(request)
-        ensureActiveMember(groupId, principal)
+        val subject = ensureActiveMember(groupId, principal)
         val totalMinor = ExpenseValidator.parseAndValidateAmount(request.amount.minor)
 
         val payerSum = ExpenseValidator.validatePayers(request.payers, request.amount.currency)
@@ -131,7 +131,7 @@ class ExpenseController(
             allocations = domainAllocations
         )
 
-        val updated = expenseStore.update(groupId, expenseId, updateRecord, principal?.name)
+        val updated = expenseStore.update(groupId, expenseId, updateRecord, subject)
 
         return toResponse(updated)
     }
@@ -144,8 +144,8 @@ class ExpenseController(
         @RequestParam(required = false) version: Long?,
         principal: Principal?
     ) {
-        ensureActiveMember(groupId, principal)
-        expenseStore.delete(groupId, expenseId, version, principal?.name)
+        val subject = ensureActiveMember(groupId, principal)
+        expenseStore.delete(groupId, expenseId, version, subject)
     }
 
     @GetMapping(ApiEndpoints.ExpenseCore.V1.EXPENSES_SUBPATH)
@@ -173,7 +173,7 @@ class ExpenseController(
         return GroupBalancesResponse(groupId, balances)
     }
 
-    private fun ensureActiveMember(groupId: UUID, principal: Principal?) {
+    private fun ensureActiveMember(groupId: UUID, principal: Principal?): String {
         val subject = principal?.name?.trim()
             ?.takeIf { it.isNotEmpty() }
             ?: throw ExpenseDomainException(PlatformErrors.AUTHENTICATION_REQUIRED, "Authenticated subject is required")
@@ -197,6 +197,7 @@ class ExpenseController(
         if (status != "ACTIVE") {
             throw ExpenseDomainException(ExpenseErrors.GROUP_ARCHIVED, "Group $groupId is archived")
         }
+        return subject
     }
 
     private fun validateRequestBounds(request: CreateExpenseRequest, idempotencyKey: String) {
