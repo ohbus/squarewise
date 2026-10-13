@@ -43,7 +43,6 @@ class LiveUpdateFanout(
     private val revocationSignals = ConcurrentHashMap<String, Sinks.One<Unit>>()
     private val subscriptionInvalidations = ConcurrentHashMap<String, SubscriptionInvalidationChannel>()
 
-    private val admissionLock = Any()
     /** Delivers only new invalidations to subscribers of this shared stream. */
     val invalidationSink: Sinks.Many<GroupInvalidation> =
         Sinks.many().multicast().directAllOrNothing()
@@ -103,8 +102,8 @@ class LiveUpdateFanout(
         require(userId.isNotBlank()) { "userId must not be blank" }
         require(groupId.isNotBlank()) { "groupId must not be blank" }
         val now = Instant.now(clock)
-        return synchronized(admissionLock) {
-            val userSubs = userSubscriptions.computeIfAbsent(userId) { ConcurrentHashMap.newKeySet() }
+        val userSubs = userSubscriptions.computeIfAbsent(userId) { ConcurrentHashMap.newKeySet() }
+        return synchronized(userSubs) {
             for (subId in userSubs.toList()) {
                 val sub = subscriptions[subId]
                 if (sub != null && !now.isBefore(sub.subscription.expiresAt)) {
