@@ -69,7 +69,7 @@ class DbTelemetry(
     }
 
     /** Measures one bounded query block without capturing SQL, parameters, or payloads. */
-    inline fun <T> measureQuery(operation: String, route: String, block: () -> T): T {
+    fun <T> measureQuery(operation: String, route: String, block: () -> T): T {
         val started = System.nanoTime()
         return try {
             block()
