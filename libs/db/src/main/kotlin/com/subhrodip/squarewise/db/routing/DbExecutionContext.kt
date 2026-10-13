@@ -33,6 +33,6 @@ data class DbExecutionContext(
     fun requiredDbWatermark(): DbWatermark? = requiredWatermark?.let(DbWatermark::parse)
 
     private companion object {
-        val OPERATION_NAME = Regex("[a-z0-9]+(?:[._-][a-z0-9]+)*")
+        private val OPERATION_NAME = Regex("[a-z0-9]+(?:[._-][a-z0-9]+)*")
     }
 }

@@ -18,26 +18,30 @@ data class DbOperationPolicy(
     val readerEligible: Boolean = false,
 ) {
     init {
-        if (!operationName.matches(OPERATION_NAME)) {
-            invalid("operationName must be a stable lowercase dot-delimited identifier")
+        require(operationName.matches(OPERATION_NAME)) {
+            throw DbPlatformException(
+                PlatformErrors.PLATFORM_CONFIGURATION_INVALID,
+                "operationName must be a stable lowercase dot-delimited identifier"
+            )
         }
-        if (readerEligible && kind != DbOperationKind.QUERY) {
-            invalid("Only non-mutating queries may be reader eligible")
+        require(!readerEligible || kind == DbOperationKind.QUERY) {
+            throw DbPlatformException(
+                PlatformErrors.PLATFORM_CONFIGURATION_INVALID,
+                "Only non-mutating queries may be reader eligible"
+            )
         }
-        if (readerEligible && consistency == ReadConsistency.STRONG) {
-            invalid("Strong queries must use the writer")
+        require(!readerEligible || consistency != ReadConsistency.STRONG) {
+            throw DbPlatformException(
+                PlatformErrors.PLATFORM_CONFIGURATION_INVALID,
+                "Strong queries must use the writer"
+            )
         }
     }
-
-    private fun invalid(detail: String): Nothing = throw DbPlatformException(
-        PlatformErrors.PLATFORM_CONFIGURATION_INVALID,
-        detail
-    )
 
     /** Returns the only valid route for a writer-only operation. */
     fun defaultRoute(): DbRoute = if (readerEligible) DbRoute.READER else DbRoute.WRITER
 
     private companion object {
-        val OPERATION_NAME = Regex("[a-z0-9]+(?:[._-][a-z0-9]+)*")
+        private val OPERATION_NAME = Regex("[a-z0-9]+(?:[._-][a-z0-9]+)*")
     }
 }
