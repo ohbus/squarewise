@@ -145,7 +145,7 @@ class NotificationEventConsumer(
          * Bounds recovery time for a consumer that crashes after claiming a dispatch.
          * A provider may still receive one duplicate if the process crashes after SMTP accepts the mail.
          */
-        val DISPATCH_LEASE: Duration = Duration.ofMinutes(5)
+        private val DISPATCH_LEASE: Duration = Duration.ofMinutes(5)
     }
 }
 

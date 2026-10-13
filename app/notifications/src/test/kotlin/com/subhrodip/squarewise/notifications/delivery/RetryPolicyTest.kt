@@ -43,5 +43,8 @@ class RetryPolicyTest {
 
         assertEquals(Duration.ofSeconds(1L shl 9), policy.decide(10, DeliveryOutcome.RETRYABLE_FAILURE).delay)
         assertEquals(Duration.ofSeconds(1L shl 10), policy.decide(11, DeliveryOutcome.RETRYABLE_FAILURE).delay)
+
+        val defaultPolicy = RetryPolicy()
+        assertEquals(true, defaultPolicy.decide(5, DeliveryOutcome.RETRYABLE_FAILURE).parked)
     }
 }

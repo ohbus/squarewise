@@ -206,6 +206,29 @@ class InboxControllerTest {
         assertTrue(store.markAsRead("alice", id))
         assertTrue(store.list("alice").first().read)
     }
+
+    @Test
+    fun `InboxPage data class and NotificationInboxEntity properties work as expected`() {
+        val page = com.subhrodip.squarewise.notifications.inbox.model.InboxPage(emptyList())
+        assertEquals(emptyList<InboxItem>(), page.items)
+        assertEquals(null, page.nextCursor)
+        val copy = page.copy(nextCursor = "cursor-1")
+        assertEquals("cursor-1", copy.nextCursor)
+        assertEquals(page, page.copy())
+        assertEquals(page.hashCode(), page.copy().hashCode())
+        assertTrue(page.toString().contains("InboxPage"))
+
+        val entity = com.subhrodip.squarewise.notifications.inbox.persistence.NotificationInboxEntity(
+            notificationId = UUID.randomUUID(),
+            subject = "alice",
+            eventType = "expense.created",
+            message = "test",
+            occurredAt = Instant.now()
+        )
+        val newId = UUID.randomUUID()
+        entity.notificationId = newId
+        assertEquals(newId, entity.notificationId)
+    }
 }
 
 private class RecordingInboxStore(private val delegate: NotificationInboxStore) : NotificationInboxStore {
