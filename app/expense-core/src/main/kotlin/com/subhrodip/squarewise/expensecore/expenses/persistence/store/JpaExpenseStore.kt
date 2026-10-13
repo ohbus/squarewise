@@ -429,6 +429,7 @@ class JpaExpenseStore(
      * Calculates net balances per participant and currency across all postings in a group.
      * Oversized result sets are rejected rather than truncated to preserve financial correctness.
      */
+    @Transactional(readOnly = true)
     override fun balances(groupId: UUID): List<GroupBalanceItem> {
         if (groupAccessCache != null) {
             return groupAccessCache.balances(groupId) {
