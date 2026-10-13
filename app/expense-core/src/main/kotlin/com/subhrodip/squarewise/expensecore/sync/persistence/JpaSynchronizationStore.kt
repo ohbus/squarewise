@@ -81,11 +81,11 @@ class JpaSynchronizationStore(
         require(limit in 1..100) { "limit must be between 1 and 100" }
 
         val start = validate(groupId, after)
-        val entities = repository.findChangesAfter(groupId, start, PageRequest.of(0, limit))
-        val totalRemaining = repository.countChangesAfter(groupId, start)
-        val hasMore = totalRemaining > entities.size
+        val entities = repository.findChangesAfter(groupId, start, PageRequest.of(0, limit + 1))
+        val hasMore = entities.size > limit
+        val pageEntities = if (hasMore) entities.take(limit) else entities
 
-        val domainChanges = entities.map {
+        val domainChanges = pageEntities.map {
             SyncChange(
                 revision = it.revision,
                 entityId = it.entityId,
