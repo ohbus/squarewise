@@ -18,19 +18,19 @@ data class DbOperationPolicy(
     val readerEligible: Boolean = false,
 ) {
     init {
-        require(operationName.matches(OPERATION_NAME)) {
+        if (!operationName.matches(OPERATION_NAME)) {
             throw DbPlatformException(
                 PlatformErrors.PLATFORM_CONFIGURATION_INVALID,
                 "operationName must be a stable lowercase dot-delimited identifier"
             )
         }
-        require(!readerEligible || kind == DbOperationKind.QUERY) {
+        if (readerEligible && kind != DbOperationKind.QUERY) {
             throw DbPlatformException(
                 PlatformErrors.PLATFORM_CONFIGURATION_INVALID,
                 "Only non-mutating queries may be reader eligible"
             )
         }
-        require(!readerEligible || consistency != ReadConsistency.STRONG) {
+        if (readerEligible && consistency == ReadConsistency.STRONG) {
             throw DbPlatformException(
                 PlatformErrors.PLATFORM_CONFIGURATION_INVALID,
                 "Strong queries must use the writer"

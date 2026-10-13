@@ -10,6 +10,7 @@ import com.subhrodip.squarewise.errors.catalog.PlatformErrors
 import com.subhrodip.squarewise.observability.db.DbTelemetry
 import java.sql.Connection
 import java.sql.SQLException
+import java.util.concurrent.atomic.AtomicInteger
 import javax.sql.DataSource
 import org.springframework.jdbc.datasource.AbstractDataSource
 
@@ -23,6 +24,8 @@ class DbRoutingDataSource(
     private val telemetry: DbTelemetry = DbTelemetry(),
     private val routeGuard: DbRouteGuard = DbRouteGuard()
 ) : AbstractDataSource() {
+    private val roundRobinCounter = AtomicInteger(0)
+
     init { readers.keys.forEach(readerHealth::register) }
 
     override fun getConnection(): Connection {
@@ -69,8 +72,6 @@ class DbRoutingDataSource(
 
     /** Returns the configured reader pools for health probing and diagnostics. */
     fun readerDataSources(): Map<String, DataSource> = readers.toMap()
-
-    private val roundRobinCounter = java.util.concurrent.atomic.AtomicInteger(0)
 
     /** Resolves the target reader pool name based on context target or round-robin among healthy readers, with automatic failover. */
     fun resolveReaderName(): String {
