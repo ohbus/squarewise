@@ -35,12 +35,35 @@ class OutboxRetentionCleanupTest {
     }
 
     @Test
+    fun `cleanupPublished drains backlog across multiple batches`() {
+        val cleanup = OutboxRetentionCleanup(
+            repository = repository,
+            clock = clock,
+            retention = Duration.ofDays(7),
+            batchSize = 100,
+            maxBatches = 5
+        )
+        val expectedCutoff = now.minus(Duration.ofDays(7))
+        `when`(repository.purgePublishedOlderThan(expectedCutoff, 100))
+            .thenReturn(100)
+            .thenReturn(100)
+            .thenReturn(33)
+
+        val deleted = cleanup.cleanupPublished()
+
+        assertEquals(233, deleted)
+    }
+
+    @Test
     fun `rejects zero or negative retention and batch size`() {
         assertThrows(IllegalArgumentException::class.java) {
             OutboxRetentionCleanup(repository, clock, retention = Duration.ZERO, batchSize = 100)
         }
         assertThrows(IllegalArgumentException::class.java) {
             OutboxRetentionCleanup(repository, clock, retention = Duration.ofDays(7), batchSize = 0)
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            OutboxRetentionCleanup(repository, clock, retention = Duration.ofDays(7), batchSize = 100, maxBatches = 0)
         }
     }
 }

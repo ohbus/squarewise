@@ -27,6 +27,7 @@ class ProcessedNotificationEventCleanup(
     private val clock: Clock = Clock.systemUTC(),
     private val retention: Duration = properties.processedEventRetention,
     private val batchSize: Int = properties.processedEventCleanupBatchSize,
+    private val maxBatches: Int = DEFAULT_MAX_BATCHES,
 ) {
     init {
         require(!retention.isNegative && !retention.isZero) {
@@ -35,16 +36,27 @@ class ProcessedNotificationEventCleanup(
         require(batchSize > 0) {
             "processed event cleanup batch size must be positive"
         }
+        require(maxBatches > 0) {
+            "processed event cleanup max batches must be positive"
+        }
     }
 
-    /** Deletes one bounded batch of markers older than the configured replay window. */
+    /** Deletes markers older than the configured replay window across bounded batches. */
     @Scheduled(fixedDelayString = "\${squarewise.notifications.processed-event-cleanup-delay-ms:3600000}")
     fun cleanupExpired(): Int {
         val cutoff = clock.instant().minus(retention)
-        val expired = repository.findByProcessedAtBefore(cutoff, PageRequest.of(0, batchSize))
-        if (expired.isNotEmpty()) {
+        var totalDeleted = 0
+        for (batch in 0 until maxBatches) {
+            val expired = repository.findByProcessedAtBefore(cutoff, PageRequest.of(0, batchSize))
+            if (expired.isEmpty()) break
             repository.deleteAllById(expired.map { it.eventId })
+            totalDeleted += expired.size
+            if (expired.size < batchSize) break
         }
-        return expired.size
+        return totalDeleted
+    }
+
+    companion object {
+        const val DEFAULT_MAX_BATCHES: Int = 50
     }
 }

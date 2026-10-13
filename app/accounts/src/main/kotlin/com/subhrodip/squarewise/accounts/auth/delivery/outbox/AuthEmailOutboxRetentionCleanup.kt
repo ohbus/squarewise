@@ -20,25 +20,34 @@ class AuthEmailOutboxRetentionCleanup(
     private val repository: AuthEmailOutboxRepository,
     private val clock: Clock = Clock.systemUTC(),
     private val retention: Duration = DEFAULT_RETENTION,
-    private val batchSize: Int = DEFAULT_BATCH_SIZE
+    private val batchSize: Int = DEFAULT_BATCH_SIZE,
+    private val maxBatches: Int = DEFAULT_MAX_BATCHES
 ) {
     init {
         require(!retention.isNegative && !retention.isZero) { "auth-email outbox retention must be positive" }
         require(batchSize > 0) { "auth-email outbox cleanup batch size must be positive" }
+        require(maxBatches > 0) { "auth-email outbox cleanup max batches must be positive" }
     }
 
     /**
-     * Purges at most [batchSize] published messages older than [retention].
+     * Purges published messages older than [retention] across bounded batches.
      */
     @Scheduled(fixedDelayString = "\${squarewise.auth-email-outbox.cleanup-delay-ms:3600000}")
     @Transactional
     fun cleanupPublished(): Int {
         val cutoff: Instant = clock.instant().minus(retention)
-        return repository.purgePublishedOlderThan(cutoff, batchSize)
+        var totalDeleted = 0
+        for (batch in 0 until maxBatches) {
+            val deleted = repository.purgePublishedOlderThan(cutoff, batchSize)
+            totalDeleted += deleted
+            if (deleted < batchSize) break
+        }
+        return totalDeleted
     }
 
     companion object {
         val DEFAULT_RETENTION: Duration = Duration.ofDays(7)
         const val DEFAULT_BATCH_SIZE: Int = 500
+        const val DEFAULT_MAX_BATCHES: Int = 50
     }
 }

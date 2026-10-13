@@ -36,6 +36,28 @@ class AuthEmailOutboxRetentionCleanupTest {
     }
 
     @Test
+    fun `cleanupPublished drains backlog across multiple batches`() {
+        val retention = Duration.ofDays(7)
+        val expectedCutoff = fixedInstant.minus(retention)
+        `when`(repository.purgePublishedOlderThan(expectedCutoff, 100))
+            .thenReturn(100)
+            .thenReturn(100)
+            .thenReturn(15)
+
+        val cleanup = AuthEmailOutboxRetentionCleanup(
+            repository = repository,
+            clock = clock,
+            retention = retention,
+            batchSize = 100,
+            maxBatches = 5
+        )
+
+        val purged = cleanup.cleanupPublished()
+
+        assertEquals(215, purged)
+    }
+
+    @Test
     fun `rejects invalid constructor parameters`() {
         assertThrows(IllegalArgumentException::class.java) {
             AuthEmailOutboxRetentionCleanup(
@@ -47,6 +69,12 @@ class AuthEmailOutboxRetentionCleanupTest {
             AuthEmailOutboxRetentionCleanup(
                 repository = repository,
                 batchSize = 0
+            )
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            AuthEmailOutboxRetentionCleanup(
+                repository = repository,
+                maxBatches = 0
             )
         }
     }

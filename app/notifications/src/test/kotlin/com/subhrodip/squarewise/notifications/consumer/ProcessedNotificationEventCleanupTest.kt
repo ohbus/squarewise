@@ -36,7 +36,7 @@ class ProcessedNotificationEventCleanupTest {
                 now.minus(Duration.ofDays(30)),
                 PageRequest.of(0, 1)
             )
-        ).thenReturn(listOf(marker))
+        ).thenReturn(listOf(marker), emptyList())
 
         val cleanup = ProcessedNotificationEventCleanup(
             repository,
@@ -46,6 +46,38 @@ class ProcessedNotificationEventCleanupTest {
 
         assertEquals(1, cleanup.cleanupExpired())
         verify(repository).deleteAllById(listOf(marker.eventId))
+    }
+
+    @Test
+    fun `drains multiple batches of expired markers`() {
+        val repository = mock(ProcessedNotificationEventRepository::class.java)
+        val now = Instant.parse("2026-10-13T00:00:00Z")
+        val m1 = ProcessedNotificationEventEntity(UUID.randomUUID(), now.minus(Duration.ofDays(31)))
+        val m2 = ProcessedNotificationEventEntity(UUID.randomUUID(), now.minus(Duration.ofDays(31)))
+        val properties = NotificationMessagingProperties(
+            processedEventRetention = Duration.ofDays(30),
+            processedEventCleanupBatchSize = 1
+        )
+        `when`(
+            repository.findByProcessedAtBefore(
+                now.minus(Duration.ofDays(30)),
+                PageRequest.of(0, 1)
+            )
+        )
+            .thenReturn(listOf(m1))
+            .thenReturn(listOf(m2))
+            .thenReturn(emptyList())
+
+        val cleanup = ProcessedNotificationEventCleanup(
+            repository,
+            properties,
+            Clock.fixed(now, ZoneOffset.UTC),
+            maxBatches = 5
+        )
+
+        assertEquals(2, cleanup.cleanupExpired())
+        verify(repository).deleteAllById(listOf(m1.eventId))
+        verify(repository).deleteAllById(listOf(m2.eventId))
     }
 
     @Test
@@ -68,6 +100,16 @@ class ProcessedNotificationEventCleanupTest {
                 NotificationMessagingProperties(),
                 clock,
                 Duration.ofDays(1),
+                0
+            )
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            ProcessedNotificationEventCleanup(
+                repository,
+                NotificationMessagingProperties(),
+                clock,
+                Duration.ofDays(1),
+                1,
                 0
             )
         }
