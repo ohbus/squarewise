@@ -50,4 +50,22 @@ class DbExecutionContextTest {
                 }
             }
     }
+
+    @Test
+    fun `DbExecutionContext supports data class methods`() {
+        val context = DbExecutionContext(
+            operationName = "expense.search",
+            kind = DbOperationKind.QUERY,
+            consistency = ReadConsistency.EVENTUAL,
+            readerEligible = true,
+            requiredWatermark = "0/20",
+            targetReader = "replica-1"
+        )
+        val copy = context.copy(operationName = "expense.find")
+        assertEquals("expense.find", copy.operationName)
+        assertEquals(context, context.copy())
+        assertEquals(context.hashCode(), context.copy().hashCode())
+        assertTrue(context.toString().contains("expense.search"))
+        assertEquals("replica-1", context.targetReader)
+    }
 }

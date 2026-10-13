@@ -25,6 +25,7 @@ class DbAutoConfigurationTest {
 
         assertEquals(DbTelemetry::class, configuration.squarewiseDbTelemetry(registryProvider)::class)
         assertEquals(DbReaderHealth::class, configuration.squarewiseReaderHealth()::class)
+        assertEquals(com.subhrodip.squarewise.db.aop.DbRouteAspect::class, configuration.squarewiseDbRouteAspect()::class)
     }
 
     @Test

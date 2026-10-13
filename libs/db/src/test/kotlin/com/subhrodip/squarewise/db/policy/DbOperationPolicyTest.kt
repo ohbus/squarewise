@@ -78,4 +78,19 @@ class DbOperationPolicyTest {
             )
         }
     }
+
+    @Test
+    fun `DbOperationPolicy supports data class methods`() {
+        val policy = DbOperationPolicy(
+            operationName = "expense.search",
+            kind = DbOperationKind.QUERY,
+            consistency = ReadConsistency.EVENTUAL,
+            readerEligible = true,
+        )
+        val copy = policy.copy(operationName = "expense.lookup")
+        assertEquals("expense.lookup", copy.operationName)
+        assertEquals(policy, policy.copy())
+        assertEquals(policy.hashCode(), policy.copy().hashCode())
+        assertEquals(true, policy.toString().contains("expense.search"))
+    }
 }
