@@ -86,17 +86,18 @@ class ClientAddressResolver(
      * - Unresolvable: returns [FALLBACK_PARTITION].
      */
     private fun normalizeToPartition(address: String): String {
-        val inet = parseAddress(address) ?: return FALLBACK_PARTITION
-        return when (inet) {
+        return when (val inet = parseAddress(address)) {
             is Inet4Address -> {
                 val parts = inet.hostAddress.split(".")
-                if (parts.size >= 3) "${parts[0]}.${parts[1]}.${parts[2]}" else FALLBACK_PARTITION
+                "${parts[0]}.${parts[1]}.${parts[2]}"
             }
             is Inet6Address -> {
-                // Use the first 3 groups of the full expanded address as the /48 prefix.
-                val expanded = expandIpv6(inet)
-                val groups = expanded.split(":")
-                if (groups.size >= 3) "${groups[0]}:${groups[1]}:${groups[2]}" else FALLBACK_PARTITION
+                val bytes = inet.address
+                (0 until 3).joinToString(":") { i ->
+                    val high = bytes[i * 2].toInt() and 0xFF
+                    val low = bytes[i * 2 + 1].toInt() and 0xFF
+                    "%02x%02x".format(high, low)
+                }
             }
             else -> FALLBACK_PARTITION
         }
@@ -106,16 +107,6 @@ class ClientAddressResolver(
     private fun parseAddress(address: String): InetAddress? = runCatching {
         InetAddress.getByName(address.trim())
     }.getOrNull()
-
-    /** Returns the fully expanded colon-separated hex representation of an IPv6 address. */
-    private fun expandIpv6(inet: Inet6Address): String {
-        val bytes = inet.address
-        return (0 until 8).joinToString(":") { i ->
-            val high = bytes[i * 2].toInt() and 0xFF
-            val low = bytes[i * 2 + 1].toInt() and 0xFF
-            "%02x%02x".format(high, low)
-        }
-    }
 
     companion object {
         private const val FALLBACK_PARTITION = "unknown"

@@ -20,7 +20,7 @@ class ProfileCache(
     private val ttl: Duration = Duration.ofSeconds(60),
     private val maxEntries: Int = 10_000
 ) {
-    private data class Entry(val profile: ProfileResponse, val subject: String?, val expiresAt: Instant) {
+    private data class Entry(val profile: ProfileResponse, val expiresAt: Instant) {
         fun isExpired(now: Instant): Boolean = now.isAfter(expiresAt)
     }
 
@@ -51,7 +51,7 @@ class ProfileCache(
         }
         evictIfOversized()
         val loadedAt = Instant.now()
-        val entry = Entry(profile, subject, loadedAt.plus(ttl))
+        val entry = Entry(profile, loadedAt.plus(ttl))
         bySubject[subject] = entry
         byAccountId[profile.accountId] = entry
         return profile
@@ -78,7 +78,7 @@ class ProfileCache(
         }
         evictIfOversized()
         val loadedAt = Instant.now()
-        val entry = Entry(profile, null, loadedAt.plus(ttl))
+        val entry = Entry(profile, loadedAt.plus(ttl))
         byAccountId[accountId] = entry
         return profile
     }
@@ -103,7 +103,7 @@ class ProfileCache(
     fun put(profile: ProfileResponse) {
         val now = Instant.now()
         evictIfOversized()
-        val entry = Entry(profile, null, now.plus(ttl))
+        val entry = Entry(profile, now.plus(ttl))
         byAccountId[profile.accountId] = entry
     }
 
@@ -141,19 +141,10 @@ class ProfileCache(
             bySubject.entries.removeIf { it.value.isExpired(now) }
             byAccountId.entries.removeIf { it.value.isExpired(now) }
             while (bySubject.size > maxEntries) {
-                val key = bySubject.keys().nextElement()
-                val removed = bySubject.remove(key)
-                if (removed != null) {
-                    byAccountId.remove(removed.profile.accountId)
-                }
+                bySubject.remove(bySubject.keys().nextElement())
             }
             while (byAccountId.size > maxEntries) {
-                val key = byAccountId.keys().nextElement()
-                val removed = byAccountId.remove(key)
-                val subject = removed?.subject
-                if (subject != null) {
-                    bySubject.remove(subject)
-                }
+                byAccountId.remove(byAccountId.keys().nextElement())
             }
         }
     }

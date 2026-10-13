@@ -116,7 +116,7 @@ class SearchController(
         @RequestParam(defaultValue = "10000") maxRows: Int,
         principal: Principal
     ): ResponseEntity<String> {
-        if (maxRows !in 1..ExpenseSearch.MAX_EXPORT_ROWS) {
+        if (maxRows < 1 || maxRows > ExpenseSearch.MAX_EXPORT_ROWS) {
             throw ExpenseDomainException(
                 ExpenseErrors.EXPENSE_REQUEST_INVALID,
                 "maxRows must be between 1 and ${ExpenseSearch.MAX_EXPORT_ROWS}"

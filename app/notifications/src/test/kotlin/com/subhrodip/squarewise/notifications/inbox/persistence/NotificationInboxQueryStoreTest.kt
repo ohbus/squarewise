@@ -14,9 +14,24 @@ class NotificationInboxQueryStoreTest {
         val oldest = item(1, Instant.parse("2026-10-01T00:00:00Z"))
         val store = object : NotificationInboxQueryStore {
             override fun list(subject: String) = listOf(newest, oldest)
+            override fun page(subject: String, afterOccurredAt: Instant?, afterNotificationId: UUID?, limit: Int): List<InboxItem> {
+                return super.page(subject, afterOccurredAt, afterNotificationId, limit)
+            }
         }
 
         assertEquals(listOf(newest), store.page("alice", null, null, 1))
+
+        val defaultImplsClass = Class.forName("com.subhrodip.squarewise.notifications.inbox.persistence.NotificationInboxQueryStore\$DefaultImpls")
+        val pageMethod = defaultImplsClass.getMethod(
+            "page",
+            NotificationInboxQueryStore::class.java,
+            String::class.java,
+            Instant::class.java,
+            UUID::class.java,
+            Int::class.javaPrimitiveType
+        )
+        val defaultImplsResult = pageMethod.invoke(null, store, "alice", null, null, 1)
+        assertEquals(listOf(newest), defaultImplsResult)
     }
 
     @Test

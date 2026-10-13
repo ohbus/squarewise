@@ -88,9 +88,8 @@ class EmailDispatcher(
                         return EmailDeliveryOutcome.RETRYABLE_FAILURE
                     }
                 }
-                return null
             }
-            return EmailDeliveryOutcome.RETRYABLE_FAILURE
+            return null
         }
 
         log.error("Non-retryable email delivery failure for recipientId={}, errorClass={}", recipientId, e::class.simpleName)

@@ -93,6 +93,16 @@ class SquarewiseExceptionTest {
         assertEquals(0, ErrorDiagnostics.EMPTY.entries.size)
     }
 
-    private class TestException(definition: ErrorDefinition) :
-        SquarewiseException(definition)
+    @Test
+    fun `supports explicit message override`() {
+        val ex = TestException(PlatformErrors.RESOURCE_CONFLICT, messageOverride = "custom-override")
+        assertEquals("custom-override", ex.message)
+    }
+
+    private class TestException(
+        definition: ErrorDefinition,
+        diagnostics: ErrorDiagnostics = ErrorDiagnostics.EMPTY,
+        cause: Throwable? = null,
+        messageOverride: String? = null,
+    ) : SquarewiseException(definition, diagnostics, cause, messageOverride)
 }

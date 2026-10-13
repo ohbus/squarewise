@@ -28,6 +28,8 @@ import org.mockito.Mockito.mock
 import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
+import com.subhrodip.squarewise.errors.catalog.NotificationErrors
+import com.subhrodip.squarewise.notifications.errors.NotificationDomainException
 import org.springframework.dao.DataIntegrityViolationException
 
 /** Verifies the notification consumer's dispatch isolation and duplicate boundary. */
@@ -264,6 +266,72 @@ class NotificationEventConsumerUnitTest {
 
         assertEquals(NotificationConsumptionOutcome.DUPLICATE, outcome)
         verify(emailDispatcher, never()).send(anyString(), anyString(), anyString())
+    }
+
+    @Test
+    fun `redelivers when delivery status is DISPATCHING and outcome is DUPLICATE`() {
+        val deliveries = mock(NotificationEmailDeliveryRepository::class.java)
+        doReturn(1).`when`(deliveries).claimForDispatch(
+            any(UUID::class.java) ?: UUID(0, 0),
+            any(Instant::class.java) ?: Instant.EPOCH,
+            any(Instant::class.java) ?: Instant.EPOCH
+        )
+        val event = sampleEvent(subject = "dispatching@example.com")
+        val dispatchingDelivery = NotificationEmailDeliveryEntity(event.notificationId, status = NotificationEmailDeliveryEntity.DISPATCHING)
+        doReturn(NotificationConsumptionOutcome.DUPLICATE).`when`(processor).process(event)
+        doReturn(Optional.of(dispatchingDelivery)).`when`(deliveries).findById(event.notificationId)
+        doReturn(NotificationPreferences(emailEnabled = true)).`when`(preferenceStore).get("dispatching@example.com")
+        doReturn(true).`when`(deliveryRateLimiter).allow("dispatching@example.com")
+        doReturn(EmailDeliveryOutcome.DELIVERED).`when`(emailDispatcher)
+            .send("dispatching@example.com", "Notification: expense.created", "Dinner was added")
+
+        NotificationEventConsumer(processor, processedEvents, preferenceStore, emailDispatcher, deliveryRateLimiter, deliveries)
+            .consume(event)
+        verify(emailDispatcher).send("dispatching@example.com", "Notification: expense.created", "Dinner was added")
+    }
+
+    @Test
+    fun `skips dispatch when delivery status is SKIPPED`() {
+        val deliveries = mock(NotificationEmailDeliveryRepository::class.java)
+        val event = sampleEvent(subject = "skipped@example.com")
+        val skippedDelivery = NotificationEmailDeliveryEntity(event.notificationId, status = NotificationEmailDeliveryEntity.SKIPPED)
+        doReturn(NotificationConsumptionOutcome.APPLIED).`when`(processor).process(event)
+        doReturn(Optional.of(skippedDelivery)).`when`(deliveries).findById(event.notificationId)
+
+        val outcome = NotificationEventConsumer(processor, processedEvents, preferenceStore, emailDispatcher, deliveryRateLimiter, deliveries)
+            .consume(event)
+
+        assertEquals(NotificationConsumptionOutcome.APPLIED, outcome)
+        verify(emailDispatcher, never()).send(anyString(), anyString(), anyString())
+    }
+
+    @Test
+    fun `marks delivery as SKIPPED when domain exception retry policy is NEVER`() {
+        val deliveries = mock(NotificationEmailDeliveryRepository::class.java)
+        doReturn(1).`when`(deliveries).claimForDispatch(
+            any(UUID::class.java) ?: UUID(0, 0),
+            any(Instant::class.java) ?: Instant.EPOCH,
+            any(Instant::class.java) ?: Instant.EPOCH
+        )
+        val event = sampleEvent(subject = "bad-domain@example.com")
+        val delivery = NotificationEmailDeliveryEntity(event.notificationId, status = NotificationEmailDeliveryEntity.PENDING)
+        doReturn(NotificationConsumptionOutcome.APPLIED).`when`(processor).process(event)
+        doReturn(Optional.of(delivery)).`when`(deliveries).findById(event.notificationId)
+        doReturn(NotificationPreferences(emailEnabled = true)).`when`(preferenceStore).get("bad-domain@example.com")
+        doReturn(true).`when`(deliveryRateLimiter).allow("bad-domain@example.com")
+        doThrow(NotificationDomainException(NotificationErrors.NOTIFICATION_PAYLOAD_CORRUPT))
+            .`when`(emailDispatcher).send("bad-domain@example.com", "Notification: expense.created", "Dinner was added")
+
+        val consumerWithDeliveries = NotificationEventConsumer(
+            processor, processedEvents, preferenceStore, emailDispatcher, deliveryRateLimiter, deliveries
+        )
+
+        assertThrows(NotificationDomainException::class.java) {
+            consumerWithDeliveries.consume(event)
+        }
+
+        assertEquals(NotificationEmailDeliveryEntity.SKIPPED, delivery.status)
+        verify(deliveries).save(delivery)
     }
 
     private fun sampleEvent(subject: String, recipientEmail: String? = null): NotificationEvent =

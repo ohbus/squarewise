@@ -14,15 +14,20 @@ data class PoolProperties(
 ) {
     /** Validates safety-critical pool bounds and required endpoint data. */
     fun validate(name: String) {
-        if (url.isBlank()) invalid("squarewise.db.$name.url is required")
-        if (username.isBlank()) invalid("squarewise.db.$name.username is required")
-        if (maximumPoolSize !in 1..200) invalid("squarewise.db.$name.maximum-pool-size must be between 1 and 200")
-        if (connectionTimeoutMs !in 250..120_000) invalid("squarewise.db.$name.connection-timeout-ms is invalid")
-        if (maxLifetimeMs < 30_000) invalid("squarewise.db.$name.max-lifetime-ms is invalid")
+        if (url.isBlank()) {
+            throw DbPlatformException(PlatformErrors.PLATFORM_CONFIGURATION_INVALID, "squarewise.db.$name.url is required")
+        }
+        if (username.isBlank()) {
+            throw DbPlatformException(PlatformErrors.PLATFORM_CONFIGURATION_INVALID, "squarewise.db.$name.username is required")
+        }
+        if (maximumPoolSize < 1 || maximumPoolSize > 200) {
+            throw DbPlatformException(PlatformErrors.PLATFORM_CONFIGURATION_INVALID, "squarewise.db.$name.maximum-pool-size must be between 1 and 200")
+        }
+        if (connectionTimeoutMs < 250 || connectionTimeoutMs > 120_000) {
+            throw DbPlatformException(PlatformErrors.PLATFORM_CONFIGURATION_INVALID, "squarewise.db.$name.connection-timeout-ms is invalid")
+        }
+        if (maxLifetimeMs < 30_000) {
+            throw DbPlatformException(PlatformErrors.PLATFORM_CONFIGURATION_INVALID, "squarewise.db.$name.max-lifetime-ms is invalid")
+        }
     }
-
-    private fun invalid(detail: String): Nothing = throw DbPlatformException(
-        PlatformErrors.PLATFORM_CONFIGURATION_INVALID,
-        detail
-    )
 }

@@ -59,4 +59,16 @@ class AuthEmailOutboxRelayTest {
             AuthEmailOutboxRelay(publisher, maxBatchSize = 0)
         }
     }
+
+    @Test
+    fun `poll drains exactly maxBatchSize when all messages are published`() {
+        val continuousPublisher = mock(AuthEmailOutboxPublisher::class.java)
+        `when`(continuousPublisher.publishOne()).thenReturn(AuthEmailPublishOutcome.PUBLISHED)
+        val relay = AuthEmailOutboxRelay(continuousPublisher, maxBatchSize = 2)
+
+        val outcome = relay.poll()
+
+        assertEquals(AuthEmailPublishOutcome.PUBLISHED, outcome)
+        verify(continuousPublisher, times(2)).publishOne()
+    }
 }

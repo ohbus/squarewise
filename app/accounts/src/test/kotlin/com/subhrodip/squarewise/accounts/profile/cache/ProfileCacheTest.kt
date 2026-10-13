@@ -298,4 +298,12 @@ class ProfileCacheTest {
         fastCache.put(ProfileResponse(id5, "User 5", "UTC", "EUR"))
         assertNotNull(fastCache.peekByAccountId(id5))
     }
+
+    @Test
+    fun `default parameter combinations instantiate successfully`() {
+        val cache1 = ProfileCache(ttl = Duration.ofMinutes(5))
+        assertNull(cache1.peekByAccountId(UUID.randomUUID()))
+        val cache2 = ProfileCache(maxEntries = 500)
+        assertNull(cache2.peekByAccountId(UUID.randomUUID()))
+    }
 }

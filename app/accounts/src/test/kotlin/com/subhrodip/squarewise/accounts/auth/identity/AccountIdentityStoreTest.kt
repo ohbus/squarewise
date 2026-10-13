@@ -61,5 +61,31 @@ class AccountIdentityStoreTest {
         assertEquals("person@example.test", enrolled.email)
         assertEquals("https://issuer.example.test", enrolled.issuer)
         assertEquals(false, enrolled.deletionRequested)
+
+        val defaultImplsClass = Class.forName("com.subhrodip.squarewise.accounts.auth.identity.AccountIdentityStore\$DefaultImpls")
+        val findByIssuerMethod = defaultImplsClass.getMethod("findByIssuerAndSubject", AccountIdentityStore::class.java, String::class.java, String::class.java)
+        assertEquals(null, findByIssuerMethod.invoke(null, store, "issuer", "subject"))
+
+        val findByEmailMethod = defaultImplsClass.getMethod("findByEmail", AccountIdentityStore::class.java, String::class.java)
+        assertEquals(null, findByEmailMethod.invoke(null, store, "person@example.test"))
+
+        val enrollMethod = defaultImplsClass.getMethod(
+            "enrollIdentity",
+            AccountIdentityStore::class.java,
+            UUID::class.java,
+            String::class.java,
+            String::class.java,
+            String::class.java,
+            Boolean::class.javaPrimitiveType
+        )
+        val enrolledViaDefault = enrollMethod.invoke(null, store, accountId, "https://issuer.example.test", "subject", "person@example.test", true) as AccountIdentity
+        assertEquals("subject", enrolledViaDefault.subject)
+
+        val updateEmailMethod = defaultImplsClass.getMethod("updateEmail", AccountIdentityStore::class.java, UUID::class.java, String::class.java, Boolean::class.javaPrimitiveType)
+        val workingStore = object : AccountIdentityStore {
+            override fun findByAccountId(requestedAccountId: UUID): AccountIdentity = enrolled
+        }
+        val updated = updateEmailMethod.invoke(null, workingStore, accountId, "new@example.test", true) as AccountIdentity
+        assertEquals(accountId, updated.accountId)
     }
 }

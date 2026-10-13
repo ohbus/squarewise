@@ -67,6 +67,28 @@ class ProcessedNotificationEventCleanupTest {
     }
 
     @Test
+    fun `drains batches until maxBatches reached without partial batch`() {
+        val repository = mock(ProcessedNotificationEventRepository::class.java)
+        val now = Instant.parse("2026-10-13T00:00:00Z")
+        val cutoff = now.minus(Duration.ofDays(30))
+        val properties = NotificationMessagingProperties(
+            processedEventRetention = Duration.ofDays(30),
+            processedEventCleanupBatchSize = 1
+        )
+        `when`(repository.purgeProcessedOlderThan(cutoff, 1)).thenReturn(1, 1)
+
+        val cleanup = ProcessedNotificationEventCleanup(
+            repository,
+            properties,
+            Clock.fixed(now, ZoneOffset.UTC),
+            maxBatches = 2
+        )
+
+        assertEquals(2, cleanup.cleanupExpired())
+        verify(repository, times(2)).purgeProcessedOlderThan(cutoff, 1)
+    }
+
+    @Test
     fun `rejects non-positive retention and batch settings`() {
         val repository = mock(ProcessedNotificationEventRepository::class.java)
         val clock = Clock.fixed(Instant.EPOCH, ZoneOffset.UTC)
@@ -77,6 +99,15 @@ class ProcessedNotificationEventCleanupTest {
                 NotificationMessagingProperties(),
                 clock,
                 Duration.ZERO,
+                1
+            )
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            ProcessedNotificationEventCleanup(
+                repository,
+                NotificationMessagingProperties(),
+                clock,
+                Duration.ofDays(-1),
                 1
             )
         }

@@ -47,4 +47,25 @@ class JpaExportRequestStoreTest {
         assertThrows(IllegalArgumentException::class.java) { store.listBySubject("alice", 101) }
         assertThrows(IllegalArgumentException::class.java) { store.listBySubject("alice", -1, 1) }
     }
+
+    @Test
+    fun `default store interface implementations delegate correctly`() {
+        val domainRequest = com.subhrodip.squarewise.accounts.requests.export.model.ExportRequest(
+            exportId = request.exportId,
+            subject = "alice",
+            requestedAt = Instant.EPOCH,
+            status = ExportStatus.REQUESTED
+        )
+        val simpleStore = object : ExportRequestStore {
+            override fun request(subject: String) = domainRequest
+            override fun get(exportId: UUID) = domainRequest
+            override fun listBySubject(subject: String) = listOf(domainRequest, domainRequest)
+        }
+        val defaultImplsClass = Class.forName("com.subhrodip.squarewise.accounts.requests.export.persistence.ExportRequestStore\$DefaultImpls")
+        val listLimitMethod = defaultImplsClass.getMethod("listBySubject", ExportRequestStore::class.java, String::class.java, Int::class.javaPrimitiveType)
+        val listPageMethod = defaultImplsClass.getMethod("listBySubject", ExportRequestStore::class.java, String::class.java, Int::class.javaPrimitiveType, Int::class.javaPrimitiveType)
+
+        assertEquals(1, (listLimitMethod.invoke(null, simpleStore, "alice", 1) as List<*>).size)
+        assertEquals(1, (listPageMethod.invoke(null, simpleStore, "alice", 0, 1) as List<*>).size)
+    }
 }

@@ -121,4 +121,54 @@ class CredentialCleanupTaskTest {
             CredentialCleanupTask(proxyRepo, expiredRetentionDays = 7, consumedRetentionHours = 24, maxBatches = 0)
         }
     }
+
+    @Test
+    fun `default constructor arguments instantiate successfully`() {
+        val proxyRepo = Proxy.newProxyInstance(
+            LoginCredentialRepository::class.java.classLoader,
+            arrayOf(LoginCredentialRepository::class.java)
+        ) { _, method: Method, _ ->
+            if (method.name == "purgeExpiredOrConsumed") 0 else null
+        } as LoginCredentialRepository
+        val task = CredentialCleanupTask(proxyRepo)
+        assertEquals(0, task.executeCleanup())
+    }
+
+    @Test
+    fun `executeCleanup runs inside transaction template when transactionManager is provided`() {
+        val proxyRepo = Proxy.newProxyInstance(
+            LoginCredentialRepository::class.java.classLoader,
+            arrayOf(LoginCredentialRepository::class.java)
+        ) { _, method: Method, _ ->
+            if (method.name == "purgeExpiredOrConsumed") 5 else null
+        } as LoginCredentialRepository
+
+        val mockTm = org.mockito.Mockito.mock(org.springframework.transaction.PlatformTransactionManager::class.java)
+        val mockStatus = org.mockito.Mockito.mock(org.springframework.transaction.TransactionStatus::class.java)
+        org.mockito.Mockito.`when`(mockTm.getTransaction(org.mockito.Mockito.any())).thenReturn(mockStatus)
+
+        val task = CredentialCleanupTask(proxyRepo, transactionManager = mockTm)
+        val count = task.executeCleanup()
+        assertEquals(5, count)
+        org.mockito.Mockito.verify(mockTm).commit(mockStatus)
+    }
+
+    @Test
+    fun `executeCleanup terminates at maxBatches when backlog is full`() {
+        var callCount = 0
+        val proxyRepo = Proxy.newProxyInstance(
+            LoginCredentialRepository::class.java.classLoader,
+            arrayOf(LoginCredentialRepository::class.java)
+        ) { _, method: Method, args: Array<out Any?>? ->
+            if (method.name == "purgeExpiredOrConsumed") {
+                callCount++
+                args?.get(2) as Int
+            } else null
+        } as LoginCredentialRepository
+
+        val task = CredentialCleanupTask(proxyRepo, batchSize = 10, maxBatches = 2)
+        val count = task.executeCleanup()
+        assertEquals(20, count)
+        assertEquals(2, callCount)
+    }
 }

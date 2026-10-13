@@ -67,14 +67,8 @@ class PreferenceCache(
             val now = Instant.now()
             cache.entries.removeIf { it.value.isExpired(now) }
             if (cache.size > maxEntries) {
-                val iter = cache.keys.iterator()
-                var removed = 0
                 val target = maxEntries / 4
-                while (iter.hasNext() && removed < target) {
-                    iter.next()
-                    iter.remove()
-                    removed++
-                }
+                cache.keys.take(target).forEach { cache.remove(it) }
             }
         }
     }

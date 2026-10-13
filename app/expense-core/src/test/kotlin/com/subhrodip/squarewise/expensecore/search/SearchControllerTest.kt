@@ -280,6 +280,21 @@ class SearchControllerTest {
     }
 
     @Test
+    fun `search filters by currency`() {
+        val group = groupStore.create("alice", CreateGroupRequest("Currency search", "TRIP", "EUR"))
+        val expense = SearchExpense("00000000-0000-0000-0000-000000000001", "Dinner", "EUR", "2500", ExpenseCategory.FOOD)
+        searchStore.saveExpenses(group.groupId, listOf(expense))
+
+        mvc.perform(
+            get(ApiEndpoints.ExpenseCore.V1.groupSearch(group.groupId))
+                .with(alice)
+                .param("currency", "eur")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.expenses.length()").value(1))
+    }
+
+    @Test
     fun `export rejects non-positive maxRows as validation failure`() {
         val group = groupStore.create("alice", CreateGroupRequest("Bounded Export", "TRIP", "EUR"))
 
@@ -287,6 +302,14 @@ class SearchControllerTest {
             get(ApiEndpoints.ExpenseCore.V1.groupExport(group.groupId))
                 .with(alice)
                 .param("maxRows", "0")
+        )
+            .andExpect(status().isUnprocessableContent)
+            .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+
+        mvc.perform(
+            get(ApiEndpoints.ExpenseCore.V1.groupExport(group.groupId))
+                .with(alice)
+                .param("maxRows", "10001")
         )
             .andExpect(status().isUnprocessableContent)
             .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))

@@ -46,4 +46,25 @@ class GroupQueryStoreTest {
 
         assertEquals(100, requestedLimit)
     }
+
+    @Test
+    fun `default impls bridge methods delegate properly`() {
+        val defaultImplsClass = Class.forName("com.subhrodip.squarewise.expensecore.groups.persistence.store.GroupQueryStore\$DefaultImpls")
+        val listMethod = defaultImplsClass.getMethod("list", GroupQueryStore::class.java, String::class.java, Int::class.javaPrimitiveType)
+        assertEquals(listOf(firstGroup), listMethod.invoke(null, store, "alice", 1))
+
+        val getMethod = defaultImplsClass.getMethod("get", GroupQueryStore::class.java, UUID::class.java, String::class.java)
+        assertEquals(secondGroup, getMethod.invoke(null, store, secondGroup.groupId, "alice"))
+
+        val listMembersDefault = defaultImplsClass.getMethod(
+            "listMembers\$default",
+            GroupQueryStore::class.java,
+            UUID::class.java,
+            String::class.java,
+            Int::class.javaPrimitiveType,
+            Int::class.javaPrimitiveType,
+            Any::class.java
+        )
+        assertEquals(emptyList<GroupMemberResponse>(), listMembersDefault.invoke(null, store, firstGroup.groupId, "alice", 0, 4, null))
+    }
 }

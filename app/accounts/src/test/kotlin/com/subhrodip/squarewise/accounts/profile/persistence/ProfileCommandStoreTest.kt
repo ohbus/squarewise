@@ -41,5 +41,33 @@ class ProfileCommandStoreTest {
         assertEquals("EUR", store.recordedDefaultCurrency)
         assertEquals("UTC", response.timezone)
         assertEquals("EUR", response.defaultCurrency)
+
+        val customTimezone = store.create(accountId, "sub-1", "User One", timezone = "America/New_York")
+        assertEquals("America/New_York", customTimezone.timezone)
+        assertEquals("EUR", customTimezone.defaultCurrency)
+
+        val customCurrency = store.create(accountId, "sub-1", "User One", defaultCurrency = "USD")
+        assertEquals("UTC", customCurrency.timezone)
+        assertEquals("USD", customCurrency.defaultCurrency)
+
+        val customBoth = store.create(accountId, "sub-1", "User One", timezone = "America/New_York", defaultCurrency = "USD")
+        assertEquals("America/New_York", customBoth.timezone)
+        assertEquals("USD", customBoth.defaultCurrency)
+
+        val defaultImplsClass = Class.forName("com.subhrodip.squarewise.accounts.profile.persistence.ProfileCommandStore\$DefaultImpls")
+        val createDefaultMethod = defaultImplsClass.getMethod(
+            "create\$default",
+            ProfileCommandStore::class.java,
+            UUID::class.java,
+            String::class.java,
+            String::class.java,
+            String::class.java,
+            String::class.java,
+            Int::class.javaPrimitiveType,
+            Any::class.java
+        )
+        val defaultResult = createDefaultMethod.invoke(null, store, accountId, "sub-1", "User One", null, null, 24, null) as ProfileResponse
+        assertEquals("UTC", defaultResult.timezone)
+        assertEquals("EUR", defaultResult.defaultCurrency)
     }
 }
