@@ -25,6 +25,9 @@ import java.security.Principal
 import java.util.UUID
 import com.subhrodip.squarewise.db.routing.DbRouteContext
 
+import com.subhrodip.squarewise.expensecore.groups.cache.GroupAccessCache
+import org.springframework.beans.factory.annotation.Autowired
+
 /**
  * REST controller exposing authenticated recurring expense schedule management transport.
  *
@@ -36,7 +39,9 @@ import com.subhrodip.squarewise.db.routing.DbRouteContext
 class RecurringExpenseController(
     private val recurringService: RecurringExpenseService,
     private val groupRepository: GroupRepository,
-    private val membershipRepository: GroupMembershipRepository
+    private val membershipRepository: GroupMembershipRepository,
+    @Autowired(required = false)
+    private val groupAccessCache: GroupAccessCache? = null
 ) {
 
     @PostMapping(ApiEndpoints.ExpenseCore.V1.SCHEDULES_SUBPATH)
@@ -140,12 +145,26 @@ class RecurringExpenseController(
     }
 
     private fun verifyGroupAndMembership(groupId: UUID, principal: Principal?) {
-        if (!groupRepository.existsById(groupId)) {
+        val groupExists = if (groupAccessCache != null) {
+            groupAccessCache.groupStatus(groupId) {
+                groupRepository.findById(groupId).map { it.status }.orElse(null)
+            } != null
+        } else {
+            groupRepository.existsById(groupId)
+        }
+        if (!groupExists) {
             throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group $groupId not found")
         }
         val subject = principal?.name?.takeIf { it.isNotBlank() }
             ?: throw ExpenseDomainException(PlatformErrors.AUTHENTICATION_REQUIRED, "Authenticated subject is required")
-        if (!membershipRepository.existsByGroupIdAndSubject(groupId, subject)) {
+        val isMember = if (groupAccessCache != null) {
+            groupAccessCache.isMember(groupId, subject) {
+                membershipRepository.existsByGroupIdAndSubject(groupId, subject)
+            }
+        } else {
+            membershipRepository.existsByGroupIdAndSubject(groupId, subject)
+        }
+        if (!isMember) {
             throw ExpenseDomainException(ExpenseErrors.GROUP_ACCESS_HIDDEN, "Group $groupId not found")
         }
     }

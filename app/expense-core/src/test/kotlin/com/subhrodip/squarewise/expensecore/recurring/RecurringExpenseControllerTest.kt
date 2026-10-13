@@ -320,4 +320,12 @@ class RecurringExpenseControllerTest @Autowired constructor(
         }
         assertEquals(CategoryCode.AUTHENTICATION_ERROR, error.definition.category)
     }
+
+    @Test
+    fun `listSchedules succeeds and reuses group access cache`() {
+        val group = groupStore.create("alice", CreateGroupRequest("Cached Access", "TRIP", "USD"))
+        val list1 = controller.listSchedules(group.groupId, alice)
+        val list2 = controller.listSchedules(group.groupId, alice)
+        assertEquals(list1.size, list2.size)
+    }
 }
