@@ -54,4 +54,32 @@ class PreferenceCacheTest {
         assertEquals(prefs2, result)
         assertEquals(2, calls.get())
     }
+
+    @Test
+    fun `clear empties the cache completely`() {
+        val subject = "user-pref-3"
+        val prefs = NotificationPreferences(emailEnabled = true)
+        val calls = AtomicInteger(0)
+
+        cache.get(subject) { calls.incrementAndGet(); prefs }
+        cache.clear()
+        cache.get(subject) { calls.incrementAndGet(); prefs }
+
+        assertEquals(2, calls.get())
+    }
+
+    @Test
+    fun `evicts expired entries when cache exceeds max entries`() {
+        val tinyCache = PreferenceCache(ttl = Duration.ofMillis(1), maxEntries = 1)
+        val prefs = NotificationPreferences(emailEnabled = true)
+
+        tinyCache.get("user-1") { prefs }
+        Thread.sleep(5)
+        // Adding second entry triggers evictIfOversized
+        tinyCache.get("user-2") { prefs }
+
+        val calls = AtomicInteger(0)
+        tinyCache.get("user-1") { calls.incrementAndGet(); prefs }
+        assertEquals(1, calls.get())
+    }
 }
