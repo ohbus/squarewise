@@ -43,7 +43,16 @@ class NotificationEventConsumer(
     private val log = LoggerFactory.getLogger(NotificationEventConsumer::class.java)
 
     override fun consume(event: NotificationEvent): NotificationConsumptionOutcome {
-        val outcome = try {
+        val outcome = processEvent(event)
+        val delivery = resolveDelivery(event, outcome)
+        if (shouldDispatch(outcome, delivery)) {
+            executeDispatch(event)
+        }
+        return outcome
+    }
+
+    private fun processEvent(event: NotificationEvent): NotificationConsumptionOutcome {
+        return try {
             processor.process(event)
         } catch (failure: RuntimeException) {
             if (failure.isConstraintViolation() && processedEvents.existsById(event.eventId)) {
@@ -52,46 +61,57 @@ class NotificationEventConsumer(
                 throw failure
             }
         }
+    }
 
-        val delivery = if (outcome == NotificationConsumptionOutcome.APPLIED) {
-            emailDeliveries?.let { repository ->
-                repository.findById(event.notificationId).orElseGet {
-                    repository.save(NotificationEmailDeliveryEntity(event.notificationId))
-                }
+    private fun resolveDelivery(
+        event: NotificationEvent,
+        outcome: NotificationConsumptionOutcome
+    ): NotificationEmailDeliveryEntity? {
+        val repository = emailDeliveries ?: return null
+        return if (outcome == NotificationConsumptionOutcome.APPLIED) {
+            repository.findById(event.notificationId).orElseGet {
+                repository.save(NotificationEmailDeliveryEntity(event.notificationId))
             }
         } else {
-            emailDeliveries?.let { repository -> repository.findById(event.notificationId).orElse(null) }
+            repository.findById(event.notificationId).orElse(null)
         }
-        if (
-            outcome == NotificationConsumptionOutcome.APPLIED ||
+    }
+
+    private fun shouldDispatch(
+        outcome: NotificationConsumptionOutcome,
+        delivery: NotificationEmailDeliveryEntity?
+    ): Boolean {
+        if (delivery?.status == NotificationEmailDeliveryEntity.DELIVERED ||
+            delivery?.status == NotificationEmailDeliveryEntity.SKIPPED
+        ) {
+            return false
+        }
+        return outcome == NotificationConsumptionOutcome.APPLIED ||
             delivery?.status == NotificationEmailDeliveryEntity.PENDING ||
             delivery?.status == NotificationEmailDeliveryEntity.DISPATCHING
-        ) {
-            if (delivery?.status == NotificationEmailDeliveryEntity.DELIVERED || delivery?.status == NotificationEmailDeliveryEntity.SKIPPED) {
-                return outcome
-            }
-            emailDeliveries?.let { repository ->
-                val now = Instant.now()
-                if (repository.claimForDispatch(event.notificationId, now, now.minus(DISPATCH_LEASE)) == 0) {
-                    return outcome
-                }
-            }
-            try {
-                dispatchEmailIfEnabled(event)
-            } catch (failure: NotificationDomainException) {
-                if (failure.definition.retryPolicy == RetryPolicy.NEVER) {
-                    markDelivery(event.notificationId, NotificationEmailDeliveryEntity.SKIPPED)
-                } else {
-                    markDelivery(event.notificationId, NotificationEmailDeliveryEntity.PENDING)
-                }
-                throw failure
-            } catch (failure: RuntimeException) {
-                markDelivery(event.notificationId, NotificationEmailDeliveryEntity.PENDING)
-                throw failure
+    }
+
+    private fun executeDispatch(event: NotificationEvent) {
+        if (emailDeliveries != null) {
+            val now = Instant.now()
+            if (emailDeliveries.claimForDispatch(event.notificationId, now, now.minus(DISPATCH_LEASE)) == 0) {
+                return
             }
         }
-
-        return outcome
+        try {
+            dispatchEmailIfEnabled(event)
+        } catch (failure: NotificationDomainException) {
+            val status = if (failure.definition.retryPolicy == RetryPolicy.NEVER) {
+                NotificationEmailDeliveryEntity.SKIPPED
+            } else {
+                NotificationEmailDeliveryEntity.PENDING
+            }
+            markDelivery(event.notificationId, status)
+            throw failure
+        } catch (failure: RuntimeException) {
+            markDelivery(event.notificationId, NotificationEmailDeliveryEntity.PENDING)
+            throw failure
+        }
     }
 
     private fun dispatchEmailIfEnabled(event: NotificationEvent) {
