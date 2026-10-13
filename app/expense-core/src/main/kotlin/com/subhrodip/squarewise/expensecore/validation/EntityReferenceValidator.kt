@@ -6,6 +6,8 @@ import com.subhrodip.squarewise.expensecore.groups.domain.GroupEntity
 import com.subhrodip.squarewise.expensecore.groups.domain.GroupMembershipEntity
 import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupMembershipRepository
 import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupRepository
+import com.subhrodip.squarewise.expensecore.groups.cache.GroupAccessCache
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 import java.util.UUID
 
@@ -19,8 +21,44 @@ import java.util.UUID
 @Component
 class EntityReferenceValidator(
     private val groupRepository: GroupRepository,
-    private val membershipRepository: GroupMembershipRepository
+    private val membershipRepository: GroupMembershipRepository,
+    @Autowired(required = false)
+    private val groupAccessCache: GroupAccessCache? = null
 ) {
+
+    /**
+     * Checks whether the specified subject holds an active membership, consulting cache when available.
+     *
+     * @param groupId unique group identifier.
+     * @param actorSubject user subject.
+     * @return true if active member, false otherwise.
+     */
+    fun isActiveMember(groupId: UUID, actorSubject: String): Boolean {
+        return if (groupAccessCache != null) {
+            groupAccessCache.isMember(groupId, actorSubject) {
+                membershipRepository.existsByGroupIdAndSubjectAndStatus(groupId, actorSubject, "ACTIVE")
+            }
+        } else {
+            membershipRepository.existsByGroupIdAndSubjectAndStatus(groupId, actorSubject, "ACTIVE")
+        }
+    }
+
+    /**
+     * Checks whether the specified group exists and is active, consulting cache when available.
+     *
+     * @param groupId unique group identifier.
+     * @return true if group exists and is active, false otherwise.
+     */
+    fun isActiveGroup(groupId: UUID): Boolean {
+        val status = if (groupAccessCache != null) {
+            groupAccessCache.groupStatus(groupId) {
+                groupRepository.findById(groupId).map { it.status }.orElse(null)
+            }
+        } else {
+            groupRepository.findById(groupId).map { it.status }.orElse(null)
+        }
+        return status == "ACTIVE"
+    }
 
     /**
      * Verifies that the specified group exists and is currently active.

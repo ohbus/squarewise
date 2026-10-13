@@ -11,6 +11,9 @@ import org.springframework.context.annotation.Primary
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
+import com.subhrodip.squarewise.accounts.validation.AccountReferenceValidator
+import org.springframework.beans.factory.annotation.Autowired
+
 /**
  * JPA-backed implementation of [AccountIdentityStore] managing durable account identity records.
  *
@@ -21,7 +24,9 @@ import org.springframework.transaction.annotation.Transactional
 @Service
 class JpaAccountIdentityStore(
     private val identityRepository: AccountIdentityRepository,
-    private val profileRepository: ProfileRepository
+    private val profileRepository: ProfileRepository,
+    @Autowired(required = false)
+    private val referenceValidator: AccountReferenceValidator? = null
 ) : AccountIdentityStore {
 
     /**
@@ -104,7 +109,8 @@ class JpaAccountIdentityStore(
         verified: Boolean
     ): AccountIdentity {
         val existing = identityRepository.findByIssuerAndProviderSubject(issuer, providerSubject)
-        val profile = profileRepository.findById(accountId).orElse(null)
+        val profile = referenceValidator?.validateActiveAccount(accountId)
+            ?: profileRepository.findById(accountId).orElse(null)
 
         val entity = if (existing != null) {
             existing.email = email

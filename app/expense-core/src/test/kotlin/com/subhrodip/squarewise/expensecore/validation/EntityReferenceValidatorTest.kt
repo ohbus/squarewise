@@ -258,4 +258,22 @@ class EntityReferenceValidatorTest {
         }
         assertSame(ExpenseErrors.EXPENSE_REQUEST_INVALID, ex.definition)
     }
+
+    @Test
+    fun `isActiveMember and isActiveGroup leverage GroupAccessCache`() {
+        val cache = com.subhrodip.squarewise.expensecore.groups.cache.GroupAccessCache()
+        val cachedValidator = EntityReferenceValidator(groupRepository, membershipRepository, cache)
+        val groupId = UUID.randomUUID()
+        val subject = "cached-user"
+
+        `when`(membershipRepository.existsByGroupIdAndSubjectAndStatus(groupId, subject, "ACTIVE")).thenReturn(true)
+        `when`(groupRepository.findById(groupId)).thenReturn(Optional.of(GroupEntity(groupId, "Trip", "TRIP", "USD", status = "ACTIVE")))
+
+        assertTrue(cachedValidator.isActiveMember(groupId, subject))
+        assertTrue(cachedValidator.isActiveGroup(groupId))
+
+        // On second invocation, cache serves without invoking repositories again
+        assertTrue(cachedValidator.isActiveMember(groupId, subject))
+        assertTrue(cachedValidator.isActiveGroup(groupId))
+    }
 }
