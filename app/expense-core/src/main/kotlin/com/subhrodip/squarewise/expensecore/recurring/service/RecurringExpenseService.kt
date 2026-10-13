@@ -69,20 +69,14 @@ class RecurringExpenseService(
         .build(),
     @Autowired(required = false)
     private val transactionManager: PlatformTransactionManager? = null,
-    @Autowired(required = false)
-    private val referenceValidator: EntityReferenceValidator? = null
+    private val referenceValidator: EntityReferenceValidator
 ) : RecurringCommandStore, RecurringQueryStore {
     private val log = LoggerFactory.getLogger(RecurringExpenseService::class.java)
 
     @Transactional
     override fun createSchedule(groupId: UUID, request: CreateRecurringScheduleRequest): RecurringExpenseSchedule {
         validateSchedule(request)
-
-        if (referenceValidator != null) {
-            referenceValidator.validateActiveGroup(groupId)
-        } else if (!groupRepository.existsById(groupId)) {
-            throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group $groupId not found")
-        }
+        referenceValidator.validateActiveGroup(groupId)
 
         val scheduleId = request.scheduleId ?: UuidGenerator.next()
         val schedule = RecurringExpenseSchedule(

@@ -53,9 +53,9 @@ class JpaExpenseStore(
     private val membershipRepository: GroupMembershipRepository,
     private val outboxStore: OutboxStore,
     private val syncStore: SynchronizationStore,
+    private val referenceValidator: EntityReferenceValidator,
     @Autowired(required = false)
-    private val groupAccessCache: GroupAccessCache? = null,
-    private val referenceValidator: EntityReferenceValidator = EntityReferenceValidator(groupRepository, membershipRepository, groupAccessCache)
+    private val groupAccessCache: GroupAccessCache? = null
 ) : ExpenseStore {
 
     /**
@@ -177,7 +177,7 @@ class JpaExpenseStore(
 
         val syncPayload = """{"expenseId":"${saved.expenseId}","groupId":"$groupId","amountMinor":${saved.amountMinor},"currency":"${saved.currency}","version":${saved.version}}"""
         syncStore.append(groupId.toString(), saved.expenseId.toString(), syncPayload)
-        groupAccessCache?.invalidateBalances(groupId)
+        groupAccessCache?.invalidateBalancesAfterCommit(groupId)
 
         return saved.toRecord()
     }
@@ -206,7 +206,6 @@ class JpaExpenseStore(
         }
     }
 
-    /** Compatibility overload for internal callers that do not carry an actor. */
     /** Rejects public postings for arbitrary or duplicate participant identifiers. */
     private fun validateFinancialParticipants(groupId: UUID, expense: ExpenseRecord, actorSubject: String?) {
         if (actorSubject == null) return
@@ -328,7 +327,7 @@ class JpaExpenseStore(
 
         val syncPayload = """{"expenseId":"${saved.expenseId}","groupId":"$groupId","amountMinor":${saved.amountMinor},"currency":"${saved.currency}","version":${saved.version}}"""
         syncStore.append(groupId.toString(), saved.expenseId.toString(), syncPayload)
-        groupAccessCache?.invalidateBalances(groupId)
+        groupAccessCache?.invalidateBalancesAfterCommit(groupId)
 
         return saved.toRecord()
     }
@@ -389,7 +388,7 @@ class JpaExpenseStore(
 
         // Sync change tombstone
         syncStore.delete(groupId.toString(), entity.expenseId.toString())
-        groupAccessCache?.invalidateBalances(groupId)
+        groupAccessCache?.invalidateBalancesAfterCommit(groupId)
     }
 
     /**

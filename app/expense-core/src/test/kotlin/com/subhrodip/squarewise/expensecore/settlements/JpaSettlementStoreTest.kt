@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional
 import com.subhrodip.squarewise.expensecore.settlements.persistence.SettlementRepository
 import com.subhrodip.squarewise.expensecore.groups.persistence.store.GroupAuditCommandStore
 import com.subhrodip.squarewise.expensecore.sync.persistence.SynchronizationStore
+import com.subhrodip.squarewise.expensecore.validation.EntityReferenceValidator
 import com.subhrodip.squarewise.expensecore.messaging.outbox.persistence.OutboxStore
 
 @SpringBootTest
@@ -228,6 +229,7 @@ class JpaSettlementStoreTest @Autowired constructor(
             audit = audit,
             synchronization = synchronization,
             outbox = outbox,
+            referenceValidator = EntityReferenceValidator(groupRepository, membershipRepository, null),
             groupAccessCache = null
         )
         val groupId = UUID.randomUUID()

@@ -1,6 +1,8 @@
 package com.subhrodip.squarewise.expensecore.groups.cache
 
 import org.springframework.stereotype.Component
+import org.springframework.transaction.support.TransactionSynchronization
+import org.springframework.transaction.support.TransactionSynchronizationManager
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
@@ -35,6 +37,12 @@ class GroupAccessCache(
     private val memberIdsCache = ConcurrentHashMap<UUID, CacheEntry<Set<UUID>>>()
     private val groupDetailsCache = ConcurrentHashMap<UUID, CacheEntry<Any?>>()
     private val invalidationTimestamps = ConcurrentHashMap<Pair<UUID, String>, Instant>()
+    private val groupGenerations = ConcurrentHashMap<UUID, Long>()
+
+    private fun currentGeneration(groupId: UUID): Long = groupGenerations[groupId] ?: 0L
+    private fun incrementGeneration(groupId: UUID) {
+        groupGenerations.compute(groupId) { _, g -> (g ?: 0L) + 1L }
+    }
 
     /**
      * Checks if the caller subject is an active member of the group, using cached state if valid.
@@ -74,9 +82,12 @@ class GroupAccessCache(
         if (cached != null && !cached.isExpired(now)) {
             return cached.value
         }
+        val gen = currentGeneration(groupId)
         val computed = loader()
-        evictIfOversized(groupStatusCache)
-        groupStatusCache[groupId] = CacheEntry(computed, now.plus(ttl))
+        if (gen == currentGeneration(groupId)) {
+            evictIfOversized(groupStatusCache)
+            groupStatusCache[groupId] = CacheEntry(computed, Instant.now().plus(ttl))
+        }
         return computed
     }
 
@@ -96,9 +107,12 @@ class GroupAccessCache(
         if (cached != null && !cached.isExpired(now)) {
             return cached.value as List<T>
         }
+        val gen = currentGeneration(groupId)
         val computed = loader()
-        evictIfOversized(membersListCache)
-        membersListCache[key] = CacheEntry(computed, now.plus(ttl))
+        if (gen == currentGeneration(groupId)) {
+            evictIfOversized(membersListCache)
+            membersListCache[key] = CacheEntry(computed, Instant.now().plus(ttl))
+        }
         return computed
     }
 
@@ -116,9 +130,12 @@ class GroupAccessCache(
         if (cached != null && !cached.isExpired(now)) {
             return cached.value as List<T>
         }
+        val gen = currentGeneration(groupId)
         val computed = loader()
-        evictIfOversized(balancesCache)
-        balancesCache[groupId] = CacheEntry(computed, now.plus(ttl))
+        if (gen == currentGeneration(groupId)) {
+            evictIfOversized(balancesCache)
+            balancesCache[groupId] = CacheEntry(computed, Instant.now().plus(ttl))
+        }
         return computed
     }
 
@@ -135,9 +152,12 @@ class GroupAccessCache(
         if (cached != null && !cached.isExpired(now)) {
             return cached.value
         }
+        val gen = currentGeneration(groupId)
         val computed = loader()
-        evictIfOversized(memberIdsCache)
-        memberIdsCache[groupId] = CacheEntry(computed, now.plus(ttl))
+        if (gen == currentGeneration(groupId)) {
+            evictIfOversized(memberIdsCache)
+            memberIdsCache[groupId] = CacheEntry(computed, Instant.now().plus(ttl))
+        }
         return computed
     }
 
@@ -153,11 +173,14 @@ class GroupAccessCache(
         val now = Instant.now()
         val cached = groupDetailsCache[groupId]
         if (cached != null && !cached.isExpired(now)) {
-            return cached.value as T?
+            return cached.value as? T
         }
+        val gen = currentGeneration(groupId)
         val computed = loader()
-        evictIfOversized(groupDetailsCache)
-        groupDetailsCache[groupId] = CacheEntry(computed, now.plus(ttl))
+        if (gen == currentGeneration(groupId)) {
+            evictIfOversized(groupDetailsCache)
+            groupDetailsCache[groupId] = CacheEntry(computed, Instant.now().plus(ttl))
+        }
         return computed
     }
 
@@ -168,6 +191,7 @@ class GroupAccessCache(
      */
     fun invalidateGroup(groupId: UUID) {
         val now = Instant.now()
+        incrementGeneration(groupId)
         groupStatusCache.remove(groupId)
         groupDetailsCache.remove(groupId)
         membershipCache.keys.filter { it.first == groupId }.forEach { key ->
@@ -196,6 +220,7 @@ class GroupAccessCache(
      * @param groupId unique group identifier.
      */
     fun invalidateMembers(groupId: UUID) {
+        incrementGeneration(groupId)
         membersListCache.keys.removeIf { it.first == groupId }
         memberIdsCache.remove(groupId)
     }
@@ -209,6 +234,25 @@ class GroupAccessCache(
         balancesCache.remove(groupId)
     }
 
+    /**
+     * Defers balance invalidation until after active transaction commits,
+     * preventing concurrent queries from re-populating stale uncommitted balance state.
+     *
+     * @param groupId unique group identifier.
+     */
+    fun invalidateBalancesAfterCommit(groupId: UUID) {
+        invalidateBalances(groupId)
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(
+                object : TransactionSynchronization {
+                    override fun afterCommit() {
+                        invalidateBalances(groupId)
+                    }
+                }
+            )
+        }
+    }
+
     /** Clears all caches completely. */
     fun clear() {
         membershipCache.clear()
@@ -217,11 +261,15 @@ class GroupAccessCache(
         membersListCache.clear()
         balancesCache.clear()
         memberIdsCache.clear()
+        invalidationTimestamps.clear()
+        groupGenerations.clear()
     }
 
     private fun <K, V> evictIfOversized(map: ConcurrentHashMap<K, CacheEntry<V>>) {
         if (map.size > maxEntries) {
             val now = Instant.now()
+            val cutoff = now.minus(ttl)
+            invalidationTimestamps.entries.removeIf { it.value.isBefore(cutoff) }
             map.entries.removeIf { it.value.isExpired(now) }
             if (map.size > maxEntries) {
                 val iter = map.keys.iterator()

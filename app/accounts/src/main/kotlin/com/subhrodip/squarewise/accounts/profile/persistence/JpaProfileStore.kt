@@ -84,23 +84,30 @@ class JpaProfileStore(
     override fun findByIds(accountIds: List<UUID>): List<ProfileResponse> {
         if (accountIds.isEmpty()) return emptyList()
         val distinctIds = accountIds.distinct()
-        val cache = profileCache ?: return repository.findAllById(distinctIds).map { it.toResponse() }.distinct()
-        val found = mutableListOf<ProfileResponse>()
-        val missing = mutableListOf<UUID>()
-        for (id in distinctIds) {
-            val cached = cache.peekByAccountId(id)
-            if (cached != null) {
-                found.add(cached)
-            } else {
-                missing.add(id)
+        val cache = profileCache
+        val byId = if (cache == null) {
+            repository.findAllById(distinctIds).associate { it.accountId to it.toResponse() }
+        } else {
+            val result = mutableMapOf<UUID, ProfileResponse>()
+            val missing = mutableListOf<UUID>()
+            for (id in distinctIds) {
+                val cached = cache.peekByAccountId(id)
+                if (cached != null) {
+                    result[id] = cached
+                } else {
+                    missing.add(id)
+                }
             }
+            if (missing.isNotEmpty()) {
+                val loaded = repository.findAllById(missing).map { it.toResponse() }
+                loaded.forEach {
+                    cache.put(it)
+                    result[it.accountId] = it
+                }
+            }
+            result
         }
-        if (missing.isNotEmpty()) {
-            val loaded = repository.findAllById(missing).map { it.toResponse() }
-            loaded.forEach { cache.put(it) }
-            found.addAll(loaded)
-        }
-        return found
+        return distinctIds.mapNotNull { byId[it] }
     }
 
     /**

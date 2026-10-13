@@ -13,6 +13,8 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.times
+import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import java.util.Optional
 import java.util.UUID
@@ -298,6 +300,7 @@ class EntityReferenceValidatorTest {
         assertEquals(setOf(p1, p2), active)
 
         cachedValidator.validateSettlementParticipants(groupId, p1, p2)
+        verify(membershipRepository, times(1)).findByGroupIdAndStatus(groupId, "ACTIVE")
     }
 
     @Test

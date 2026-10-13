@@ -75,11 +75,15 @@ class DbRoutingDataSource(
 
     /** Resolves the target reader pool name based on context target or round-robin among healthy readers, with automatic failover. */
     fun resolveReaderName(): String {
-        val target = DbContextHolder.current().targetReader?.takeIf { it.isNotBlank() }
+        val context = DbContextHolder.current()
+        val target = context.targetReader?.takeIf { it.isNotBlank() }
         if (target != null && readerHealth.state(target) == DbReaderState.HEALTHY) {
             return target
         }
-        val healthyCandidates = readers.keys.filter { readerHealth.state(it) == DbReaderState.HEALTHY }
+        val healthyCandidates = readers.keys.filter {
+            readerHealth.state(it) == DbReaderState.HEALTHY &&
+                readerHealth.route(context, it) == DbReaderDecision.Reader
+        }
         if (healthyCandidates.isNotEmpty()) {
             val idx = (roundRobinCounter.getAndIncrement() and Int.MAX_VALUE) % healthyCandidates.size
             return healthyCandidates[idx]

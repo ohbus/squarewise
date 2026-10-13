@@ -11,6 +11,7 @@ import com.subhrodip.squarewise.bff.messaging.model.ProcessedConsumptionResult
 import com.subhrodip.squarewise.bff.messaging.service.BffEventConsumer
 import com.subhrodip.squarewise.bff.messaging.persistence.BffEventDeduplicator
 import com.subhrodip.squarewise.bff.realtime.GroupInvalidation
+import com.subhrodip.squarewise.bff.realtime.LiveSubscription
 import com.subhrodip.squarewise.bff.realtime.LiveUpdate
 import com.subhrodip.squarewise.bff.realtime.LiveUpdateFanout
 import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
@@ -631,6 +632,38 @@ class LiveUpdateFanoutTest {
         // calling subscribe again while previous is unexpired covers the false condition of !now.isBefore
         val secondSub = fanout.subscribe("user-phantom", "group-2")
         assertThat(secondSub).isNotNull
+    }
+
+    @Test
+    fun `concurrent revokeUser and subscribe leaves no live subscriptions`() {
+        val fanout = LiveUpdateFanout()
+        val userId = "concurrent-user"
+        val startLatch = CountDownLatch(1)
+        val executor = Executors.newFixedThreadPool(2)
+        try {
+            val subFuture = executor.submit<LiveSubscription> {
+                startLatch.await()
+                fanout.subscribe(userId, "group-1")
+            }
+            val revokeFuture = executor.submit {
+                startLatch.await()
+                while (!subFuture.isDone) {
+                    fanout.revokeUser(userId)
+                    Thread.yield()
+                }
+                fanout.revokeUser(userId)
+            }
+            startLatch.countDown()
+            val sub = subFuture.get()
+            revokeFuture.get()
+            fanout.revokeUser(userId)
+
+            assertThat(fanout.pendingCount(sub.id)).isZero()
+            assertThat(fanout.poll(sub.id)).isNull()
+            assertThat(fanout.revokeUser(userId)).isZero()
+        } finally {
+            executor.shutdownNow()
+        }
     }
 
     @Test

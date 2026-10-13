@@ -2,6 +2,7 @@ package com.subhrodip.squarewise.expensecore.groups.cache
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -150,6 +151,7 @@ class GroupAccessCacheTest {
 
         cache.invalidateMembers(groupId)
         val res3 = cache.activeMemberIds(groupId) { calls.incrementAndGet(); memberIds }
+        assertEquals(memberIds, res3)
         assertEquals(2, calls.get())
     }
 
@@ -168,6 +170,20 @@ class GroupAccessCacheTest {
 
         cache.invalidateGroup(groupId)
         val res3 = cache.groupDetails(groupId) { calls.incrementAndGet(); details }
+        assertEquals(details, res3)
+        assertEquals(2, calls.get())
+    }
+
+    @Test
+    fun `invalidateBalancesAfterCommit purges balance cache`() {
+        val groupId = UUID.randomUUID()
+        val calls = AtomicInteger(0)
+        cache.balances(groupId) { calls.incrementAndGet(); listOf("b1") }
+        cache.balances(groupId) { calls.incrementAndGet(); listOf("b1") }
+        assertEquals(1, calls.get())
+
+        cache.invalidateBalancesAfterCommit(groupId)
+        cache.balances(groupId) { calls.incrementAndGet(); listOf("b1") }
         assertEquals(2, calls.get())
     }
 
@@ -204,9 +220,22 @@ class GroupAccessCacheTest {
 
         // Test non-expired overflow eviction as well
         val smallLiveCache = GroupAccessCache(ttl = Duration.ofMinutes(10), maxEntries = 4)
+        val userIds = (1..8).map { UUID.randomUUID() }
         for (i in 1..8) {
-            smallLiveCache.isMember(UUID.randomUUID(), "live-$i") { true }
+            smallLiveCache.isMember(userIds[i - 1], "live-$i") { true }
         }
+        var reloads = 0
+        for (i in 1..8) {
+            var loaded = false
+            smallLiveCache.isMember(userIds[i - 1], "live-$i") {
+                loaded = true
+                true
+            }
+            if (loaded) reloads++
+        }
+        val hits = 8 - reloads
+        assertTrue(reloads >= 4)
+        assertTrue(hits >= 4)
     }
 
     @Test
@@ -271,5 +300,94 @@ class GroupAccessCacheTest {
         val defaultCache = GroupAccessCache()
         val groupId = UUID.randomUUID()
         assertTrue(defaultCache.isMember(groupId, "user") { true })
+    }
+
+    @Test
+    fun `does not cache stale group data if invalidation occurred during load`() {
+        val groupId = UUID.randomUUID()
+
+        val s1 = cache.groupStatus(groupId) {
+            cache.invalidateGroup(groupId)
+            "ACTIVE"
+        }
+        assertEquals("ACTIVE", s1)
+        var sLoads = 0
+        cache.groupStatus(groupId) { sLoads++; "ACTIVE" }
+        assertEquals(1, sLoads)
+
+        val m1 = cache.members(groupId, 10) {
+            cache.invalidateMembers(groupId)
+            listOf("m1")
+        }
+        assertEquals(listOf("m1"), m1)
+        var mLoads = 0
+        cache.members(groupId, 10) { mLoads++; listOf("m1") }
+        assertEquals(1, mLoads)
+
+        val b1 = cache.balances(groupId) {
+            cache.invalidateGroup(groupId)
+            listOf("b1")
+        }
+        assertEquals(listOf("b1"), b1)
+        var bLoads = 0
+        cache.balances(groupId) { bLoads++; listOf("b1") }
+        assertEquals(1, bLoads)
+
+        val id = UUID.randomUUID()
+        val a1 = cache.activeMemberIds(groupId) {
+            cache.invalidateMembers(groupId)
+            setOf(id)
+        }
+        assertEquals(setOf(id), a1)
+        var aLoads = 0
+        cache.activeMemberIds(groupId) { aLoads++; setOf(id) }
+        assertEquals(1, aLoads)
+
+        val d1 = cache.groupDetails(groupId) {
+            cache.invalidateGroup(groupId)
+            "details"
+        }
+        assertEquals("details", d1)
+        var dLoads = 0
+        cache.groupDetails(groupId) { dLoads++; "details" }
+        assertEquals(1, dLoads)
+    }
+
+    @Test
+    fun `groupDetails caches and returns null when loader returns null`() {
+        val groupId = UUID.randomUUID()
+        val calls = AtomicInteger(0)
+        val r1 = cache.groupDetails<String>(groupId) { calls.incrementAndGet(); null }
+        assertNull(r1)
+        val r2 = cache.groupDetails<String>(groupId) { calls.incrementAndGet(); "should-not-load" }
+        assertNull(r2)
+        assertEquals(1, calls.get())
+    }
+
+    @Test
+    fun `invalidateBalancesAfterCommit registers afterCommit hook when synchronization active`() {
+        val groupId = UUID.randomUUID()
+        cache.balances(groupId) { listOf("b1") }
+
+        org.springframework.transaction.support.TransactionSynchronizationManager.initSynchronization()
+        try {
+            cache.invalidateBalancesAfterCommit(groupId)
+            val syncs = org.springframework.transaction.support.TransactionSynchronizationManager.getSynchronizations()
+            assertEquals(1, syncs.size)
+            syncs[0].afterCommit()
+        } finally {
+            org.springframework.transaction.support.TransactionSynchronizationManager.clearSynchronization()
+        }
+    }
+
+    @Test
+    fun `evictIfOversized prunes expired invalidation timestamps`() {
+        val fastCache = GroupAccessCache(ttl = Duration.ofMillis(1), maxEntries = 2)
+        val groupId = UUID.randomUUID()
+        fastCache.invalidateMember(groupId, "old-user")
+        Thread.sleep(10)
+        fastCache.isMember(UUID.randomUUID(), "u1") { true }
+        fastCache.isMember(UUID.randomUUID(), "u2") { true }
+        fastCache.isMember(UUID.randomUUID(), "u3") { true }
     }
 }

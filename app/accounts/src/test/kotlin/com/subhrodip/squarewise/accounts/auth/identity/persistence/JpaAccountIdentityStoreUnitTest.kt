@@ -71,7 +71,7 @@ class JpaAccountIdentityStoreUnitTest {
     }
 
     @Test
-    fun `re-enrollment keeps a false deletion flag when the profile is missing`() {
+    fun `re-enrollment keeps a false deletion flag when profile is validated`() {
         val accountId = UUID.randomUUID()
         val entity = identity(accountId, email = "old@example.com")
         val profile = profile(accountId).apply { deletionRequested = false }

@@ -5,6 +5,8 @@ import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseAllocation
 import com.subhrodip.squarewise.expensecore.expenses.domain.ExpensePayer
 import com.subhrodip.squarewise.expensecore.expenses.persistence.store.ExpenseStore
 import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupRepository
+import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupMembershipRepository
+import com.subhrodip.squarewise.expensecore.validation.EntityReferenceValidator
 import com.subhrodip.squarewise.expensecore.recurring.domain.RecurrenceFrequency
 import com.subhrodip.squarewise.expensecore.recurring.domain.RecurringExpenseSchedule
 import com.subhrodip.squarewise.expensecore.recurring.persistence.RecurringExpenseOccurrenceRepository
@@ -111,7 +113,8 @@ class RecurringExpenseOptionalOutboxTest {
             expenseStore = expenseStore,
             groupRepository = groupRepository,
             entityManager = entityManager,
-            outboxStore = null
+            outboxStore = null,
+            referenceValidator = EntityReferenceValidator(groupRepository, mock(GroupMembershipRepository::class.java))
         )
 
         inActiveTransaction { assertEquals(0, service.processDueOccurrences(occurrenceDate)) }
@@ -173,7 +176,14 @@ class RecurringExpenseOptionalOutboxTest {
             isNull()
         )
 
-        val service = RecurringExpenseService(scheduleRepository, occurrenceRepository, expenseStore, groupRepository, entityManager)
+        val service = RecurringExpenseService(
+            scheduleRepository = scheduleRepository,
+            occurrenceRepository = occurrenceRepository,
+            expenseStore = expenseStore,
+            groupRepository = groupRepository,
+            entityManager = entityManager,
+            referenceValidator = EntityReferenceValidator(groupRepository, mock(GroupMembershipRepository::class.java))
+        )
 
         inActiveTransaction { assertEquals(1, service.processDueOccurrences(occurrenceDate)) }
         assertEquals(listOf(ExpensePayer(payerId, 1200)), created?.payers)
@@ -236,7 +246,14 @@ class RecurringExpenseOptionalOutboxTest {
             isNull()
         )
 
-        val service = RecurringExpenseService(scheduleRepository, occurrenceRepository, expenseStore, groupRepository, entityManager)
+        val service = RecurringExpenseService(
+            scheduleRepository = scheduleRepository,
+            occurrenceRepository = occurrenceRepository,
+            expenseStore = expenseStore,
+            groupRepository = groupRepository,
+            entityManager = entityManager,
+            referenceValidator = EntityReferenceValidator(groupRepository, mock(GroupMembershipRepository::class.java))
+        )
 
         inActiveTransaction { assertEquals(1, service.processDueOccurrences(occurrenceDate)) }
         assertEquals(listOf(ExpensePayer(participantIds.first(), 1200)), created?.payers)
@@ -252,7 +269,8 @@ class RecurringExpenseOptionalOutboxTest {
             expenseStore = mock(ExpenseStore::class.java),
             groupRepository = mock(GroupRepository::class.java),
             entityManager = mock(EntityManager::class.java),
-            outboxStore = null
+            outboxStore = null,
+            referenceValidator = EntityReferenceValidator(mock(GroupRepository::class.java), mock(GroupMembershipRepository::class.java))
         )
         val asOfDate = LocalDate.of(2026, 12, 1)
         `when`(scheduleRepository.findDueSchedules(asOfDate)).thenReturn(emptyList())
@@ -308,7 +326,8 @@ class RecurringExpenseOptionalOutboxTest {
             groupRepository = groupRepository,
             entityManager = entityManager,
             outboxStore = null,
-            transactionManager = TestTransactionManager()
+            transactionManager = TestTransactionManager(),
+            referenceValidator = EntityReferenceValidator(groupRepository, mock(GroupMembershipRepository::class.java))
         )
 
         assertEquals(0, service.processDueOccurrences(asOfDate))
@@ -349,7 +368,14 @@ class RecurringExpenseOptionalOutboxTest {
         `when`(query.setMaxResults(101)).thenReturn(query)
         `when`(query.resultList).thenReturn(listOf(memberId))
 
-        val service = RecurringExpenseService(scheduleRepository, occurrenceRepository, expenseStore, groupRepository, entityManager)
+        val service = RecurringExpenseService(
+            scheduleRepository = scheduleRepository,
+            occurrenceRepository = occurrenceRepository,
+            expenseStore = expenseStore,
+            groupRepository = groupRepository,
+            entityManager = entityManager,
+            referenceValidator = EntityReferenceValidator(groupRepository, mock(GroupMembershipRepository::class.java))
+        )
 
         inActiveTransaction { assertEquals(1, service.processDueOccurrences(12)) }
 
@@ -390,12 +416,13 @@ class RecurringExpenseOptionalOutboxTest {
         `when`(query.resultList).thenReturn(listOf(memberId))
 
         val service = RecurringExpenseService(
-            scheduleRepository,
-            occurrenceRepository,
-            expenseStore,
-            groupRepository,
-            entityManager,
-            transactionManager = TestTransactionManager()
+            scheduleRepository = scheduleRepository,
+            occurrenceRepository = occurrenceRepository,
+            expenseStore = expenseStore,
+            groupRepository = groupRepository,
+            entityManager = entityManager,
+            transactionManager = TestTransactionManager(),
+            referenceValidator = EntityReferenceValidator(groupRepository, mock(GroupMembershipRepository::class.java))
         )
 
         assertEquals(1, service.processDueOccurrences(12))

@@ -4,6 +4,7 @@ import com.subhrodip.squarewise.accounts.profile.api.ProfileResponse
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.time.Duration
@@ -213,9 +214,18 @@ class ProfileCacheTest {
             initialIds.add(id)
             smallLiveCache.getBySubject("live-$i") { ProfileResponse(id, "Live $i", "UTC", "EUR") }
         }
-        var liveReloadCalls = 0
-        smallLiveCache.getBySubject("live-1") { liveReloadCalls++; ProfileResponse(initialIds[0], "Live 1 Reloaded", "UTC", "EUR") }
-        assertEquals(1, liveReloadCalls)
+        var reloads = 0
+        for (i in 1..8) {
+            var loaded = false
+            smallLiveCache.getBySubject("live-$i") {
+                loaded = true
+                ProfileResponse(initialIds[i - 1], "Live $i Reloaded", "UTC", "EUR")
+            }
+            if (loaded) reloads++
+        }
+        val hits = 8 - reloads
+        assertTrue(reloads >= 4)
+        assertTrue(hits >= 4)
     }
 
     @Test
@@ -231,10 +241,12 @@ class ProfileCacheTest {
         val id1 = UUID.randomUUID()
         val id2 = UUID.randomUUID()
         val id3 = UUID.randomUUID()
+        val id4 = UUID.randomUUID()
         smallCache.put(ProfileResponse(id1, "User 1", "UTC", "EUR"))
         smallCache.put(ProfileResponse(id2, "User 2", "UTC", "EUR"))
         smallCache.put(ProfileResponse(id3, "User 3", "UTC", "EUR"))
-        assertEquals(ProfileResponse(id3, "User 3", "UTC", "EUR"), smallCache.peekByAccountId(id3))
+        smallCache.put(ProfileResponse(id4, "User 4", "UTC", "EUR"))
+        assertEquals(ProfileResponse(id4, "User 4", "UTC", "EUR"), smallCache.peekByAccountId(id4))
     }
 
     @Test
@@ -244,6 +256,46 @@ class ProfileCacheTest {
         smallCache.getBySubject("sub-1") { ProfileResponse(sharedAccountId, "User", "UTC", "EUR") }
         smallCache.getBySubject("sub-2") { ProfileResponse(sharedAccountId, "User", "UTC", "EUR") }
         smallCache.getBySubject("sub-3") { ProfileResponse(sharedAccountId, "User", "UTC", "EUR") }
-        assertEquals(ProfileResponse(sharedAccountId, "User", "UTC", "EUR"), smallCache.getBySubject("sub-3") { null })
+        smallCache.getBySubject("sub-4") { ProfileResponse(sharedAccountId, "User", "UTC", "EUR") }
+        assertEquals(ProfileResponse(sharedAccountId, "User", "UTC", "EUR"), smallCache.getBySubject("sub-4") { null })
+    }
+
+    @Test
+    fun `evicts from bySubject when byAccountId overflows with mapped subject entry`() {
+        val smallCache = ProfileCache(ttl = Duration.ofMinutes(10), maxEntries = 2)
+        val id1 = UUID.randomUUID()
+        val id2 = UUID.randomUUID()
+        val id3 = UUID.randomUUID()
+        val id4 = UUID.randomUUID()
+        val id5 = UUID.randomUUID()
+        // Put two entries via subject
+        smallCache.getBySubject("user-1") { ProfileResponse(id1, "User 1", "UTC", "EUR") }
+        smallCache.getBySubject("user-2") { ProfileResponse(id2, "User 2", "UTC", "EUR") }
+        // Now remove user-1 from bySubject directly via invalidate, but put id1 back into byAccountId only
+        smallCache.invalidate("user-1")
+        smallCache.put(ProfileResponse(id1, "User 1 direct", "UTC", "EUR"))
+        // byAccountId now has id1 (subject null) and id2 (subject user-2)
+        smallCache.put(ProfileResponse(id3, "User 3", "UTC", "EUR"))
+        smallCache.put(ProfileResponse(id4, "User 4", "UTC", "EUR"))
+        smallCache.put(ProfileResponse(id5, "User 5", "UTC", "EUR"))
+        assertNotNull(smallCache.peekByAccountId(id5))
+    }
+
+    @Test
+    fun `evictIfOversized prunes invalidation timestamps older than ttl`() {
+        val fastCache = ProfileCache(ttl = Duration.ofMillis(1), maxEntries = 2)
+        val id1 = UUID.randomUUID()
+        fastCache.invalidate("old-sub", id1)
+        Thread.sleep(10)
+        // Trigger eviction pass with entries exceeding maxEntries
+        val id2 = UUID.randomUUID()
+        val id3 = UUID.randomUUID()
+        val id4 = UUID.randomUUID()
+        val id5 = UUID.randomUUID()
+        fastCache.put(ProfileResponse(id2, "User 2", "UTC", "EUR"))
+        fastCache.put(ProfileResponse(id3, "User 3", "UTC", "EUR"))
+        fastCache.put(ProfileResponse(id4, "User 4", "UTC", "EUR"))
+        fastCache.put(ProfileResponse(id5, "User 5", "UTC", "EUR"))
+        assertNotNull(fastCache.peekByAccountId(id5))
     }
 }

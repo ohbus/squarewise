@@ -50,7 +50,8 @@ class ProfileCache(
             return profile
         }
         evictIfOversized()
-        val entry = Entry(profile, subject, now.plus(ttl))
+        val loadedAt = Instant.now()
+        val entry = Entry(profile, subject, loadedAt.plus(ttl))
         bySubject[subject] = entry
         byAccountId[profile.accountId] = entry
         return profile
@@ -76,7 +77,8 @@ class ProfileCache(
             return profile
         }
         evictIfOversized()
-        val entry = Entry(profile, null, now.plus(ttl))
+        val loadedAt = Instant.now()
+        val entry = Entry(profile, null, loadedAt.plus(ttl))
         byAccountId[accountId] = entry
         return profile
     }
@@ -133,13 +135,25 @@ class ProfileCache(
     private fun evictIfOversized() {
         if (bySubject.size > maxEntries || byAccountId.size > maxEntries) {
             val now = Instant.now()
+            val cutoff = now.minus(ttl)
+            subjectInvalidationTimes.entries.removeIf { it.value.isBefore(cutoff) }
+            accountIdInvalidationTimes.entries.removeIf { it.value.isBefore(cutoff) }
             bySubject.entries.removeIf { it.value.isExpired(now) }
             byAccountId.entries.removeIf { it.value.isExpired(now) }
             while (bySubject.size > maxEntries) {
-                bySubject.remove(bySubject.keys().nextElement())
+                val key = bySubject.keys().nextElement()
+                val removed = bySubject.remove(key)
+                if (removed != null) {
+                    byAccountId.remove(removed.profile.accountId)
+                }
             }
             while (byAccountId.size > maxEntries) {
-                byAccountId.remove(byAccountId.keys().nextElement())
+                val key = byAccountId.keys().nextElement()
+                val removed = byAccountId.remove(key)
+                val subject = removed?.subject
+                if (subject != null) {
+                    bySubject.remove(subject)
+                }
             }
         }
     }

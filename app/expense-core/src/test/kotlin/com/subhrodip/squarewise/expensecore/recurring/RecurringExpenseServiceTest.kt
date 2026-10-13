@@ -8,6 +8,8 @@ import com.subhrodip.squarewise.expensecore.groups.api.CreateGroupRequest
 import com.subhrodip.squarewise.expensecore.groups.api.CreateInviteRequest
 import com.subhrodip.squarewise.expensecore.groups.persistence.store.JpaGroupStore
 import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupRepository
+import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupMembershipRepository
+import com.subhrodip.squarewise.expensecore.validation.EntityReferenceValidator
 import com.subhrodip.squarewise.expensecore.messaging.outbox.persistence.OutboxStore
 import com.subhrodip.squarewise.expensecore.recurring.api.CreateRecurringScheduleRequest
 import com.subhrodip.squarewise.expensecore.recurring.api.UpdateRecurringScheduleRequest
@@ -46,7 +48,8 @@ class RecurringExpenseServiceTest @Autowired constructor(
     private val occurrenceRepository: RecurringExpenseOccurrenceRepository,
     private val outboxStore: OutboxStore,
     private val entityManager: EntityManager,
-    private val groupRepository: GroupRepository
+    private val groupRepository: GroupRepository,
+    private val membershipRepository: GroupMembershipRepository
 ) {
 
     @Test
@@ -692,7 +695,8 @@ class RecurringExpenseServiceTest @Autowired constructor(
             expenseStore,
             groupRepository,
             entityManager,
-            outboxStore
+            outboxStore,
+            referenceValidator = EntityReferenceValidator(groupRepository, membershipRepository)
         )
         val group = groupStore.create("fallback-mapper", CreateGroupRequest("Fallback mapper", "HOUSEHOLD", "EUR"))
         val member = groupStore.listMembers(group.groupId, "fallback-mapper").single().membershipId

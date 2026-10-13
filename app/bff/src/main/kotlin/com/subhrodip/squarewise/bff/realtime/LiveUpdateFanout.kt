@@ -98,20 +98,22 @@ class LiveUpdateFanout(
         require(maxSubscriptionsPerUser > 0) { "maxSubscriptionsPerUser must be positive" }
     }
 
+    private val userLocks = Array(64) { Any() }
+    private fun userLock(userId: String): Any = userLocks[Math.floorMod(userId.hashCode(), userLocks.size)]
+
     fun subscribe(userId: String, groupId: String): LiveSubscription {
         require(userId.isNotBlank()) { "userId must not be blank" }
         require(groupId.isNotBlank()) { "groupId must not be blank" }
         val now = Instant.now(clock)
-        val lock = userSubscriptions.computeIfAbsent(userId) { ConcurrentHashMap.newKeySet() }
-        return synchronized(lock) {
+        return synchronized(userLock(userId)) {
             for (subId in userSubscriptions[userId]?.toList().orEmpty()) {
                 val sub = subscriptions[subId]
                 if (sub != null && !now.isBefore(sub.subscription.expiresAt)) {
                     unsubscribe(subId)
                 }
             }
-            val activeUserSubs = userSubscriptions.computeIfAbsent(userId) { ConcurrentHashMap.newKeySet() }
-            if (activeUserSubs.size >= maxSubscriptionsPerUser) {
+            val currentSubs = userSubscriptions[userId]
+            if ((currentSubs?.size ?: 0) >= maxSubscriptionsPerUser) {
                 throw BffDomainException(BffErrors.SUBSCRIPTION_LIMIT_EXCEEDED, "subscription limit exceeded")
             }
             val subscription = LiveSubscription(
@@ -121,7 +123,9 @@ class LiveUpdateFanout(
                 SubscriptionInvalidationChannel(queueCapacity)
             subscriptions[subscription.id] = Subscriber(subscription, ArrayDeque())
             revocationSignals[subscription.id] = Sinks.one()
-            activeUserSubs.add(subscription.id)
+            userSubscriptions.compute(userId) { _, set ->
+                (set ?: ConcurrentHashMap.newKeySet()).apply { add(subscription.id) }
+            }
             groupSubscriptions.compute(groupId) { _, set ->
                 (set ?: ConcurrentHashMap.newKeySet()).apply { add(subscription.id) }
             }
@@ -148,15 +152,17 @@ class LiveUpdateFanout(
 
     fun revokeUser(userId: String): Int {
         require(userId.isNotBlank()) { "userId must not be blank" }
-        val targetIds = userSubscriptions[userId]?.toList().orEmpty()
-        var revoked = 0
-        for (id in targetIds) {
-            if (subscriptions.containsKey(id)) {
-                unsubscribe(id)
-                revoked++
+        return synchronized(userLock(userId)) {
+            val targetIds = userSubscriptions[userId]?.toList().orEmpty()
+            var revoked = 0
+            for (id in targetIds) {
+                if (subscriptions.containsKey(id)) {
+                    unsubscribe(id)
+                    revoked++
+                }
             }
+            revoked
         }
-        return revoked
     }
 
     /**
@@ -172,16 +178,18 @@ class LiveUpdateFanout(
     fun revokeUserFromGroup(userId: String, groupId: String): Int {
         require(userId.isNotBlank()) { "userId must not be blank" }
         require(groupId.isNotBlank()) { "groupId must not be blank" }
-        val targetIds = userSubscriptions[userId]?.toList().orEmpty()
-        var revoked = 0
-        for (id in targetIds) {
-            val subscriber = subscriptions[id]
-            if (subscriber != null && subscriber.subscription.groupId == groupId) {
-                unsubscribe(id)
-                revoked++
+        return synchronized(userLock(userId)) {
+            val targetIds = userSubscriptions[userId]?.toList().orEmpty()
+            var revoked = 0
+            for (id in targetIds) {
+                val subscriber = subscriptions[id]
+                if (subscriber != null && subscriber.subscription.groupId == groupId) {
+                    unsubscribe(id)
+                    revoked++
+                }
             }
+            revoked
         }
-        return revoked
     }
 
     fun publish(update: LiveUpdate): Int {

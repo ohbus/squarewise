@@ -31,6 +31,7 @@ import com.subhrodip.squarewise.expensecore.recurring.service.RecurringExpenseSe
 import com.subhrodip.squarewise.expensecore.recurring.persistence.RecurringExpenseScheduleRepository
 import com.subhrodip.squarewise.expensecore.recurring.persistence.RecurringExpenseOccurrenceRepository
 import com.subhrodip.squarewise.expensecore.expenses.persistence.store.ExpenseStore
+import com.subhrodip.squarewise.expensecore.validation.EntityReferenceValidator
 import jakarta.persistence.EntityManager
 
 @SpringBootTest
@@ -403,18 +404,18 @@ class RecurringExpenseControllerTest @Autowired constructor(
     }
 
     @Test
-    fun `RecurringExpenseService without referenceValidator rejects non-existent group`() {
-        val serviceWithoutValidator = RecurringExpenseService(
+    fun `RecurringExpenseService rejects non-existent group on schedule creation`() {
+        val serviceWithValidator = RecurringExpenseService(
             scheduleRepository = scheduleRepository,
             occurrenceRepository = occurrenceRepository,
             expenseStore = expenseStore,
             groupRepository = groupRepository,
             entityManager = entityManager,
-            referenceValidator = null
+            referenceValidator = EntityReferenceValidator(groupRepository, membershipRepository)
         )
         val missingGroupId = UUID.randomUUID()
         val request = CreateRecurringScheduleRequest(
-            description = "Validator-less missing group",
+            description = "Missing group schedule",
             amountMinor = 1000,
             currency = "EUR",
             frequency = RecurrenceFrequency.MONTHLY,
@@ -423,7 +424,7 @@ class RecurringExpenseControllerTest @Autowired constructor(
             timezone = "Europe/Vienna"
         )
         val error = assertThrows<SquarewiseException> {
-            serviceWithoutValidator.createSchedule(missingGroupId, request)
+            serviceWithValidator.createSchedule(missingGroupId, request)
         }
         assertEquals(CategoryCode.NOT_FOUND, error.definition.category)
     }

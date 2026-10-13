@@ -13,6 +13,7 @@ import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupR
 import com.subhrodip.squarewise.expensecore.messaging.outbox.persistence.OutboxStore
 
 import com.subhrodip.squarewise.expensecore.sync.persistence.SynchronizationStore
+import com.subhrodip.squarewise.expensecore.validation.EntityReferenceValidator
 import java.time.Instant
 import java.util.UUID
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -962,6 +963,7 @@ class JpaExpenseStoreTest @Autowired constructor(
             membershipRepository = membershipRepository,
             outboxStore = outboxStore,
             syncStore = syncStore,
+            referenceValidator = EntityReferenceValidator(groupRepository, membershipRepository, null),
             groupAccessCache = null
         )
         val group = groupStore.create("alice", CreateGroupRequest("Uncached Balances", "TRIP", "EUR"))
@@ -986,6 +988,7 @@ class JpaExpenseStoreTest @Autowired constructor(
             membershipRepository = membershipRepository,
             outboxStore = outboxStore,
             syncStore = syncStore,
+            referenceValidator = EntityReferenceValidator(groupRepository, membershipRepository, null),
             groupAccessCache = null
         )
 

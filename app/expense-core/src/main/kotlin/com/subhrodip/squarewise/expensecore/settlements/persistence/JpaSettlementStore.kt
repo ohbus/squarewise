@@ -44,9 +44,9 @@ class JpaSettlementStore(
     private val audit: GroupAuditCommandStore,
     private val synchronization: SynchronizationStore,
     private val outbox: OutboxStore,
+    private val referenceValidator: EntityReferenceValidator,
     @Autowired(required = false)
-    private val groupAccessCache: GroupAccessCache? = null,
-    private val referenceValidator: EntityReferenceValidator = EntityReferenceValidator(groupRepository, membershipRepository, groupAccessCache)
+    private val groupAccessCache: GroupAccessCache? = null
 ) : SettlementStore {
 
     /**
@@ -94,7 +94,7 @@ class JpaSettlementStore(
             )
         )
         recordMutation(group, actorSubject, "settlement.recorded", saved.toDomain())
-        groupAccessCache?.invalidateBalances(groupId)
+        groupAccessCache?.invalidateBalancesAfterCommit(groupId)
         return saved.toDomain()
     }
 
@@ -131,7 +131,7 @@ class JpaSettlementStore(
         )
         val reversed = repository.save(entity).toDomain()
         recordMutation(group, actorSubject, "settlement.reversed", reversed)
-        groupAccessCache?.invalidateBalances(groupId)
+        groupAccessCache?.invalidateBalancesAfterCommit(groupId)
         return reversed
     }
 

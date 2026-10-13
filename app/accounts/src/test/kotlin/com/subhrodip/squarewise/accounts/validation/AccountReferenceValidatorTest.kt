@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.verifyNoInteractions
 import org.mockito.Mockito.`when`
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -241,6 +242,7 @@ class AccountReferenceValidatorTest {
 
         // Serves from cache without repository call
         assertTrue(cachedValidator.isActiveAccount(accountId))
+        verifyNoInteractions(profileRepository)
     }
 
     @Test

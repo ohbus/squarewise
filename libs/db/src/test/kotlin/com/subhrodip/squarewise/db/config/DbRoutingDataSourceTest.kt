@@ -304,5 +304,22 @@ class DbRoutingDataSourceTest {
             assertEquals("", routing.resolveReaderName())
         }
     }
+
+    @Test
+    fun `resolveReaderName filters out candidates not meeting watermark eligibility`() {
+        val writer = mock(DataSource::class.java)
+        val reader1 = mock(DataSource::class.java)
+        val reader2 = mock(DataSource::class.java)
+        val health = mock(DbReaderHealth::class.java)
+        val context = DbExecutionContext("query", DbOperationKind.QUERY)
+        `when`(health.state("r1")).thenReturn(DbReaderState.HEALTHY)
+        `when`(health.state("r2")).thenReturn(DbReaderState.HEALTHY)
+        `when`(health.route(context, "r1")).thenReturn(DbReaderDecision.Fail)
+        `when`(health.route(context, "r2")).thenReturn(DbReaderDecision.Reader)
+        val routing = DbRoutingDataSource(writer, linkedMapOf("r1" to reader1, "r2" to reader2), health)
+        DbContextHolder.withContext(context) {
+            assertEquals("r2", routing.resolveReaderName())
+        }
+    }
 }
 
