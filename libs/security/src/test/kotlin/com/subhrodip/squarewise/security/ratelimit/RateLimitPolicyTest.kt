@@ -88,4 +88,14 @@ class RateLimitPolicyTest {
             RateLimitPolicy("login", maximumPermits = 1, window = Duration.ofNanos(1_000_000_001))
         }
     }
+
+    @Test
+    fun `RateLimitPolicy supports data class methods`() {
+        val policy = RateLimitPolicy("auth-login", maximumPermits = 5, window = Duration.ofMinutes(1))
+        val copy = policy.copy(maximumPermits = 10)
+        assertEquals(10, copy.maximumPermits)
+        assertEquals(policy, policy.copy())
+        assertEquals(policy.hashCode(), policy.copy().hashCode())
+        assertEquals(true, policy.toString().contains("auth-login"))
+    }
 }
