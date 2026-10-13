@@ -171,7 +171,7 @@ class DbRoutingDataSourceTest {
     }
 
     @Test
-    fun `implicit query selects second healthy reader when first reader fails`() {
+    fun `implicit query falls back to healthy reader when targeted reader is unhealthy`() {
         val writer = mock(DataSource::class.java)
         val reader1 = mock(DataSource::class.java)
         val reader2 = mock(DataSource::class.java)
@@ -182,7 +182,13 @@ class DbRoutingDataSourceTest {
         val routing = DbRoutingDataSource(writer, mapOf("replica-1" to reader1, "replica-2" to reader2), health)
 
         DbContextHolder.withContext(
-            DbExecutionContext("expense.search", DbOperationKind.QUERY, ReadConsistency.EVENTUAL, readerEligible = true)
+            DbExecutionContext(
+                operationName = "expense.search",
+                kind = DbOperationKind.QUERY,
+                consistency = ReadConsistency.EVENTUAL,
+                readerEligible = true,
+                targetReader = "replica-1"
+            )
         ) {
             assertSame(conn2, routing.getConnection())
         }

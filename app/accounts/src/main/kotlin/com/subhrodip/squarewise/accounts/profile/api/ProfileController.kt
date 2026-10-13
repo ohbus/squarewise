@@ -38,7 +38,7 @@ class ProfileController(
     private val dbTelemetry: DbTelemetry = DbTelemetry()
 ) {
     @GetMapping(ApiEndpoints.Accounts.V1.ME)
-    @DbRouteContext("profile.me", readerEligible = true)
+    @DbRouteContext("profile.me", targetReader = "profile", readerEligible = true)
     fun get(principal: Principal): ProfileResponse =
         profiles.get(principal.name) ?: throw AccountsDomainException(AccountsErrors.AUTHENTICATED_PROFILE_NOT_FOUND)
 
@@ -91,7 +91,7 @@ class ProfileController(
      * @throws AccountsDomainException if unauthenticated, unauthorized, or not found.
      */
     @GetMapping(ApiEndpoints.Accounts.V1.PROFILES_BY_ID)
-    @DbRouteContext("profile.lookup", readerEligible = true)
+    @DbRouteContext("profile.lookup", targetReader = "profile", readerEligible = true)
     fun getProfileById(
         @PathVariable accountId: UUID,
         principal: Principal?,
@@ -124,7 +124,7 @@ class ProfileController(
      * @throws AccountsDomainException if unauthenticated or unauthorized.
      */
     @PostMapping(ApiEndpoints.Accounts.V1.PROFILES_BATCH)
-    @DbRouteContext("profile.batch_lookup", readerEligible = true)
+    @DbRouteContext("profile.batch_lookup", targetReader = "profile", readerEligible = true)
     fun getProfilesBatch(
         @Valid @RequestBody request: BatchProfileRequest,
         principal: Principal?,
@@ -147,7 +147,8 @@ class ProfileController(
         operationName = operationName,
         kind = DbOperationKind.QUERY,
         consistency = ReadConsistency.EVENTUAL,
-        readerEligible = true
+        readerEligible = true,
+        targetReader = "profile"
     )
 
     private fun hasInternalServiceAuthority(principal: Principal?): Boolean =

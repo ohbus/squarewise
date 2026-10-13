@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
 import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
+import com.subhrodip.squarewise.db.routing.DbRouteContext
 import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
 
 @RestController
@@ -23,6 +24,7 @@ class SyncController(
     private val memberships: GroupMembershipRepository,
 ) {
     @GetMapping(ApiEndpoints.ExpenseCore.V1.SYNC_SNAPSHOT_RELATIVE_SUBPATH, ApiEndpoints.ExpenseCore.V1.SYNC_CHANGES_RELATIVE_SUBPATH)
+    @DbRouteContext("expense.sync.page", readerEligible = true)
     fun page(
         @PathVariable groupId: UUID,
         @RequestParam(required = false) cursor: String?,

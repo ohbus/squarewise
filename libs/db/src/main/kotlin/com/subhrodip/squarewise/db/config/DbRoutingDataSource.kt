@@ -70,10 +70,10 @@ class DbRoutingDataSource(
     /** Returns the configured reader pools for health probing and diagnostics. */
     fun readerDataSources(): Map<String, DataSource> = readers.toMap()
 
-    /** Resolves the target reader pool name based on context target or first healthy reader. */
+    /** Resolves the target reader pool name based on context target or first healthy reader, with automatic failover. */
     fun resolveReaderName(): String {
         val target = DbContextHolder.current().targetReader?.takeIf { it.isNotBlank() }
-        if (target != null) {
+        if (target != null && readerHealth.state(target) == DbReaderState.HEALTHY) {
             return target
         }
         for (candidate in readers.keys) {
@@ -81,7 +81,7 @@ class DbRoutingDataSource(
                 return candidate
             }
         }
-        return readers.keys.firstOrNull() ?: ""
+        return target ?: readers.keys.firstOrNull() ?: ""
     }
 
     private fun routeForCurrentContext(): Pair<DbRoute, String> {

@@ -15,12 +15,14 @@ import com.subhrodip.squarewise.errors.catalog.NotificationErrors
 import com.subhrodip.squarewise.errors.catalog.PlatformErrors
 import java.security.Principal
 
+import com.subhrodip.squarewise.db.routing.DbRouteContext
 import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
 
 @RestController
 @RequestMapping(ApiEndpoints.Notifications.V1.PATH_PREFERENCES)
 class PreferenceController(private val store: PreferenceStore) {
     @GetMapping
+    @DbRouteContext("notifications.preferences.get", readerEligible = true)
     fun get(principal: Principal?): NotificationPreferences = store.get(subject(principal))
 
     @PutMapping

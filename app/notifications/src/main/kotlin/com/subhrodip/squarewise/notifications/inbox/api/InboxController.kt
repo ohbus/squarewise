@@ -16,12 +16,14 @@ import com.subhrodip.squarewise.errors.catalog.PlatformErrors
 import com.subhrodip.squarewise.notifications.errors.NotificationDomainException
 import java.util.UUID
 
+import com.subhrodip.squarewise.db.routing.DbRouteContext
 import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
 
 @RestController
 @RequestMapping(ApiEndpoints.Notifications.V1.PATH_INBOX)
 class InboxController(private val inbox: NotificationInboxService) {
     @GetMapping
+    @DbRouteContext("notifications.inbox.list", targetReader = "inbox", readerEligible = true)
     fun list(
         principal: Principal?,
         @RequestParam(required = false) cursor: String?,
