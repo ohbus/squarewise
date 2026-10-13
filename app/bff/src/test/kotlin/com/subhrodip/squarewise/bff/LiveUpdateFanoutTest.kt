@@ -376,6 +376,71 @@ class LiveUpdateFanoutTest {
         assertThat(tOtherUser).isFalse()
     }
 
+    @Test
+    fun `poll and pendingCount return null and zero when subscription has expired`() {
+        val start = Instant.parse("2026-01-01T00:00:00Z")
+        val clock = MutableClock(start)
+        val fanout = LiveUpdateFanout(clock = clock, subscriptionTtl = Duration.ofMinutes(5))
+
+        val sub = fanout.subscribe("user-exp", "group-exp")
+        fanout.publish(LiveUpdate("group-exp", 1))
+
+        assertThat(fanout.pendingCount(sub.id)).isEqualTo(1)
+
+        // Advance past expiration
+        clock.now = start.plus(Duration.ofMinutes(10))
+
+        assertThat(fanout.pendingCount(sub.id)).isEqualTo(0)
+        assertThat(fanout.poll(sub.id)).isNull()
+    }
+
+    @Test
+    fun `removeExpired removes all expired subscriptions and completes signals`() {
+        val start = Instant.parse("2026-01-01T00:00:00Z")
+        val clock = MutableClock(start)
+        val fanout = LiveUpdateFanout(clock = clock, subscriptionTtl = Duration.ofMinutes(5))
+
+        val sub1 = fanout.subscribe("user-exp-1", "group-exp-1")
+        val sub2 = fanout.subscribe("user-exp-2", "group-exp-2")
+
+        var sub1Revoked = false
+        fanout.revocationSignal(sub1.id).doOnTerminate { sub1Revoked = true }.subscribe()
+
+        // Advance time so sub1 and sub2 expire
+        clock.now = start.plus(Duration.ofMinutes(10))
+
+        fanout.removeExpired()
+
+        assertThat(sub1Revoked).isTrue()
+        assertThat(fanout.poll(sub1.id)).isNull()
+        assertThat(fanout.poll(sub2.id)).isNull()
+    }
+
+    @Test
+    fun `subscribe evicts expired subscriptions for user when admitting new subscription`() {
+        val start = Instant.parse("2026-01-01T00:00:00Z")
+        val clock = MutableClock(start)
+        val fanout = LiveUpdateFanout(clock = clock, maxSubscriptionsPerUser = 1, subscriptionTtl = Duration.ofMinutes(5))
+
+        val sub1 = fanout.subscribe("user-cap", "group-1")
+        assertThat(sub1).isNotNull
+
+        // Advance time so sub1 expires
+        clock.now = start.plus(Duration.ofMinutes(10))
+
+        // Subscribing now should evict sub1 instead of throwing limit exceeded
+        val sub2 = fanout.subscribe("user-cap", "group-2")
+        assertThat(sub2).isNotNull
+        assertThat(fanout.poll(sub1.id)).isNull()
+    }
+
+    @Test
+    fun `poll and pendingCount return null and zero for unknown subscription`() {
+        val fanout = LiveUpdateFanout()
+        assertThat(fanout.poll("unknown-sub")).isNull()
+        assertThat(fanout.pendingCount("unknown-sub")).isZero()
+    }
+
     private class MutableClock(var now: Instant) : Clock() {
         override fun getZone(): ZoneOffset = ZoneOffset.UTC
 

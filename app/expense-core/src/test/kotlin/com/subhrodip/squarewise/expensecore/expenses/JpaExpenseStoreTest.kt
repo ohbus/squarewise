@@ -934,4 +934,12 @@ class JpaExpenseStoreTest @Autowired constructor(
             }
         }
     }
+
+    @Test
+    fun `list rejects invalid cursor format`() {
+        val group = groupStore.create("alice", CreateGroupRequest("Cursor Test", "TRIP", "EUR"))
+        assertThrows(SquarewiseException::class.java) {
+            expenseStore.list(group.groupId, null, "not-a-valid-uuid", 20)
+        }
+    }
 }

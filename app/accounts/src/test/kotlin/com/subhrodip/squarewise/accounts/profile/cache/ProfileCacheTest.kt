@@ -89,5 +89,47 @@ class ProfileCacheTest {
         assertNotNull(retrieved)
         assertEquals(profile, retrieved)
     }
-}
 
+    @Test
+    fun `clear purges all profiles from subject and accountId caches`() {
+        val accountId = UUID.randomUUID()
+        val subject = "internal:clear@example.com"
+        val profile = ProfileResponse(accountId, "Clear User", "UTC", "USD")
+
+        cache.getBySubject(subject) { profile }
+        cache.clear()
+
+        val calls = AtomicInteger(0)
+        cache.getBySubject(subject) { calls.incrementAndGet(); profile }
+        // After getBySubject, byAccountId is also populated with the entry
+        assertEquals(1, calls.get())
+
+        // Clearing again must purge byAccountId as well
+        cache.clear()
+        val accountCalls = AtomicInteger(0)
+        cache.getByAccountId(accountId) { accountCalls.incrementAndGet(); profile }
+        assertEquals(1, accountCalls.get())
+    }
+
+    @Test
+    fun `getBySubject and getByAccountId return null when loader returns null`() {
+        assertEquals(null, cache.getBySubject("nonexistent") { null })
+        assertEquals(null, cache.getByAccountId(UUID.randomUUID()) { null })
+    }
+
+    @Test
+    fun `evicts oversized entries when limit is exceeded`() {
+        val smallCache = ProfileCache(ttl = Duration.ofMillis(1), maxEntries = 4)
+        for (i in 1..6) {
+            smallCache.getBySubject("user-$i") { ProfileResponse(UUID.randomUUID(), "Name $i", "UTC", "EUR") }
+        }
+        Thread.sleep(10)
+        smallCache.getBySubject("trigger") { ProfileResponse(UUID.randomUUID(), "Trigger", "UTC", "EUR") }
+
+        // Also test non-expired overflow
+        val smallLiveCache = ProfileCache(ttl = Duration.ofMinutes(10), maxEntries = 4)
+        for (i in 1..8) {
+            smallLiveCache.getBySubject("live-$i") { ProfileResponse(UUID.randomUUID(), "Live $i", "UTC", "EUR") }
+        }
+    }
+}

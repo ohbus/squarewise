@@ -163,6 +163,38 @@ class DbRouteAspectTest {
     }
 
     @Test
+    fun `intercepts custom DbRouteContext and establishes custom context`() {
+        val target = SampleService()
+        val method = SampleService::class.java.getMethod("customRoutedRead")
+        val joinPoint = mock(ProceedingJoinPoint::class.java)
+        val signature = mock(MethodSignature::class.java)
+
+        `when`(joinPoint.signature).thenReturn(signature)
+        `when`(signature.method).thenReturn(method)
+        `when`(joinPoint.target).thenReturn(target)
+        `when`(joinPoint.proceed()).thenAnswer { target.customRoutedRead() }
+
+        val result = aspect.aroundRoutedMethod(joinPoint)
+        assertEquals("ok-read", result)
+    }
+
+    @Test
+    fun `intercepts writeTx and establishes write command context`() {
+        val target = SampleService()
+        val method = SampleService::class.java.getMethod("writeTx")
+        val joinPoint = mock(ProceedingJoinPoint::class.java)
+        val signature = mock(MethodSignature::class.java)
+
+        `when`(joinPoint.signature).thenReturn(signature)
+        `when`(signature.method).thenReturn(method)
+        `when`(joinPoint.target).thenReturn(target)
+        `when`(joinPoint.proceed()).thenAnswer { target.writeTx() }
+
+        val result = aspect.aroundRoutedMethod(joinPoint)
+        assertEquals("ok-tx-write", result)
+    }
+
+    @Test
     fun `unannotated method proceeds without establishing context`() {
         val target = SampleService()
         val method = SampleService::class.java.getMethod("plainMethod")
@@ -176,5 +208,32 @@ class DbRouteAspectTest {
 
         val result = aspect.aroundRoutedMethod(joinPoint)
         assertEquals("plain", result)
+    }
+
+    @com.subhrodip.squarewise.db.routing.DbReader
+    open class ClassAnnotatedReader {
+        open fun queryWithoutMethodAnnotation(): String {
+            val ctx = DbContextHolder.current()
+            assertEquals("classannotatedreader.querywithoutmethodannotation", ctx.operationName)
+            assertTrue(ctx.readerEligible)
+            assertEquals(DbOperationKind.QUERY, ctx.kind)
+            return "from-class-reader"
+        }
+    }
+
+    @Test
+    fun `inherits DbReader from class level and auto-resolves operation name`() {
+        val target = ClassAnnotatedReader()
+        val method = ClassAnnotatedReader::class.java.getMethod("queryWithoutMethodAnnotation")
+        val joinPoint = mock(ProceedingJoinPoint::class.java)
+        val signature = mock(MethodSignature::class.java)
+
+        `when`(joinPoint.signature).thenReturn(signature)
+        `when`(signature.method).thenReturn(method)
+        `when`(joinPoint.target).thenReturn(target)
+        `when`(joinPoint.proceed()).thenAnswer { target.queryWithoutMethodAnnotation() }
+
+        val result = aspect.aroundRoutedMethod(joinPoint)
+        assertEquals("from-class-reader", result)
     }
 }

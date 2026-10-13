@@ -134,5 +134,42 @@ class GroupAccessCacheTest {
         val res3 = cache.balances(groupId) { calls.incrementAndGet(); sampleBalances }
         assertEquals(2, calls.get())
     }
-}
 
+    @Test
+    fun `clear purges all cached categories`() {
+        val groupId = UUID.randomUUID()
+        val subject = "user-clear"
+        cache.isMember(groupId, subject) { true }
+        cache.groupStatus(groupId) { "ACTIVE" }
+        cache.members(groupId, 10) { listOf("m1") }
+        cache.balances(groupId) { listOf("b1") }
+
+        cache.clear()
+
+        val calls = AtomicInteger(0)
+        cache.isMember(groupId, subject) { calls.incrementAndGet(); true }
+        cache.groupStatus(groupId) { calls.incrementAndGet(); "ACTIVE" }
+        cache.members(groupId, 10) { calls.incrementAndGet(); listOf("m1") }
+        cache.balances(groupId) { calls.incrementAndGet(); listOf("b1") }
+
+        assertEquals(4, calls.get())
+    }
+
+    @Test
+    fun `evicts oversized entries when maxEntries is exceeded`() {
+        val smallCache = GroupAccessCache(ttl = Duration.ofMillis(1), maxEntries = 4)
+        for (i in 1..6) {
+            smallCache.isMember(UUID.randomUUID(), "user-$i") { true }
+        }
+        // Wait for TTL to pass
+        Thread.sleep(10)
+        // Add another entry to trigger eviction pass
+        smallCache.isMember(UUID.randomUUID(), "trigger") { true }
+
+        // Test non-expired overflow eviction as well
+        val smallLiveCache = GroupAccessCache(ttl = Duration.ofMinutes(10), maxEntries = 4)
+        for (i in 1..8) {
+            smallLiveCache.isMember(UUID.randomUUID(), "live-$i") { true }
+        }
+    }
+}

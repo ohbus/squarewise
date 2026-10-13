@@ -198,6 +198,13 @@ class JpaRequestStoresTest @Autowired constructor(
             profileStore.update("oidc|missing-${UUID.randomUUID()}", ProfilePatchRequest(displayName = "Missing"))
         }
         assertEquals(profile.accountId, profileStore.get(subject)?.accountId)
+        assertEquals(profile.accountId, profileStore.findById(profile.accountId)?.accountId)
+
+        // findByIds coverage
+        assertEquals(emptyList<com.subhrodip.squarewise.accounts.profile.api.ProfileResponse>(), profileStore.findByIds(emptyList()))
+        val batchResult = profileStore.findByIds(listOf(profile.accountId, UUID.randomUUID()))
+        assertEquals(1, batchResult.size)
+        assertEquals(profile.accountId, batchResult.first().accountId)
     }
 
     @Test
