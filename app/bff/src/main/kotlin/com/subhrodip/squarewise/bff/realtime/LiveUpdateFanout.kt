@@ -52,7 +52,6 @@ class LiveUpdateFanout(
         emitInvalidation(groupId, revision, UuidGenerator.next().toString())
 
     fun emitInvalidation(groupId: String, revision: Long, changeId: String): GroupInvalidation {
-        removeExpired()
         val invalidation = GroupInvalidation(groupId, revision, changeId)
         invalidationSink.tryEmitNext(invalidation)
         val now = Instant.now(clock)
@@ -103,14 +102,20 @@ class LiveUpdateFanout(
     fun subscribe(userId: String, groupId: String): LiveSubscription {
         require(userId.isNotBlank()) { "userId must not be blank" }
         require(groupId.isNotBlank()) { "groupId must not be blank" }
+        val now = Instant.now(clock)
         return synchronized(admissionLock) {
-            removeExpired()
             val userSubs = userSubscriptions.computeIfAbsent(userId) { ConcurrentHashMap.newKeySet() }
+            for (subId in userSubs.toList()) {
+                val sub = subscriptions[subId]
+                if (sub != null && !now.isBefore(sub.subscription.expiresAt)) {
+                    unsubscribe(subId)
+                }
+            }
             if (userSubs.size >= maxSubscriptionsPerUser) {
                 throw BffDomainException(BffErrors.SUBSCRIPTION_LIMIT_EXCEEDED, "subscription limit exceeded")
             }
             val subscription = LiveSubscription(
-                UuidGenerator.next().toString(), userId, groupId, Instant.now(clock).plus(subscriptionTtl)
+                UuidGenerator.next().toString(), userId, groupId, now.plus(subscriptionTtl)
             )
             subscriptionInvalidations[subscription.id] =
                 SubscriptionInvalidationChannel(queueCapacity)
@@ -180,11 +185,15 @@ class LiveUpdateFanout(
     fun publish(update: LiveUpdate): Int {
         require(update.groupId.isNotBlank()) { "groupId must not be blank" }
         require(update.revision >= 0) { "revision must not be negative" }
-        removeExpired()
+        val now = Instant.now(clock)
         var delivered = 0
         val targetIds = groupSubscriptions[update.groupId]?.toList().orEmpty()
         for (id in targetIds) {
             val subscriber = subscriptions[id] ?: continue
+            if (!now.isBefore(subscriber.subscription.expiresAt)) {
+                unsubscribe(id)
+                continue
+            }
             if (subscriber.offer(update, queueCapacity)) {
                 delivered++
             }
@@ -193,16 +202,25 @@ class LiveUpdateFanout(
     }
 
     fun poll(subscriptionId: String): LiveUpdate? {
-        removeExpired()
-        return subscriptions[subscriptionId]?.poll()
+        val subscriber = subscriptions[subscriptionId] ?: return null
+        if (!Instant.now(clock).isBefore(subscriber.subscription.expiresAt)) {
+            unsubscribe(subscriptionId)
+            return null
+        }
+        return subscriber.poll()
     }
 
     fun pendingCount(subscriptionId: String): Int {
-        removeExpired()
-        return subscriptions[subscriptionId]?.size() ?: 0
+        val subscriber = subscriptions[subscriptionId] ?: return 0
+        if (!Instant.now(clock).isBefore(subscriber.subscription.expiresAt)) {
+            unsubscribe(subscriptionId)
+            return 0
+        }
+        return subscriber.size()
     }
 
-    private fun removeExpired() {
+    /** Sweeps all expired subscriptions from the global index. */
+    fun removeExpired() {
         val now = Instant.now(clock)
         subscriptions.entries.removeIf { entry ->
             val expired = !now.isBefore(entry.value.subscription.expiresAt)

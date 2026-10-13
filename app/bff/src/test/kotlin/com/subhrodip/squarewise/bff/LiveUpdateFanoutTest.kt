@@ -168,7 +168,7 @@ class LiveUpdateFanoutTest {
     fun `expires a subscription if it reaches its deadline during invalidation delivery`() {
         val start = Instant.parse("2026-01-01T00:00:00Z")
         val expiry = start.plusSeconds(1)
-        val clock = SequenceClock(start, start, start, expiry)
+        val clock = SequenceClock(start, expiry)
         val fanout = LiveUpdateFanout(clock = clock, subscriptionTtl = Duration.ofSeconds(1))
         val subscription = fanout.subscribe("user-1", "group-1")
         var terminated = false
@@ -391,6 +391,6 @@ class LiveUpdateFanoutTest {
 
         override fun withZone(zone: ZoneId): Clock = this
 
-        override fun instant(): Instant = instants[index++]
+        override fun instant(): Instant = instants.getOrElse(index++) { instants.last() }
     }
 }
