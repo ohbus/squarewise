@@ -142,10 +142,20 @@ class ProfileCacheTest {
         Thread.sleep(10)
         smallCache.getBySubject("trigger") { ProfileResponse(UUID.randomUUID(), "Trigger", "UTC", "EUR") }
 
+        var loaderCalls = 0
+        smallCache.getBySubject("user-1") { loaderCalls++; ProfileResponse(UUID.randomUUID(), "Reloaded", "UTC", "EUR") }
+        assertEquals(1, loaderCalls)
+
         // Also test non-expired overflow
         val smallLiveCache = ProfileCache(ttl = Duration.ofMinutes(10), maxEntries = 4)
+        val initialIds = mutableListOf<UUID>()
         for (i in 1..8) {
-            smallLiveCache.getBySubject("live-$i") { ProfileResponse(UUID.randomUUID(), "Live $i", "UTC", "EUR") }
+            val id = UUID.randomUUID()
+            initialIds.add(id)
+            smallLiveCache.getBySubject("live-$i") { ProfileResponse(id, "Live $i", "UTC", "EUR") }
         }
+        var liveReloadCalls = 0
+        smallLiveCache.getBySubject("live-1") { liveReloadCalls++; ProfileResponse(initialIds[0], "Live 1 Reloaded", "UTC", "EUR") }
+        assertEquals(1, liveReloadCalls)
     }
 }

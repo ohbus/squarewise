@@ -81,8 +81,8 @@ class JpaProfileStore(
     @Transactional(readOnly = true)
     override fun findByIds(accountIds: List<UUID>): List<ProfileResponse> {
         if (accountIds.isEmpty()) return emptyList()
-        val cache = profileCache ?: return repository.findAllById(accountIds).map { it.toResponse() }
         val distinctIds = accountIds.distinct()
+        val cache = profileCache ?: return repository.findAllById(distinctIds).map { it.toResponse() }.distinct()
         val found = mutableListOf<ProfileResponse>()
         val missing = mutableListOf<UUID>()
         for (id in distinctIds) {
@@ -113,7 +113,7 @@ class JpaProfileStore(
         entity.timezone = patch.timezone?.also(ProfileRules::requireTimezone) ?: entity.timezone
         entity.defaultCurrency = patch.defaultCurrency ?: entity.defaultCurrency
         val saved = repository.save(entity).toResponse()
-        profileCache?.invalidate(subject, entity.accountId)
+        invalidateAfterCommit(subject, entity.accountId)
         return saved
     }
 
@@ -127,7 +127,21 @@ class JpaProfileStore(
             ?: throw AccountsDomainException(AccountsErrors.AUTHENTICATED_PROFILE_NOT_FOUND)
         entity.deletionRequested = true
         repository.save(entity)
-        profileCache?.invalidate(subject, entity.accountId)
+        invalidateAfterCommit(subject, entity.accountId)
+    }
+
+    private fun invalidateAfterCommit(subject: String, accountId: UUID) {
+        if (org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive()) {
+            org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                object : org.springframework.transaction.support.TransactionSynchronization {
+                    override fun afterCommit() {
+                        profileCache?.invalidate(subject, accountId)
+                    }
+                }
+            )
+        } else {
+            profileCache?.invalidate(subject, accountId)
+        }
     }
 }
 

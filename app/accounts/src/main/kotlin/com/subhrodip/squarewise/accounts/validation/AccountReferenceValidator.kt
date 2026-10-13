@@ -72,7 +72,7 @@ class AccountReferenceValidator(
         if (session.revokedAt != null) {
             throw AccountsDomainException(AccountsErrors.SESSION_REVOKED)
         }
-        if (session.expiresAt.isBefore(now) || session.absoluteExpiresAt.isBefore(now)) {
+        if (!session.expiresAt.isAfter(now) || !session.absoluteExpiresAt.isAfter(now)) {
             throw AccountsDomainException(AccountsErrors.SESSION_EXPIRED)
         }
         return session

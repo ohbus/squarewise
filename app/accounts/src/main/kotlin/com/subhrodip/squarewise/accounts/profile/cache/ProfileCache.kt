@@ -12,6 +12,8 @@ import java.util.concurrent.ConcurrentHashMap
  *
  * Caches [ProfileResponse] records by subject and by accountId with short TTL,
  * eliminating database roundtrips on high-frequency authenticated requests.
+ * In multi-instance deployments, local node caches accept up to [ttl] of eventual consistency
+ * unless invalidated via transaction hooks or distributed channels.
  */
 @Component
 class ProfileCache(
@@ -24,6 +26,8 @@ class ProfileCache(
 
     private val bySubject = ConcurrentHashMap<String, Entry>()
     private val byAccountId = ConcurrentHashMap<UUID, Entry>()
+    private val subjectInvalidationTimes = ConcurrentHashMap<String, Instant>()
+    private val accountIdInvalidationTimes = ConcurrentHashMap<UUID, Instant>()
 
     /**
      * Resolves a profile by user subject, serving from cache if fresh or falling back to loader.
@@ -38,7 +42,13 @@ class ProfileCache(
         if (cached != null && !cached.isExpired(now)) {
             return cached.profile
         }
+        val loadStartTime = Instant.now()
         val profile = loader() ?: return null
+        val lastInvalidated = subjectInvalidationTimes[subject]
+        if (lastInvalidated != null && !loadStartTime.isAfter(lastInvalidated)) {
+            // Invalidation occurred during or after this load started; do not cache stale result
+            return profile
+        }
         evictIfOversized()
         val entry = Entry(profile, subject, now.plus(ttl))
         bySubject[subject] = entry
@@ -59,7 +69,12 @@ class ProfileCache(
         if (cached != null && !cached.isExpired(now)) {
             return cached.profile
         }
+        val loadStartTime = Instant.now()
         val profile = loader() ?: return null
+        val lastInvalidated = accountIdInvalidationTimes[accountId]
+        if (lastInvalidated != null && !loadStartTime.isAfter(lastInvalidated)) {
+            return profile
+        }
         evictIfOversized()
         val entry = Entry(profile, null, now.plus(ttl))
         byAccountId[accountId] = entry
@@ -97,9 +112,12 @@ class ProfileCache(
      * @param accountId optional account UUID to invalidate from the accountId map.
      */
     fun invalidate(subject: String, accountId: UUID? = null) {
+        val now = Instant.now()
+        subjectInvalidationTimes[subject] = now
         val removed = bySubject.remove(subject)
         val targetAccountId = accountId ?: removed?.profile?.accountId
         if (targetAccountId != null) {
+            accountIdInvalidationTimes[targetAccountId] = now
             byAccountId.remove(targetAccountId)
         }
     }
@@ -108,13 +126,23 @@ class ProfileCache(
     fun clear() {
         bySubject.clear()
         byAccountId.clear()
+        subjectInvalidationTimes.clear()
+        accountIdInvalidationTimes.clear()
     }
 
     private fun evictIfOversized() {
-        if (bySubject.size > maxEntries) {
+        if (bySubject.size > maxEntries || byAccountId.size > maxEntries) {
             val now = Instant.now()
             bySubject.entries.removeIf { it.value.isExpired(now) }
             byAccountId.entries.removeIf { it.value.isExpired(now) }
+            while (bySubject.size > maxEntries) {
+                val key = bySubject.keys().nextElement() ?: break
+                bySubject.remove(key)
+            }
+            while (byAccountId.size > maxEntries) {
+                val key = byAccountId.keys().nextElement() ?: break
+                byAccountId.remove(key)
+            }
         }
     }
 }

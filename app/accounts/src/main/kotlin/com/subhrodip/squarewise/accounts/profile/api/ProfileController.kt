@@ -38,7 +38,6 @@ class ProfileController(
     private val dbTelemetry: DbTelemetry = DbTelemetry()
 ) {
     @GetMapping(ApiEndpoints.Accounts.V1.ME)
-    @DbReader(operation = "profile.me", target = "profile")
     fun get(principal: Principal): ProfileResponse =
         profiles.get(principal.name) ?: throw AccountsDomainException(AccountsErrors.AUTHENTICATED_PROFILE_NOT_FOUND)
 

@@ -7,6 +7,7 @@ import com.subhrodip.squarewise.accounts.requests.export.persistence.ExportReque
 import com.subhrodip.squarewise.accounts.requests.export.model.ExportStatus
 import com.subhrodip.squarewise.accounts.requests.export.persistence.JpaExportRequestStore
 import com.subhrodip.squarewise.accounts.profile.api.ProfilePatchRequest
+import com.subhrodip.squarewise.accounts.profile.api.ProfileResponse
 import com.subhrodip.squarewise.accounts.profile.persistence.JpaProfileStore
 import com.subhrodip.squarewise.accounts.profile.persistence.ProfileRepository
 import com.subhrodip.squarewise.accounts.auth.session.AuthSessionEntity
@@ -201,7 +202,7 @@ class JpaRequestStoresTest @Autowired constructor(
         assertEquals(profile.accountId, profileStore.findById(profile.accountId)?.accountId)
 
         // findByIds coverage
-        assertEquals(emptyList<com.subhrodip.squarewise.accounts.profile.api.ProfileResponse>(), profileStore.findByIds(emptyList()))
+        assertEquals(emptyList<ProfileResponse>(), profileStore.findByIds(emptyList()))
         val batchResult = profileStore.findByIds(listOf(profile.accountId, UUID.randomUUID()))
         assertEquals(1, batchResult.size)
         assertEquals(profile.accountId, batchResult.first().accountId)
