@@ -67,6 +67,30 @@ class ProfileCache(
     }
 
     /**
+     * Looks up an existing non-expired profile by account ID without invoking a loader.
+     *
+     * @param accountId account UUID.
+     * @return cached [ProfileResponse] or null if missing or expired.
+     */
+    fun peekByAccountId(accountId: UUID): ProfileResponse? {
+        val now = Instant.now()
+        val cached = byAccountId[accountId]
+        return if (cached != null && !cached.isExpired(now)) cached.profile else null
+    }
+
+    /**
+     * Stores a resolved profile into the accountId cache.
+     *
+     * @param profile resolved [ProfileResponse] to cache.
+     */
+    fun put(profile: ProfileResponse) {
+        val now = Instant.now()
+        evictIfOversized()
+        val entry = Entry(profile, null, now.plus(ttl))
+        byAccountId[profile.accountId] = entry
+    }
+
+    /**
      * Invalidates cached profile entries by subject and optionally accountId.
      *
      * @param subject user subject identifier.

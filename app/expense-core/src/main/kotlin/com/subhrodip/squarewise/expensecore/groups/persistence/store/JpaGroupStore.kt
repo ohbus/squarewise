@@ -225,6 +225,15 @@ class JpaGroupStore(
         checkActiveMembership(groupId, subject)
         val group = groups.findById(groupId).orElse(null) ?: notFound()
         if (group.status != "ACTIVE") notFound()
+        if (groupAccessCache != null) {
+            return groupAccessCache.members(groupId, limit) {
+                memberships.findByGroupIdAndStatus(
+                    groupId,
+                    "ACTIVE",
+                    PageRequest.of(0, limit, Sort.by(Sort.Direction.ASC, "membershipId"))
+                ).map { it.toResponse() }
+            }
+        }
         // shortcut: return the first 100 members until the public contract has cursor pagination.
         return memberships.findByGroupIdAndStatus(
             groupId,
@@ -313,6 +322,8 @@ class JpaGroupStore(
                 "revision" to saved.revision
             )
             recordMutation(group.groupId, subject, "invitation.claimed", saved.revision, payload, claimedAt, "invitation.claimed.v1")
+            groupAccessCache?.invalidateGroup(group.groupId)
+            groupAccessCache?.invalidateMember(group.groupId, subject)
             saved.toResponse()
         } else {
             if (memberships.existsByGroupIdAndSubjectAndStatus(group.groupId, subject, "ACTIVE")) {
@@ -332,6 +343,8 @@ class JpaGroupStore(
                 "revision" to saved.revision
             )
             recordMutation(group.groupId, subject, "invitation.claimed", saved.revision, payload, claimedAt, "invitation.claimed.v1")
+            groupAccessCache?.invalidateGroup(group.groupId)
+            groupAccessCache?.invalidateMember(group.groupId, subject)
             saved.toResponse()
         }
     }
@@ -352,7 +365,14 @@ class JpaGroupStore(
     }
 
     private fun checkActiveMembership(groupId: UUID, subject: String) {
-        if (!memberships.existsByGroupIdAndSubjectAndStatus(groupId, subject, "ACTIVE")) {
+        val isActive = if (groupAccessCache != null) {
+            groupAccessCache.isMember(groupId, subject) {
+                memberships.existsByGroupIdAndSubjectAndStatus(groupId, subject, "ACTIVE")
+            }
+        } else {
+            memberships.existsByGroupIdAndSubjectAndStatus(groupId, subject, "ACTIVE")
+        }
+        if (!isActive) {
             throw ExpenseDomainException(ExpenseErrors.GROUP_ACCESS_HIDDEN, "Group not found")
         }
     }

@@ -79,8 +79,27 @@ class JpaProfileStore(
      * Finds profiles by a batch of account IDs.
      */
     @Transactional(readOnly = true)
-    override fun findByIds(accountIds: List<UUID>): List<ProfileResponse> =
-        repository.findAllById(accountIds).map { it.toResponse() }
+    override fun findByIds(accountIds: List<UUID>): List<ProfileResponse> {
+        if (accountIds.isEmpty()) return emptyList()
+        val cache = profileCache ?: return repository.findAllById(accountIds).map { it.toResponse() }
+        val distinctIds = accountIds.distinct()
+        val found = mutableListOf<ProfileResponse>()
+        val missing = mutableListOf<UUID>()
+        for (id in distinctIds) {
+            val cached = cache.peekByAccountId(id)
+            if (cached != null) {
+                found.add(cached)
+            } else {
+                missing.add(id)
+            }
+        }
+        if (missing.isNotEmpty()) {
+            val loaded = repository.findAllById(missing).map { it.toResponse() }
+            loaded.forEach { cache.put(it) }
+            found.addAll(loaded)
+        }
+        return found
+    }
 
     /**
      * Updates an existing profile. Fails closed if the profile does not exist.

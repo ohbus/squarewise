@@ -16,6 +16,8 @@ import com.subhrodip.squarewise.expensecore.messaging.outbox.persistence.OutboxS
 import com.subhrodip.squarewise.ids.generation.UuidGenerator
 import java.util.UUID
 import java.time.Instant
+import com.subhrodip.squarewise.expensecore.groups.cache.GroupAccessCache
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Primary
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -42,7 +44,9 @@ class JpaSettlementStore(
     private val audit: GroupAuditCommandStore,
     private val synchronization: SynchronizationStore,
     private val outbox: OutboxStore,
-    private val referenceValidator: EntityReferenceValidator = EntityReferenceValidator(groupRepository, membershipRepository)
+    private val referenceValidator: EntityReferenceValidator = EntityReferenceValidator(groupRepository, membershipRepository),
+    @Autowired(required = false)
+    private val groupAccessCache: GroupAccessCache? = null
 ) : SettlementStore {
 
     /**
@@ -90,6 +94,7 @@ class JpaSettlementStore(
             )
         )
         recordMutation(group, actorSubject, "settlement.recorded", saved.toDomain())
+        groupAccessCache?.invalidateBalances(groupId)
         return saved.toDomain()
     }
 
@@ -126,6 +131,7 @@ class JpaSettlementStore(
         )
         val reversed = repository.save(entity).toDomain()
         recordMutation(group, actorSubject, "settlement.reversed", reversed)
+        groupAccessCache?.invalidateBalances(groupId)
         return reversed
     }
 

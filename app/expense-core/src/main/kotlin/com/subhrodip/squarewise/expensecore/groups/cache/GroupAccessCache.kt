@@ -23,6 +23,8 @@ class GroupAccessCache(
 
     private val membershipCache = ConcurrentHashMap<Pair<UUID, String>, CacheEntry<Boolean>>()
     private val groupStatusCache = ConcurrentHashMap<UUID, CacheEntry<String?>>()
+    private val membersListCache = ConcurrentHashMap<Pair<UUID, Int>, CacheEntry<List<*>>>()
+    private val balancesCache = ConcurrentHashMap<UUID, CacheEntry<List<*>>>()
 
     /**
      * Checks if the caller subject is an active member of the group, using cached state if valid.
@@ -65,29 +67,94 @@ class GroupAccessCache(
     }
 
     /**
-     * Invalidates all cached status and membership entries for the given group.
+     * Resolves active member list of a group, using cached list if valid.
+     *
+     * @param groupId unique group identifier.
+     * @param limit maximum items requested.
+     * @param loader fallback supplier to query the database on cache miss.
+     * @return list of group members.
+     */
+    @Suppress("UNCHECKED_CAST")
+    fun <T> members(groupId: UUID, limit: Int, loader: () -> List<T>): List<T> {
+        val key = groupId to limit
+        val now = Instant.now()
+        val cached = membersListCache[key]
+        if (cached != null && !cached.isExpired(now)) {
+            return cached.value as List<T>
+        }
+        val computed = loader()
+        evictIfOversized(membersListCache)
+        membersListCache[key] = CacheEntry(computed, now.plus(ttl))
+        return computed
+    }
+
+    /**
+     * Resolves group balances, using cached list if valid.
+     *
+     * @param groupId unique group identifier.
+     * @param loader fallback supplier to query the database on cache miss.
+     * @return list of computed balance items.
+     */
+    @Suppress("UNCHECKED_CAST")
+    fun <T> balances(groupId: UUID, loader: () -> List<T>): List<T> {
+        val now = Instant.now()
+        val cached = balancesCache[groupId]
+        if (cached != null && !cached.isExpired(now)) {
+            return cached.value as List<T>
+        }
+        val computed = loader()
+        evictIfOversized(balancesCache)
+        balancesCache[groupId] = CacheEntry(computed, now.plus(ttl))
+        return computed
+    }
+
+    /**
+     * Invalidates all cached status, memberships, rosters, and balances for the given group.
      *
      * @param groupId unique group identifier to invalidate.
      */
     fun invalidateGroup(groupId: UUID) {
         groupStatusCache.remove(groupId)
         membershipCache.keys.removeIf { it.first == groupId }
+        invalidateMembers(groupId)
+        invalidateBalances(groupId)
     }
 
     /**
-     * Invalidates a specific membership entry.
+     * Invalidates a specific membership entry and group member roster.
      *
      * @param groupId unique group identifier.
      * @param subject user subject identifier.
      */
     fun invalidateMember(groupId: UUID, subject: String) {
         membershipCache.remove(groupId to subject)
+        invalidateMembers(groupId)
+    }
+
+    /**
+     * Invalidates cached member list for a group.
+     *
+     * @param groupId unique group identifier.
+     */
+    fun invalidateMembers(groupId: UUID) {
+        membersListCache.keys.removeIf { it.first == groupId }
+    }
+
+    /**
+     * Invalidates cached balances for a group.
+     *
+     * @param groupId unique group identifier.
+     */
+    fun invalidateBalances(groupId: UUID) {
+        balancesCache.remove(groupId)
     }
 
     /** Clears all caches completely. */
     fun clear() {
         membershipCache.clear()
         groupStatusCache.clear()
+        membersListCache.clear()
+        balancesCache.clear()
     }
 
     private fun <K, V> evictIfOversized(map: ConcurrentHashMap<K, CacheEntry<V>>) {

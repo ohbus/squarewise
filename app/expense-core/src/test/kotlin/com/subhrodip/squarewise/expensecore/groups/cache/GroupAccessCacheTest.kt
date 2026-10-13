@@ -98,4 +98,41 @@ class GroupAccessCacheTest {
         assertEquals(2, callsA.get())
         assertEquals(1, callsB.get())
     }
+
+    @Test
+    fun `members caches roster and avoids repeat loader calls`() {
+        val groupId = UUID.randomUUID()
+        val calls = AtomicInteger(0)
+        val roster = listOf("alice", "bob")
+
+        val res1 = cache.members(groupId, 50) { calls.incrementAndGet(); roster }
+        val res2 = cache.members(groupId, 50) { calls.incrementAndGet(); roster }
+
+        assertEquals(roster, res1)
+        assertEquals(roster, res2)
+        assertEquals(1, calls.get())
+
+        cache.invalidateMembers(groupId)
+        val res3 = cache.members(groupId, 50) { calls.incrementAndGet(); roster }
+        assertEquals(2, calls.get())
+    }
+
+    @Test
+    fun `balances caches balance list and invalidates appropriately`() {
+        val groupId = UUID.randomUUID()
+        val calls = AtomicInteger(0)
+        val sampleBalances = listOf("balance-1", "balance-2")
+
+        val res1 = cache.balances(groupId) { calls.incrementAndGet(); sampleBalances }
+        val res2 = cache.balances(groupId) { calls.incrementAndGet(); sampleBalances }
+
+        assertEquals(sampleBalances, res1)
+        assertEquals(sampleBalances, res2)
+        assertEquals(1, calls.get())
+
+        cache.invalidateBalances(groupId)
+        val res3 = cache.balances(groupId) { calls.incrementAndGet(); sampleBalances }
+        assertEquals(2, calls.get())
+    }
 }
+

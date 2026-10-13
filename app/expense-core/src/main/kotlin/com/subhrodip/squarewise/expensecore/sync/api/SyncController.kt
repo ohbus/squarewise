@@ -5,6 +5,8 @@ import com.subhrodip.squarewise.expensecore.sync.persistence.SynchronizationStor
 import com.subhrodip.squarewise.expensecore.sync.api.toResponse
 import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupMembershipRepository
 
+import com.subhrodip.squarewise.expensecore.groups.cache.GroupAccessCache
+import org.springframework.beans.factory.annotation.Autowired
 import java.security.Principal
 import java.util.UUID
 import org.springframework.web.bind.annotation.GetMapping
@@ -22,6 +24,8 @@ import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
 class SyncController(
     private val store: SynchronizationStore,
     private val memberships: GroupMembershipRepository,
+    @Autowired(required = false)
+    private val groupAccessCache: GroupAccessCache? = null
 ) {
     @GetMapping(ApiEndpoints.ExpenseCore.V1.SYNC_SNAPSHOT_RELATIVE_SUBPATH, ApiEndpoints.ExpenseCore.V1.SYNC_CHANGES_RELATIVE_SUBPATH)
     @DbRouteContext("expense.sync.page", readerEligible = true)
@@ -32,7 +36,14 @@ class SyncController(
         principal: Principal
     ): SyncPageResponse {
         if (principal.name.isBlank()) throw ExpenseDomainException(PlatformErrors.AUTHENTICATION_REQUIRED, "Authenticated subject is required")
-        if (!memberships.existsByGroupIdAndSubjectAndStatus(groupId, principal.name, "ACTIVE")) {
+        val isMember = if (groupAccessCache != null) {
+            groupAccessCache.isMember(groupId, principal.name) {
+                memberships.existsByGroupIdAndSubjectAndStatus(groupId, principal.name, "ACTIVE")
+            }
+        } else {
+            memberships.existsByGroupIdAndSubjectAndStatus(groupId, principal.name, "ACTIVE")
+        }
+        if (!isMember) {
             throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group $groupId not found")
         }
         if (limit !in 1..100) throw ExpenseDomainException(ExpenseErrors.EXPENSE_REQUEST_INVALID, "limit must be between 1 and 100")

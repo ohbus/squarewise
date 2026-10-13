@@ -24,6 +24,8 @@ import com.subhrodip.squarewise.expensecore.messaging.outbox.persistence.OutboxS
 
 import com.subhrodip.squarewise.expensecore.validation.EntityReferenceValidator
 import com.subhrodip.squarewise.expensecore.sync.persistence.SynchronizationStore
+import com.subhrodip.squarewise.expensecore.groups.cache.GroupAccessCache
+import org.springframework.beans.factory.annotation.Autowired
 import com.subhrodip.squarewise.ids.generation.UuidGenerator
 import java.time.Instant
 import java.util.UUID
@@ -51,7 +53,9 @@ class JpaExpenseStore(
     private val membershipRepository: GroupMembershipRepository,
     private val outboxStore: OutboxStore,
     private val syncStore: SynchronizationStore,
-    private val referenceValidator: EntityReferenceValidator = EntityReferenceValidator(groupRepository, membershipRepository)
+    private val referenceValidator: EntityReferenceValidator = EntityReferenceValidator(groupRepository, membershipRepository),
+    @Autowired(required = false)
+    private val groupAccessCache: GroupAccessCache? = null
 ) : ExpenseStore {
 
     /**
@@ -173,6 +177,7 @@ class JpaExpenseStore(
 
         val syncPayload = """{"expenseId":"${saved.expenseId}","groupId":"$groupId","amountMinor":${saved.amountMinor},"currency":"${saved.currency}","version":${saved.version}}"""
         syncStore.append(groupId.toString(), saved.expenseId.toString(), syncPayload)
+        groupAccessCache?.invalidateBalances(groupId)
 
         return saved.toRecord()
     }
@@ -321,6 +326,7 @@ class JpaExpenseStore(
 
         val syncPayload = """{"expenseId":"${saved.expenseId}","groupId":"$groupId","amountMinor":${saved.amountMinor},"currency":"${saved.currency}","version":${saved.version}}"""
         syncStore.append(groupId.toString(), saved.expenseId.toString(), syncPayload)
+        groupAccessCache?.invalidateBalances(groupId)
 
         return saved.toRecord()
     }
@@ -381,6 +387,7 @@ class JpaExpenseStore(
 
         // Sync change tombstone
         syncStore.delete(groupId.toString(), entity.expenseId.toString())
+        groupAccessCache?.invalidateBalances(groupId)
     }
 
     /**
@@ -421,6 +428,15 @@ class JpaExpenseStore(
      * Oversized result sets are rejected rather than truncated to preserve financial correctness.
      */
     override fun balances(groupId: UUID): List<GroupBalanceItem> {
+        if (groupAccessCache != null) {
+            return groupAccessCache.balances(groupId) {
+                calculateBalances(groupId)
+            }
+        }
+        return calculateBalances(groupId)
+    }
+
+    private fun calculateBalances(groupId: UUID): List<GroupBalanceItem> {
         val rows = balancePostingRepository.sumBalancesByGroup(
             groupId,
             PageRequest.of(0, ExpenseRequestLimits.MAX_BALANCE_ROWS + 1),

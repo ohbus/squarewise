@@ -77,4 +77,17 @@ class ProfileCacheTest {
 
         assertEquals(1, calls.get())
     }
+
+    @Test
+    fun `put and peekByAccountId store and retrieve profile without invocation`() {
+        val accountId = UUID.randomUUID()
+        val profile = ProfileResponse(accountId, "Direct Put", "UTC", "USD")
+
+        cache.put(profile)
+        val retrieved = cache.peekByAccountId(accountId)
+
+        assertNotNull(retrieved)
+        assertEquals(profile, retrieved)
+    }
 }
+
