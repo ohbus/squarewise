@@ -144,10 +144,15 @@ class RequestIdContextAndFilterTest {
     }
 
     @Test
-    fun `RequestIdGenerator produces valid uuid`() {
+    fun `RequestIdGenerator produces valid uuid and wraps runtime exceptions`() {
         val id1 = RequestIdGenerator.next()
         val id2 = RequestIdGenerator.next()
         assertNotEquals(id1, id2)
         assertEquals(7, id1.version())
+
+        val thrown = org.junit.jupiter.api.assertThrows<com.subhrodip.squarewise.errors.exceptions.PlatformDomainException> {
+            RequestIdGenerator.next { throw IllegalStateException("clock failure") }
+        }
+        assertEquals(com.subhrodip.squarewise.errors.catalog.PlatformErrors.IDENTIFIER_GENERATION_FAILED, thrown.definition)
     }
 }

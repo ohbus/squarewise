@@ -14,8 +14,8 @@ object RequestIdGenerator {
      * @return a time-ordered UUID.
      * @throws PlatformDomainException when the UUID source fails.
      */
-    fun next(): UUID = try {
-        UuidCreator.getTimeOrderedEpoch()
+    fun next(supplier: () -> UUID = { UuidCreator.getTimeOrderedEpoch() }): UUID = try {
+        supplier()
     } catch (exception: RuntimeException) {
         throw PlatformDomainException(PlatformErrors.IDENTIFIER_GENERATION_FAILED, cause = exception)
     }
