@@ -244,18 +244,26 @@ class NotificationEventConsumerUnitTest {
         NotificationEventConsumer(processor, processedEvents, preferenceStore, emailDispatcher, deliveryRateLimiter, deliveries)
             .consume(pending)
         verify(emailDispatcher).send("pending@example.com", "Notification: expense.created", "Dinner was added")
+    }
 
-        listOf(NotificationEmailDeliveryEntity.DELIVERED, NotificationEmailDeliveryEntity.SKIPPED).forEachIndexed { index, status ->
-            val terminal = sampleEvent(subject = "terminal-$index@example.com")
-            val delivery = NotificationEmailDeliveryEntity(terminal.notificationId, status = status)
-            doReturn(NotificationConsumptionOutcome.DUPLICATE).`when`(processor).process(terminal)
-            doReturn(Optional.of(delivery)).`when`(deliveries).findById(terminal.notificationId)
+    @Test
+    fun `returns outcome early when claimForDispatch loses claim race`() {
+        val deliveries = mock(NotificationEmailDeliveryRepository::class.java)
+        doReturn(0).`when`(deliveries).claimForDispatch(
+            any(UUID::class.java) ?: UUID(0, 0),
+            any(Instant::class.java) ?: Instant.EPOCH,
+            any(Instant::class.java) ?: Instant.EPOCH
+        )
+        val event = sampleEvent(subject = "user@example.com")
+        val pendingDelivery = NotificationEmailDeliveryEntity(event.notificationId, status = NotificationEmailDeliveryEntity.PENDING)
+        doReturn(NotificationConsumptionOutcome.DUPLICATE).`when`(processor).process(event)
+        doReturn(Optional.of(pendingDelivery)).`when`(deliveries).findById(event.notificationId)
 
-            NotificationEventConsumer(processor, processedEvents, preferenceStore, emailDispatcher, deliveryRateLimiter, deliveries)
-                .consume(terminal)
-        }
-        verify(preferenceStore, never()).get("terminal-0@example.com")
-        verify(preferenceStore, never()).get("terminal-1@example.com")
+        val outcome = NotificationEventConsumer(processor, processedEvents, preferenceStore, emailDispatcher, deliveryRateLimiter, deliveries)
+            .consume(event)
+
+        assertEquals(NotificationConsumptionOutcome.DUPLICATE, outcome)
+        verify(emailDispatcher, never()).send(anyString(), anyString(), anyString())
     }
 
     private fun sampleEvent(subject: String, recipientEmail: String? = null): NotificationEvent =

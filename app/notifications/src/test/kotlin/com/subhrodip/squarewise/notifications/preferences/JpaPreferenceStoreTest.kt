@@ -61,4 +61,12 @@ class JpaPreferenceStoreTest @Autowired constructor(
         }
         assertEquals(0, repository.count())
     }
+
+    @Test
+    fun `store without cache queries repository directly`() {
+        val storeWithoutCache = JpaPreferenceStore(repository, preferenceCache = null)
+        assertEquals(NotificationPreferences(), storeWithoutCache.get("bob"))
+        storeWithoutCache.put("bob", NotificationPreferences(emailEnabled = true, pushEnabled = false))
+        assertEquals(NotificationPreferences(emailEnabled = true, pushEnabled = false), storeWithoutCache.get("bob"))
+    }
 }
