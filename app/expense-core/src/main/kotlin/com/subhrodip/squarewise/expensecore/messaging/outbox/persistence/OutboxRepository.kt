@@ -1,9 +1,12 @@
 package com.subhrodip.squarewise.expensecore.messaging.outbox.persistence
 
 import jakarta.persistence.LockModeType
+import java.time.Instant
 import java.util.UUID
+import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Lock
+import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 import org.springframework.stereotype.Repository
@@ -25,12 +28,12 @@ interface OutboxRepository : JpaRepository<OutboxEntity, UUID> {
     /**
      * Retrieves a bounded page of outbox entities ordered chronologically by occurrence time and event ID.
      */
-    fun findAllByOrderByOccurredAtAscEventIdAsc(pageable: org.springframework.data.domain.Pageable): List<OutboxEntity>
+    fun findAllByOrderByOccurredAtAscEventIdAsc(pageable: Pageable): List<OutboxEntity>
 
     /**
      * Purges published outbox messages older than [cutoff] in bounded batches.
      */
-    @org.springframework.data.jpa.repository.Modifying
+    @Modifying
     @Query(
         value = """
             DELETE FROM expense_outbox
@@ -42,5 +45,5 @@ interface OutboxRepository : JpaRepository<OutboxEntity, UUID> {
         """,
         nativeQuery = true
     )
-    fun purgePublishedOlderThan(@Param("cutoff") cutoff: java.time.Instant, @Param("limit") limit: Int): Int
+    fun purgePublishedOlderThan(@Param("cutoff") cutoff: Instant, @Param("limit") limit: Int): Int
 }

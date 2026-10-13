@@ -20,6 +20,7 @@ import com.subhrodip.squarewise.expensecore.recurring.domain.RecurringExpenseSch
 import com.subhrodip.squarewise.expensecore.recurring.domain.RecurringExpenseSpecification
 import com.subhrodip.squarewise.expensecore.recurring.persistence.RecurringExpenseOccurrenceRepository
 import com.subhrodip.squarewise.expensecore.recurring.persistence.RecurringExpenseScheduleRepository
+import com.subhrodip.squarewise.expensecore.validation.EntityReferenceValidator
 import com.subhrodip.squarewise.ids.generation.UuidGenerator
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext
@@ -69,7 +70,7 @@ class RecurringExpenseService(
     @Autowired(required = false)
     private val transactionManager: PlatformTransactionManager? = null,
     @Autowired(required = false)
-    private val referenceValidator: com.subhrodip.squarewise.expensecore.validation.EntityReferenceValidator? = null
+    private val referenceValidator: EntityReferenceValidator? = null
 ) : RecurringCommandStore, RecurringQueryStore {
     private val log = LoggerFactory.getLogger(RecurringExpenseService::class.java)
 

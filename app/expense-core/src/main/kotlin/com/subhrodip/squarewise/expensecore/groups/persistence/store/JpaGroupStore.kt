@@ -29,6 +29,8 @@ import org.springframework.data.domain.Sort
 import org.springframework.context.annotation.Primary
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.transaction.support.TransactionSynchronization
+import org.springframework.transaction.support.TransactionSynchronizationManager
 import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
 import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
 
@@ -132,7 +134,7 @@ class JpaGroupStore(
             "changedBy" to subject
         )
         recordMutation(groupId, subject, "group.renamed", saved.revision, payload, occurredAt, "group.renamed.v1")
-        groupAccessCache?.invalidateGroup(groupId)
+        invalidateGroupAfterCommit(groupId)
         return saved.toResponse()
     }
 
@@ -158,7 +160,7 @@ class JpaGroupStore(
             "changedBy" to subject
         )
         recordMutation(groupId, subject, "group.archived", saved.revision, payload, occurredAt, "group.archived.v1")
-        groupAccessCache?.invalidateGroup(groupId)
+        invalidateGroupAfterCommit(groupId)
         return saved.toResponse()
     }
 
@@ -197,7 +199,7 @@ class JpaGroupStore(
             "changedBy" to subject
         )
         recordMutation(groupId, subject, "member.placeholder_added", group.revision, payload, occurredAt, "member.placeholder_added.v1")
-        groupAccessCache?.invalidateGroup(groupId)
+        invalidateGroupAfterCommit(groupId)
         return entity.toResponse()
     }
 
@@ -228,8 +230,7 @@ class JpaGroupStore(
             "changedBy" to subject
         )
         recordMutation(groupId, subject, "member.removed", group.revision, payload, occurredAt, "member.removed.v1")
-        groupAccessCache?.invalidateGroup(groupId)
-        target.subject?.let { groupAccessCache?.invalidateMember(groupId, it) }
+        invalidateGroupAfterCommit(groupId, target.subject)
     }
 
     /**
@@ -344,8 +345,7 @@ class JpaGroupStore(
                 "revision" to saved.revision
             )
             recordMutation(group.groupId, subject, "invitation.claimed", saved.revision, payload, claimedAt, "invitation.claimed.v1")
-            groupAccessCache?.invalidateGroup(group.groupId)
-            groupAccessCache?.invalidateMember(group.groupId, subject)
+            invalidateGroupAfterCommit(group.groupId, subject)
             saved.toResponse()
         } else {
             if (memberships.existsByGroupIdAndSubjectAndStatus(group.groupId, subject, "ACTIVE")) {
@@ -365,8 +365,7 @@ class JpaGroupStore(
                 "revision" to saved.revision
             )
             recordMutation(group.groupId, subject, "invitation.claimed", saved.revision, payload, claimedAt, "invitation.claimed.v1")
-            groupAccessCache?.invalidateGroup(group.groupId)
-            groupAccessCache?.invalidateMember(group.groupId, subject)
+            invalidateGroupAfterCommit(group.groupId, subject)
             saved.toResponse()
         }
     }
@@ -448,6 +447,26 @@ class JpaGroupStore(
 
     private fun notFound(): Nothing =
         throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group not found")
+
+    private fun invalidateGroupAfterCommit(groupId: UUID, memberSubject: String? = null) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(
+                object : TransactionSynchronization {
+                    override fun afterCommit() {
+                        groupAccessCache?.invalidateGroup(groupId)
+                        if (memberSubject != null) {
+                            groupAccessCache?.invalidateMember(groupId, memberSubject)
+                        }
+                    }
+                }
+            )
+        } else {
+            groupAccessCache?.invalidateGroup(groupId)
+            if (memberSubject != null) {
+                groupAccessCache?.invalidateMember(groupId, memberSubject)
+            }
+        }
+    }
 
     private companion object {
         val INVITATION_TOKEN = Regex("^[a-f0-9]{64}$")

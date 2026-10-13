@@ -6,6 +6,7 @@ import jakarta.persistence.EntityManager
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
+import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import tools.jackson.core.type.TypeReference
@@ -89,7 +90,7 @@ class JpaOutboxStore(
      */
     @Transactional(readOnly = true)
     override fun snapshot(): List<OutboxMessage> =
-        repository.findAllByOrderByOccurredAtAscEventIdAsc(org.springframework.data.domain.PageRequest.of(0, 100))
+        repository.findAllByOrderByOccurredAtAscEventIdAsc(PageRequest.of(0, 100))
             .map { it.toDomain(objectMapper) }
 
     private companion object {

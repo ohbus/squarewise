@@ -11,6 +11,13 @@ import java.util.concurrent.ConcurrentHashMap
  *
  * Caches active membership status and group archival status with short TTL,
  * eliminating high-frequency repeated database lookups on expense and balance endpoints.
+ *
+ * Multi-instance staleness policy:
+ * Local node caches hold group authorization and roster status for up to 30 seconds.
+ * Under multi-instance deployments, membership changes (e.g. member removal) invalidate
+ * local cache upon transaction commit; cross-node instances observe up to 30 seconds of
+ * eventual consistency bounded by TTL, which is an accepted trade-off to protect the primary
+ * database writer from high read-frequency authorization queries at 10M DAU scale.
  */
 @Component
 class GroupAccessCache(
@@ -27,6 +34,7 @@ class GroupAccessCache(
     private val balancesCache = ConcurrentHashMap<UUID, CacheEntry<List<*>>>()
     private val memberIdsCache = ConcurrentHashMap<UUID, CacheEntry<Set<UUID>>>()
     private val groupDetailsCache = ConcurrentHashMap<UUID, CacheEntry<Any?>>()
+    private val invalidationTimestamps = ConcurrentHashMap<Pair<UUID, String>, Instant>()
 
     /**
      * Checks if the caller subject is an active member of the group, using cached state if valid.
@@ -43,9 +51,13 @@ class GroupAccessCache(
         if (cached != null && !cached.isExpired(now)) {
             return cached.value
         }
+        val loadStart = Instant.now()
         val computed = loader()
-        evictIfOversized(membershipCache)
-        membershipCache[key] = CacheEntry(computed, now.plus(ttl))
+        val invalidatedAt = invalidationTimestamps[key]
+        if (invalidatedAt == null || !invalidatedAt.isAfter(loadStart)) {
+            evictIfOversized(membershipCache)
+            membershipCache[key] = CacheEntry(computed, now.plus(ttl))
+        }
         return computed
     }
 
@@ -155,9 +167,13 @@ class GroupAccessCache(
      * @param groupId unique group identifier to invalidate.
      */
     fun invalidateGroup(groupId: UUID) {
+        val now = Instant.now()
         groupStatusCache.remove(groupId)
         groupDetailsCache.remove(groupId)
-        membershipCache.keys.removeIf { it.first == groupId }
+        membershipCache.keys.filter { it.first == groupId }.forEach { key ->
+            invalidationTimestamps[key] = now
+            membershipCache.remove(key)
+        }
         invalidateMembers(groupId)
         invalidateBalances(groupId)
     }
@@ -169,6 +185,7 @@ class GroupAccessCache(
      * @param subject user subject identifier.
      */
     fun invalidateMember(groupId: UUID, subject: String) {
+        invalidationTimestamps[groupId to subject] = Instant.now()
         membershipCache.remove(groupId to subject)
         invalidateMembers(groupId)
     }
