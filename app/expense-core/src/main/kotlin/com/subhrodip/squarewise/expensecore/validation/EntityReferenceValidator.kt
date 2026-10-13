@@ -142,4 +142,21 @@ class EntityReferenceValidator(
             )
         }
     }
+
+    /**
+     * Verifies that the specified placeholder member belongs to the group and has active status.
+     *
+     * @param groupId the unique identifier of the target group.
+     * @param placeholderId the unique identifier of the placeholder member.
+     * @return the resolved active placeholder [GroupMembershipEntity].
+     * @throws ExpenseDomainException if placeholder not found, not active, or not in group.
+     */
+    fun validateActivePlaceholder(groupId: UUID, placeholderId: UUID): GroupMembershipEntity {
+        val member = membershipRepository.findByMembershipIdAndGroupId(placeholderId, groupId)
+            ?: throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Placeholder $placeholderId not found in group $groupId")
+        if (member.status != "ACTIVE" || !member.isPlaceholder) {
+            throw ExpenseDomainException(ExpenseErrors.EXPENSE_REQUEST_INVALID, "Member $placeholderId is not an active placeholder")
+        }
+        return member
+    }
 }

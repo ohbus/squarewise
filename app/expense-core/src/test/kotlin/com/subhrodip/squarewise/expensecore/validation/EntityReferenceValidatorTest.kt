@@ -208,4 +208,54 @@ class EntityReferenceValidatorTest {
         }
         assertSame(ExpenseErrors.GROUP_NOT_FOUND, ex.definition)
     }
+
+    @Test
+    fun `validateActivePlaceholder returns entity when placeholder exists and active`() {
+        val groupId = UUID.randomUUID()
+        val placeholderId = UUID.randomUUID()
+        val placeholder = GroupMembershipEntity(
+            membershipId = placeholderId,
+            groupId = groupId,
+            subject = null,
+            displayName = "Alice",
+            isPlaceholder = true,
+            status = "ACTIVE"
+        )
+        `when`(membershipRepository.findByMembershipIdAndGroupId(placeholderId, groupId)).thenReturn(placeholder)
+
+        val result = validator.validateActivePlaceholder(groupId, placeholderId)
+        assertEquals(placeholderId, result.membershipId)
+    }
+
+    @Test
+    fun `validateActivePlaceholder throws when placeholder not found`() {
+        val groupId = UUID.randomUUID()
+        val placeholderId = UUID.randomUUID()
+        `when`(membershipRepository.findByMembershipIdAndGroupId(placeholderId, groupId)).thenReturn(null)
+
+        val ex = assertThrows(ExpenseDomainException::class.java) {
+            validator.validateActivePlaceholder(groupId, placeholderId)
+        }
+        assertSame(ExpenseErrors.GROUP_NOT_FOUND, ex.definition)
+    }
+
+    @Test
+    fun `validateActivePlaceholder throws when member is not a placeholder`() {
+        val groupId = UUID.randomUUID()
+        val memberId = UUID.randomUUID()
+        val member = GroupMembershipEntity(
+            membershipId = memberId,
+            groupId = groupId,
+            subject = "user-1",
+            displayName = "Bob",
+            isPlaceholder = false,
+            status = "ACTIVE"
+        )
+        `when`(membershipRepository.findByMembershipIdAndGroupId(memberId, groupId)).thenReturn(member)
+
+        val ex = assertThrows(ExpenseDomainException::class.java) {
+            validator.validateActivePlaceholder(groupId, memberId)
+        }
+        assertSame(ExpenseErrors.EXPENSE_REQUEST_INVALID, ex.definition)
+    }
 }
