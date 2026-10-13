@@ -26,4 +26,21 @@ interface OutboxRepository : JpaRepository<OutboxEntity, UUID> {
      * Retrieves a bounded page of outbox entities ordered chronologically by occurrence time and event ID.
      */
     fun findAllByOrderByOccurredAtAscEventIdAsc(pageable: org.springframework.data.domain.Pageable): List<OutboxEntity>
+
+    /**
+     * Purges published outbox messages older than [cutoff] in bounded batches.
+     */
+    @org.springframework.data.jpa.repository.Modifying
+    @Query(
+        value = """
+            DELETE FROM expense_outbox
+            WHERE event_id IN (
+                SELECT event_id FROM expense_outbox
+                WHERE status = 'PUBLISHED' AND occurred_at < :cutoff
+                LIMIT :limit
+            )
+        """,
+        nativeQuery = true
+    )
+    fun purgePublishedOlderThan(@Param("cutoff") cutoff: java.time.Instant, @Param("limit") limit: Int): Int
 }
