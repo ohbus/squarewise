@@ -17,14 +17,23 @@ import org.springframework.transaction.annotation.Transactional
 @ConditionalOnProperty(name = ["squarewise.auth.credential-cleanup-enabled"], havingValue = "true", matchIfMissing = true)
 class CredentialCleanupTask(
     private val loginCredentialRepository: LoginCredentialRepository,
-    @Value("\${squarewise.auth.credential-retention-expired-days:7}") private val expiredRetentionDays: Long,
-    @Value("\${squarewise.auth.credential-retention-consumed-hours:24}") private val consumedRetentionHours: Long
+    @Value("\${squarewise.auth.credential-retention-expired-days:7}") private val expiredRetentionDays: Long = 7,
+    @Value("\${squarewise.auth.credential-retention-consumed-hours:24}") private val consumedRetentionHours: Long = 24,
+    @Value("\${squarewise.auth.credential-cleanup-batch-size:500}") private val batchSize: Int = 500,
+    @Value("\${squarewise.auth.credential-cleanup-max-batches:50}") private val maxBatches: Int = 50
 ) {
     private val log = LoggerFactory.getLogger(CredentialCleanupTask::class.java)
 
+    init {
+        require(expiredRetentionDays > 0) { "expired retention days must be positive" }
+        require(consumedRetentionHours > 0) { "consumed retention hours must be positive" }
+        require(batchSize > 0) { "credential cleanup batch size must be positive" }
+        require(maxBatches > 0) { "credential cleanup max batches must be positive" }
+    }
+
     /**
      * Purges expired credentials older than [expiredRetentionDays] days and consumed
-     * credentials older than [consumedRetentionHours] hours.
+     * credentials older than [consumedRetentionHours] hours across bounded batches.
      */
     @Scheduled(cron = "\${squarewise.auth.credential-cleanup-cron:0 0 * * * *}")
     @Transactional
@@ -33,10 +42,15 @@ class CredentialCleanupTask(
         val expiredCutoff = now.minus(Duration.ofDays(expiredRetentionDays))
         val consumedCutoff = now.minus(Duration.ofHours(consumedRetentionHours))
 
-        val deletedCount = loginCredentialRepository.purgeExpiredOrConsumed(expiredCutoff, consumedCutoff)
-        if (deletedCount > 0) {
-            log.info("Purged {} expired or consumed auth login credentials (expiredCutoff={}, consumedCutoff={})", deletedCount, expiredCutoff, consumedCutoff)
+        var totalDeleted = 0
+        for (batch in 0 until maxBatches) {
+            val deletedCount = loginCredentialRepository.purgeExpiredOrConsumed(expiredCutoff, consumedCutoff, batchSize)
+            totalDeleted += deletedCount
+            if (deletedCount < batchSize) break
         }
-        return deletedCount
+        if (totalDeleted > 0) {
+            log.info("Purged {} expired or consumed auth login credentials (expiredCutoff={}, consumedCutoff={})", totalDeleted, expiredCutoff, consumedCutoff)
+        }
+        return totalDeleted
     }
 }
