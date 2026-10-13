@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
 import java.security.Principal
-import com.subhrodip.squarewise.db.routing.DbRouteContext
+import com.subhrodip.squarewise.db.routing.DbReader
 import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
 import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
 
@@ -49,7 +49,7 @@ class SettlementController(
     }
 
     @GetMapping(ApiEndpoints.ExpenseCore.V1.SETTLEMENT_SUGGESTIONS_RELATIVE_SUBPATH)
-    @DbRouteContext("settlement.suggestions", readerEligible = true)
+    @DbReader("settlement.suggestions")
     fun getSuggestions(@PathVariable groupId: UUID, principal: Principal?): List<SuggestedSettlement> {
         ensureMembership(groupId, principal)
         return service.suggestions(groupId)

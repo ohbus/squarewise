@@ -21,7 +21,7 @@ import java.util.UUID
 import com.subhrodip.squarewise.db.routing.DbContextHolder
 import com.subhrodip.squarewise.db.routing.DbExecutionContext
 import com.subhrodip.squarewise.db.routing.DbOperationKind
-import com.subhrodip.squarewise.db.routing.DbRouteContext
+import com.subhrodip.squarewise.db.routing.DbReader
 import com.subhrodip.squarewise.db.routing.ReadConsistency
 import com.subhrodip.squarewise.observability.db.DbTelemetry
 import com.subhrodip.squarewise.accounts.profile.persistence.ProfileStore
@@ -38,7 +38,7 @@ class ProfileController(
     private val dbTelemetry: DbTelemetry = DbTelemetry()
 ) {
     @GetMapping(ApiEndpoints.Accounts.V1.ME)
-    @DbRouteContext("profile.me", targetReader = "profile", readerEligible = true)
+    @DbReader(operation = "profile.me", target = "profile")
     fun get(principal: Principal): ProfileResponse =
         profiles.get(principal.name) ?: throw AccountsDomainException(AccountsErrors.AUTHENTICATED_PROFILE_NOT_FOUND)
 
@@ -66,7 +66,7 @@ class ProfileController(
     }
 
     @GetMapping(ApiEndpoints.Accounts.V1.ME_EXPORT_REQUESTS)
-    @DbRouteContext("export.requests.list", readerEligible = true)
+    @DbReader("export.requests.list")
     fun listExportRequests(
         principal: Principal?,
         @RequestParam(name = "page", defaultValue = "0") page: Int,
@@ -91,7 +91,7 @@ class ProfileController(
      * @throws AccountsDomainException if unauthenticated, unauthorized, or not found.
      */
     @GetMapping(ApiEndpoints.Accounts.V1.PROFILES_BY_ID)
-    @DbRouteContext("profile.lookup", targetReader = "profile", readerEligible = true)
+    @DbReader(operation = "profile.lookup", target = "profile")
     fun getProfileById(
         @PathVariable accountId: UUID,
         principal: Principal?,
@@ -124,7 +124,7 @@ class ProfileController(
      * @throws AccountsDomainException if unauthenticated or unauthorized.
      */
     @PostMapping(ApiEndpoints.Accounts.V1.PROFILES_BATCH)
-    @DbRouteContext("profile.batch_lookup", targetReader = "profile", readerEligible = true)
+    @DbReader(operation = "profile.batch_lookup", target = "profile")
     fun getProfilesBatch(
         @Valid @RequestBody request: BatchProfileRequest,
         principal: Principal?,

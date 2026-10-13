@@ -23,7 +23,7 @@ import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
 import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
 import java.security.Principal
 import java.util.UUID
-import com.subhrodip.squarewise.db.routing.DbRouteContext
+import com.subhrodip.squarewise.db.routing.DbReader
 
 import com.subhrodip.squarewise.expensecore.groups.cache.GroupAccessCache
 import org.springframework.beans.factory.annotation.Autowired
@@ -73,7 +73,7 @@ class RecurringExpenseController(
 
     @GetMapping(ApiEndpoints.ExpenseCore.V1.SCHEDULES_SUBPATH)
     /** Returns the first bounded page of schedules visible to the authenticated member. */
-    @DbRouteContext("recurring.schedules.list", readerEligible = true)
+    @DbReader("recurring.schedules.list")
     fun listSchedules(
         @PathVariable groupId: UUID,
         principal: Principal?,
@@ -84,7 +84,7 @@ class RecurringExpenseController(
     }
 
     @GetMapping(ApiEndpoints.ExpenseCore.V1.SCHEDULE_BY_ID_SUBPATH)
-    @DbRouteContext("recurring.schedules.get", readerEligible = true)
+    @DbReader("recurring.schedules.get")
     fun getSchedule(
         @PathVariable groupId: UUID,
         @PathVariable scheduleId: UUID,

@@ -21,7 +21,7 @@ import java.util.UUID
 import com.subhrodip.squarewise.db.routing.DbContextHolder
 import com.subhrodip.squarewise.db.routing.DbExecutionContext
 import com.subhrodip.squarewise.db.routing.DbOperationKind
-import com.subhrodip.squarewise.db.routing.DbRouteContext
+import com.subhrodip.squarewise.db.routing.DbReader
 import com.subhrodip.squarewise.db.routing.ReadConsistency
 import com.subhrodip.squarewise.observability.db.DbTelemetry
 
@@ -54,7 +54,7 @@ class SearchController(
      * @throws ResponseStatusException if group not found or user not a member
      */
     @GetMapping(ApiEndpoints.ExpenseCore.V1.SEARCH_SUBPATH)
-    @DbRouteContext("expense.search", targetReader = "search", readerEligible = true)
+    @DbReader(operation = "expense.search", target = "search")
     fun search(
         @PathVariable groupId: UUID,
         @RequestParam(required = false) query: String?,
@@ -107,7 +107,7 @@ class SearchController(
      * @throws ResponseStatusException if group not found, user not a member, or export exceeds limit
      */
     @GetMapping(ApiEndpoints.ExpenseCore.V1.EXPORT_SUBPATH, produces = [ApiEndpoints.Headers.TEXT_CSV_UTF8])
-    @DbRouteContext("expense.search.export", targetReader = "search", readerEligible = true)
+    @DbReader(operation = "expense.search.export", target = "search")
     fun export(
         @PathVariable groupId: UUID,
         @RequestParam(required = false) query: String?,
