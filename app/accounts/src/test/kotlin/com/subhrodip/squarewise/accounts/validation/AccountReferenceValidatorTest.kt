@@ -137,7 +137,7 @@ class AccountReferenceValidatorTest {
     }
 
     @Test
-    fun `validateActiveSession throws when session is expired`() {
+    fun `validateActiveSession throws when session is expired by relative or absolute expiry`() {
         val sessionId = UUID.randomUUID()
         val now = Instant.now()
         val session = AuthSessionEntity(
@@ -160,5 +160,31 @@ class AccountReferenceValidatorTest {
             validator.validateActiveSession(sessionId, now)
         }
         assertSame(AccountsErrors.SESSION_EXPIRED, ex.definition)
+
+        // Test with default now parameter
+        assertThrows(AccountsDomainException::class.java) {
+            validator.validateActiveSession(sessionId)
+        }
+
+        // Test absolute expiry
+        val sessionWithAbsExpired = AuthSessionEntity(
+            sessionId = sessionId,
+            accountId = UUID.randomUUID(),
+            familyId = UUID.randomUUID(),
+            clientKind = "WEB",
+            deviceLabel = "Chrome",
+            refreshTokenDigest = byteArrayOf(1, 2, 3),
+            createdAt = now.minus(2, ChronoUnit.HOURS),
+            lastUsedAt = now.minus(2, ChronoUnit.HOURS),
+            expiresAt = now.plus(1, ChronoUnit.HOURS),
+            absoluteExpiresAt = now.minus(1, ChronoUnit.SECONDS),
+            revokedAt = null,
+            replacedBySessionId = null
+        )
+        `when`(sessionRepository.findById(sessionId)).thenReturn(Optional.of(sessionWithAbsExpired))
+        val exAbs = assertThrows(AccountsDomainException::class.java) {
+            validator.validateActiveSession(sessionId, now)
+        }
+        assertSame(AccountsErrors.SESSION_EXPIRED, exAbs.definition)
     }
 }

@@ -205,6 +205,14 @@ class JpaRequestStoresTest @Autowired constructor(
         val batchResult = profileStore.findByIds(listOf(profile.accountId, UUID.randomUUID()))
         assertEquals(1, batchResult.size)
         assertEquals(profile.accountId, batchResult.first().accountId)
+
+        // Store without cache coverage
+        val uncachedStore = JpaProfileStore(profileRepository, profileCache = null)
+        assertEquals(profile.accountId, uncachedStore.get(subject)?.accountId)
+        assertEquals(profile.accountId, uncachedStore.findById(profile.accountId)?.accountId)
+        val uncachedBatch = uncachedStore.findByIds(listOf(profile.accountId, UUID.randomUUID()))
+        assertEquals(1, uncachedBatch.size)
+        assertEquals(profile.accountId, uncachedBatch.first().accountId)
     }
 
     @Test
