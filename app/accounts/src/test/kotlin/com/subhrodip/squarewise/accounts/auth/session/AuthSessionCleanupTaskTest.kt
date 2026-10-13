@@ -25,12 +25,28 @@ class AuthSessionCleanupTaskTest {
     }
 
     @Test
+    fun `executeCleanup drains backlog across multiple batches`() {
+        val task = AuthSessionCleanupTask(repository, retentionDays = 14, batchSize = 100, maxBatches = 5)
+        `when`(repository.purgeExpiredOrRevokedOlderThan(any(Instant::class.java) ?: Instant.EPOCH, eq(100)))
+            .thenReturn(100)
+            .thenReturn(100)
+            .thenReturn(42)
+
+        val count = task.executeCleanup()
+
+        assertEquals(242, count)
+    }
+
+    @Test
     fun `rejects invalid retention and batch size parameters`() {
         assertThrows(IllegalArgumentException::class.java) {
             AuthSessionCleanupTask(repository, retentionDays = 0, batchSize = 100)
         }
         assertThrows(IllegalArgumentException::class.java) {
             AuthSessionCleanupTask(repository, retentionDays = 14, batchSize = 0)
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            AuthSessionCleanupTask(repository, retentionDays = 14, batchSize = 100, maxBatches = 0)
         }
     }
 }
