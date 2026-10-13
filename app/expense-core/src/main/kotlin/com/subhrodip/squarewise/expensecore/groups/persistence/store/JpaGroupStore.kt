@@ -93,8 +93,24 @@ class JpaGroupStore(
 
     /** Resolves one active group through the membership join. */
     @Transactional(readOnly = true)
-    override fun get(groupId: UUID, subject: String): GroupResponse? =
-        memberships.findActiveGroupBySubjectAndId(groupId, subject, "ACTIVE")?.toResponse()
+    override fun get(groupId: UUID, subject: String): GroupResponse? {
+        val isActive = if (groupAccessCache != null) {
+            groupAccessCache.isMember(groupId, subject) {
+                memberships.existsByGroupIdAndSubjectAndStatus(groupId, subject, "ACTIVE")
+            }
+        } else {
+            memberships.existsByGroupIdAndSubjectAndStatus(groupId, subject, "ACTIVE")
+        }
+        if (!isActive) return null
+
+        return if (groupAccessCache != null) {
+            groupAccessCache.groupDetails(groupId) {
+                memberships.findActiveGroupBySubjectAndId(groupId, subject, "ACTIVE")?.toResponse()
+            }
+        } else {
+            memberships.findActiveGroupBySubjectAndId(groupId, subject, "ACTIVE")?.toResponse()
+        }
+    }
 
     /**
      * Updates an existing expense group's name and increments its revision.
@@ -223,8 +239,14 @@ class JpaGroupStore(
     override fun listMembers(groupId: UUID, subject: String, limit: Int): List<GroupMemberResponse> {
         require(limit in 1..100) { "member limit must be between 1 and 100" }
         checkActiveMembership(groupId, subject)
-        val group = groups.findById(groupId).orElse(null) ?: notFound()
-        if (group.status != "ACTIVE") notFound()
+        val status = if (groupAccessCache != null) {
+            groupAccessCache.groupStatus(groupId) {
+                groups.findById(groupId).map { it.status }.orElse(null)
+            }
+        } else {
+            groups.findById(groupId).map { it.status }.orElse(null)
+        }
+        if (status != "ACTIVE") notFound()
         if (groupAccessCache != null) {
             return groupAccessCache.members(groupId, limit) {
                 memberships.findByGroupIdAndStatus(
