@@ -6,6 +6,8 @@ import com.subhrodip.squarewise.accounts.errors.AccountsDomainException
 import com.subhrodip.squarewise.accounts.profile.persistence.ProfileEntity
 import com.subhrodip.squarewise.accounts.profile.persistence.ProfileRepository
 import com.subhrodip.squarewise.errors.catalog.AccountsErrors
+import com.subhrodip.squarewise.accounts.profile.cache.ProfileCache
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 import java.time.Instant
 import java.util.UUID
@@ -20,8 +22,25 @@ import java.util.UUID
 @Component
 class AccountReferenceValidator(
     private val profileRepository: ProfileRepository,
-    private val sessionRepository: AuthSessionRepository
+    private val sessionRepository: AuthSessionRepository,
+    @Autowired(required = false)
+    private val profileCache: ProfileCache? = null
 ) {
+
+    /**
+     * Checks whether the specified account exists and has no deletion requested, using cache when available.
+     *
+     * @param accountId the unique identifier of the target account profile.
+     * @return true if account exists and is active, false otherwise.
+     */
+    fun isActiveAccount(accountId: UUID): Boolean {
+        if (profileCache != null) {
+            val cached = profileCache.peekByAccountId(accountId)
+            if (cached != null) return true
+        }
+        val profile = profileRepository.findById(accountId).orElse(null) ?: return false
+        return !profile.deletionRequested
+    }
 
     /**
      * Verifies that the specified account profile exists and is active.

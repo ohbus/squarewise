@@ -7,9 +7,11 @@ import com.subhrodip.squarewise.accounts.profile.persistence.ProfileEntity
 import com.subhrodip.squarewise.accounts.profile.persistence.ProfileRepository
 import com.subhrodip.squarewise.errors.catalog.AccountsErrors
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
@@ -186,5 +188,56 @@ class AccountReferenceValidatorTest {
             validator.validateActiveSession(sessionId, now)
         }
         assertSame(AccountsErrors.SESSION_EXPIRED, exAbs.definition)
+    }
+
+    @Test
+    fun `isActiveAccount returns true when profile exists in repository`() {
+        val accountId = UUID.randomUUID()
+        val profile = ProfileEntity(
+            accountId = accountId,
+            subject = "user@example.com",
+            displayName = "User",
+            timezone = "UTC",
+            defaultCurrency = "USD",
+            deletionRequested = false
+        )
+        `when`(profileRepository.findById(accountId)).thenReturn(Optional.of(profile))
+
+        assertTrue(validator.isActiveAccount(accountId))
+    }
+
+    @Test
+    fun `isActiveAccount returns false when profile has deletion requested or missing`() {
+        val accountId = UUID.randomUUID()
+        `when`(profileRepository.findById(accountId)).thenReturn(Optional.empty())
+        assertFalse(validator.isActiveAccount(accountId))
+
+        val deletedProfile = ProfileEntity(
+            accountId = accountId,
+            subject = "del@example.com",
+            displayName = "Deleted",
+            timezone = "UTC",
+            defaultCurrency = "USD",
+            deletionRequested = true
+        )
+        `when`(profileRepository.findById(accountId)).thenReturn(Optional.of(deletedProfile))
+        assertFalse(validator.isActiveAccount(accountId))
+    }
+
+    @Test
+    fun `isActiveAccount leverages ProfileCache when available`() {
+        val cache = com.subhrodip.squarewise.accounts.profile.cache.ProfileCache()
+        val cachedValidator = AccountReferenceValidator(profileRepository, sessionRepository, cache)
+        val accountId = UUID.randomUUID()
+        val profileResponse = com.subhrodip.squarewise.accounts.profile.api.ProfileResponse(
+            accountId = accountId,
+            displayName = "Cached",
+            timezone = "UTC",
+            defaultCurrency = "EUR"
+        )
+        cache.put(profileResponse)
+
+        // Serves from cache without repository call
+        assertTrue(cachedValidator.isActiveAccount(accountId))
     }
 }
