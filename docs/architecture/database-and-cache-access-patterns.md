@@ -16,6 +16,12 @@ This document details the database (PostgreSQL) and cache (Redis) access pattern
    - Neither Accounts PostgreSQL nor Redis is queried solely to validate an active bearer access token.
 4. **BFF is Completely Database-Free**:
    - The BFF microservice has zero database or cache connections, acting strictly as a GraphQL-to-REST facade.
+5. **In-Memory Bounded Domain Caches with Coordinated Transactional Eviction**:
+   - Hot read queries (`GroupAccessCache` in Expense Core, `ProfileCache` in Accounts, `PreferenceCache` in Notifications) hit local in-memory caches, yielding 0 DB queries on cache hits.
+   - Cache invalidations are synchronized to transaction completion (`afterCommit`), guaranteeing read-after-write consistency without stale dirty reads.
+6. **CQRS Reader Replica Routing & Application Referential Validation**:
+   - High-throughput read endpoints (`/sync/page`, `/search`, `/export`, `/inbox`, `/preferences`, `/profiles/me`, `/profiles/batch`, `/groups/{id}/balances`) route to healthy read replicas via `@DbReader` and `@DbRouteContext` using round-robin load-balancing with automatic failover to the primary writer.
+   - Under 10M DAU write loads, database-level foreign keys on high-throughput tables are replaced with application-layer referential integrity validation (`EntityReferenceValidator`, `AccountReferenceValidator`) to eliminate row-level lock contention on parent tables.
 
 ---
 
