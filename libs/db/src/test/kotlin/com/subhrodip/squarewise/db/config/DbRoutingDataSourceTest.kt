@@ -64,6 +64,29 @@ class DbRoutingDataSourceTest {
         }
     }
 
+    @Test
+    fun `multi-reader connection load balances round-robin across healthy replicas`() {
+        val writer = mock(DataSource::class.java)
+        val reader1 = mock(DataSource::class.java)
+        val reader2 = mock(DataSource::class.java)
+        val conn1 = mock(Connection::class.java)
+        val conn2 = mock(Connection::class.java)
+        `when`(reader1.connection).thenReturn(conn1)
+        `when`(reader2.connection).thenReturn(conn2)
+        val routing = DbRoutingDataSource(writer, linkedMapOf("replica1" to reader1, "replica2" to reader2))
+
+        DbContextHolder.withContext(
+            DbExecutionContext("expense.search", DbOperationKind.QUERY, ReadConsistency.EVENTUAL, readerEligible = true)
+        ) {
+            val first = routing.resolveReaderName()
+            val second = routing.resolveReaderName()
+            val third = routing.resolveReaderName()
+            assertEquals("replica1", first)
+            assertEquals("replica2", second)
+            assertEquals("replica1", third)
+        }
+    }
+
     /** Default connection acquisition routes writer-only work to the writer pool. */
     @Test
     fun `default connection acquisition uses writer for command`() {

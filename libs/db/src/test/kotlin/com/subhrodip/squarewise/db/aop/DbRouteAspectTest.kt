@@ -48,29 +48,64 @@ class DbRouteAspectTest {
             return "ok-tx-write"
         }
 
+        @com.subhrodip.squarewise.db.routing.DbReader(target = "search", operation = "search.items")
+        open fun dbReaderMethod(): String {
+            val ctx = DbContextHolder.current()
+            assertEquals("search.items", ctx.operationName)
+            assertEquals("search", ctx.targetReader)
+            assertTrue(ctx.readerEligible)
+            assertEquals(DbOperationKind.QUERY, ctx.kind)
+            return "ok-db-reader"
+        }
+
+        @com.subhrodip.squarewise.db.routing.DbWriter(operation = "persist.item")
+        open fun dbWriterMethod(): String {
+            val ctx = DbContextHolder.current()
+            assertEquals("persist.item", ctx.operationName)
+            assertFalse(ctx.readerEligible)
+            assertEquals(DbOperationKind.COMMAND, ctx.kind)
+            return "ok-db-writer"
+        }
+
         open fun plainMethod(): String {
             return "plain"
         }
     }
 
     @Test
-    fun `intercepts DbRouteContext and establishes thread context`() {
+    fun `intercepts DbReader and establishes reader context with target`() {
         val target = SampleService()
-        val method = SampleService::class.java.getMethod("customRoutedRead")
+        val method = SampleService::class.java.getMethod("dbReaderMethod")
         val joinPoint = mock(ProceedingJoinPoint::class.java)
         val signature = mock(MethodSignature::class.java)
 
         `when`(joinPoint.signature).thenReturn(signature)
         `when`(signature.method).thenReturn(method)
         `when`(joinPoint.target).thenReturn(target)
-        `when`(joinPoint.proceed()).thenAnswer { target.customRoutedRead() }
+        `when`(joinPoint.proceed()).thenAnswer { target.dbReaderMethod() }
 
         val result = aspect.aroundRoutedMethod(joinPoint)
-        assertEquals("ok-read", result)
+        assertEquals("ok-db-reader", result)
     }
 
     @Test
-    fun `intercepts readOnly Transactional and routes to reader`() {
+    fun `intercepts DbWriter and establishes writer command context`() {
+        val target = SampleService()
+        val method = SampleService::class.java.getMethod("dbWriterMethod")
+        val joinPoint = mock(ProceedingJoinPoint::class.java)
+        val signature = mock(MethodSignature::class.java)
+
+        `when`(joinPoint.signature).thenReturn(signature)
+        `when`(signature.method).thenReturn(method)
+        `when`(joinPoint.target).thenReturn(target)
+        `when`(joinPoint.proceed()).thenAnswer { target.dbWriterMethod() }
+
+        val result = aspect.aroundRoutedMethod(joinPoint)
+        assertEquals("ok-db-writer", result)
+    }
+
+    @Test
+    fun `pins inner read-only method to writer when executing inside active writer transaction`() {
         val target = SampleService()
         val method = SampleService::class.java.getMethod("readOnlyTx")
         val joinPoint = mock(ProceedingJoinPoint::class.java)
@@ -79,26 +114,52 @@ class DbRouteAspectTest {
         `when`(joinPoint.signature).thenReturn(signature)
         `when`(signature.method).thenReturn(method)
         `when`(joinPoint.target).thenReturn(target)
-        `when`(joinPoint.proceed()).thenAnswer { target.readOnlyTx() }
+        `when`(joinPoint.proceed()).thenAnswer {
+            val ctx = DbContextHolder.current()
+            // Invariant: must remain on writer despite readOnly = true
+            assertFalse(ctx.readerEligible)
+            assertEquals(DbOperationKind.COMMAND, ctx.kind)
+            "pinned-to-writer"
+        }
 
-        val result = aspect.aroundRoutedMethod(joinPoint)
-        assertEquals("ok-tx-read", result)
+        val writerContext = com.subhrodip.squarewise.db.routing.DbExecutionContext(
+            operationName = "outer.command",
+            kind = DbOperationKind.COMMAND,
+            readerEligible = false
+        )
+        val result = DbContextHolder.withContext(writerContext) {
+            aspect.aroundRoutedMethod(joinPoint)
+        }
+        assertEquals("pinned-to-writer", result)
     }
 
     @Test
-    fun `intercepts write Transactional and routes to writer`() {
+    fun `inherits parent targetReader when inner read context leaves target blank`() {
         val target = SampleService()
-        val method = SampleService::class.java.getMethod("writeTx")
+        val method = SampleService::class.java.getMethod("readOnlyTx")
         val joinPoint = mock(ProceedingJoinPoint::class.java)
         val signature = mock(MethodSignature::class.java)
 
         `when`(joinPoint.signature).thenReturn(signature)
         `when`(signature.method).thenReturn(method)
         `when`(joinPoint.target).thenReturn(target)
-        `when`(joinPoint.proceed()).thenAnswer { target.writeTx() }
+        `when`(joinPoint.proceed()).thenAnswer {
+            val ctx = DbContextHolder.current()
+            assertEquals("analytics", ctx.targetReader)
+            assertTrue(ctx.readerEligible)
+            "inherited-target"
+        }
 
-        val result = aspect.aroundRoutedMethod(joinPoint)
-        assertEquals("ok-tx-write", result)
+        val parentContext = com.subhrodip.squarewise.db.routing.DbExecutionContext(
+            operationName = "outer.read",
+            kind = DbOperationKind.QUERY,
+            readerEligible = true,
+            targetReader = "analytics"
+        )
+        val result = DbContextHolder.withContext(parentContext) {
+            aspect.aroundRoutedMethod(joinPoint)
+        }
+        assertEquals("inherited-target", result)
     }
 
     @Test

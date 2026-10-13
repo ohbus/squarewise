@@ -70,16 +70,18 @@ class DbRoutingDataSource(
     /** Returns the configured reader pools for health probing and diagnostics. */
     fun readerDataSources(): Map<String, DataSource> = readers.toMap()
 
-    /** Resolves the target reader pool name based on context target or first healthy reader, with automatic failover. */
+    private val roundRobinCounter = java.util.concurrent.atomic.AtomicInteger(0)
+
+    /** Resolves the target reader pool name based on context target or round-robin among healthy readers, with automatic failover. */
     fun resolveReaderName(): String {
         val target = DbContextHolder.current().targetReader?.takeIf { it.isNotBlank() }
         if (target != null && readerHealth.state(target) == DbReaderState.HEALTHY) {
             return target
         }
-        for (candidate in readers.keys) {
-            if (readerHealth.state(candidate) == DbReaderState.HEALTHY) {
-                return candidate
-            }
+        val healthyCandidates = readers.keys.filter { readerHealth.state(it) == DbReaderState.HEALTHY }
+        if (healthyCandidates.isNotEmpty()) {
+            val idx = (roundRobinCounter.getAndIncrement() and Int.MAX_VALUE) % healthyCandidates.size
+            return healthyCandidates[idx]
         }
         return target ?: readers.keys.firstOrNull() ?: ""
     }

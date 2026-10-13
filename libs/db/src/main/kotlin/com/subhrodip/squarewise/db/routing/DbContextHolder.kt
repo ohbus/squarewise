@@ -8,6 +8,9 @@ object DbContextHolder {
     fun current(): DbExecutionContext = context.get()
         ?: DbExecutionContext("unclassified", DbOperationKind.COMMAND)
 
+    /** Returns the currently active execution context on this thread, or null if none established. */
+    fun getActiveContext(): DbExecutionContext? = context.get()
+
     /** Executes [block] with [executionContext] and always restores the previous context. */
     fun <T> withContext(executionContext: DbExecutionContext, block: () -> T): T {
         val previous = context.get()
