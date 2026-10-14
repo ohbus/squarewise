@@ -19,10 +19,7 @@ import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
 import java.security.Principal
 import java.util.UUID
 import com.subhrodip.squarewise.db.routing.DbContextHolder
-import com.subhrodip.squarewise.db.routing.DbExecutionContext
-import com.subhrodip.squarewise.db.routing.DbOperationKind
 import com.subhrodip.squarewise.db.routing.DbReader
-import com.subhrodip.squarewise.db.routing.ReadConsistency
 import com.subhrodip.squarewise.observability.db.DbTelemetry
 
 /**
@@ -66,15 +63,7 @@ class SearchController(
     ): ExpenseSearchPage {
         ensureMembership(groupId, principal.name)
         val expenses = dbTelemetry.measureQuery("expense.search", "approved-query") {
-            DbContextHolder.withContext(
-                DbExecutionContext(
-                    operationName = "expense.search",
-                    kind = DbOperationKind.QUERY,
-                    consistency = ReadConsistency.EVENTUAL,
-                    readerEligible = true,
-                    targetReader = "search"
-                )
-            ) {
+            DbContextHolder.withReader(target = "search", operation = "expense.search") {
                 searchStore.findSearchExpenses(
                     SearchQuery(groupId, query?.trim().orEmpty(), currency?.trim()?.uppercase(), category, cursor, limit)
                 )
@@ -124,15 +113,7 @@ class SearchController(
         }
         ensureMembership(groupId, principal.name)
         val expenses = dbTelemetry.measureQuery("expense.search.export", "approved-query") {
-            DbContextHolder.withContext(
-                DbExecutionContext(
-                    operationName = "expense.search.export",
-                    kind = DbOperationKind.QUERY,
-                    consistency = ReadConsistency.EVENTUAL,
-                    readerEligible = true,
-                    targetReader = "search"
-                )
-            ) {
+            DbContextHolder.withReader(target = "search", operation = "expense.search.export") {
                 searchStore.findSearchExpenses(
                     SearchQuery(groupId, query?.trim().orEmpty(), currency?.trim()?.uppercase(), category, null, maxRows)
                 )
