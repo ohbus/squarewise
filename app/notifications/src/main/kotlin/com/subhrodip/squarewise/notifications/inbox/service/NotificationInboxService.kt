@@ -4,9 +4,6 @@ import com.subhrodip.squarewise.notifications.inbox.model.InboxItem
 import com.subhrodip.squarewise.notifications.inbox.model.InboxPage
 import com.subhrodip.squarewise.notifications.inbox.persistence.NotificationInboxStore
 import com.subhrodip.squarewise.db.routing.DbContextHolder
-import com.subhrodip.squarewise.db.routing.DbExecutionContext
-import com.subhrodip.squarewise.db.routing.DbOperationKind
-import com.subhrodip.squarewise.db.routing.ReadConsistency
 import com.subhrodip.squarewise.errors.catalog.NotificationErrors
 import com.subhrodip.squarewise.notifications.errors.NotificationDomainException
 import com.subhrodip.squarewise.observability.db.DbTelemetry
@@ -20,13 +17,16 @@ import org.springframework.stereotype.Service
 class NotificationInboxService(private val store: NotificationInboxStore, private val dbTelemetry: DbTelemetry = DbTelemetry()) {
     fun append(subject: String, item: InboxItem) = store.append(subject, item)
     /** Returns one bounded compatibility page; callers needing more use [page]. */
-    fun list(subject: String): List<InboxItem> = store.list(subject).take(100)
+    fun list(subject: String): List<InboxItem> =
+        DbContextHolder.withReader(target = "inbox", operation = "notification.inbox.list") {
+            store.list(subject).take(100)
+        }
     fun markAsRead(subject: String, notificationId: UUID): Boolean = store.markAsRead(subject, notificationId)
     fun page(subject: String, cursor: String?, limit: Int): InboxPage {
         require(limit in 1..100) { "inbox page limit must be between 1 and 100" }
         val key = cursor?.let(::decodeCursor)
         val page = dbTelemetry.measureQuery("notification.inbox.history", "approved-query") {
-            DbContextHolder.withContext(DbExecutionContext("notification.inbox.history", DbOperationKind.QUERY, ReadConsistency.EVENTUAL, readerEligible = true)) {
+            DbContextHolder.withReader(target = "inbox", operation = "notification.inbox.history") {
                 store.page(subject, key?.first, key?.second, limit)
             }
         }
