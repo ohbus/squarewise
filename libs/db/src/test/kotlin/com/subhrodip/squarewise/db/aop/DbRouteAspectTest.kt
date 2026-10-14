@@ -680,4 +680,58 @@ class DbRouteAspectTest {
         val result = aspect.aroundRoutedMethod(joinPoint)
         assertEquals("proxy-result", result)
     }
+
+    @DbWriter("cqrs.command")
+    interface SampleCommandInterface {
+        fun executeCommand(): String
+    }
+
+    @DbReader("cqrs.query", target = "query-replica")
+    interface SampleQueryInterface {
+        fun executeQuery(): String
+    }
+
+    class MultiInterfaceCqrsStore : SampleCommandInterface, SampleQueryInterface {
+        override fun executeCommand(): String = "cmd-ok"
+        override fun executeQuery(): String = "query-ok"
+    }
+
+    @Test
+    fun `class implementing both DbWriter and DbReader interfaces routes query to reader and command to writer`() {
+        val target = MultiInterfaceCqrsStore()
+        val queryMethod = SampleQueryInterface::class.java.getMethod("executeQuery")
+        val queryJoinPoint = mock(ProceedingJoinPoint::class.java)
+        val querySig = mock(MethodSignature::class.java)
+        `when`(queryJoinPoint.signature).thenReturn(querySig)
+        `when`(querySig.method).thenReturn(queryMethod)
+        `when`(queryJoinPoint.target).thenReturn(target)
+        `when`(queryJoinPoint.proceed()).thenAnswer {
+            val ctx = DbContextHolder.current()
+            assertEquals("cqrs.query", ctx.operationName)
+            assertEquals("query-replica", ctx.targetReader)
+            assertTrue(ctx.readerEligible)
+            assertEquals(DbOperationKind.QUERY, ctx.kind)
+            target.executeQuery()
+        }
+
+        val queryResult = aspect.aroundRoutedMethod(queryJoinPoint)
+        assertEquals("query-ok", queryResult)
+
+        val cmdMethod = SampleCommandInterface::class.java.getMethod("executeCommand")
+        val cmdJoinPoint = mock(ProceedingJoinPoint::class.java)
+        val cmdSig = mock(MethodSignature::class.java)
+        `when`(cmdJoinPoint.signature).thenReturn(cmdSig)
+        `when`(cmdSig.method).thenReturn(cmdMethod)
+        `when`(cmdJoinPoint.target).thenReturn(target)
+        `when`(cmdJoinPoint.proceed()).thenAnswer {
+            val ctx = DbContextHolder.current()
+            assertEquals("cqrs.command", ctx.operationName)
+            assertFalse(ctx.readerEligible)
+            assertEquals(DbOperationKind.COMMAND, ctx.kind)
+            target.executeCommand()
+        }
+
+        val cmdResult = aspect.aroundRoutedMethod(cmdJoinPoint)
+        assertEquals("cmd-ok", cmdResult)
+    }
 }

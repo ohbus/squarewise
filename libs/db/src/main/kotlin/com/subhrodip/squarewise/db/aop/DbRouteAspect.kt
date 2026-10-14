@@ -57,7 +57,52 @@ class DbRouteAspect {
     }
 
     private fun resolveRawContext(method: Method?, targetClass: Class<*>?): DbExecutionContext? {
-        val dbWriterAnnotation = findAnnotation(method, targetClass, DbWriter::class.java)
+        // 1. Direct method-level annotations (highest precedence)
+        val methodWriter = findMethodAnnotation(method, targetClass, DbWriter::class.java)
+        if (methodWriter != null) {
+            val opName = resolveOperationName(methodWriter.operation, method, targetClass)
+            return DbExecutionContext(
+                operationName = opName,
+                kind = DbOperationKind.COMMAND,
+                consistency = ReadConsistency.STRONG,
+                readerEligible = false,
+                targetReader = null,
+                targetWriter = methodWriter.target.takeIf { it.isNotBlank() }
+            )
+        }
+
+        val methodReader = findMethodAnnotation(method, targetClass, DbReader::class.java)
+        if (methodReader != null) {
+            val opName = resolveOperationName(methodReader.operation, method, targetClass)
+            return DbExecutionContext(
+                operationName = opName,
+                kind = DbOperationKind.QUERY,
+                consistency = methodReader.consistency,
+                readerEligible = true,
+                targetReader = methodReader.target.takeIf { it.isNotBlank() }
+            )
+        }
+
+        val methodRoute = findMethodAnnotation(method, targetClass, DbRouteContext::class.java)
+        if (methodRoute != null) {
+            val opName = resolveOperationName(methodRoute.operation, method, targetClass)
+            return DbExecutionContext(
+                operationName = opName,
+                kind = methodRoute.kind,
+                consistency = methodRoute.consistency,
+                readerEligible = methodRoute.readerEligible,
+                targetReader = methodRoute.targetReader.takeIf { it.isNotBlank() },
+                targetWriter = methodRoute.targetWriter.takeIf { it.isNotBlank() }
+            )
+        }
+
+        val methodTx = findMethodAnnotation(method, targetClass, Transactional::class.java)
+        if (methodTx != null && !methodTx.readOnly) {
+            return resolveTxContext(methodTx, method, targetClass)
+        }
+
+        // 2. Class and declaring interface hierarchy annotations
+        val dbWriterAnnotation = findClassAnnotation(method, targetClass, DbWriter::class.java)
         if (dbWriterAnnotation != null) {
             val opName = resolveOperationName(dbWriterAnnotation.operation, method, targetClass)
             return DbExecutionContext(
@@ -70,7 +115,7 @@ class DbRouteAspect {
             )
         }
 
-        val dbReaderAnnotation = findAnnotation(method, targetClass, DbReader::class.java)
+        val dbReaderAnnotation = findClassAnnotation(method, targetClass, DbReader::class.java)
         if (dbReaderAnnotation != null) {
             val opName = resolveOperationName(dbReaderAnnotation.operation, method, targetClass)
             return DbExecutionContext(
@@ -82,7 +127,7 @@ class DbRouteAspect {
             )
         }
 
-        val routeAnnotation = findAnnotation(method, targetClass, DbRouteContext::class.java)
+        val routeAnnotation = findClassAnnotation(method, targetClass, DbRouteContext::class.java)
         if (routeAnnotation != null) {
             val opName = resolveOperationName(routeAnnotation.operation, method, targetClass)
             return DbExecutionContext(
@@ -95,7 +140,7 @@ class DbRouteAspect {
             )
         }
 
-        val txAnnotation = findAnnotation(method, targetClass, Transactional::class.java)
+        val txAnnotation = findClassAnnotation(method, targetClass, Transactional::class.java)
         if (txAnnotation != null) {
             return resolveTxContext(txAnnotation, method, targetClass)
         }
@@ -142,20 +187,70 @@ class DbRouteAspect {
         return rawContext
     }
 
-    private fun <A : Annotation> findAnnotation(method: Method?, targetClass: Class<*>?, annotationClass: Class<A>): A? {
-        if (method != null) {
-            val methodAnnotation = AnnotatedElementUtils.findMergedAnnotation(method, annotationClass)
-            if (methodAnnotation != null) return methodAnnotation
-        }
-        val classesToInspect = listOfNotNull(targetClass, method?.declaringClass).distinct()
+    private fun <A : Annotation> findMethodAnnotation(
+        method: Method?,
+        targetClass: Class<*>?,
+        annotationClass: Class<A>
+    ): A? {
+        if (method == null) return null
+        val direct = org.springframework.core.annotation.AnnotationUtils.findAnnotation(method, annotationClass)
+        if (direct != null) return direct
+
+        val classesToInspect = listOfNotNull(targetClass, method.declaringClass).distinct()
         for (rootClass in classesToInspect) {
-            val annotation = searchClassHierarchy(rootClass, method, annotationClass)
-            if (annotation != null) return annotation
+            val fromClass = searchMethodInHierarchy(rootClass, method, annotationClass)
+            if (fromClass != null) return fromClass
         }
         return null
     }
 
-    private fun <A : Annotation> searchClassHierarchy(
+    private fun <A : Annotation> searchMethodInHierarchy(
+        rootClass: Class<*>,
+        method: Method,
+        annotationClass: Class<A>
+    ): A? {
+        val visited = mutableSetOf<Class<*>>()
+        val queue = ArrayDeque<Class<*>>()
+        var currentClass: Class<*>? = rootClass
+        while (currentClass != null && currentClass != Any::class.java) {
+            try {
+                val declaredMethod = currentClass.getDeclaredMethod(method.name, *method.parameterTypes)
+                val annotation = org.springframework.core.annotation.AnnotationUtils.findAnnotation(declaredMethod, annotationClass)
+                if (annotation != null) return annotation
+            } catch (_: NoSuchMethodException) {
+            }
+            queue.addAll(currentClass.interfaces)
+            currentClass = currentClass.superclass
+        }
+        while (queue.isNotEmpty()) {
+            val iface = queue.removeFirst()
+            if (visited.add(iface)) {
+                try {
+                    val ifaceMethod = iface.getMethod(method.name, *method.parameterTypes)
+                    val annotation = org.springframework.core.annotation.AnnotationUtils.findAnnotation(ifaceMethod, annotationClass)
+                    if (annotation != null) return annotation
+                } catch (_: NoSuchMethodException) {
+                }
+                queue.addAll(iface.interfaces)
+            }
+        }
+        return null
+    }
+
+    private fun <A : Annotation> findClassAnnotation(
+        method: Method?,
+        targetClass: Class<*>?,
+        annotationClass: Class<A>
+    ): A? {
+        val classesToInspect = listOfNotNull(targetClass, method?.declaringClass).distinct()
+        for (rootClass in classesToInspect) {
+            val fromClass = searchClassInHierarchy(rootClass, method, annotationClass)
+            if (fromClass != null) return fromClass
+        }
+        return null
+    }
+
+    private fun <A : Annotation> searchClassInHierarchy(
         rootClass: Class<*>,
         method: Method?,
         annotationClass: Class<A>
@@ -164,32 +259,26 @@ class DbRouteAspect {
         val queue = ArrayDeque<Class<*>>()
         var currentClass: Class<*>? = rootClass
         while (currentClass != null && currentClass != Any::class.java) {
-            val classAnnotation = AnnotatedElementUtils.findMergedAnnotation(currentClass, annotationClass)
+            val classAnnotation = currentClass.getAnnotation(annotationClass)
             if (classAnnotation != null) return classAnnotation
-            if (method != null) {
-                try {
-                    val declaredMethod = currentClass.getDeclaredMethod(method.name, *method.parameterTypes)
-                    val declaredMethodAnnotation = AnnotatedElementUtils.findMergedAnnotation(declaredMethod, annotationClass)
-                    if (declaredMethodAnnotation != null) return declaredMethodAnnotation
-                } catch (_: NoSuchMethodException) {
-                }
-            }
             queue.addAll(currentClass.interfaces)
             currentClass = currentClass.superclass
         }
-
         while (queue.isNotEmpty()) {
             val iface = queue.removeFirst()
             if (visited.add(iface)) {
-                val ifaceAnnotation = AnnotatedElementUtils.findMergedAnnotation(iface, annotationClass)
-                if (ifaceAnnotation != null) return ifaceAnnotation
-                if (method != null) {
+                val declaresMethod = if (method != null) {
                     try {
-                        val ifaceMethod = iface.getMethod(method.name, *method.parameterTypes)
-                        val ifaceMethodAnnotation = AnnotatedElementUtils.findMergedAnnotation(ifaceMethod, annotationClass)
-                        if (ifaceMethodAnnotation != null) return ifaceMethodAnnotation
+                        iface.getMethod(method.name, *method.parameterTypes)
+                        true
                     } catch (_: NoSuchMethodException) {
+                        false
                     }
+                } else true
+
+                if (declaresMethod) {
+                    val ifaceAnnotation = iface.getAnnotation(annotationClass)
+                    if (ifaceAnnotation != null) return ifaceAnnotation
                 }
                 queue.addAll(iface.interfaces)
             }
