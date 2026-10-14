@@ -5,6 +5,7 @@ import com.subhrodip.squarewise.notifications.consumer.model.NotificationEvent
 import com.subhrodip.squarewise.notifications.consumer.persistence.ProcessedNotificationEventEntity
 import com.subhrodip.squarewise.notifications.consumer.persistence.ProcessedNotificationEventRepository
 
+import com.subhrodip.squarewise.db.routing.DbWriter
 import com.subhrodip.squarewise.notifications.inbox.persistence.NotificationInboxEntity
 import jakarta.persistence.EntityManager
 import org.springframework.stereotype.Service
@@ -25,6 +26,7 @@ class TransactionalNotificationEventProcessor(
      * @param event The notification event to process.
      * @return [NotificationConsumptionOutcome.APPLIED] if newly persisted, or [NotificationConsumptionOutcome.DUPLICATE] if previously recorded.
      */
+    @DbWriter("notifications.event.process")
     @Transactional
     fun process(event: NotificationEvent): NotificationConsumptionOutcome {
         val inboxItem = event.toInboxEntity()
