@@ -286,5 +286,14 @@ class GroupAccessCache(
                 }
             }
         }
+        if (groupGenerations.size > maxEntries) {
+            val genIter = groupGenerations.keys.iterator()
+            var removedGen = 0
+            while (genIter.hasNext() && removedGen < maxEntries / 4) {
+                genIter.next()
+                genIter.remove()
+                removedGen++
+            }
+        }
     }
 }

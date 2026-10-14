@@ -307,6 +307,7 @@ class JpaGroupStore(
             "changedBy" to subject
         )
         recordMutation(groupId, subject, "invitation.revoked", group.revision, payload, occurredAt, "invitation.revoked.v1")
+        invalidateGroupAfterCommit(groupId)
     }
 
     /**

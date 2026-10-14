@@ -391,4 +391,19 @@ class GroupAccessCacheTest {
         fastCache.isMember(UUID.randomUUID(), "u2") { true }
         fastCache.isMember(UUID.randomUUID(), "u3") { true }
     }
+
+    @Test
+    fun `evictIfOversized prunes excess groupGenerations when exceeding maxEntries`() {
+        val tinyCache = GroupAccessCache(ttl = Duration.ofMinutes(1), maxEntries = 4)
+        for (i in 1..6) {
+            tinyCache.invalidateBalances(UUID.randomUUID())
+        }
+        for (i in 1..6) {
+            tinyCache.isMember(UUID.randomUUID(), "user-$i") { true }
+        }
+        val testGroup = UUID.randomUUID()
+        tinyCache.invalidateBalances(testGroup)
+        val loaded = tinyCache.balances(testGroup) { listOf("b-$testGroup") }
+        assertEquals(listOf("b-$testGroup"), loaded)
+    }
 }
