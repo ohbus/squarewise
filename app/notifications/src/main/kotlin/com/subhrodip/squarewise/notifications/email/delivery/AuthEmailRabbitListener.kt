@@ -19,6 +19,7 @@ import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.CancellationException
 import org.springframework.amqp.core.Message
+import com.subhrodip.squarewise.db.routing.DbWriter
 import org.springframework.amqp.rabbit.annotation.RabbitListener
 import org.springframework.amqp.rabbit.listener.api.ChannelAwareMessageListener
 import org.springframework.stereotype.Component
@@ -37,6 +38,7 @@ class AuthEmailRabbitListener(
         queues = ["\${squarewise.notifications.auth-email-queue:squarewise.auth-email.v2}"],
         ackMode = "MANUAL"
     )
+    @DbWriter("notifications.auth-email.consumer")
     override fun onMessage(message: Message, channel: Channel?) {
         val deliveryTag = message.messageProperties.deliveryTag
         try {
