@@ -24,6 +24,7 @@ import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
 import java.security.Principal
 import java.util.UUID
 import com.subhrodip.squarewise.db.routing.DbReader
+import com.subhrodip.squarewise.db.routing.DbWriter
 
 import com.subhrodip.squarewise.expensecore.groups.cache.GroupAccessCache
 import org.springframework.beans.factory.annotation.Autowired
@@ -46,6 +47,7 @@ class RecurringExpenseController(
 
     @PostMapping(ApiEndpoints.ExpenseCore.V1.SCHEDULES_SUBPATH)
     @ResponseStatus(HttpStatus.CREATED)
+    @DbWriter("recurring.schedules.create")
     fun createSchedule(
         @PathVariable groupId: UUID,
         @Valid @RequestBody request: CreateRecurringScheduleRequestDto,
@@ -96,6 +98,7 @@ class RecurringExpenseController(
     }
 
     @PutMapping(ApiEndpoints.ExpenseCore.V1.SCHEDULE_BY_ID_SUBPATH)
+    @DbWriter("recurring.schedules.update")
     fun updateSchedule(
         @PathVariable groupId: UUID,
         @PathVariable scheduleId: UUID,
@@ -123,6 +126,7 @@ class RecurringExpenseController(
     }
 
     @PostMapping(ApiEndpoints.ExpenseCore.V1.SCHEDULE_PAUSE_SUBPATH)
+    @DbWriter("recurring.schedules.pause")
     fun pauseSchedule(
         @PathVariable groupId: UUID,
         @PathVariable scheduleId: UUID,
@@ -134,6 +138,7 @@ class RecurringExpenseController(
     }
 
     @PostMapping(ApiEndpoints.ExpenseCore.V1.SCHEDULE_RESUME_SUBPATH)
+    @DbWriter("recurring.schedules.resume")
     fun resumeSchedule(
         @PathVariable groupId: UUID,
         @PathVariable scheduleId: UUID,

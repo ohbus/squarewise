@@ -194,9 +194,13 @@ class GroupAccessCache(
         incrementGeneration(groupId)
         groupStatusCache.remove(groupId)
         groupDetailsCache.remove(groupId)
-        membershipCache.keys.filter { it.first == groupId }.forEach { key ->
-            invalidationTimestamps[key] = now
-            membershipCache.remove(key)
+        val iterator = membershipCache.keys.iterator()
+        while (iterator.hasNext()) {
+            val key = iterator.next()
+            if (key.first == groupId) {
+                invalidationTimestamps[key] = now
+                iterator.remove()
+            }
         }
         invalidateMembers(groupId)
         invalidateBalances(groupId)
