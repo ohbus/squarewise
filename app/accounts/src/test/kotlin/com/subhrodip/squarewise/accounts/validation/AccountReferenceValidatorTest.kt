@@ -318,5 +318,50 @@ class AccountReferenceValidatorTest {
         `when`(profileRepository.findById(accountId)).thenReturn(Optional.of(profile))
 
         assertTrue(cachedValidator.isActiveAccount(accountId))
+        assertNotNull(cache.peekByAccountId(accountId))
+    }
+
+    @Test
+    fun `validateActiveAccount populates ProfileCache on success`() {
+        val cache = ProfileCache()
+        val cachedValidator = AccountReferenceValidator(profileRepository, sessionRepository, cache)
+        val accountId = UUID.randomUUID()
+        val profile = ProfileEntity(
+            accountId = accountId,
+            subject = "alice@example.com",
+            displayName = "Alice",
+            timezone = "UTC",
+            defaultCurrency = "EUR",
+            deletionRequested = false
+        )
+        `when`(profileRepository.findById(accountId)).thenReturn(Optional.of(profile))
+
+        val resolved = cachedValidator.validateActiveAccount(accountId)
+        assertEquals(accountId, resolved.accountId)
+        val cached = cache.peekByAccountId(accountId)
+        assertNotNull(cached)
+        assertEquals("Alice", cached?.displayName)
+    }
+
+    @Test
+    fun `validateActiveSubject populates ProfileCache on success`() {
+        val cache = ProfileCache()
+        val cachedValidator = AccountReferenceValidator(profileRepository, sessionRepository, cache)
+        val accountId = UUID.randomUUID()
+        val profile = ProfileEntity(
+            accountId = accountId,
+            subject = "bob@example.com",
+            displayName = "Bob",
+            timezone = "UTC",
+            defaultCurrency = "USD",
+            deletionRequested = false
+        )
+        `when`(profileRepository.findBySubject("bob@example.com")).thenReturn(profile)
+
+        val resolved = cachedValidator.validateActiveSubject("bob@example.com")
+        assertEquals(accountId, resolved.accountId)
+        val cached = cache.peekByAccountId(accountId)
+        assertNotNull(cached)
+        assertEquals("Bob", cached?.displayName)
     }
 }

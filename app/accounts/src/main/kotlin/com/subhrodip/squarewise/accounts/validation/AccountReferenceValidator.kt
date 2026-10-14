@@ -7,6 +7,7 @@ import com.subhrodip.squarewise.accounts.profile.persistence.ProfileEntity
 import com.subhrodip.squarewise.accounts.profile.persistence.ProfileRepository
 import com.subhrodip.squarewise.errors.catalog.AccountsErrors
 import com.subhrodip.squarewise.accounts.profile.cache.ProfileCache
+import com.subhrodip.squarewise.accounts.profile.api.ProfileResponse
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 import java.time.Instant
@@ -35,7 +36,11 @@ class AccountReferenceValidator(
      */
     fun isActiveAccount(accountId: UUID): Boolean {
         val profile = profileRepository.findById(accountId).orElse(null) ?: return false
-        return !profile.deletionRequested
+        val active = !profile.deletionRequested
+        if (active) {
+            profileCache?.put(ProfileResponse(profile.accountId, profile.displayName, profile.timezone, profile.defaultCurrency))
+        }
+        return active
     }
 
     /**
@@ -51,6 +56,7 @@ class AccountReferenceValidator(
         if (profile.deletionRequested) {
             throw AccountsDomainException(AccountsErrors.PROFILE_REQUEST_INVALID)
         }
+        profileCache?.put(ProfileResponse(profile.accountId, profile.displayName, profile.timezone, profile.defaultCurrency))
         return profile
     }
 
@@ -67,6 +73,7 @@ class AccountReferenceValidator(
         if (profile.deletionRequested) {
             throw AccountsDomainException(AccountsErrors.PROFILE_REQUEST_INVALID)
         }
+        profileCache?.put(ProfileResponse(profile.accountId, profile.displayName, profile.timezone, profile.defaultCurrency))
         return profile
     }
 
