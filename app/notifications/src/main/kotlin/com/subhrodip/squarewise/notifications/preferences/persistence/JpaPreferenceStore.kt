@@ -1,5 +1,7 @@
 package com.subhrodip.squarewise.notifications.preferences.persistence
 
+import com.subhrodip.squarewise.db.routing.DbReader
+import com.subhrodip.squarewise.db.routing.DbWriter
 import com.subhrodip.squarewise.notifications.preferences.cache.PreferenceCache
 import com.subhrodip.squarewise.notifications.preferences.model.NotificationPreferences
 import org.springframework.beans.factory.annotation.Autowired
@@ -32,6 +34,7 @@ class JpaPreferenceStore(
      * @return Current or default [NotificationPreferences].
      * @throws IllegalArgumentException if subject validation fails.
      */
+    @DbReader("notifications.preferences.get", target = "preferences")
     @Transactional(readOnly = true)
     override fun get(subject: String): NotificationPreferences {
         val validatedSubject = requireSubject(subject)
@@ -56,6 +59,7 @@ class JpaPreferenceStore(
      * @param value Updated [NotificationPreferences] settings.
      * @throws IllegalArgumentException if subject validation fails.
      */
+    @DbWriter("notifications.preferences.put")
     @Transactional
     override fun put(subject: String, value: NotificationPreferences) {
         val validatedSubject = requireSubject(subject)

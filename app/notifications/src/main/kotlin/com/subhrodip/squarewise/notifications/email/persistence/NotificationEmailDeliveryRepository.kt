@@ -27,6 +27,23 @@ interface NotificationEmailDeliveryRepository : JpaRepository<NotificationEmailD
     )
     fun claimForDispatch(notificationId: UUID, now: Instant, leaseCutoff: Instant): Int
 
+    /** Direct atomic status update avoiding a prior SELECT. */
+    @Modifying
+    @Transactional
+    @Query(
+        value = """
+            UPDATE notification_email_deliveries
+               SET status = :status, updated_at = :now
+             WHERE notification_id = :notificationId
+        """,
+        nativeQuery = true
+    )
+    fun updateStatus(
+        @Param("notificationId") notificationId: UUID,
+        @Param("status") status: String,
+        @Param("now") now: Instant
+    ): Int
+
     /**
      * Purges delivered or skipped email delivery records older than [cutoff] in bounded batches.
      */

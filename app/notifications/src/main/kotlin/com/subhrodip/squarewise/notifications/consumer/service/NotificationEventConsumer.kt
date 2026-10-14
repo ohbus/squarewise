@@ -153,10 +153,13 @@ class NotificationEventConsumer(
     }
 
     private fun markDelivery(notificationId: UUID, status: String) {
-        emailDeliveries?.findById(notificationId)?.ifPresent { delivery ->
-            delivery.status = status
-            delivery.updatedAt = Instant.now()
-            emailDeliveries.save(delivery)
+        val updated = emailDeliveries?.updateStatus(notificationId, status, Instant.now()) ?: 0
+        if (updated == 0) {
+            emailDeliveries?.findById(notificationId)?.ifPresent { delivery ->
+                delivery.status = status
+                delivery.updatedAt = Instant.now()
+                emailDeliveries.save(delivery)
+            }
         }
     }
 

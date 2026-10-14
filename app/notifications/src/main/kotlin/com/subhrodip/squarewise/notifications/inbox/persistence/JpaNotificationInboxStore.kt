@@ -1,5 +1,7 @@
 package com.subhrodip.squarewise.notifications.inbox.persistence
 
+import com.subhrodip.squarewise.db.routing.DbReader
+import com.subhrodip.squarewise.db.routing.DbWriter
 import com.subhrodip.squarewise.notifications.inbox.model.InboxItem
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
@@ -21,6 +23,7 @@ class JpaNotificationInboxStore(
 ) : NotificationInboxStore {
 
     /** Returns the first bounded inbox page for compatibility callers. */
+    @DbReader("notifications.inbox.list", target = "inbox")
     @Transactional(readOnly = true)
     override fun list(subject: String): List<InboxItem> = page(requireSubject(subject), null, null, 100)
 
@@ -31,12 +34,14 @@ class JpaNotificationInboxStore(
      * @param item Inbox notification item to persist.
      * @throws IllegalArgumentException if subject, event type, or message validation constraints fail.
      */
+    @DbWriter("notifications.inbox.append")
     @Transactional
     override fun append(subject: String, item: InboxItem) {
         repository.save(item.toEntity(requireSubject(subject)))
     }
 
     /** Reads only the requested inbox page from PostgreSQL using the cursor index. */
+    @DbReader("notifications.inbox.page", target = "inbox")
     @Transactional(readOnly = true)
     override fun page(
         subject: String,
@@ -62,6 +67,7 @@ class JpaNotificationInboxStore(
      * @return `true` if the notification was found and marked as read; `false` otherwise.
      * @throws IllegalArgumentException if subject validation fails.
      */
+    @DbWriter("notifications.inbox.markAsRead")
     @Transactional
     override fun markAsRead(subject: String, notificationId: UUID): Boolean {
         val entity = repository.findBySubjectAndNotificationId(requireSubject(subject), notificationId)

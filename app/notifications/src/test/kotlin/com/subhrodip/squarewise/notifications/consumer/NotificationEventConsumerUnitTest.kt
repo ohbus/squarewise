@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers.anyString
 import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers.eq
 import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.doThrow
 import org.mockito.Mockito.mock
@@ -332,6 +333,43 @@ class NotificationEventConsumerUnitTest {
 
         assertEquals(NotificationEmailDeliveryEntity.SKIPPED, delivery.status)
         verify(deliveries).save(delivery)
+    }
+
+    @Test
+    fun `markDelivery uses direct updateStatus avoiding findById and save`() {
+        val deliveries = mock(NotificationEmailDeliveryRepository::class.java)
+        doReturn(1).`when`(deliveries).claimForDispatch(
+            any(UUID::class.java) ?: UUID(0, 0),
+            any(Instant::class.java) ?: Instant.EPOCH,
+            any(Instant::class.java) ?: Instant.EPOCH
+        )
+        val event = sampleEvent(subject = "user@example.com")
+        val delivery = NotificationEmailDeliveryEntity(event.notificationId, status = NotificationEmailDeliveryEntity.PENDING)
+        doReturn(Optional.of(delivery)).`when`(deliveries).findById(event.notificationId)
+        doReturn(NotificationConsumptionOutcome.APPLIED).`when`(processor).process(event)
+        doReturn(NotificationPreferences(emailEnabled = true)).`when`(preferenceStore).get("user@example.com")
+        doReturn(true).`when`(deliveryRateLimiter).allow("user@example.com")
+        doReturn(EmailDeliveryOutcome.DELIVERED).`when`(emailDispatcher)
+            .send("user@example.com", "Notification: expense.created", "Dinner was added")
+        doReturn(1).`when`(deliveries).updateStatus(
+            any(UUID::class.java) ?: UUID(0, 0),
+            anyString(),
+            any(Instant::class.java) ?: Instant.EPOCH
+        )
+
+        val consumerWithDeliveries = NotificationEventConsumer(
+            processor, processedEvents, preferenceStore, emailDispatcher, deliveryRateLimiter, deliveries
+        )
+
+        val outcome = consumerWithDeliveries.consume(event)
+        assertEquals(NotificationConsumptionOutcome.APPLIED, outcome)
+
+        verify(deliveries).updateStatus(
+            any(UUID::class.java) ?: UUID(0, 0),
+            anyString(),
+            any(Instant::class.java) ?: Instant.EPOCH
+        )
+        verify(deliveries, never()).save(any(NotificationEmailDeliveryEntity::class.java) ?: NotificationEmailDeliveryEntity(UUID(0, 0)))
     }
 
     private fun sampleEvent(subject: String, recipientEmail: String? = null): NotificationEvent =
