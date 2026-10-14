@@ -90,6 +90,55 @@ class AccountReferenceValidatorTest {
     }
 
     @Test
+    fun `validateActiveSubject returns entity when profile is active`() {
+        val subject = "alice"
+        val profile = ProfileEntity(
+            accountId = UUID.randomUUID(),
+            subject = subject,
+            displayName = "Alice",
+            timezone = "UTC",
+            defaultCurrency = "EUR",
+            deletionRequested = false
+        )
+        `when`(profileRepository.findBySubject(subject)).thenReturn(profile)
+
+        val result = validator.validateActiveSubject(subject)
+
+        assertNotNull(result)
+        assertEquals(subject, result.subject)
+    }
+
+    @Test
+    fun `validateActiveSubject throws when subject not found`() {
+        val subject = "unknown"
+        `when`(profileRepository.findBySubject(subject)).thenReturn(null)
+
+        val ex = assertThrows(AccountsDomainException::class.java) {
+            validator.validateActiveSubject(subject)
+        }
+        assertSame(AccountsErrors.AUTHENTICATED_PROFILE_NOT_FOUND, ex.definition)
+    }
+
+    @Test
+    fun `validateActiveSubject throws when deletion requested`() {
+        val subject = "deleted-user"
+        val profile = ProfileEntity(
+            accountId = UUID.randomUUID(),
+            subject = subject,
+            displayName = "Deleted",
+            timezone = "UTC",
+            defaultCurrency = "EUR",
+            deletionRequested = true
+        )
+        `when`(profileRepository.findBySubject(subject)).thenReturn(profile)
+
+        val ex = assertThrows(AccountsDomainException::class.java) {
+            validator.validateActiveSubject(subject)
+        }
+        assertSame(AccountsErrors.PROFILE_REQUEST_INVALID, ex.definition)
+    }
+
+    @Test
     fun `validateActiveSession returns entity when session is active`() {
         val sessionId = UUID.randomUUID()
         val now = Instant.now()

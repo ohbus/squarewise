@@ -59,6 +59,22 @@ class AccountReferenceValidator(
     }
 
     /**
+     * Verifies that the specified subject corresponds to an active account profile (not deleted).
+     *
+     * @param subject the unique user subject identifier.
+     * @return the resolved [ProfileEntity].
+     * @throws AccountsDomainException if the profile does not exist or has deletion requested.
+     */
+    fun validateActiveSubject(subject: String): ProfileEntity {
+        val profile = profileRepository.findBySubject(subject)
+            ?: throw AccountsDomainException(AccountsErrors.AUTHENTICATED_PROFILE_NOT_FOUND)
+        if (profile.deletionRequested) {
+            throw AccountsDomainException(AccountsErrors.PROFILE_REQUEST_INVALID)
+        }
+        return profile
+    }
+
+    /**
      * Verifies that the specified auth session exists and is currently active (not revoked or expired).
      *
      * @param sessionId the unique identifier of the target session.

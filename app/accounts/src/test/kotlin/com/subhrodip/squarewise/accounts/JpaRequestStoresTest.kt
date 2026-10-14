@@ -12,6 +12,7 @@ import com.subhrodip.squarewise.accounts.profile.persistence.JpaProfileStore
 import com.subhrodip.squarewise.accounts.profile.persistence.ProfileRepository
 import com.subhrodip.squarewise.accounts.auth.session.AuthSessionEntity
 import com.subhrodip.squarewise.accounts.auth.session.AuthSessionRepository
+import com.subhrodip.squarewise.accounts.errors.AccountsDomainException
 import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
 
 import java.time.Instant
@@ -98,6 +99,8 @@ class JpaRequestStoresTest @Autowired constructor(
     @Test
     fun `persists and queries export requests by id and subject`() {
         val subject = "oidc|user-${UUID.randomUUID()}"
+        assertThrows(AccountsDomainException::class.java) { exportStore.request(subject) }
+        profileStore.create(UUID.randomUUID(), subject, subject)
 
         val exp1 = exportStore.request(subject)
         assertNotNull(exp1.exportId)

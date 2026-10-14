@@ -63,7 +63,9 @@ class JpaProfileStore(
             timezone = timezone,
             defaultCurrency = defaultCurrency
         )
-        return repository.save(entity).toResponse()
+        val saved = repository.save(entity).toResponse()
+        profileCache?.put(saved)
+        return saved
     }
 
     /**

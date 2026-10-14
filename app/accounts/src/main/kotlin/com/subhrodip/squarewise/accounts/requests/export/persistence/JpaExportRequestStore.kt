@@ -11,18 +11,24 @@ import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
 import java.util.UUID
 
+import com.subhrodip.squarewise.accounts.validation.AccountReferenceValidator
+import org.springframework.beans.factory.annotation.Autowired
+
 /**
  * JPA-backed implementation of [ExportRequestStore].
  *
  * Persists data export requests to PostgreSQL via [ExportRequestRepository].
  *
  * @param repository Spring Data JPA repository for export requests.
+ * @param referenceValidator Application-layer referential validator ensuring account active status.
  * @param clock Timestamp supplier, defaulting to [Instant.now].
  */
 @Primary
 @Service
 class JpaExportRequestStore(
     private val repository: ExportRequestRepository,
+    @Autowired(required = false)
+    private val referenceValidator: AccountReferenceValidator? = null,
     private val clock: () -> Instant = Instant::now
 ) : ExportRequestStore {
 
@@ -35,6 +41,7 @@ class JpaExportRequestStore(
     @Transactional
     override fun request(subject: String): ExportRequest {
         ProfileRules.requireSubject(subject)
+        referenceValidator?.validateActiveSubject(subject)
         val entity = AccountExportRequestEntity(
             exportId = UuidGenerator.next(),
             subject = subject,

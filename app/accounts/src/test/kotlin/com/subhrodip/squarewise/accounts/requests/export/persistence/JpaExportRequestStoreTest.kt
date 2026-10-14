@@ -68,4 +68,51 @@ class JpaExportRequestStoreTest {
         assertEquals(1, (listLimitMethod.invoke(null, simpleStore, "alice", 1) as List<*>).size)
         assertEquals(1, (listPageMethod.invoke(null, simpleStore, "alice", 0, 1) as List<*>).size)
     }
+
+    @Test
+    fun `request succeeds and persists when subject is active`() {
+        val validator = mock(com.subhrodip.squarewise.accounts.validation.AccountReferenceValidator::class.java)
+        val validatedStore = JpaExportRequestStore(repository, validator) { Instant.EPOCH }
+        val savedEntity = AccountExportRequestEntity(
+            exportId = UUID.randomUUID(),
+            subject = "alice",
+            status = ExportStatus.REQUESTED,
+            requestedAt = Instant.EPOCH
+        )
+        doReturn(savedEntity).`when`(repository).save(org.mockito.ArgumentMatchers.any(AccountExportRequestEntity::class.java))
+
+        val result = validatedStore.request("alice")
+
+        assertEquals("alice", result.subject)
+        assertEquals(ExportStatus.REQUESTED, result.status)
+        org.mockito.Mockito.verify(validator).validateActiveSubject("alice")
+    }
+
+    @Test
+    fun `request propagates exception when validator rejects inactive subject`() {
+        val validator = mock(com.subhrodip.squarewise.accounts.validation.AccountReferenceValidator::class.java)
+        val validatedStore = JpaExportRequestStore(repository, validator) { Instant.EPOCH }
+        org.mockito.Mockito.`when`(validator.validateActiveSubject("deleted"))
+            .thenThrow(AccountsDomainException(com.subhrodip.squarewise.errors.catalog.AccountsErrors.PROFILE_REQUEST_INVALID))
+
+        val ex = assertThrows(AccountsDomainException::class.java) {
+            validatedStore.request("deleted")
+        }
+        assertEquals(com.subhrodip.squarewise.errors.catalog.AccountsErrors.PROFILE_REQUEST_INVALID, ex.definition)
+    }
+
+    @Test
+    fun `request succeeds without referenceValidator`() {
+        val savedEntity = AccountExportRequestEntity(
+            exportId = UUID.randomUUID(),
+            subject = "alice",
+            status = ExportStatus.REQUESTED,
+            requestedAt = Instant.EPOCH
+        )
+        doReturn(savedEntity).`when`(repository).save(org.mockito.ArgumentMatchers.any(AccountExportRequestEntity::class.java))
+
+        val result = store.request("alice")
+
+        assertEquals("alice", result.subject)
+    }
 }
