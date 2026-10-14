@@ -2,9 +2,11 @@ package com.subhrodip.squarewise.expensecore.groups.persistence.store
 
 import com.subhrodip.squarewise.expensecore.groups.api.GroupMemberResponse
 import com.subhrodip.squarewise.expensecore.groups.api.GroupResponse
+import com.subhrodip.squarewise.db.routing.DbReader
 import java.util.UUID
 
 /** Reader-side persistence port for groups and memberships. */
+@DbReader("groups.query")
 interface GroupQueryStore {
     /** Lists groups in which the subject has an active membership. */
     fun list(subject: String): List<GroupResponse>

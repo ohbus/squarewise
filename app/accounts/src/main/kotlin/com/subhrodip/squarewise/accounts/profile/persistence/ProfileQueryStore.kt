@@ -1,9 +1,11 @@
 package com.subhrodip.squarewise.accounts.profile.persistence
 
 import com.subhrodip.squarewise.accounts.profile.api.ProfileResponse
+import com.subhrodip.squarewise.db.routing.DbReader
 import java.util.UUID
 
 /** Reader-side profile persistence port. */
+@DbReader("accounts.profile.query")
 interface ProfileQueryStore {
     /**
      * Retrieves an existing profile for an authenticated subject without mutating state.

@@ -1,9 +1,11 @@
 package com.subhrodip.squarewise.notifications.inbox.persistence
 
+import com.subhrodip.squarewise.db.routing.DbReader
 import com.subhrodip.squarewise.notifications.inbox.model.InboxItem
 import java.time.Instant
 import java.util.UUID
 /** Reader-side persistence port for historical inbox items. */
+@DbReader("notifications.inbox.query", target = "inbox")
 interface NotificationInboxQueryStore {
     /** Returns at most one bounded compatibility page. */
     fun list(subject: String): List<InboxItem>

@@ -1,7 +1,8 @@
 package com.subhrodip.squarewise.accounts.auth.identity
 
 import com.subhrodip.squarewise.accounts.errors.AccountsInputException
-
+import com.subhrodip.squarewise.db.routing.DbReader
+import com.subhrodip.squarewise.db.routing.DbWriter
 import java.util.UUID
 
 /**
@@ -17,6 +18,7 @@ interface AccountIdentityStore {
      * @param accountId Local account identifier stored in the session.
      * @return Current identity or `null` when the account is unmapped.
      */
+    @DbReader("accounts.identity.query")
     fun findByAccountId(accountId: UUID): AccountIdentity?
 
     /**
@@ -26,6 +28,7 @@ interface AccountIdentityStore {
      * @param providerSubject Subject claim unique to that authority.
      * @return Current identity or `null`.
      */
+    @DbReader("accounts.identity.query")
     fun findByIssuerAndSubject(issuer: String, providerSubject: String): AccountIdentity? = null
 
     /**
@@ -34,6 +37,7 @@ interface AccountIdentityStore {
      * @param email Normalized user email.
      * @return Current identity or `null`.
      */
+    @DbReader("accounts.identity.query")
     fun findByEmail(email: String): AccountIdentity? = null
 
     /**
@@ -46,6 +50,7 @@ interface AccountIdentityStore {
      * @param verified Whether the email is verified.
      * @return Enrolled [AccountIdentity].
      */
+    @DbWriter("accounts.identity.command")
     fun enrollIdentity(
         accountId: UUID,
         issuer: String,
@@ -68,6 +73,7 @@ interface AccountIdentityStore {
      * @param verified Verification status of the new email.
      * @return Updated [AccountIdentity].
      */
+    @DbWriter("accounts.identity.command")
     fun updateEmail(accountId: UUID, email: String, verified: Boolean): AccountIdentity =
         findByAccountId(accountId) ?: throw AccountsInputException("Account not found")
 }

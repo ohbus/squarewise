@@ -1,11 +1,13 @@
 package com.subhrodip.squarewise.expensecore.settlements.persistence
 
+import com.subhrodip.squarewise.db.routing.DbWriter
 import com.subhrodip.squarewise.expensecore.settlements.domain.Settlement
 import java.util.UUID
 
 /**
  * Settlement persistence port supporting atomic recording and reversal of financial settlements.
  */
+@DbWriter("settlements.command")
 interface SettlementStore {
     /**
      * Records a new settlement or returns the existing record idempotently.
