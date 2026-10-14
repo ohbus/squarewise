@@ -162,6 +162,29 @@ class GroupAccessCache(
     }
 
     /**
+     * Looks up existing non-expired active member UUIDs for a group without calling a loader.
+     *
+     * @param groupId unique group identifier.
+     * @return cached set of member UUIDs or null if not cached or expired.
+     */
+    fun peekActiveMemberIds(groupId: UUID): Set<UUID>? {
+        val now = Instant.now()
+        val cached = memberIdsCache[groupId]
+        return if (cached != null && !cached.isExpired(now)) cached.value else null
+    }
+
+    /**
+     * Directly caches active member UUIDs for a group with the default TTL.
+     *
+     * @param groupId unique group identifier.
+     * @param memberIds set of active member UUIDs.
+     */
+    fun putActiveMemberIds(groupId: UUID, memberIds: Set<UUID>) {
+        evictIfOversized(memberIdsCache)
+        memberIdsCache[groupId] = CacheEntry(memberIds, Instant.now().plus(ttl))
+    }
+
+    /**
      * Resolves full group details response, using cached object if valid.
      *
      * @param groupId unique group identifier.

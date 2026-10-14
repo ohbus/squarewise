@@ -335,6 +335,18 @@ class RecurringExpenseService(
         val requestedIds = (payers.map { it.participantId } + allocations.map { it.participantId }).toSet()
         val missingIds = requestedIds - memberSet
         if (missingIds.isEmpty()) return true
+        val cache = groupAccessCache
+        if (cache != null) {
+            val cachedActiveIds = cache.activeMemberIds(schedule.groupId) {
+                entityManager.createQuery(
+                    "SELECT m.membershipId FROM GroupMembershipEntity m WHERE m.groupId = :groupId AND m.status = 'ACTIVE'",
+                    UUID::class.java
+                ).setParameter("groupId", schedule.groupId)
+                    .resultList
+                    .toSet()
+            }
+            return missingIds.all { it in cachedActiveIds }
+        }
         val activeMissingIds = entityManager.createQuery(
             "SELECT m.membershipId FROM GroupMembershipEntity m WHERE m.groupId = :groupId AND m.membershipId IN :membershipIds AND m.status = 'ACTIVE'",
             UUID::class.java
@@ -441,6 +453,38 @@ class RecurringExpenseService(
 
     private fun getGroupMembers(groupIds: Set<UUID>): Map<UUID, List<UUID>> {
         if (groupIds.isEmpty()) return emptyMap()
+        val cache = groupAccessCache
+        if (cache != null) {
+            val result = mutableMapOf<UUID, List<UUID>>()
+            val missingGroupIds = mutableSetOf<UUID>()
+            for (groupId in groupIds) {
+                val cached = cache.peekActiveMemberIds(groupId)
+                if (cached != null) {
+                    result[groupId] = cached.toList().sorted()
+                } else {
+                    missingGroupIds.add(groupId)
+                }
+            }
+            if (missingGroupIds.isEmpty()) {
+                return result
+            }
+            val rows = entityManager.createQuery(
+                "SELECT m.groupId, m.membershipId FROM GroupMembershipEntity m WHERE m.groupId IN :groupIds AND m.status = 'ACTIVE' ORDER BY m.membershipId ASC",
+                Array<Any>::class.java
+            ).setParameter("groupIds", missingGroupIds)
+                .resultList
+
+            val byGroup = rows.groupBy(
+                { it[0] as UUID },
+                { it[1] as UUID }
+            )
+            for (groupId in missingGroupIds) {
+                val memberIds = byGroup[groupId].orEmpty().toSet()
+                cache.putActiveMemberIds(groupId, memberIds)
+                result[groupId] = memberIds.toList().sorted()
+            }
+            return result
+        }
         return groupIds.associateWith { getGroupMembers(it) }
     }
 
