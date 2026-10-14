@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.never
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
@@ -97,6 +98,21 @@ class EntityReferenceValidatorTest {
             validator.validateActiveMembership(groupId, "bob")
         }
         assertSame(ExpenseErrors.GROUP_ACCESS_HIDDEN, ex.definition)
+    }
+
+    @Test
+    fun `validateActiveMembership fast fails from cache when cached non-member without querying findByGroupIdAndSubjectAndStatus`() {
+        val groupId = UUID.randomUUID()
+        val cache = GroupAccessCache()
+        // Populate cache as non-member
+        cache.isMember(groupId, "charlie") { false }
+        val cachedValidator = EntityReferenceValidator(groupRepository, membershipRepository, cache)
+
+        val ex = assertThrows(ExpenseDomainException::class.java) {
+            cachedValidator.validateActiveMembership(groupId, "charlie")
+        }
+        assertSame(ExpenseErrors.GROUP_ACCESS_HIDDEN, ex.definition)
+        verify(membershipRepository, never()).findByGroupIdAndSubjectAndStatus(groupId, "charlie", "ACTIVE")
     }
 
     @Test

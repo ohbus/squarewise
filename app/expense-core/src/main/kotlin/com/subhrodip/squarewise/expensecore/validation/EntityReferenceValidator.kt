@@ -134,6 +134,11 @@ class EntityReferenceValidator(
      * @throws ExpenseDomainException if the caller is not an active member.
      */
     fun validateActiveMembership(groupId: UUID, actorSubject: String): GroupMembershipEntity {
+        if (groupAccessCache != null && !groupAccessCache.isMember(groupId, actorSubject) {
+            membershipRepository.existsByGroupIdAndSubjectAndStatus(groupId, actorSubject, "ACTIVE")
+        }) {
+            throw ExpenseDomainException(ExpenseErrors.GROUP_ACCESS_HIDDEN, "Group $groupId not found")
+        }
         return membershipRepository.findByGroupIdAndSubjectAndStatus(groupId, actorSubject, "ACTIVE")
             ?: throw ExpenseDomainException(ExpenseErrors.GROUP_ACCESS_HIDDEN, "Group $groupId not found")
     }
