@@ -90,14 +90,16 @@ class AuthSessionConfiguration(
         identityProviderPort: IdentityProviderPort,
         credentialDigest: CredentialDigest,
         sessionPolicy: SessionPolicy,
-        accountIdentityStore: AccountIdentityStore
+        accountIdentityStore: AccountIdentityStore,
+        referenceValidator: com.subhrodip.squarewise.accounts.validation.AccountReferenceValidator
     ): TokenSessionService =
         TokenSessionService(
             sessionRepository = sessionRepository,
             identityProviderPort = identityProviderPort,
             credentialDigest = credentialDigest,
             sessionPolicy = sessionPolicy,
-            accountIdentityStore = accountIdentityStore
+            accountIdentityStore = accountIdentityStore,
+            referenceValidator = referenceValidator
         )
 
     /**

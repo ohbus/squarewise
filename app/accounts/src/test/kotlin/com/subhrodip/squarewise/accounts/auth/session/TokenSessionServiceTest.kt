@@ -516,4 +516,62 @@ class TokenSessionServiceTest @Autowired constructor(
 
         assertNotNull(sessionRepository.findByRefreshTokenDigest(digest.digest(legacyCredential))?.revokedAt)
     }
+
+    @Test
+    fun `createSession validates account existence when validator is configured`() {
+        val mockValidator = org.mockito.Mockito.mock(com.subhrodip.squarewise.accounts.validation.AccountReferenceValidator::class.java)
+        val validatedService = TokenSessionService(
+            sessionRepository = sessionRepository,
+            identityProviderPort = tokenProvider,
+            credentialDigest = digest,
+            accountIdentityStore = object : AccountIdentityStore {
+                override fun findByAccountId(accountId: UUID): AccountIdentity? =
+                    AccountIdentity(accountId, currentSubject, "test@example.com", false)
+            },
+            referenceValidator = mockValidator
+        )
+        val accountId = UUID.randomUUID()
+        val now = Instant.now()
+
+        val response = validatedService.createSession(
+            accountId = accountId,
+            subject = currentSubject,
+            email = "user@example.com",
+            clientKind = "BROWSER",
+            deviceLabel = "Mozilla/5.0",
+            now = now
+        )
+        assertNotNull(response.accessToken)
+        org.mockito.Mockito.verify(mockValidator).validateActiveAccount(accountId)
+    }
+
+    @Test
+    fun `createSession fails when validator rejects account reference`() {
+        val mockValidator = org.mockito.Mockito.mock(com.subhrodip.squarewise.accounts.validation.AccountReferenceValidator::class.java)
+        val validatedService = TokenSessionService(
+            sessionRepository = sessionRepository,
+            identityProviderPort = tokenProvider,
+            credentialDigest = digest,
+            accountIdentityStore = object : AccountIdentityStore {
+                override fun findByAccountId(accountId: UUID): AccountIdentity? = null
+            },
+            referenceValidator = mockValidator
+        )
+        val accountId = UUID.randomUUID()
+        val now = Instant.now()
+        org.mockito.Mockito.`when`(mockValidator.validateActiveAccount(accountId)).thenThrow(
+            com.subhrodip.squarewise.accounts.errors.AccountsDomainException(com.subhrodip.squarewise.errors.catalog.AccountsErrors.AUTHENTICATED_PROFILE_NOT_FOUND)
+        )
+
+        assertThrows(SquarewiseException::class.java) {
+            validatedService.createSession(
+                accountId = accountId,
+                subject = currentSubject,
+                email = "user@example.com",
+                clientKind = "BROWSER",
+                deviceLabel = "Mozilla/5.0",
+                now = now
+            )
+        }
+    }
 }
