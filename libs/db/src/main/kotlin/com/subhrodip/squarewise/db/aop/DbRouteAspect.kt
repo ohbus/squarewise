@@ -148,11 +148,24 @@ class DbRouteAspect {
             if (methodAnnotation != null) return methodAnnotation
         }
         if (targetClass != null) {
-            val classAnnotation = AnnotatedElementUtils.findMergedAnnotation(targetClass, annotationClass)
-            if (classAnnotation != null) return classAnnotation
             val visited = mutableSetOf<Class<*>>()
             val queue = ArrayDeque<Class<*>>()
-            queue.addAll(targetClass.interfaces)
+            var currentClass: Class<*>? = targetClass
+            while (currentClass != null && currentClass != Any::class.java) {
+                val classAnnotation = AnnotatedElementUtils.findMergedAnnotation(currentClass, annotationClass)
+                if (classAnnotation != null) return classAnnotation
+                if (method != null) {
+                    try {
+                        val declaredMethod = currentClass.getDeclaredMethod(method.name, *method.parameterTypes)
+                        val declaredMethodAnnotation = AnnotatedElementUtils.findMergedAnnotation(declaredMethod, annotationClass)
+                        if (declaredMethodAnnotation != null) return declaredMethodAnnotation
+                    } catch (_: NoSuchMethodException) {
+                    }
+                }
+                queue.addAll(currentClass.interfaces)
+                currentClass = currentClass.superclass
+            }
+
             while (queue.isNotEmpty()) {
                 val iface = queue.removeFirst()
                 if (visited.add(iface)) {

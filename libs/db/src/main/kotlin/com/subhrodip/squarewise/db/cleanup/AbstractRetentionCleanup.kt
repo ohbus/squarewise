@@ -1,5 +1,6 @@
 package com.subhrodip.squarewise.db.cleanup
 
+import com.subhrodip.squarewise.db.routing.DbWriter
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -17,6 +18,7 @@ import org.springframework.transaction.support.TransactionTemplate
  * @param transactionManager optional transaction manager to wrap each batch in an isolated transaction
  * @param subjectName label used for validation error messages
  */
+@DbWriter("retention.cleanup")
 abstract class AbstractRetentionCleanup(
     private val clock: Clock = Clock.systemUTC(),
     private val retention: Duration = DEFAULT_RETENTION,

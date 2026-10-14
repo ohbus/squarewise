@@ -619,4 +619,33 @@ class DbRouteAspectTest {
         val result = aspect.aroundRoutedMethod(joinPoint)
         assertEquals("direct-proceed", result)
     }
+
+    @DbWriter("superclass.writer")
+    open class BaseWriterClass {
+        open fun baseMethod(): String = "base-ok"
+    }
+
+    class SubclassOfBaseWriter : BaseWriterClass()
+
+    @Test
+    fun `discovers DbWriter on superclass of targetClass`() {
+        val target = SubclassOfBaseWriter()
+        val method = SubclassOfBaseWriter::class.java.getMethod("baseMethod")
+        val joinPoint = mock(ProceedingJoinPoint::class.java)
+        val signature = mock(MethodSignature::class.java)
+
+        `when`(joinPoint.signature).thenReturn(signature)
+        `when`(signature.method).thenReturn(method)
+        `when`(joinPoint.target).thenReturn(target)
+        `when`(joinPoint.proceed()).thenAnswer {
+            val ctx = DbContextHolder.current()
+            assertEquals("superclass.writer", ctx.operationName)
+            assertFalse(ctx.readerEligible)
+            assertEquals(DbOperationKind.COMMAND, ctx.kind)
+            target.baseMethod()
+        }
+
+        val result = aspect.aroundRoutedMethod(joinPoint)
+        assertEquals("base-ok", result)
+    }
 }
