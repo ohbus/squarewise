@@ -47,6 +47,8 @@ import org.springframework.transaction.support.TransactionTemplate
 import org.springframework.transaction.TransactionDefinition
 import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.slf4j.LoggerFactory
+import com.subhrodip.squarewise.db.routing.DbReader
+import com.subhrodip.squarewise.db.routing.DbWriter
 import tools.jackson.databind.ObjectMapper
 import tools.jackson.databind.json.JsonMapper
 import tools.jackson.module.kotlin.KotlinModule
@@ -76,6 +78,7 @@ class RecurringExpenseService(
 ) : RecurringCommandStore, RecurringQueryStore {
     private val log = LoggerFactory.getLogger(RecurringExpenseService::class.java)
 
+    @DbWriter("recurring.schedules.create")
     @Transactional
     override fun createSchedule(groupId: UUID, request: CreateRecurringScheduleRequest): RecurringExpenseSchedule {
         validateSchedule(request)
@@ -103,6 +106,7 @@ class RecurringExpenseService(
         return scheduleRepository.save(schedule)
     }
 
+    @DbWriter("recurring.schedules.update")
     @Transactional
     override fun updateSchedule(
         groupId: UUID,
@@ -134,6 +138,7 @@ class RecurringExpenseService(
         return scheduleRepository.save(schedule)
     }
 
+    @DbWriter("recurring.schedules.pause")
     @Transactional
     override fun pauseSchedule(scheduleId: UUID): RecurringExpenseSchedule {
         val schedule = scheduleRepository.findById(scheduleId).orElseThrow {
@@ -143,6 +148,7 @@ class RecurringExpenseService(
         return scheduleRepository.save(schedule)
     }
 
+    @DbWriter("recurring.schedules.resume")
     @Transactional
     override fun resumeSchedule(scheduleId: UUID): RecurringExpenseSchedule {
         val schedule = scheduleRepository.findById(scheduleId).orElseThrow {
@@ -226,16 +232,19 @@ class RecurringExpenseService(
         asOfDate
     }
 
+    @DbReader("recurring.schedules.get")
     @Transactional(readOnly = true)
     override fun getSchedule(scheduleId: UUID): RecurringExpenseSchedule? =
         scheduleRepository.findById(scheduleId).orElse(null)
 
+    @DbReader("recurring.schedules.list")
     @Transactional(readOnly = true)
     override fun listSchedules(groupId: UUID, limit: Int): List<RecurringExpenseSchedule> {
         require(limit in 1..100) { "schedule limit must be between 1 and 100" }
         return scheduleRepository.findByGroupId(groupId, PageRequest.of(0, limit))
     }
 
+    @DbReader("recurring.occurrences.get")
     @Transactional(readOnly = true)
     override fun getOccurrences(scheduleId: UUID, limit: Int): List<RecurringExpenseOccurrence> {
         require(limit in 1..100) { "occurrence limit must be between 1 and 100" }

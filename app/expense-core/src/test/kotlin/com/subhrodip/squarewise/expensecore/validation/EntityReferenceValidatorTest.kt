@@ -63,6 +63,22 @@ class EntityReferenceValidatorTest {
     }
 
     @Test
+    fun `validateActiveGroup uses groupAccessCache to eliminate duplicate repository lookups`() {
+        val cache = GroupAccessCache()
+        val cachedValidator = EntityReferenceValidator(groupRepository, membershipRepository, cache)
+        val groupId = UUID.randomUUID()
+        val group = GroupEntity(groupId, "Vacation", "TRIP", "EUR", status = "ACTIVE")
+        `when`(groupRepository.findById(groupId)).thenReturn(Optional.of(group))
+
+        val first = cachedValidator.validateActiveGroup(groupId)
+        val second = cachedValidator.validateActiveGroup(groupId)
+
+        assertEquals("Vacation", first.name)
+        assertEquals("Vacation", second.name)
+        verify(groupRepository, times(1)).findById(groupId)
+    }
+
+    @Test
     fun `validateActiveMembership succeeds for active membership`() {
         val groupId = UUID.randomUUID()
         val membership = GroupMembershipEntity(UUID.randomUUID(), groupId, "alice")

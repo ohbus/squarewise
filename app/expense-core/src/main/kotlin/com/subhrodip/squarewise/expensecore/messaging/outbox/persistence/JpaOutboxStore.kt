@@ -6,6 +6,8 @@ import jakarta.persistence.EntityManager
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
+import com.subhrodip.squarewise.db.routing.DbReader
+import com.subhrodip.squarewise.db.routing.DbWriter
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -28,6 +30,7 @@ class JpaOutboxStore(
     /**
      * Durably stores an outbox event in the database within the calling local transaction.
      */
+    @DbWriter("outbox.append")
     @Transactional
     override fun append(message: OutboxMessage) {
         require(!repository.existsById(message.eventId)) { "eventId already exists" }
@@ -37,6 +40,7 @@ class JpaOutboxStore(
     /**
      * Claims up to [limit] pending or expired-lease messages using `FOR UPDATE SKIP LOCKED`.
      */
+    @DbWriter("outbox.claim")
     @Transactional
     override fun claim(limit: Int, lease: Duration): List<OutboxMessage> {
         require(limit > 0) { "limit must be positive" }
@@ -59,6 +63,7 @@ class JpaOutboxStore(
     /**
      * Marks an outbox event as published upon successful dispatch to the message broker.
      */
+    @DbWriter("outbox.acknowledge")
     @Transactional
     override fun acknowledge(eventId: UUID) {
         repository.findForUpdate(eventId)?.apply {
@@ -70,6 +75,7 @@ class JpaOutboxStore(
     /**
      * Rejects an outbox event after a failed publish attempt, either rescheduling or marking as PARKED.
      */
+    @DbWriter("outbox.reject")
     @Transactional
     override fun reject(eventId: UUID, maxAttempts: Int, retryAfter: Duration) {
         require(maxAttempts > 0) { "maxAttempts must be positive" }
@@ -88,6 +94,7 @@ class JpaOutboxStore(
     /**
      * Returns a bounded snapshot of messages ordered chronologically.
      */
+    @DbReader("outbox.snapshot")
     @Transactional(readOnly = true)
     override fun snapshot(): List<OutboxMessage> =
         repository.findAllByOrderByOccurredAtAscEventIdAsc(PageRequest.of(0, 100))
