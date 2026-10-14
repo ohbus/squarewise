@@ -140,6 +140,28 @@ class DbAutoConfigurationTest {
     }
 
     @Test
+    fun `normal mode builds configured writer datasources`() {
+        val writer = mock(HikariDataSource::class.java)
+        val writerPool = PoolProperties(url = "jdbc:postgresql://writer/db", username = "app")
+        val shardPool = PoolProperties(url = "jdbc:postgresql://shard-1/db", username = "app")
+        val routing = configuration.squarewiseDataSource(
+            DbProperties(writer = writerPool, writers = mapOf("shard-1" to shardPool)),
+            writer,
+            DbReaderHealth(),
+            DbTelemetry(),
+        ) as DbRoutingDataSource
+
+        val shard = routing.writerDataSources()["shard-1"] as HikariDataSource
+        try {
+            assertNotSame(writer, shard)
+            assertEquals("jdbc:postgresql://shard-1/db", shard.jdbcUrl)
+            assertEquals("app", shard.username)
+        } finally {
+            shard.close()
+        }
+    }
+
+    @Test
     fun `reader health scheduler accepts routed and ordinary datasources`() {
         val properties = DbProperties(readerLagBudgetMs = 250)
         val health = DbReaderHealth()

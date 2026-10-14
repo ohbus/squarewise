@@ -75,13 +75,15 @@ class DbAutoConfiguration {
         telemetry: DbTelemetry
     ): DataSource {
         properties.writer.validate("writer")
+        properties.writers.forEach { (name, pool) -> pool.validate("writers.$name") }
         properties.readers.forEach { (name, pool) -> pool.validate("readers.$name") }
+        val writers = properties.writers.mapValues { (name, pool) -> buildDataSource(pool, "writer.$name") }
         val readers = if (properties.readerIsWriterDiagnostic) {
             properties.readers.keys.associateWith { writer }
         } else {
             properties.readers.mapValues { (name, pool) -> buildDataSource(pool, "reader.$name") }
         }
-        return DbRoutingDataSource(writer, readers, readerHealth, telemetry)
+        return DbRoutingDataSource(writer, readers, readerHealth, telemetry, writers = writers)
     }
 
     /** Registers causal HTTP propagation only for stateful applications with routed DB access. */
