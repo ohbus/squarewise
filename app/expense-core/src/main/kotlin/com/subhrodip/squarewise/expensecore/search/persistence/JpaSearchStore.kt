@@ -8,6 +8,7 @@ import com.subhrodip.squarewise.expensecore.search.model.SearchExpense
 import com.subhrodip.squarewise.expensecore.categories.ExpenseCategory
 import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
 import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
+import com.subhrodip.squarewise.db.routing.DbReader
 import org.springframework.data.domain.PageRequest
 import org.springframework.context.annotation.Primary
 import org.springframework.stereotype.Service
@@ -31,6 +32,7 @@ class JpaSearchStore(
      * @param query bounded group-scoped search request
      * @return list of [SearchExpense] domain records
      */
+    @DbReader(operation = "expense.search", target = "search")
     @Transactional(readOnly = true)
     override fun findSearchExpenses(query: SearchQuery): List<SearchExpense> {
         require(query.limit in 1..ExpenseSearch.MAX_EXPORT_ROWS)

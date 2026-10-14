@@ -20,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Primary
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import com.subhrodip.squarewise.db.routing.DbWriter
 import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
 import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
 
@@ -55,6 +56,7 @@ class JpaSettlementStore(
      * @param actorSubject the authenticated subject recording the settlement
      * @return the persisted or existing domain settlement
      */
+    @DbWriter("settlement.record")
     @Transactional
     override fun record(groupId: UUID, settlement: Settlement, actorSubject: String): Settlement {
         val group = lockActiveGroup(groupId, actorSubject)
@@ -106,6 +108,7 @@ class JpaSettlementStore(
      * @return the updated domain settlement with REVERSED status
      * @throws ExpenseDomainException with [ExpenseErrors.SETTLEMENT_NOT_FOUND] if the settlement cannot be found
      */
+    @DbWriter("settlement.reverse")
     @Transactional
     override fun reverse(groupId: UUID, settlementId: UUID, reason: String, actorSubject: String): Settlement {
         val group = lockActiveGroup(groupId, actorSubject)

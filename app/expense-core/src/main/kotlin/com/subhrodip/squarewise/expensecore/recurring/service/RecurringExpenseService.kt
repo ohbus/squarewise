@@ -20,6 +20,7 @@ import com.subhrodip.squarewise.expensecore.recurring.domain.RecurringExpenseSch
 import com.subhrodip.squarewise.expensecore.recurring.domain.RecurringExpenseSpecification
 import com.subhrodip.squarewise.expensecore.recurring.persistence.RecurringExpenseOccurrenceRepository
 import com.subhrodip.squarewise.expensecore.recurring.persistence.RecurringExpenseScheduleRepository
+import com.subhrodip.squarewise.expensecore.groups.cache.GroupAccessCache
 import com.subhrodip.squarewise.expensecore.validation.EntityReferenceValidator
 import com.subhrodip.squarewise.ids.generation.UuidGenerator
 import jakarta.persistence.EntityManager
@@ -69,7 +70,9 @@ class RecurringExpenseService(
         .build(),
     @Autowired(required = false)
     private val transactionManager: PlatformTransactionManager? = null,
-    private val referenceValidator: EntityReferenceValidator
+    private val referenceValidator: EntityReferenceValidator,
+    @Autowired(required = false)
+    private val groupAccessCache: GroupAccessCache? = null
 ) : RecurringCommandStore, RecurringQueryStore {
     private val log = LoggerFactory.getLogger(RecurringExpenseService::class.java)
 
@@ -432,12 +435,25 @@ class RecurringExpenseService(
         return groupIds.associateWith { getGroupMembers(it) }
     }
 
-    private fun getGroupMembers(groupId: UUID): List<UUID> = entityManager.createQuery(
-        "SELECT m.membershipId FROM GroupMembershipEntity m WHERE m.groupId = :groupId AND m.status = 'ACTIVE' ORDER BY m.membershipId ASC",
-        UUID::class.java
-    ).setParameter("groupId", groupId)
-        .setMaxResults(ExpenseRequestLimits.MAX_PARTICIPANTS + 1)
-        .resultList
+    private fun getGroupMembers(groupId: UUID): List<UUID> {
+        val cache = groupAccessCache
+        if (cache != null) {
+            return cache.activeMemberIds(groupId) {
+                entityManager.createQuery(
+                    "SELECT m.membershipId FROM GroupMembershipEntity m WHERE m.groupId = :groupId AND m.status = 'ACTIVE' ORDER BY m.membershipId ASC",
+                    UUID::class.java
+                ).setParameter("groupId", groupId)
+                    .setMaxResults(ExpenseRequestLimits.MAX_PARTICIPANTS + 1)
+                    .resultList.toSet()
+            }.toList().sorted()
+        }
+        return entityManager.createQuery(
+            "SELECT m.membershipId FROM GroupMembershipEntity m WHERE m.groupId = :groupId AND m.status = 'ACTIVE' ORDER BY m.membershipId ASC",
+            UUID::class.java
+        ).setParameter("groupId", groupId)
+            .setMaxResults(ExpenseRequestLimits.MAX_PARTICIPANTS + 1)
+            .resultList
+    }
 
     private fun validateSchedule(request: CreateRecurringScheduleRequest) {
         validateScheduleValues(

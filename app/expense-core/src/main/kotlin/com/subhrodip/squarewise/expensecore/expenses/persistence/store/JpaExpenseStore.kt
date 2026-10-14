@@ -24,6 +24,8 @@ import com.subhrodip.squarewise.expensecore.messaging.outbox.persistence.OutboxS
 import com.subhrodip.squarewise.expensecore.validation.EntityReferenceValidator
 import com.subhrodip.squarewise.expensecore.sync.persistence.SynchronizationStore
 import com.subhrodip.squarewise.expensecore.groups.cache.GroupAccessCache
+import com.subhrodip.squarewise.db.routing.DbReader
+import com.subhrodip.squarewise.db.routing.DbWriter
 import org.springframework.beans.factory.annotation.Autowired
 import com.subhrodip.squarewise.ids.generation.UuidGenerator
 import java.time.Instant
@@ -60,6 +62,7 @@ class JpaExpenseStore(
      * Persists a new expense, updates group revision, creates ledger postings,
      * emits an outbox event, and creates a sync record.
      */
+    @DbWriter("expense.create")
     @Transactional
     override fun create(
         groupId: UUID,
@@ -225,6 +228,7 @@ class JpaExpenseStore(
      * Updates an existing expense in place, generates double-entry reversal postings,
      * writes new balance postings, updates group revision, emits outbox and sync events.
      */
+    @DbWriter("expense.update")
     @Transactional
     override fun update(groupId: UUID, expenseId: UUID, update: ExpenseRecord, actorSubject: String?): ExpenseRecord {
         val group = groupRepository.findForMembershipUpdate(groupId)
@@ -333,6 +337,7 @@ class JpaExpenseStore(
     /**
      * Performs a soft delete on an expense, posting reversal balance entries and recording outbox and sync changes.
      */
+    @DbWriter("expense.delete")
     @Transactional
     override fun delete(groupId: UUID, expenseId: UUID, version: Long?, actorSubject: String?) {
         val group = groupRepository.findForMembershipUpdate(groupId)
@@ -392,6 +397,7 @@ class JpaExpenseStore(
     /**
      * Looks up an active (non-deleted) expense by its ID.
      */
+    @DbReader("expense.get")
     @Transactional(readOnly = true)
     override fun findById(expenseId: UUID): ExpenseRecord? {
         val entity = expenseRepository.findById(expenseId).orElse(null) ?: return null
@@ -401,6 +407,7 @@ class JpaExpenseStore(
     /**
      * Lists active expenses for a group, optionally filtered by category.
      */
+    @DbReader("expense.list")
     @Transactional(readOnly = true)
     override fun list(groupId: UUID, category: String?, cursor: String?, limit: Int): List<ExpenseRecord> {
         val boundedLimit = limit.coerceIn(1, 100)
@@ -426,6 +433,7 @@ class JpaExpenseStore(
      * Calculates net balances per participant and currency across all postings in a group.
      * Oversized result sets are rejected rather than truncated to preserve financial correctness.
      */
+    @DbReader("expense.balances")
     @Transactional(readOnly = true)
     override fun balances(groupId: UUID): List<GroupBalanceItem> {
         if (groupAccessCache != null) {

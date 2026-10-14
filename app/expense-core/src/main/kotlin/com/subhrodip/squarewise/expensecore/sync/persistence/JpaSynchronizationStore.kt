@@ -13,6 +13,8 @@ import org.springframework.context.annotation.Primary
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import com.subhrodip.squarewise.db.routing.DbReader
+import com.subhrodip.squarewise.db.routing.DbWriter
 
 /**
  * Spring Data JPA implementation of [SynchronizationStore].
@@ -31,6 +33,7 @@ class JpaSynchronizationStore(
     /**
      * Records a change for an entity under the given group and returns the newly assigned revision.
      */
+    @DbWriter("expense.sync.append")
     @Transactional
     override fun append(groupId: String, entityId: String, payload: String?): Long {
         require(groupId.isNotBlank()) { "groupId must not be blank" }
@@ -53,6 +56,7 @@ class JpaSynchronizationStore(
     /**
      * Records a tombstone deletion for an entity under the given group.
      */
+    @DbWriter("expense.sync.delete")
     @Transactional
     override fun delete(groupId: String, entityId: String): Long {
         require(groupId.isNotBlank()) { "groupId must not be blank" }
@@ -75,6 +79,7 @@ class JpaSynchronizationStore(
     /**
      * Retrieves a page of sync changes after a given cursor for the specified group.
      */
+    @DbReader("expense.sync.page")
     @Transactional(readOnly = true)
     override fun snapshot(groupId: String, after: String?, limit: Int): SyncPage {
         require(groupId.isNotBlank()) { "groupId must not be blank" }
