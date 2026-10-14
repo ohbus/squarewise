@@ -27,6 +27,7 @@ import com.subhrodip.squarewise.db.routing.DbReader
 import com.subhrodip.squarewise.db.routing.DbWriter
 
 import com.subhrodip.squarewise.expensecore.groups.cache.GroupAccessCache
+import com.subhrodip.squarewise.expensecore.validation.EntityReferenceValidator
 import org.springframework.beans.factory.annotation.Autowired
 
 /**
@@ -42,8 +43,11 @@ class RecurringExpenseController(
     private val groupRepository: GroupRepository,
     private val membershipRepository: GroupMembershipRepository,
     @Autowired(required = false)
-    private val groupAccessCache: GroupAccessCache? = null
+    private val groupAccessCache: GroupAccessCache? = null,
+    @Autowired(required = false)
+    referenceValidator: EntityReferenceValidator? = null
 ) {
+    private val validator = referenceValidator ?: EntityReferenceValidator(groupRepository, membershipRepository, groupAccessCache)
 
     @PostMapping(ApiEndpoints.ExpenseCore.V1.SCHEDULES_SUBPATH)
     @ResponseStatus(HttpStatus.CREATED)
@@ -162,14 +166,7 @@ class RecurringExpenseController(
         }
         val subject = principal?.name?.takeIf { it.isNotBlank() }
             ?: throw ExpenseDomainException(PlatformErrors.AUTHENTICATION_REQUIRED, "Authenticated subject is required")
-        val isMember = if (groupAccessCache != null) {
-            groupAccessCache.isMember(groupId, subject) {
-                membershipRepository.existsByGroupIdAndSubject(groupId, subject)
-            }
-        } else {
-            membershipRepository.existsByGroupIdAndSubject(groupId, subject)
-        }
-        if (!isMember) {
+        if (!validator.isActiveMember(groupId, subject)) {
             throw ExpenseDomainException(ExpenseErrors.GROUP_ACCESS_HIDDEN, "Group $groupId not found")
         }
     }

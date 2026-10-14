@@ -6,6 +6,7 @@ import com.subhrodip.squarewise.expensecore.sync.api.toResponse
 import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupMembershipRepository
 
 import com.subhrodip.squarewise.expensecore.groups.cache.GroupAccessCache
+import com.subhrodip.squarewise.expensecore.validation.EntityReferenceValidator
 import org.springframework.beans.factory.annotation.Autowired
 import java.security.Principal
 import java.util.UUID
@@ -25,8 +26,12 @@ class SyncController(
     private val store: SynchronizationStore,
     private val memberships: GroupMembershipRepository,
     @Autowired(required = false)
-    private val groupAccessCache: GroupAccessCache? = null
+    private val groupAccessCache: GroupAccessCache? = null,
+    @Autowired(required = false)
+    referenceValidator: EntityReferenceValidator? = null
 ) {
+    private val validator = referenceValidator ?: EntityReferenceValidator(membershipRepository = memberships, groupAccessCache = groupAccessCache)
+
     @GetMapping(ApiEndpoints.ExpenseCore.V1.SYNC_SNAPSHOT_RELATIVE_SUBPATH, ApiEndpoints.ExpenseCore.V1.SYNC_CHANGES_RELATIVE_SUBPATH)
     @DbReader("expense.sync.page")
     fun page(
@@ -36,14 +41,7 @@ class SyncController(
         principal: Principal
     ): SyncPageResponse {
         if (principal.name.isBlank()) throw ExpenseDomainException(PlatformErrors.AUTHENTICATION_REQUIRED, "Authenticated subject is required")
-        val isMember = if (groupAccessCache != null) {
-            groupAccessCache.isMember(groupId, principal.name) {
-                memberships.existsByGroupIdAndSubjectAndStatus(groupId, principal.name, "ACTIVE")
-            }
-        } else {
-            memberships.existsByGroupIdAndSubjectAndStatus(groupId, principal.name, "ACTIVE")
-        }
-        if (!isMember) {
+        if (!validator.isActiveMember(groupId, principal.name)) {
             throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group $groupId not found")
         }
         if (limit !in 1..100) throw ExpenseDomainException(ExpenseErrors.EXPENSE_REQUEST_INVALID, "limit must be between 1 and 100")

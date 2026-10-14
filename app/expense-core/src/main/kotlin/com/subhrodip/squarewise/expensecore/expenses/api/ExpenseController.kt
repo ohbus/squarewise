@@ -42,6 +42,7 @@ import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
 import com.subhrodip.squarewise.expensecore.groups.cache.GroupAccessCache
 import org.springframework.beans.factory.annotation.Autowired
 
+import com.subhrodip.squarewise.expensecore.validation.EntityReferenceValidator
 import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
 @RestController
 @Validated
@@ -51,8 +52,11 @@ class ExpenseController(
     private val membershipRepository: GroupMembershipRepository,
     private val groupRepository: GroupRepository,
     @Autowired(required = false)
-    private val groupAccessCache: GroupAccessCache? = null
+    private val groupAccessCache: GroupAccessCache? = null,
+    @Autowired(required = false)
+    referenceValidator: EntityReferenceValidator? = null
 ) {
+    private val validator = referenceValidator ?: EntityReferenceValidator(groupRepository, membershipRepository, groupAccessCache)
 
     @PostMapping(ApiEndpoints.ExpenseCore.V1.EXPENSES_SUBPATH)
     @ResponseStatus(HttpStatus.CREATED)
@@ -177,32 +181,8 @@ class ExpenseController(
         return GroupBalancesResponse(groupId, balances)
     }
 
-    private fun ensureActiveMember(groupId: UUID, principal: Principal?): String {
-        val subject = principal?.name?.trim()
-            ?.takeIf { it.isNotEmpty() }
-            ?: throw ExpenseDomainException(PlatformErrors.AUTHENTICATION_REQUIRED, "Authenticated subject is required")
-        val isMember = if (groupAccessCache != null) {
-            groupAccessCache.isMember(groupId, subject) {
-                membershipRepository.existsByGroupIdAndSubject(groupId, subject)
-            }
-        } else {
-            membershipRepository.existsByGroupIdAndSubject(groupId, subject)
-        }
-        if (!isMember) {
-            throw ExpenseDomainException(ExpenseErrors.GROUP_ACCESS_HIDDEN, "Group $groupId not found")
-        }
-        val status = if (groupAccessCache != null) {
-            groupAccessCache.groupStatus(groupId) {
-                groupRepository.findById(groupId).map { it.status }.orElse(null)
-            }
-        } else {
-            groupRepository.findById(groupId).map { it.status }.orElse(null)
-        }
-        if (status != "ACTIVE") {
-            throw ExpenseDomainException(ExpenseErrors.GROUP_ARCHIVED, "Group $groupId is archived")
-        }
-        return subject
-    }
+    private fun ensureActiveMember(groupId: UUID, principal: Principal?): String =
+        validator.ensureActiveMember(groupId, principal)
 
     private fun validateRequestBounds(request: CreateExpenseRequest, idempotencyKey: String) {
         if (idempotencyKey.length > ExpenseRequestLimits.MAX_IDEMPOTENCY_KEY_LENGTH) {

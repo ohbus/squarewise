@@ -1,6 +1,7 @@
 package com.subhrodip.squarewise.expensecore.validation
 
 import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
+import com.subhrodip.squarewise.errors.catalog.PlatformErrors
 import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
 import com.subhrodip.squarewise.expensecore.groups.cache.GroupAccessCache
 import com.subhrodip.squarewise.expensecore.groups.domain.GroupEntity
@@ -16,6 +17,7 @@ import org.mockito.Mockito.mock
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
+import java.security.Principal
 import java.util.Optional
 import java.util.UUID
 
@@ -352,4 +354,98 @@ class EntityReferenceValidatorTest {
         }
         assertSame(ExpenseErrors.GROUP_NOT_FOUND, ex.definition)
     }
+
+    @Test
+    fun `ensureActiveMember succeeds for active member of active group`() {
+        val groupId = UUID.randomUUID()
+        val principal = Principal { "alice" }
+        `when`(membershipRepository.existsByGroupIdAndSubjectAndStatus(groupId, "alice", "ACTIVE")).thenReturn(true)
+        `when`(groupRepository.findById(groupId)).thenReturn(Optional.of(GroupEntity(groupId, "Trip", "TRIP", "USD", status = "ACTIVE")))
+
+        val subject = validator.ensureActiveMember(groupId, principal)
+        assertEquals("alice", subject)
+    }
+
+    @Test
+    fun `ensureActiveMember fails on missing or blank principal`() {
+        val groupId = UUID.randomUUID()
+        val exNull = assertThrows(ExpenseDomainException::class.java) {
+            validator.ensureActiveMember(groupId, null)
+        }
+        assertSame(PlatformErrors.AUTHENTICATION_REQUIRED, exNull.definition)
+
+        val exBlank = assertThrows(ExpenseDomainException::class.java) {
+            validator.ensureActiveMember(groupId, Principal { "   " })
+        }
+        assertSame(PlatformErrors.AUTHENTICATION_REQUIRED, exBlank.definition)
+    }
+
+    @Test
+    fun `ensureActiveMember fails when not active member`() {
+        val groupId = UUID.randomUUID()
+        `when`(membershipRepository.existsByGroupIdAndSubjectAndStatus(groupId, "bob", "ACTIVE")).thenReturn(false)
+
+        val ex = assertThrows(ExpenseDomainException::class.java) {
+            validator.ensureActiveMember(groupId, Principal { "bob" })
+        }
+        assertSame(ExpenseErrors.GROUP_ACCESS_HIDDEN, ex.definition)
+    }
+
+    @Test
+    fun `ensureActiveMember fails when group is archived`() {
+        val groupId = UUID.randomUUID()
+        `when`(membershipRepository.existsByGroupIdAndSubjectAndStatus(groupId, "alice", "ACTIVE")).thenReturn(true)
+        `when`(groupRepository.findById(groupId)).thenReturn(Optional.of(GroupEntity(groupId, "Trip", "TRIP", "USD", status = "ARCHIVED")))
+
+        val ex = assertThrows(ExpenseDomainException::class.java) {
+            validator.ensureActiveMember(groupId, Principal { "alice" })
+        }
+        assertSame(ExpenseErrors.GROUP_ARCHIVED, ex.definition)
+    }
+
+    @Test
+    fun `ensureMembership succeeds for active member`() {
+        val groupId = UUID.randomUUID()
+        val principal = Principal { "alice" }
+        `when`(membershipRepository.existsByGroupIdAndSubjectAndStatus(groupId, "alice", "ACTIVE")).thenReturn(true)
+
+        val subject = validator.ensureMembership(groupId, principal)
+        assertEquals("alice", subject)
+    }
+
+    @Test
+    fun `ensureMembership fails on missing or blank principal`() {
+        val groupId = UUID.randomUUID()
+        val exNull = assertThrows(ExpenseDomainException::class.java) {
+            validator.ensureMembership(groupId, null)
+        }
+        assertSame(PlatformErrors.AUTHENTICATION_REQUIRED, exNull.definition)
+
+        val exBlank = assertThrows(ExpenseDomainException::class.java) {
+            validator.ensureMembership(groupId, Principal { "" })
+        }
+        assertSame(PlatformErrors.AUTHENTICATION_REQUIRED, exBlank.definition)
+    }
+
+    @Test
+    fun `ensureMembership fails when not a member`() {
+        val groupId = UUID.randomUUID()
+        `when`(membershipRepository.existsByGroupIdAndSubjectAndStatus(groupId, "eve", "ACTIVE")).thenReturn(false)
+
+        val ex = assertThrows(ExpenseDomainException::class.java) {
+            validator.ensureMembership(groupId, Principal { "eve" })
+        }
+        assertSame(ExpenseErrors.GROUP_ACCESS_HIDDEN, ex.definition)
+    }
+
+    @Test
+    fun `validator without groupRepository supports ensureMembership and isActiveMember`() {
+        val standaloneValidator = EntityReferenceValidator(membershipRepository = membershipRepository)
+        val groupId = UUID.randomUUID()
+        `when`(membershipRepository.existsByGroupIdAndSubjectAndStatus(groupId, "carol", "ACTIVE")).thenReturn(true)
+
+        assertTrue(standaloneValidator.isActiveMember(groupId, "carol"))
+        assertEquals("carol", standaloneValidator.ensureMembership(groupId, Principal { "carol" }))
+    }
 }
+

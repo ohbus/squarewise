@@ -26,6 +26,7 @@ import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
 
 import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
 import com.subhrodip.squarewise.expensecore.groups.cache.GroupAccessCache
+import com.subhrodip.squarewise.expensecore.validation.EntityReferenceValidator
 import org.springframework.beans.factory.annotation.Autowired
 
 @RestController
@@ -34,8 +35,12 @@ class SettlementController(
     private val service: SettlementService,
     private val membershipRepository: GroupMembershipRepository,
     @Autowired(required = false)
-    private val groupAccessCache: GroupAccessCache? = null
+    private val groupAccessCache: GroupAccessCache? = null,
+    @Autowired(required = false)
+    referenceValidator: EntityReferenceValidator? = null
 ) {
+    private val validator = referenceValidator ?: EntityReferenceValidator(membershipRepository = membershipRepository, groupAccessCache = groupAccessCache)
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @DbWriter("settlement.record")
@@ -59,18 +64,7 @@ class SettlementController(
     }
 
     private fun ensureMembership(groupId: UUID, principal: Principal?) {
-        val subject = principal?.name?.takeIf { it.isNotBlank() }
-            ?: throw ExpenseDomainException(PlatformErrors.AUTHENTICATION_REQUIRED, "Authenticated subject is required")
-        val isMember = if (groupAccessCache != null) {
-            groupAccessCache.isMember(groupId, subject) {
-                membershipRepository.existsByGroupIdAndSubject(groupId, subject)
-            }
-        } else {
-            membershipRepository.existsByGroupIdAndSubject(groupId, subject)
-        }
-        if (!isMember) {
-            throw ExpenseDomainException(ExpenseErrors.GROUP_ACCESS_HIDDEN, "Group $groupId not found")
-        }
+        validator.ensureMembership(groupId, principal)
     }
 
     private fun parseAmount(amountMinor: String): Long =

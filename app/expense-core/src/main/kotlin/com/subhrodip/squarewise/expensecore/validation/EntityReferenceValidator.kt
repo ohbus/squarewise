@@ -1,6 +1,7 @@
 package com.subhrodip.squarewise.expensecore.validation
 
 import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
+import com.subhrodip.squarewise.errors.catalog.PlatformErrors
 import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
 import com.subhrodip.squarewise.expensecore.groups.domain.GroupEntity
 import com.subhrodip.squarewise.expensecore.groups.domain.GroupMembershipEntity
@@ -9,6 +10,7 @@ import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupR
 import com.subhrodip.squarewise.expensecore.groups.cache.GroupAccessCache
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
+import java.security.Principal
 import java.util.UUID
 
 /**
@@ -20,11 +22,53 @@ import java.util.UUID
  */
 @Component
 class EntityReferenceValidator(
-    private val groupRepository: GroupRepository,
+    @Autowired(required = false)
+    private val groupRepository: GroupRepository? = null,
     private val membershipRepository: GroupMembershipRepository,
     @Autowired(required = false)
     private val groupAccessCache: GroupAccessCache? = null
 ) {
+
+    /**
+     * Asserts that the authenticated principal is present and is an active member of an active group.
+     *
+     * Leverages bounded [GroupAccessCache] to eliminate database lookups at 10M DAU scale.
+     *
+     * @param groupId unique group identifier.
+     * @param principal authenticated user principal.
+     * @return validated non-blank user subject string.
+     * @throws ExpenseDomainException if unauthenticated, not an active member, or if group is archived.
+     */
+    fun ensureActiveMember(groupId: UUID, principal: Principal?): String {
+        val subject = principal?.name?.trim()?.takeIf { it.isNotEmpty() }
+            ?: throw ExpenseDomainException(PlatformErrors.AUTHENTICATION_REQUIRED, "Authenticated subject is required")
+        if (!isActiveMember(groupId, subject)) {
+            throw ExpenseDomainException(ExpenseErrors.GROUP_ACCESS_HIDDEN, "Group $groupId not found")
+        }
+        if (!isActiveGroup(groupId)) {
+            throw ExpenseDomainException(ExpenseErrors.GROUP_ARCHIVED, "Group $groupId is archived")
+        }
+        return subject
+    }
+
+    /**
+     * Asserts that the authenticated principal is present and holds active membership in the group.
+     *
+     * Leverages bounded [GroupAccessCache] to eliminate database lookups at 10M DAU scale.
+     *
+     * @param groupId unique group identifier.
+     * @param principal authenticated user principal.
+     * @return validated non-blank user subject string.
+     * @throws ExpenseDomainException if unauthenticated or not an active member.
+     */
+    fun ensureMembership(groupId: UUID, principal: Principal?): String {
+        val subject = principal?.name?.trim()?.takeIf { it.isNotEmpty() }
+            ?: throw ExpenseDomainException(PlatformErrors.AUTHENTICATION_REQUIRED, "Authenticated subject is required")
+        if (!isActiveMember(groupId, subject)) {
+            throw ExpenseDomainException(ExpenseErrors.GROUP_ACCESS_HIDDEN, "Group $groupId not found")
+        }
+        return subject
+    }
 
     /**
      * Checks whether the specified subject holds an active membership, consulting cache when available.
@@ -52,10 +96,10 @@ class EntityReferenceValidator(
     fun isActiveGroup(groupId: UUID): Boolean {
         val status = if (groupAccessCache != null) {
             groupAccessCache.groupStatus(groupId) {
-                groupRepository.findById(groupId).map { it.status }.orElse(null)
+                groupRepository?.findById(groupId)?.map { it.status }?.orElse(null)
             }
         } else {
-            groupRepository.findById(groupId).map { it.status }.orElse(null)
+            groupRepository?.findById(groupId)?.map { it.status }?.orElse(null)
         }
         return status == "ACTIVE"
     }
@@ -68,7 +112,7 @@ class EntityReferenceValidator(
      * @throws ExpenseDomainException if the group does not exist or has been archived.
      */
     fun validateActiveGroup(groupId: UUID): GroupEntity {
-        val group = groupRepository.findById(groupId).orElse(null)
+        val group = groupRepository?.findById(groupId)?.orElse(null)
             ?: throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group $groupId not found")
         if (group.status == "ARCHIVED") {
             throw ExpenseDomainException(ExpenseErrors.GROUP_ARCHIVED, "Group $groupId is archived")
