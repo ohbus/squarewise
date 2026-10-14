@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional
 import com.subhrodip.squarewise.db.routing.DbReader
 import com.subhrodip.squarewise.db.routing.DbWriter
 import org.springframework.core.annotation.AnnotatedElementUtils
+import org.springframework.core.annotation.AnnotationUtils
 import java.lang.reflect.Method
 
 /**
@@ -193,7 +194,7 @@ class DbRouteAspect {
         annotationClass: Class<A>
     ): A? {
         if (method == null) return null
-        val direct = org.springframework.core.annotation.AnnotationUtils.findAnnotation(method, annotationClass)
+        val direct = AnnotationUtils.findAnnotation(method, annotationClass)
         if (direct != null) return direct
 
         val classesToInspect = listOfNotNull(targetClass, method.declaringClass).distinct()
@@ -215,7 +216,7 @@ class DbRouteAspect {
         while (currentClass != null && currentClass != Any::class.java) {
             try {
                 val declaredMethod = currentClass.getDeclaredMethod(method.name, *method.parameterTypes)
-                val annotation = org.springframework.core.annotation.AnnotationUtils.findAnnotation(declaredMethod, annotationClass)
+                val annotation = AnnotationUtils.findAnnotation(declaredMethod, annotationClass)
                 if (annotation != null) return annotation
             } catch (_: NoSuchMethodException) {
             }
@@ -227,7 +228,7 @@ class DbRouteAspect {
             if (visited.add(iface)) {
                 try {
                     val ifaceMethod = iface.getMethod(method.name, *method.parameterTypes)
-                    val annotation = org.springframework.core.annotation.AnnotationUtils.findAnnotation(ifaceMethod, annotationClass)
+                    val annotation = AnnotationUtils.findAnnotation(ifaceMethod, annotationClass)
                     if (annotation != null) return annotation
                 } catch (_: NoSuchMethodException) {
                 }

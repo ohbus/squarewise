@@ -674,6 +674,77 @@ class LiveUpdateFanoutTest {
         assertThrows<IllegalArgumentException> { LiveUpdateFanout(maxSubscriptionsPerUser = 0) }
     }
 
+    @Suppress("UNCHECKED_CAST")
+    @Test
+    fun `publish ignores dangling subscription in group subscriptions index`() {
+        val fanout = LiveUpdateFanout()
+        val groupSubsField = LiveUpdateFanout::class.java.getDeclaredField("groupSubscriptions").apply { isAccessible = true }
+        val groupSubs = groupSubsField.get(fanout) as ConcurrentHashMap<String, MutableSet<String>>
+        groupSubs.computeIfAbsent("group-publish-dangling") { ConcurrentHashMap.newKeySet() }.add("non-existent-sub-id")
+
+        val delivered = fanout.publish(LiveUpdate("group-publish-dangling", 1))
+        assertThat(delivered).isZero()
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    @Test
+    fun `emitInvalidation unsubscribes when subscription invalidation channel is missing`() {
+        val fanout = LiveUpdateFanout()
+        val sub = fanout.subscribe("user-no-chan", "group-no-chan")
+
+        val invalidationsField = LiveUpdateFanout::class.java.getDeclaredField("subscriptionInvalidations").apply { isAccessible = true }
+        val invalidationsMap = invalidationsField.get(fanout) as ConcurrentHashMap<String, Any>
+        invalidationsMap.remove(sub.id)
+
+        fanout.emitInvalidation("group-no-chan", 1L)
+        assertThat(fanout.poll(sub.id)).isNull()
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    @Test
+    fun `removeExpired safely tolerates missing revocation signal and invalidation channel`() {
+        val clock = MutableClock(Instant.parse("2026-10-13T10:00:00Z"))
+        val fanout = LiveUpdateFanout(clock = clock, subscriptionTtl = Duration.ofMinutes(10))
+        val sub = fanout.subscribe("user-missing-signals", "group-missing-signals")
+
+        val revSignalsField = LiveUpdateFanout::class.java.getDeclaredField("revocationSignals").apply { isAccessible = true }
+        val revSignals = revSignalsField.get(fanout) as ConcurrentHashMap<String, Any>
+        revSignals.remove(sub.id)
+
+        val invalidationsField = LiveUpdateFanout::class.java.getDeclaredField("subscriptionInvalidations").apply { isAccessible = true }
+        val invalidationsMap = invalidationsField.get(fanout) as ConcurrentHashMap<String, Any>
+        invalidationsMap.remove(sub.id)
+
+        clock.now = Instant.parse("2026-10-13T10:15:00Z")
+        fanout.removeExpired()
+
+        assertThat(fanout.poll(sub.id)).isNull()
+    }
+
+    @Test
+    fun `concurrent invalidation admissions exercise CAS retry on reservation`() {
+        val channelClass = Class.forName("com.subhrodip.squarewise.bff.realtime.LiveUpdateFanout\$SubscriptionInvalidationChannel")
+        val constructor = channelClass.getDeclaredConstructor(Int::class.javaPrimitiveType).apply { isAccessible = true }
+        val channel = constructor.newInstance(100_000)
+        val reserveMethod = channelClass.getDeclaredMethod("reserve").apply { isAccessible = true }
+
+        val pool = Executors.newFixedThreadPool(8)
+        val barrier = java.util.concurrent.CyclicBarrier(8)
+        try {
+            val tasks = (1..8).map {
+                pool.submit {
+                    barrier.await()
+                    for (i in 0 until 5_000) {
+                        reserveMethod.invoke(channel)
+                    }
+                }
+            }
+            tasks.forEach { it.get() }
+        } finally {
+            pool.shutdownNow()
+        }
+    }
+
 
     private class MutableClock(var now: Instant) : Clock() {
         override fun getZone(): ZoneOffset = ZoneOffset.UTC

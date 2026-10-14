@@ -11,7 +11,9 @@ import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchers.anyList
+import org.mockito.ArgumentMatchers.eq
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
@@ -35,7 +37,7 @@ class JpaProfileStoreTest {
     fun `get returns null when profile does not exist`() {
         val subject = "oidc|missing"
         `when`(repository.findBySubject(subject)).thenReturn(null)
-        `when`(cache.getBySubject(subject, { repository.findBySubject(subject)?.let { ProfileResponse(it.accountId, it.displayName, it.timezone, it.defaultCurrency) } })).thenAnswer { invocation ->
+        `when`(cache.getBySubject(eq(subject) ?: "", any() ?: { null })).thenAnswer { invocation ->
             val loader = invocation.getArgument<() -> ProfileResponse?>(1)
             loader()
         }
@@ -48,7 +50,7 @@ class JpaProfileStoreTest {
     fun `findById returns null when account does not exist`() {
         val accountId = UUID.randomUUID()
         `when`(repository.findById(accountId)).thenReturn(Optional.empty())
-        `when`(cache.getByAccountId(accountId, { repository.findById(accountId).orElse(null)?.let { ProfileResponse(it.accountId, it.displayName, it.timezone, it.defaultCurrency) } })).thenAnswer { invocation ->
+        `when`(cache.getByAccountId(eq(accountId) ?: accountId, any() ?: { null })).thenAnswer { invocation ->
             val loader = invocation.getArgument<() -> ProfileResponse?>(1)
             loader()
         }

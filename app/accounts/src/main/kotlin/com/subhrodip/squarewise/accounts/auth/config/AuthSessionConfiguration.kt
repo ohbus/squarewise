@@ -17,6 +17,7 @@ import com.subhrodip.squarewise.accounts.auth.session.SessionPolicy
 import com.subhrodip.squarewise.accounts.auth.session.SessionPolicyProperties
 import com.subhrodip.squarewise.accounts.auth.session.TokenSessionService
 import com.subhrodip.squarewise.accounts.profile.persistence.ProfileStore
+import com.subhrodip.squarewise.accounts.validation.AccountReferenceValidator
 import com.subhrodip.squarewise.errors.catalog.PlatformErrors
 import com.subhrodip.squarewise.security.errors.PlatformDomainException
 import org.springframework.beans.factory.annotation.Value
@@ -91,7 +92,7 @@ class AuthSessionConfiguration(
         credentialDigest: CredentialDigest,
         sessionPolicy: SessionPolicy,
         accountIdentityStore: AccountIdentityStore,
-        referenceValidator: com.subhrodip.squarewise.accounts.validation.AccountReferenceValidator
+        referenceValidator: AccountReferenceValidator
     ): TokenSessionService =
         TokenSessionService(
             sessionRepository = sessionRepository,
