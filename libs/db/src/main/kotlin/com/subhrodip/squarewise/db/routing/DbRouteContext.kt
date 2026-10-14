@@ -38,5 +38,11 @@ annotation class DbRouteContext(
      * Optional explicit reader instance name to route queries to (e.g. "search", "reporting").
      * When blank, routes to any available healthy reader replica.
      */
-    val targetReader: String = ""
+    val targetReader: String = "",
+
+    /**
+     * Optional explicit writer instance or shard name to route mutations and strong queries to.
+     * When blank, routes to the default primary writer instance.
+     */
+    val targetWriter: String = ""
 )

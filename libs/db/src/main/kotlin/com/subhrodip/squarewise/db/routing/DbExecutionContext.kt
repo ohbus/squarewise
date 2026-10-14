@@ -15,7 +15,9 @@ data class DbExecutionContext(
     /** Optional writer watermark required before a replica may answer. */
     val requiredWatermark: String? = null,
     /** Optional explicit reader instance name to route queries to. */
-    val targetReader: String? = null
+    val targetReader: String? = null,
+    /** Optional explicit writer instance name to route commands and strong queries to. */
+    val targetWriter: String? = null
 ) {
     init {
         if (!operationName.matches(OPERATION_NAME)) {

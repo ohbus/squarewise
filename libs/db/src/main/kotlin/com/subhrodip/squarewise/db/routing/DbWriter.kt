@@ -17,5 +17,11 @@ annotation class DbWriter(
      * Stable lowercase dot-delimited operation identity for telemetry and auditing.
      * If blank, defaults to inferred operation name from class and method.
      */
-    val operation: String = ""
+    val operation: String = "",
+
+    /**
+     * Optional explicit writer instance or shard name to route mutations and strong queries to.
+     * When blank, routes to the default primary writer instance.
+     */
+    val target: String = ""
 )

@@ -65,7 +65,8 @@ class DbRouteAspect {
                 kind = DbOperationKind.COMMAND,
                 consistency = ReadConsistency.STRONG,
                 readerEligible = false,
-                targetReader = null
+                targetReader = null,
+                targetWriter = dbWriterAnnotation.target.takeIf { it.isNotBlank() }
             )
         }
 
@@ -89,7 +90,8 @@ class DbRouteAspect {
                 kind = routeAnnotation.kind,
                 consistency = routeAnnotation.consistency,
                 readerEligible = routeAnnotation.readerEligible,
-                targetReader = routeAnnotation.targetReader.takeIf { it.isNotBlank() }
+                targetReader = routeAnnotation.targetReader.takeIf { it.isNotBlank() },
+                targetWriter = routeAnnotation.targetWriter.takeIf { it.isNotBlank() }
             )
         }
 
@@ -127,8 +129,12 @@ class DbRouteAspect {
             return rawContext.copy(
                 kind = DbOperationKind.COMMAND,
                 readerEligible = false,
-                targetReader = null
+                targetReader = null,
+                targetWriter = rawContext.targetWriter ?: activeContext.targetWriter
             )
+        }
+        if (rawContext.targetWriter == null && activeContext?.targetWriter != null) {
+            return rawContext.copy(targetWriter = activeContext.targetWriter)
         }
         if (rawContext.targetReader == null && activeContext?.targetReader != null) {
             return rawContext.copy(targetReader = activeContext.targetReader)

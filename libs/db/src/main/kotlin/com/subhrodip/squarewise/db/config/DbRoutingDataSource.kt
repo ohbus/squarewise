@@ -22,7 +22,8 @@ class DbRoutingDataSource(
     private val readers: Map<String, DataSource>,
     private val readerHealth: DbReaderHealth = DbReaderHealth(),
     private val telemetry: DbTelemetry = DbTelemetry(),
-    private val routeGuard: DbRouteGuard = DbRouteGuard()
+    private val routeGuard: DbRouteGuard = DbRouteGuard(),
+    private val writers: Map<String, DataSource> = emptyMap()
 ) : AbstractDataSource() {
     private val roundRobinCounter = AtomicInteger(0)
 
@@ -45,7 +46,9 @@ class DbRoutingDataSource(
         val operation = context.operationName
         if (route == DbRoute.WRITER) {
             val started = System.nanoTime()
-            return try { writer.connection } finally {
+            val targetWriter = context.targetWriter?.takeIf { it.isNotBlank() }
+            val selectedWriter = if (targetWriter != null) writers[targetWriter] ?: writer else writer
+            return try { selectedWriter.connection } finally {
                 telemetry.route(operation, "writer")
                 telemetry.acquisition(operation, "writer", (System.nanoTime() - started) / 1_000_000)
             }
@@ -72,6 +75,9 @@ class DbRoutingDataSource(
 
     /** Returns the configured reader pools for health probing and diagnostics. */
     fun readerDataSources(): Map<String, DataSource> = readers.toMap()
+
+    /** Returns the configured writer pools for diagnostics. */
+    fun writerDataSources(): Map<String, DataSource> = writers.toMap()
 
     /** Resolves the target reader pool name based on context target or round-robin among healthy readers, with automatic failover. */
     fun resolveReaderName(): String {

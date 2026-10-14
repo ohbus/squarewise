@@ -321,5 +321,32 @@ class DbRoutingDataSourceTest {
             assertEquals("r2", routing.resolveReaderName())
         }
     }
+
+    @Test
+    fun `connection routes to specific targetWriter when configured`() {
+        val writer = mock(DataSource::class.java)
+        val shard1 = mock(DataSource::class.java)
+        val connShard = mock(Connection::class.java)
+        `when`(shard1.connection).thenReturn(connShard)
+        val routing = DbRoutingDataSource(writer, emptyMap(), writers = mapOf("shard-1" to shard1))
+
+        assertEquals(mapOf("shard-1" to shard1), routing.writerDataSources())
+
+        DbContextHolder.withContext(DbExecutionContext("expense.create", DbOperationKind.COMMAND, targetWriter = "shard-1")) {
+            assertSame(connShard, routing.connection(DbRoute.WRITER))
+        }
+    }
+
+    @Test
+    fun `connection falls back to primary writer when targetWriter is unconfigured`() {
+        val writer = mock(DataSource::class.java)
+        val connPrimary = mock(Connection::class.java)
+        `when`(writer.connection).thenReturn(connPrimary)
+        val routing = DbRoutingDataSource(writer, emptyMap(), writers = emptyMap())
+
+        DbContextHolder.withContext(DbExecutionContext("expense.create", DbOperationKind.COMMAND, targetWriter = "shard-unknown")) {
+            assertSame(connPrimary, routing.connection(DbRoute.WRITER))
+        }
+    }
 }
 

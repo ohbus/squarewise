@@ -71,6 +71,25 @@ class DbRouteAspectTest {
             return "ok-db-writer"
         }
 
+        @DbWriter(operation = "persist.shard", target = "shard-1")
+        open fun dbWriterTargetMethod(): String {
+            val ctx = DbContextHolder.current()
+            assertEquals("persist.shard", ctx.operationName)
+            assertEquals("shard-1", ctx.targetWriter)
+            assertFalse(ctx.readerEligible)
+            assertEquals(DbOperationKind.COMMAND, ctx.kind)
+            return "ok-db-writer-target"
+        }
+
+        @DbRouteContext(operation = "route.shard", kind = DbOperationKind.COMMAND, readerEligible = false, targetWriter = "shard-2")
+        open fun dbRouteTargetWriterMethod(): String {
+            val ctx = DbContextHolder.current()
+            assertEquals("route.shard", ctx.operationName)
+            assertEquals("shard-2", ctx.targetWriter)
+            assertFalse(ctx.readerEligible)
+            return "ok-db-route-target-writer"
+        }
+
         open fun plainMethod(): String {
             return "plain"
         }
@@ -106,6 +125,38 @@ class DbRouteAspectTest {
 
         val result = aspect.aroundRoutedMethod(joinPoint)
         assertEquals("ok-db-writer", result)
+    }
+
+    @Test
+    fun `intercepts DbWriter with target and sets targetWriter`() {
+        val target = SampleService()
+        val method = SampleService::class.java.getMethod("dbWriterTargetMethod")
+        val joinPoint = mock(ProceedingJoinPoint::class.java)
+        val signature = mock(MethodSignature::class.java)
+
+        `when`(joinPoint.signature).thenReturn(signature)
+        `when`(signature.method).thenReturn(method)
+        `when`(joinPoint.target).thenReturn(target)
+        `when`(joinPoint.proceed()).thenAnswer { target.dbWriterTargetMethod() }
+
+        val result = aspect.aroundRoutedMethod(joinPoint)
+        assertEquals("ok-db-writer-target", result)
+    }
+
+    @Test
+    fun `intercepts DbRouteContext with targetWriter and sets targetWriter`() {
+        val target = SampleService()
+        val method = SampleService::class.java.getMethod("dbRouteTargetWriterMethod")
+        val joinPoint = mock(ProceedingJoinPoint::class.java)
+        val signature = mock(MethodSignature::class.java)
+
+        `when`(joinPoint.signature).thenReturn(signature)
+        `when`(signature.method).thenReturn(method)
+        `when`(joinPoint.target).thenReturn(target)
+        `when`(joinPoint.proceed()).thenAnswer { target.dbRouteTargetWriterMethod() }
+
+        val result = aspect.aroundRoutedMethod(joinPoint)
+        assertEquals("ok-db-route-target-writer", result)
     }
 
     @Test
