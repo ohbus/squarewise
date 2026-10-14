@@ -147,40 +147,51 @@ class DbRouteAspect {
             val methodAnnotation = AnnotatedElementUtils.findMergedAnnotation(method, annotationClass)
             if (methodAnnotation != null) return methodAnnotation
         }
-        if (targetClass != null) {
-            val visited = mutableSetOf<Class<*>>()
-            val queue = ArrayDeque<Class<*>>()
-            var currentClass: Class<*>? = targetClass
-            while (currentClass != null && currentClass != Any::class.java) {
-                val classAnnotation = AnnotatedElementUtils.findMergedAnnotation(currentClass, annotationClass)
-                if (classAnnotation != null) return classAnnotation
+        val classesToInspect = listOfNotNull(targetClass, method?.declaringClass).distinct()
+        for (rootClass in classesToInspect) {
+            val annotation = searchClassHierarchy(rootClass, method, annotationClass)
+            if (annotation != null) return annotation
+        }
+        return null
+    }
+
+    private fun <A : Annotation> searchClassHierarchy(
+        rootClass: Class<*>,
+        method: Method?,
+        annotationClass: Class<A>
+    ): A? {
+        val visited = mutableSetOf<Class<*>>()
+        val queue = ArrayDeque<Class<*>>()
+        var currentClass: Class<*>? = rootClass
+        while (currentClass != null && currentClass != Any::class.java) {
+            val classAnnotation = AnnotatedElementUtils.findMergedAnnotation(currentClass, annotationClass)
+            if (classAnnotation != null) return classAnnotation
+            if (method != null) {
+                try {
+                    val declaredMethod = currentClass.getDeclaredMethod(method.name, *method.parameterTypes)
+                    val declaredMethodAnnotation = AnnotatedElementUtils.findMergedAnnotation(declaredMethod, annotationClass)
+                    if (declaredMethodAnnotation != null) return declaredMethodAnnotation
+                } catch (_: NoSuchMethodException) {
+                }
+            }
+            queue.addAll(currentClass.interfaces)
+            currentClass = currentClass.superclass
+        }
+
+        while (queue.isNotEmpty()) {
+            val iface = queue.removeFirst()
+            if (visited.add(iface)) {
+                val ifaceAnnotation = AnnotatedElementUtils.findMergedAnnotation(iface, annotationClass)
+                if (ifaceAnnotation != null) return ifaceAnnotation
                 if (method != null) {
                     try {
-                        val declaredMethod = currentClass.getDeclaredMethod(method.name, *method.parameterTypes)
-                        val declaredMethodAnnotation = AnnotatedElementUtils.findMergedAnnotation(declaredMethod, annotationClass)
-                        if (declaredMethodAnnotation != null) return declaredMethodAnnotation
+                        val ifaceMethod = iface.getMethod(method.name, *method.parameterTypes)
+                        val ifaceMethodAnnotation = AnnotatedElementUtils.findMergedAnnotation(ifaceMethod, annotationClass)
+                        if (ifaceMethodAnnotation != null) return ifaceMethodAnnotation
                     } catch (_: NoSuchMethodException) {
                     }
                 }
-                queue.addAll(currentClass.interfaces)
-                currentClass = currentClass.superclass
-            }
-
-            while (queue.isNotEmpty()) {
-                val iface = queue.removeFirst()
-                if (visited.add(iface)) {
-                    val ifaceAnnotation = AnnotatedElementUtils.findMergedAnnotation(iface, annotationClass)
-                    if (ifaceAnnotation != null) return ifaceAnnotation
-                    if (method != null) {
-                        try {
-                            val ifaceMethod = iface.getMethod(method.name, *method.parameterTypes)
-                            val ifaceMethodAnnotation = AnnotatedElementUtils.findMergedAnnotation(ifaceMethod, annotationClass)
-                            if (ifaceMethodAnnotation != null) return ifaceMethodAnnotation
-                        } catch (_: NoSuchMethodException) {
-                        }
-                    }
-                    queue.addAll(iface.interfaces)
-                }
+                queue.addAll(iface.interfaces)
             }
         }
         return null

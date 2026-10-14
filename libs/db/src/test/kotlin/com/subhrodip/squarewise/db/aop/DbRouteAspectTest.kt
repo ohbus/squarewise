@@ -648,4 +648,36 @@ class DbRouteAspectTest {
         val result = aspect.aroundRoutedMethod(joinPoint)
         assertEquals("base-ok", result)
     }
+
+    @DbReader(operation = "repo.find", target = "search-reader")
+    interface SampleRepositoryInterface {
+        fun findCustom(): String
+    }
+
+    class GenericSpringDataProxyTarget {
+        fun findCustom(): String = "proxy-result"
+    }
+
+    @Test
+    fun `discovers DbReader on method declaringClass interface when target is generic proxy target`() {
+        val target = GenericSpringDataProxyTarget()
+        val method = SampleRepositoryInterface::class.java.getMethod("findCustom")
+        val joinPoint = mock(ProceedingJoinPoint::class.java)
+        val signature = mock(MethodSignature::class.java)
+
+        `when`(joinPoint.signature).thenReturn(signature)
+        `when`(signature.method).thenReturn(method)
+        `when`(joinPoint.target).thenReturn(target)
+        `when`(joinPoint.proceed()).thenAnswer {
+            val ctx = DbContextHolder.current()
+            assertEquals("repo.find", ctx.operationName)
+            assertEquals("search-reader", ctx.targetReader)
+            assertTrue(ctx.readerEligible)
+            assertEquals(DbOperationKind.QUERY, ctx.kind)
+            target.findCustom()
+        }
+
+        val result = aspect.aroundRoutedMethod(joinPoint)
+        assertEquals("proxy-result", result)
+    }
 }
