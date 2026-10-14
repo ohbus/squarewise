@@ -38,7 +38,10 @@ class AccountReferenceValidator(
         val profile = profileRepository.findById(accountId).orElse(null) ?: return false
         val active = !profile.deletionRequested
         if (active) {
-            profileCache?.put(ProfileResponse(profile.accountId, profile.displayName, profile.timezone, profile.defaultCurrency))
+            profileCache?.put(
+                ProfileResponse(profile.accountId, profile.displayName, profile.timezone, profile.defaultCurrency),
+                profile.subject
+            )
         }
         return active
     }
@@ -56,7 +59,10 @@ class AccountReferenceValidator(
         if (profile.deletionRequested) {
             throw AccountsDomainException(AccountsErrors.PROFILE_REQUEST_INVALID)
         }
-        profileCache?.put(ProfileResponse(profile.accountId, profile.displayName, profile.timezone, profile.defaultCurrency))
+        profileCache?.put(
+            ProfileResponse(profile.accountId, profile.displayName, profile.timezone, profile.defaultCurrency),
+            profile.subject
+        )
         return profile
     }
 
@@ -73,7 +79,10 @@ class AccountReferenceValidator(
         if (profile.deletionRequested) {
             throw AccountsDomainException(AccountsErrors.PROFILE_REQUEST_INVALID)
         }
-        profileCache?.put(ProfileResponse(profile.accountId, profile.displayName, profile.timezone, profile.defaultCurrency))
+        profileCache?.put(
+            ProfileResponse(profile.accountId, profile.displayName, profile.timezone, profile.defaultCurrency),
+            subject
+        )
         return profile
     }
 

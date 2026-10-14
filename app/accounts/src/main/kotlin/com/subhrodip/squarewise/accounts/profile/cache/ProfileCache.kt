@@ -96,15 +96,31 @@ class ProfileCache(
     }
 
     /**
-     * Stores a resolved profile into the accountId cache.
+     * Looks up an existing non-expired profile by subject without invoking a loader.
+     *
+     * @param subject user subject identifier.
+     * @return cached [ProfileResponse] or null if missing or expired.
+     */
+    fun peekBySubject(subject: String): ProfileResponse? {
+        val now = Instant.now()
+        val cached = bySubject[subject]
+        return if (cached != null && !cached.isExpired(now)) cached.profile else null
+    }
+
+    /**
+     * Stores a resolved profile into the accountId cache and optionally subject cache.
      *
      * @param profile resolved [ProfileResponse] to cache.
+     * @param subject optional user subject identifier to cache.
      */
-    fun put(profile: ProfileResponse) {
+    fun put(profile: ProfileResponse, subject: String? = null) {
         val now = Instant.now()
         evictIfOversized()
         val entry = Entry(profile, now.plus(ttl))
         byAccountId[profile.accountId] = entry
+        if (subject != null) {
+            bySubject[subject] = entry
+        }
     }
 
     /**

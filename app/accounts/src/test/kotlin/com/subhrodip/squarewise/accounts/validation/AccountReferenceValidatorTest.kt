@@ -363,5 +363,8 @@ class AccountReferenceValidatorTest {
         val cached = cache.peekByAccountId(accountId)
         assertNotNull(cached)
         assertEquals("Bob", cached?.displayName)
+        val cachedBySubject = cache.peekBySubject("bob@example.com")
+        assertNotNull(cachedBySubject)
+        assertEquals("Bob", cachedBySubject?.displayName)
     }
 }
