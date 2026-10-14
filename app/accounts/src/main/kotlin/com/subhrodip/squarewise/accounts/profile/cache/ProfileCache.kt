@@ -20,7 +20,7 @@ class ProfileCache(
     private val ttl: Duration = Duration.ofSeconds(60),
     private val maxEntries: Int = 10_000
 ) {
-    private data class Entry(val profile: ProfileResponse, val expiresAt: Instant) {
+    private data class Entry(val profile: ProfileResponse, val expiresAt: Instant, val subject: String? = null) {
         fun isExpired(now: Instant): Boolean = now.isAfter(expiresAt)
     }
 
@@ -51,7 +51,7 @@ class ProfileCache(
         }
         evictIfOversized()
         val loadedAt = Instant.now()
-        val entry = Entry(profile, loadedAt.plus(ttl))
+        val entry = Entry(profile, loadedAt.plus(ttl), subject)
         bySubject[subject] = entry
         byAccountId[profile.accountId] = entry
         return profile
@@ -96,6 +96,18 @@ class ProfileCache(
     }
 
     /**
+     * Looks up an existing non-expired user subject by account ID without invoking a loader.
+     *
+     * @param accountId account UUID.
+     * @return cached subject string or null if missing, expired, or unmapped.
+     */
+    fun peekSubjectByAccountId(accountId: UUID): String? {
+        val now = Instant.now()
+        val cached = byAccountId[accountId]
+        return if (cached != null && !cached.isExpired(now)) cached.subject else null
+    }
+
+    /**
      * Looks up an existing non-expired profile by subject without invoking a loader.
      *
      * @param subject user subject identifier.
@@ -116,7 +128,7 @@ class ProfileCache(
     fun put(profile: ProfileResponse, subject: String? = null) {
         val now = Instant.now()
         evictIfOversized()
-        val entry = Entry(profile, now.plus(ttl))
+        val entry = Entry(profile, now.plus(ttl), subject)
         byAccountId[profile.accountId] = entry
         if (subject != null) {
             bySubject[subject] = entry

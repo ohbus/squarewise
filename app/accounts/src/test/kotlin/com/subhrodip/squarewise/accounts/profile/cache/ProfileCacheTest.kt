@@ -339,4 +339,19 @@ class ProfileCacheTest {
         Thread.sleep(10)
         assertNull(fastCache.peekBySubject("subject-fast"))
     }
+
+    @Test
+    fun `peekSubjectByAccountId returns cached subject when present and null when absent or expired`() {
+        val id = UUID.randomUUID()
+        val profile = ProfileResponse(id, "Subject User", "UTC", "EUR")
+        assertNull(cache.peekSubjectByAccountId(id))
+
+        cache.put(profile, "subject-1")
+        assertEquals("subject-1", cache.peekSubjectByAccountId(id))
+
+        val fastCache = ProfileCache(ttl = Duration.ofMillis(1))
+        fastCache.put(profile, "subject-fast")
+        Thread.sleep(10)
+        assertNull(fastCache.peekSubjectByAccountId(id))
+    }
 }

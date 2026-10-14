@@ -170,6 +170,7 @@ class RecurringExpenseService(
 
     private fun processDueOccurrences(asOfDate: LocalDate, maxCatchUpOccurrences: Int, useScheduleTimezone: Boolean): Int {
         val dueSchedules = scheduleRepository.findDueSchedules(asOfDate)
+        val membersByGroup = getGroupMembers(dueSchedules.map { it.groupId }.toSet())
         if (TransactionSynchronizationManager.isActualTransactionActive()) {
             return dueSchedules.sumOf { schedule ->
                 try {
@@ -177,7 +178,7 @@ class RecurringExpenseService(
                         schedule,
                         occurrenceCutoff(schedule, asOfDate, useScheduleTimezone),
                         maxCatchUpOccurrences,
-                        mapOf(schedule.groupId to getGroupMembers(schedule.groupId))
+                        membersByGroup
                     )
                 } catch (error: DateTimeException) {
                     logInvalidTimezone(schedule, error)
@@ -188,7 +189,6 @@ class RecurringExpenseService(
         val manager = requireNotNull(transactionManager) {
             "transactionManager is required when due occurrences run outside a transaction"
         }
-        val membersByGroup = getGroupMembers(dueSchedules.map { it.groupId }.toSet())
         val transactionTemplate = TransactionTemplate(manager).apply {
             propagationBehavior = TransactionDefinition.PROPAGATION_REQUIRES_NEW
         }

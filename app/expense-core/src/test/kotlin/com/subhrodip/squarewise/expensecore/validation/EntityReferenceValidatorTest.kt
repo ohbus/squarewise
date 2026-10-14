@@ -297,6 +297,23 @@ class EntityReferenceValidatorTest {
     }
 
     @Test
+    fun `validateActivePlaceholder rejects non-active members using GroupAccessCache without querying membershipRepository`() {
+        val cache = GroupAccessCache()
+        val cachedValidator = EntityReferenceValidator(groupRepository, membershipRepository, cache)
+        val groupId = UUID.randomUUID()
+        val placeholderId = UUID.randomUUID()
+        val activeMemberId = UUID.randomUUID()
+        cache.putActiveMemberIds(groupId, setOf(activeMemberId))
+
+        val ex = assertThrows(ExpenseDomainException::class.java) {
+            cachedValidator.validateActivePlaceholder(groupId, placeholderId)
+        }
+        assertSame(ExpenseErrors.GROUP_NOT_FOUND, ex.definition)
+        org.mockito.Mockito.verify(membershipRepository, org.mockito.Mockito.never())
+            .findByMembershipIdAndGroupId(placeholderId, groupId)
+    }
+
+    @Test
     fun `isActiveMember and isActiveGroup leverage GroupAccessCache`() {
         val cache = GroupAccessCache()
         val cachedValidator = EntityReferenceValidator(groupRepository, membershipRepository, cache)

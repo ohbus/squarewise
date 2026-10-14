@@ -265,6 +265,15 @@ class EntityReferenceValidator(
      * @throws ExpenseDomainException if placeholder not found, not active, or not in group.
      */
     fun validateActivePlaceholder(groupId: UUID, placeholderId: UUID): GroupMembershipEntity {
+        if (groupAccessCache != null) {
+            val activeIds = groupAccessCache.activeMemberIds(groupId) {
+                membershipRepository.findByGroupIdAndStatus(groupId, "ACTIVE")
+                    .map { it.membershipId }.toSet()
+            }
+            if (!activeIds.contains(placeholderId)) {
+                throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Placeholder $placeholderId not found in group $groupId")
+            }
+        }
         val member = membershipRepository.findByMembershipIdAndGroupId(placeholderId, groupId)
             ?: throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Placeholder $placeholderId not found in group $groupId")
         if (member.status != "ACTIVE" || !member.isPlaceholder) {
