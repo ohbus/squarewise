@@ -50,10 +50,10 @@ class JpaDeletionRequestStore(
         }
 
         // Retain historical financial attribution by preserving profile record with deletionRequested = true
+        val account = profileRepository.findBySubject(subject)
         profileStore.requestDeletion(subject)
-        val accountId = profileRepository.findBySubject(subject)?.accountId
-        if (accountId != null) {
-            authSessionRepository.revokeAllForAccount(accountId, clock())
+        if (account != null) {
+            authSessionRepository.revokeAllForAccount(account.accountId, clock())
         }
 
         val entity = AccountDeletionRequestEntity(
