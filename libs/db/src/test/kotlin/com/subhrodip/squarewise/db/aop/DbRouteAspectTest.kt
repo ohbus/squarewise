@@ -126,6 +126,61 @@ class DbRouteAspectTest {
         assertEquals("ok-interface-read", result)
     }
 
+    interface SuperRepoInterface {
+        @DbWriter(target = "writer-shard", operation = "super.write")
+        fun superWrite(): String
+    }
+
+    interface SubRepoInterface : SuperRepoInterface {
+        @DbReader(target = "reader-replica", operation = "sub.read")
+        fun subRead(): String
+    }
+
+    open class HierarchicalServiceImpl : SubRepoInterface {
+        override fun superWrite(): String {
+            val ctx = DbContextHolder.current()
+            assertEquals("super.write", ctx.operationName)
+            assertEquals("writer-shard", ctx.targetWriter)
+            assertFalse(ctx.readerEligible)
+            return "ok-super-write"
+        }
+
+        override fun subRead(): String {
+            val ctx = DbContextHolder.current()
+            assertEquals("sub.read", ctx.operationName)
+            assertEquals("reader-replica", ctx.targetReader)
+            assertTrue(ctx.readerEligible)
+            return "ok-sub-read"
+        }
+    }
+
+    @Test
+    fun `intercepts DbReader and DbWriter from interface hierarchy and interface methods`() {
+        val target = HierarchicalServiceImpl()
+        val subMethod = HierarchicalServiceImpl::class.java.getMethod("subRead")
+        val superMethod = HierarchicalServiceImpl::class.java.getMethod("superWrite")
+
+        val joinPoint1 = mock(ProceedingJoinPoint::class.java)
+        val sig1 = mock(MethodSignature::class.java)
+        `when`(joinPoint1.signature).thenReturn(sig1)
+        `when`(sig1.method).thenReturn(subMethod)
+        `when`(joinPoint1.target).thenReturn(target)
+        `when`(joinPoint1.proceed()).thenAnswer { target.subRead() }
+
+        val result1 = aspect.aroundRoutedMethod(joinPoint1)
+        assertEquals("ok-sub-read", result1)
+
+        val joinPoint2 = mock(ProceedingJoinPoint::class.java)
+        val sig2 = mock(MethodSignature::class.java)
+        `when`(joinPoint2.signature).thenReturn(sig2)
+        `when`(sig2.method).thenReturn(superMethod)
+        `when`(joinPoint2.target).thenReturn(target)
+        `when`(joinPoint2.proceed()).thenAnswer { target.superWrite() }
+
+        val result2 = aspect.aroundRoutedMethod(joinPoint2)
+        assertEquals("ok-super-write", result2)
+    }
+
     @Test
     fun `intercepts DbReader and establishes reader context with target`() {
         val target = SampleService()

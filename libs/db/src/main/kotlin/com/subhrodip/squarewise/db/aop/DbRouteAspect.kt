@@ -150,9 +150,24 @@ class DbRouteAspect {
         if (targetClass != null) {
             val classAnnotation = AnnotatedElementUtils.findMergedAnnotation(targetClass, annotationClass)
             if (classAnnotation != null) return classAnnotation
-            for (iface in targetClass.interfaces) {
-                val ifaceAnnotation = AnnotatedElementUtils.findMergedAnnotation(iface, annotationClass)
-                if (ifaceAnnotation != null) return ifaceAnnotation
+            val visited = mutableSetOf<Class<*>>()
+            val queue = ArrayDeque<Class<*>>()
+            queue.addAll(targetClass.interfaces)
+            while (queue.isNotEmpty()) {
+                val iface = queue.removeFirst()
+                if (visited.add(iface)) {
+                    val ifaceAnnotation = AnnotatedElementUtils.findMergedAnnotation(iface, annotationClass)
+                    if (ifaceAnnotation != null) return ifaceAnnotation
+                    if (method != null) {
+                        try {
+                            val ifaceMethod = iface.getMethod(method.name, *method.parameterTypes)
+                            val ifaceMethodAnnotation = AnnotatedElementUtils.findMergedAnnotation(ifaceMethod, annotationClass)
+                            if (ifaceMethodAnnotation != null) return ifaceMethodAnnotation
+                        } catch (_: NoSuchMethodException) {
+                        }
+                    }
+                    queue.addAll(iface.interfaces)
+                }
             }
         }
         return null
