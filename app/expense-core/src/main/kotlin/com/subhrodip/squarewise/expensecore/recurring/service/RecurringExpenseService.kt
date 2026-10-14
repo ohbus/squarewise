@@ -77,7 +77,6 @@ class RecurringExpenseService(
     override fun createSchedule(groupId: UUID, request: CreateRecurringScheduleRequest): RecurringExpenseSchedule {
         validateSchedule(request)
         referenceValidator.validateActiveGroup(groupId)
-
         val scheduleId = request.scheduleId ?: UuidGenerator.next()
         val schedule = RecurringExpenseSchedule(
             scheduleId = scheduleId,
@@ -113,6 +112,7 @@ class RecurringExpenseService(
         if (schedule.groupId != groupId) {
             throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Schedule $scheduleId not in group $groupId")
         }
+        referenceValidator.validateActiveGroup(groupId)
 
         val effectiveTimezone = request.timezone ?: schedule.timezone
         validateSchedule(request, effectiveTimezone)

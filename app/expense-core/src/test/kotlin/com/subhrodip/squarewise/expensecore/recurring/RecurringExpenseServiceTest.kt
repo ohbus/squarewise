@@ -1,5 +1,7 @@
 package com.subhrodip.squarewise.expensecore.recurring
 
+import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
+import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
 import com.subhrodip.squarewise.errors.code.CategoryCode
 import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseAllocation
 import com.subhrodip.squarewise.expensecore.expenses.domain.ExpensePayer
@@ -1196,5 +1198,35 @@ class RecurringExpenseServiceTest @Autowired constructor(
 
         failureMethod.invoke(targetService, schedule, UUID.randomUUID(), IllegalStateException("business failure"))
         assertTrue(schedule.paused)
+    }
+
+    @Test
+    fun `updateSchedule rejects updates when target group is archived`() {
+        val group = groupStore.create("alice", CreateGroupRequest("Test Group", "HOUSEHOLD", "EUR"))
+        val schedule = service.createSchedule(
+            group.groupId,
+            CreateRecurringScheduleRequest(
+                description = "Original schedule",
+                amountMinor = 5000,
+                currency = "EUR",
+                frequency = RecurrenceFrequency.WEEKLY,
+                startDate = LocalDate.of(2026, 9, 1)
+            )
+        )
+        groupStore.archive(group.groupId, "alice")
+        val exception = assertThrows(ExpenseDomainException::class.java) {
+            service.updateSchedule(
+                group.groupId,
+                schedule.scheduleId,
+                UpdateRecurringScheduleRequest(
+                    description = "Updated schedule",
+                    amountMinor = 5000,
+                    currency = "EUR",
+                    frequency = RecurrenceFrequency.WEEKLY,
+                    startDate = LocalDate.of(2026, 9, 1)
+                )
+            )
+        }
+        assertEquals(ExpenseErrors.GROUP_ARCHIVED, exception.definition)
     }
 }
