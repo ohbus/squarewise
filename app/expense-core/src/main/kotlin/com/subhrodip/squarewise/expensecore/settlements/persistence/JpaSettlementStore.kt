@@ -5,7 +5,6 @@ import com.subhrodip.squarewise.expensecore.settlements.domain.SettlementStatus
 import com.subhrodip.squarewise.expensecore.expenses.persistence.entity.BalancePostingEntity
 import com.subhrodip.squarewise.expensecore.expenses.persistence.repository.BalancePostingRepository
 import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupRepository
-import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupMembershipRepository
 import com.subhrodip.squarewise.expensecore.groups.persistence.store.GroupAuditCommandStore
 import com.subhrodip.squarewise.expensecore.groups.domain.GroupAuditEntity
 import com.subhrodip.squarewise.expensecore.groups.domain.GroupEntity
@@ -39,7 +38,6 @@ import com.subhrodip.squarewise.expensecore.validation.EntityReferenceValidator
 class JpaSettlementStore(
     private val repository: SettlementRepository,
     private val groupRepository: GroupRepository,
-    private val membershipRepository: GroupMembershipRepository,
     private val balancePostingRepository: BalancePostingRepository,
     private val audit: GroupAuditCommandStore,
     private val synchronization: SynchronizationStore,

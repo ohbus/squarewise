@@ -224,7 +224,6 @@ class JpaSettlementStoreTest @Autowired constructor(
         val uncachedStore = JpaSettlementStore(
             repository = settlementRepository,
             groupRepository = groupRepository,
-            membershipRepository = membershipRepository,
             balancePostingRepository = balancePostingRepository,
             audit = audit,
             synchronization = synchronization,

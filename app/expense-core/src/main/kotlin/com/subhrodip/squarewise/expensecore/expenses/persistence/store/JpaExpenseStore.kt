@@ -17,7 +17,6 @@ import com.subhrodip.squarewise.expensecore.expenses.persistence.entity.BalanceP
 import com.subhrodip.squarewise.expensecore.expenses.persistence.repository.ExpenseRepository
 import com.subhrodip.squarewise.expensecore.expenses.persistence.repository.ExpenseIdempotencyRepository
 import com.subhrodip.squarewise.expensecore.expenses.persistence.repository.BalancePostingRepository
-import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupMembershipRepository
 import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupRepository
 import com.subhrodip.squarewise.expensecore.messaging.outbox.model.OutboxMessage
 import com.subhrodip.squarewise.expensecore.messaging.outbox.persistence.OutboxStore
@@ -50,7 +49,6 @@ class JpaExpenseStore(
     private val idempotencyRepository: ExpenseIdempotencyRepository,
     private val balancePostingRepository: BalancePostingRepository,
     private val groupRepository: GroupRepository,
-    private val membershipRepository: GroupMembershipRepository,
     private val outboxStore: OutboxStore,
     private val syncStore: SynchronizationStore,
     private val referenceValidator: EntityReferenceValidator,
