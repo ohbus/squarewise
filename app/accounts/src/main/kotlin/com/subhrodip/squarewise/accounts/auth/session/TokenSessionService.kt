@@ -14,6 +14,7 @@ import java.security.SecureRandom
 import java.time.Instant
 import java.util.Base64
 import java.util.UUID
+import com.subhrodip.squarewise.db.routing.DbWriter
 import org.slf4j.LoggerFactory
 import org.springframework.transaction.annotation.Transactional
 
@@ -62,6 +63,7 @@ open class TokenSessionService(
      * @param now Current timestamp.
      * @return [TokenResponse] containing signed access token and new opaque refresh token.
      */
+    @DbWriter("accounts.session.create")
     @Transactional
     open fun createSession(
         accountId: UUID,
@@ -114,6 +116,7 @@ open class TokenSessionService(
      * @return [TokenResponse] with fresh access token and child refresh token.
      * @throws AccountsDomainException when the refresh token is invalid, expired, revoked, or reused.
      */
+    @DbWriter("accounts.session.rotate")
     @Transactional(noRollbackFor = [AccountsDomainException::class])
     open fun rotateSession(
         rawRefreshToken: String,
@@ -207,6 +210,7 @@ open class TokenSessionService(
      *        provider-independent internal revocation flows.
      * @param now Revocation timestamp.
      */
+    @DbWriter("accounts.session.revoke")
     @Transactional
     open fun revokeSessionByRefreshToken(
         rawRefreshToken: String,
@@ -231,6 +235,7 @@ open class TokenSessionService(
      * @param familyId Unique family UUID.
      * @param now Revocation timestamp.
      */
+    @DbWriter("accounts.session.revoke.family")
     @Transactional
     open fun revokeFamily(familyId: UUID, now: Instant) {
         sessionRepository.revokeFamily(familyId, now)
