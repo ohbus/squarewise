@@ -367,4 +367,19 @@ class AccountReferenceValidatorTest {
         assertNotNull(cachedBySubject)
         assertEquals("Bob", cachedBySubject?.displayName)
     }
+
+    @Test
+    fun `validateActiveSubject returns ProfileEntity from cache without querying profileRepository`() {
+        val cache = ProfileCache()
+        val cachedValidator = AccountReferenceValidator(profileRepository, sessionRepository, cache)
+        val accountId = UUID.randomUUID()
+        cache.put(ProfileResponse(accountId, "Cached User", "UTC", "EUR"), "cached-sub@example.com")
+
+        val result = cachedValidator.validateActiveSubject("cached-sub@example.com")
+        assertEquals(accountId, result.accountId)
+        assertEquals("cached-sub@example.com", result.subject)
+        assertEquals("Cached User", result.displayName)
+        assertFalse(result.deletionRequested)
+        verifyNoInteractions(profileRepository)
+    }
 }
