@@ -277,7 +277,7 @@ class AccountReferenceValidatorTest {
     }
 
     @Test
-    fun `isActiveAccount leverages ProfileCache when available`() {
+    fun `isActiveAccount queries profileRepository and returns false when deletion requested even if cache is present`() {
         val cache = ProfileCache()
         val cachedValidator = AccountReferenceValidator(profileRepository, sessionRepository, cache)
         val accountId = UUID.randomUUID()
@@ -289,13 +289,21 @@ class AccountReferenceValidatorTest {
         )
         cache.put(profileResponse)
 
-        // Serves from cache without repository call
-        assertTrue(cachedValidator.isActiveAccount(accountId))
-        verifyNoInteractions(profileRepository)
+        val deletedProfile = ProfileEntity(
+            accountId = accountId,
+            subject = "del@example.com",
+            displayName = "Cached",
+            timezone = "UTC",
+            defaultCurrency = "EUR",
+            deletionRequested = true
+        )
+        `when`(profileRepository.findById(accountId)).thenReturn(Optional.of(deletedProfile))
+
+        assertFalse(cachedValidator.isActiveAccount(accountId))
     }
 
     @Test
-    fun `isActiveAccount falls back to repository when cache misses`() {
+    fun `isActiveAccount queries profileRepository and returns true when active`() {
         val cache = ProfileCache()
         val cachedValidator = AccountReferenceValidator(profileRepository, sessionRepository, cache)
         val accountId = UUID.randomUUID()

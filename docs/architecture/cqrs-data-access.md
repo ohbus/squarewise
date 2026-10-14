@@ -29,7 +29,7 @@ and are not used by Flyway or Hibernate schema validation.
 ## Declarative Routing Annotations
 
 Routing to reader and writer pools is configured declaratively using annotations processed by `DbRouteAspect`:
-- `@DbReader(pool = "namedPool", consistency = ReadConsistency.BOUNDED_STALENESS)`: Directs the execution context to an approved read replica pool.
+- `@DbReader(target = "namedPool", consistency = ReadConsistency.BOUNDED_STALENESS)`: Directs the execution context to an approved read replica pool.
 - `@DbWriter`: Explicitly pins the context to the writer datasource.
 - `@DbRouteContext`: Binds custom named contexts across controller and service boundaries.
 

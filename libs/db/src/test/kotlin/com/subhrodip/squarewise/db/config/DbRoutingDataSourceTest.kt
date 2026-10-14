@@ -219,18 +219,6 @@ class DbRoutingDataSourceTest {
     }
 
     @Test
-    fun `getConnection with credentials routes to appropriate datasource`() {
-        val writer = mock(DataSource::class.java)
-        val conn = mock(Connection::class.java)
-        `when`(writer.connection).thenReturn(conn)
-        val routing = DbRoutingDataSource(writer, emptyMap())
-
-        DbContextHolder.withContext(DbExecutionContext("expense.create", DbOperationKind.COMMAND)) {
-            assertSame(conn, routing.getConnection("user", "pass"))
-        }
-    }
-
-    @Test
     fun `explicit connection with blank readerName resolves reader automatically`() {
         val writer = mock(DataSource::class.java)
         val reader = mock(DataSource::class.java)

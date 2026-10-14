@@ -28,16 +28,12 @@ class AccountReferenceValidator(
 ) {
 
     /**
-     * Checks whether the specified account exists and has no deletion requested, using cache when available.
+     * Checks whether the specified account exists and has no deletion requested.
      *
      * @param accountId the unique identifier of the target account profile.
      * @return true if account exists and is active, false otherwise.
      */
     fun isActiveAccount(accountId: UUID): Boolean {
-        if (profileCache != null) {
-            val cached = profileCache.peekByAccountId(accountId)
-            if (cached != null) return true
-        }
         val profile = profileRepository.findById(accountId).orElse(null) ?: return false
         return !profile.deletionRequested
     }

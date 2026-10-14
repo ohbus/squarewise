@@ -3,6 +3,7 @@ package com.subhrodip.squarewise.notifications.preferences.cache
 import com.subhrodip.squarewise.notifications.preferences.model.NotificationPreferences
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.time.Duration
@@ -83,7 +84,7 @@ class PreferenceCacheTest {
         for (i in 1..8) {
             smallCache.get("user-$i") { calls.incrementAndGet(); prefs }
         }
-        org.junit.jupiter.api.Assertions.assertTrue(calls.get() > 8)
+        assertTrue(calls.get() > 8)
     }
 
     @Test
@@ -124,11 +125,18 @@ class PreferenceCacheTest {
     fun `eviction of expired items drops size below maxEntries skipping lru pass`() {
         val expiringCache = PreferenceCache(ttl = Duration.ofMillis(5), maxEntries = 2)
         val prefs = NotificationPreferences(emailEnabled = true)
+        val calls = AtomicInteger(0)
 
         expiringCache.get("exp-1") { prefs }
         expiringCache.get("exp-2") { prefs }
-        Thread.sleep(10)
-        expiringCache.get("exp-3") { prefs }
-        expiringCache.get("exp-4") { prefs }
+        Thread.sleep(15)
+        expiringCache.get("exp-3") { calls.incrementAndGet(); prefs }
+        expiringCache.get("exp-4") { calls.incrementAndGet(); prefs }
+        assertEquals(2, calls.get())
+
+        // Verify subsequent lookups reuse cached values without invoking loaders
+        expiringCache.get("exp-3") { calls.incrementAndGet(); prefs }
+        expiringCache.get("exp-4") { calls.incrementAndGet(); prefs }
+        assertEquals(2, calls.get())
     }
 }

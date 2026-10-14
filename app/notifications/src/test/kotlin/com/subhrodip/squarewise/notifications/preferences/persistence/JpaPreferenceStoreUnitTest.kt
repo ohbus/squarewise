@@ -105,12 +105,23 @@ class JpaPreferenceStoreUnitTest {
         val existing = NotificationPreferenceEntity(subject, emailEnabled = true, pushEnabled = true)
         `when`(repository.findById(subject)).thenReturn(Optional.of(existing))
 
+        // Preload cache so initial read is cached with emailEnabled = true
+        val initial = store.get(subject)
+        assertTrue(initial.emailEnabled)
+
         TransactionSynchronizationManager.initSynchronization()
         try {
+            val updatedEntity = NotificationPreferenceEntity(subject, emailEnabled = false, pushEnabled = false)
+            `when`(repository.findById(subject)).thenReturn(Optional.of(updatedEntity))
+
             store.put(subject, NotificationPreferences(emailEnabled = false, pushEnabled = false))
             val synchronizations = TransactionSynchronizationManager.getSynchronizations()
             assertEquals(1, synchronizations.size)
             synchronizations.first().afterCommit()
+
+            // After commit executes invalidation, get should reload the updated entity
+            val reloaded = store.get(subject)
+            assertFalse(reloaded.emailEnabled)
         } finally {
             TransactionSynchronizationManager.clearSynchronization()
         }

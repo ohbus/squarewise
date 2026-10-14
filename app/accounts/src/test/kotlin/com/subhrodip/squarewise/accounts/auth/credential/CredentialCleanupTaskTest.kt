@@ -8,6 +8,12 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.mockito.Mockito.any
+import org.mockito.Mockito.mock
+import org.mockito.Mockito.verify
+import org.mockito.Mockito.`when`
+import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.transaction.TransactionStatus
 
 /** Unit test for [CredentialCleanupTask] utilizing dynamic reflection proxy. */
 class CredentialCleanupTaskTest {
@@ -143,14 +149,14 @@ class CredentialCleanupTaskTest {
             if (method.name == "purgeExpiredOrConsumed") 5 else null
         } as LoginCredentialRepository
 
-        val mockTm = org.mockito.Mockito.mock(org.springframework.transaction.PlatformTransactionManager::class.java)
-        val mockStatus = org.mockito.Mockito.mock(org.springframework.transaction.TransactionStatus::class.java)
-        org.mockito.Mockito.`when`(mockTm.getTransaction(org.mockito.Mockito.any())).thenReturn(mockStatus)
+        val mockTm = mock(PlatformTransactionManager::class.java)
+        val mockStatus = mock(TransactionStatus::class.java)
+        `when`(mockTm.getTransaction(any())).thenReturn(mockStatus)
 
         val task = CredentialCleanupTask(proxyRepo, transactionManager = mockTm)
         val count = task.executeCleanup()
         assertEquals(5, count)
-        org.mockito.Mockito.verify(mockTm).commit(mockStatus)
+        verify(mockTm).commit(mockStatus)
     }
 
     @Test

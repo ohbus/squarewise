@@ -233,6 +233,23 @@ class ProfileCacheTest {
         val defaultCache = ProfileCache()
         defaultCache.invalidate("missing-subject", null)
         defaultCache.invalidate("missing-subject-2")
+
+        var loaderCalls = 0
+        val expected = ProfileResponse(UUID.randomUUID(), "Alice", "UTC", "EUR")
+        val result = defaultCache.getBySubject("missing-subject") {
+            loaderCalls++
+            expected
+        }
+        assertEquals(expected, result)
+        assertEquals(1, loaderCalls)
+
+        // Verifies result is now cached and loader is not invoked again
+        val cached = defaultCache.getBySubject("missing-subject") {
+            loaderCalls++
+            expected
+        }
+        assertEquals(expected, cached)
+        assertEquals(1, loaderCalls)
     }
 
     @Test

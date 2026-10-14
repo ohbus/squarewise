@@ -423,7 +423,14 @@ class DbRouteAspectTest {
         `when`(joinPoint.signature).thenReturn(signature)
         `when`(signature.method).thenReturn(method)
         `when`(joinPoint.target).thenReturn(null)
-        `when`(joinPoint.proceed()).thenReturn("fallback-ok")
+        `when`(joinPoint.proceed()).thenAnswer {
+            val ctx = DbContextHolder.current()
+            assertEquals("custom.read", ctx.operationName)
+            assertEquals("analytics", ctx.targetReader)
+            assertTrue(ctx.readerEligible)
+            assertEquals(DbOperationKind.QUERY, ctx.kind)
+            "fallback-ok"
+        }
 
         val result = aspect.aroundRoutedMethod(joinPoint)
         assertEquals("fallback-ok", result)

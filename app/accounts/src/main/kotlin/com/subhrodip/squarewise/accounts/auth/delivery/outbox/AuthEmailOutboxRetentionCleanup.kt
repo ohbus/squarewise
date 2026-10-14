@@ -6,6 +6,7 @@ import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
@@ -19,13 +20,13 @@ import org.springframework.transaction.PlatformTransactionManager
 @ConditionalOnProperty(prefix = "squarewise.auth-email-outbox", name = ["cleanup-enabled"], havingValue = "true", matchIfMissing = true)
 class AuthEmailOutboxRetentionCleanup(
     private val repository: AuthEmailOutboxRepository,
-    clock: Clock = Clock.systemUTC(),
-    retention: Duration = DEFAULT_RETENTION,
-    batchSize: Int = DEFAULT_BATCH_SIZE,
-    maxBatches: Int = DEFAULT_MAX_BATCHES,
+    @Autowired(required = false) clock: Clock? = null,
+    @Value("\${squarewise.auth-email-outbox.retention:P7D}") retention: Duration = DEFAULT_RETENTION,
+    @Value("\${squarewise.auth-email-outbox.cleanup-batch-size:500}") batchSize: Int = DEFAULT_BATCH_SIZE,
+    @Value("\${squarewise.auth-email-outbox.cleanup-max-batches:50}") maxBatches: Int = DEFAULT_MAX_BATCHES,
     @Autowired(required = false) transactionManager: PlatformTransactionManager? = null
 ) : AbstractRetentionCleanup(
-    clock = clock,
+    clock = clock ?: Clock.systemUTC(),
     retention = retention,
     batchSize = batchSize,
     maxBatches = maxBatches,

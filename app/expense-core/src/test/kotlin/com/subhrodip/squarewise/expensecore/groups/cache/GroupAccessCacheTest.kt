@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test
 import java.time.Duration
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
+import org.springframework.transaction.support.TransactionSynchronizationManager
 
 /**
  * Unit tests verifying [GroupAccessCache] hit/miss behavior, TTL expiration, and invalidation.
@@ -369,14 +370,14 @@ class GroupAccessCacheTest {
         val groupId = UUID.randomUUID()
         cache.balances(groupId) { listOf("b1") }
 
-        org.springframework.transaction.support.TransactionSynchronizationManager.initSynchronization()
+        TransactionSynchronizationManager.initSynchronization()
         try {
             cache.invalidateBalancesAfterCommit(groupId)
-            val syncs = org.springframework.transaction.support.TransactionSynchronizationManager.getSynchronizations()
+            val syncs = TransactionSynchronizationManager.getSynchronizations()
             assertEquals(1, syncs.size)
             syncs[0].afterCommit()
         } finally {
-            org.springframework.transaction.support.TransactionSynchronizationManager.clearSynchronization()
+            TransactionSynchronizationManager.clearSynchronization()
         }
     }
 

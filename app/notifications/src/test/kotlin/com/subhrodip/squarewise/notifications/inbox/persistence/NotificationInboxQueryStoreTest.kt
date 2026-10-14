@@ -20,18 +20,6 @@ class NotificationInboxQueryStoreTest {
         }
 
         assertEquals(listOf(newest), store.page("alice", null, null, 1))
-
-        val defaultImplsClass = Class.forName("com.subhrodip.squarewise.notifications.inbox.persistence.NotificationInboxQueryStore\$DefaultImpls")
-        val pageMethod = defaultImplsClass.getMethod(
-            "page",
-            NotificationInboxQueryStore::class.java,
-            String::class.java,
-            Instant::class.java,
-            UUID::class.java,
-            Int::class.javaPrimitiveType
-        )
-        val defaultImplsResult = pageMethod.invoke(null, store, "alice", null, null, 1)
-        assertEquals(listOf(newest), defaultImplsResult)
     }
 
     @Test

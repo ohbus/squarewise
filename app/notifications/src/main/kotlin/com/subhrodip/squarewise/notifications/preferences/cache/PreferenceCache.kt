@@ -63,8 +63,10 @@ class PreferenceCache(
     }
 
     private fun evictIfOversized() {
+        val now = Instant.now()
+        val cutoff = now.minus(ttl)
+        invalidationTimestamps.entries.removeIf { it.value.isBefore(cutoff) }
         if (cache.size > maxEntries) {
-            val now = Instant.now()
             cache.entries.removeIf { it.value.isExpired(now) }
             if (cache.size > maxEntries) {
                 val target = maxEntries / 4

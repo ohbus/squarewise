@@ -235,6 +235,7 @@ class GroupAccessCache(
      * @param groupId unique group identifier.
      */
     fun invalidateBalances(groupId: UUID) {
+        incrementGeneration(groupId)
         balancesCache.remove(groupId)
     }
 
