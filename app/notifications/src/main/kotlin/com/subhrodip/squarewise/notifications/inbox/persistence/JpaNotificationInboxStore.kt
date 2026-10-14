@@ -70,11 +70,7 @@ class JpaNotificationInboxStore(
     @DbWriter("notifications.inbox.markAsRead")
     @Transactional
     override fun markAsRead(subject: String, notificationId: UUID): Boolean {
-        val entity = repository.findBySubjectAndNotificationId(requireSubject(subject), notificationId)
-            ?: return false
-        entity.read = true
-        repository.save(entity)
-        return true
+        return repository.markAsReadBySubjectAndNotificationId(requireSubject(subject), notificationId) > 0
     }
 }
 
