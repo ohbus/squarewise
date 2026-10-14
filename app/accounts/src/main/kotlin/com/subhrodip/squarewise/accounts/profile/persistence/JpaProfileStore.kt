@@ -6,6 +6,8 @@ import com.subhrodip.squarewise.accounts.profile.service.ProfileRules
 import com.subhrodip.squarewise.accounts.errors.AccountsDomainException
 import com.subhrodip.squarewise.errors.catalog.AccountsErrors
 import com.subhrodip.squarewise.accounts.profile.cache.ProfileCache
+import com.subhrodip.squarewise.db.routing.DbReader
+import com.subhrodip.squarewise.db.routing.DbWriter
 import org.springframework.beans.factory.annotation.Autowired
 import java.util.UUID
 import org.springframework.stereotype.Service
@@ -33,6 +35,7 @@ class JpaProfileStore(
      * @param subject OIDC subject identifier. Must not be blank.
      * @return [ProfileResponse] or null if not found.
      */
+    @DbReader(operation = "profile.get", target = "profile")
     @Transactional(readOnly = true)
     override fun get(subject: String): ProfileResponse? {
         ProfileRules.requireSubject(subject)
@@ -46,6 +49,7 @@ class JpaProfileStore(
     /**
      * Explicitly provisions a new profile for an account.
      */
+    @DbWriter("profile.create")
     @Transactional
     override fun create(
         accountId: UUID,
@@ -71,6 +75,7 @@ class JpaProfileStore(
     /**
      * Finds a profile by account ID.
      */
+    @DbReader(operation = "profile.findById", target = "profile")
     @Transactional(readOnly = true)
     override fun findById(accountId: UUID): ProfileResponse? =
         if (profileCache != null) {
@@ -82,6 +87,7 @@ class JpaProfileStore(
     /**
      * Finds profiles by a batch of account IDs.
      */
+    @DbReader(operation = "profile.findByIds", target = "profile")
     @Transactional(readOnly = true)
     override fun findByIds(accountIds: List<UUID>): List<ProfileResponse> {
         if (accountIds.isEmpty()) return emptyList()
@@ -115,6 +121,7 @@ class JpaProfileStore(
     /**
      * Updates an existing profile. Fails closed if the profile does not exist.
      */
+    @DbWriter("profile.update")
     @Transactional
     override fun update(subject: String, patch: ProfilePatchRequest): ProfileResponse {
         ProfileRules.requireSubject(subject)
@@ -131,6 +138,7 @@ class JpaProfileStore(
     /**
      * Marks an account profile for deletion while preserving historical financial attribution.
      */
+    @DbWriter("profile.deletion.request")
     @Transactional
     override fun requestDeletion(subject: String) {
         ProfileRules.requireSubject(subject)
