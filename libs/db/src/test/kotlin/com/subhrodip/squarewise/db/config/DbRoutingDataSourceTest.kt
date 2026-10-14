@@ -321,6 +321,7 @@ class DbRoutingDataSourceTest {
         assertEquals(mapOf("shard-1" to shard1), routing.writerDataSources())
 
         DbContextHolder.withContext(DbExecutionContext("expense.create", DbOperationKind.COMMAND, targetWriter = "shard-1")) {
+            assertEquals("shard-1", routing.resolveWriterName())
             assertSame(connShard, routing.connection(DbRoute.WRITER))
         }
     }
@@ -333,6 +334,7 @@ class DbRoutingDataSourceTest {
         val routing = DbRoutingDataSource(writer, emptyMap(), writers = emptyMap())
 
         DbContextHolder.withContext(DbExecutionContext("expense.create", DbOperationKind.COMMAND, targetWriter = "shard-unknown")) {
+            assertEquals("", routing.resolveWriterName())
             assertSame(connPrimary, routing.connection(DbRoute.WRITER))
         }
     }

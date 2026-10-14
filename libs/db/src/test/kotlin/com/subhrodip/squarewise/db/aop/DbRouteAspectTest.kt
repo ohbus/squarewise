@@ -95,6 +95,37 @@ class DbRouteAspectTest {
         }
     }
 
+    @DbReader(target = "reporting", operation = "interface.read")
+    interface SampleReaderInterface {
+        fun interfaceRead(): String
+    }
+
+    open class SampleReaderServiceImpl : SampleReaderInterface {
+        override fun interfaceRead(): String {
+            val ctx = DbContextHolder.current()
+            assertEquals("interface.read", ctx.operationName)
+            assertEquals("reporting", ctx.targetReader)
+            assertTrue(ctx.readerEligible)
+            return "ok-interface-read"
+        }
+    }
+
+    @Test
+    fun `intercepts DbReader on implemented interface and establishes reader context`() {
+        val target = SampleReaderServiceImpl()
+        val method = SampleReaderServiceImpl::class.java.getMethod("interfaceRead")
+        val joinPoint = mock(ProceedingJoinPoint::class.java)
+        val signature = mock(MethodSignature::class.java)
+
+        `when`(joinPoint.signature).thenReturn(signature)
+        `when`(signature.method).thenReturn(method)
+        `when`(joinPoint.target).thenReturn(target)
+        `when`(joinPoint.proceed()).thenAnswer { target.interfaceRead() }
+
+        val result = aspect.aroundRoutedMethod(joinPoint)
+        assertEquals("ok-interface-read", result)
+    }
+
     @Test
     fun `intercepts DbReader and establishes reader context with target`() {
         val target = SampleService()

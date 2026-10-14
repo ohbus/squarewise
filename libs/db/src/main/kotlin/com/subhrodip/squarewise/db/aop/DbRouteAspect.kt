@@ -142,9 +142,21 @@ class DbRouteAspect {
         return rawContext
     }
 
-    private fun <A : Annotation> findAnnotation(method: Method?, targetClass: Class<*>?, annotationClass: Class<A>): A? =
-        method?.let { AnnotatedElementUtils.findMergedAnnotation(it, annotationClass) }
-            ?: targetClass?.let { AnnotatedElementUtils.findMergedAnnotation(it, annotationClass) }
+    private fun <A : Annotation> findAnnotation(method: Method?, targetClass: Class<*>?, annotationClass: Class<A>): A? {
+        if (method != null) {
+            val methodAnnotation = AnnotatedElementUtils.findMergedAnnotation(method, annotationClass)
+            if (methodAnnotation != null) return methodAnnotation
+        }
+        if (targetClass != null) {
+            val classAnnotation = AnnotatedElementUtils.findMergedAnnotation(targetClass, annotationClass)
+            if (classAnnotation != null) return classAnnotation
+            for (iface in targetClass.interfaces) {
+                val ifaceAnnotation = AnnotatedElementUtils.findMergedAnnotation(iface, annotationClass)
+                if (ifaceAnnotation != null) return ifaceAnnotation
+            }
+        }
+        return null
+    }
 
     private fun resolveOperationName(declared: String, method: Method?, targetClass: Class<*>?): String {
         if (declared.isNotBlank()) return declared

@@ -46,11 +46,12 @@ class DbRoutingDataSource(
         val operation = context.operationName
         if (route == DbRoute.WRITER) {
             val started = System.nanoTime()
-            val targetWriter = context.targetWriter?.takeIf { it.isNotBlank() }
-            val selectedWriter = if (targetWriter != null) writers[targetWriter] ?: writer else writer
+            val writerName = resolveWriterName()
+            val selectedWriter = if (writerName.isNotBlank()) writers[writerName] ?: writer else writer
+            val poolTag = if (writerName.isNotBlank()) "writer.$writerName" else "writer"
             return try { selectedWriter.connection } finally {
-                telemetry.route(operation, "writer")
-                telemetry.acquisition(operation, "writer", (System.nanoTime() - started) / 1_000_000)
+                telemetry.route(operation, poolTag)
+                telemetry.acquisition(operation, poolTag, (System.nanoTime() - started) / 1_000_000)
             }
         }
         val targetName = if (readerName.isNotBlank()) readerName else resolveReaderName()
@@ -78,6 +79,16 @@ class DbRoutingDataSource(
 
     /** Returns the configured writer pools for diagnostics. */
     fun writerDataSources(): Map<String, DataSource> = writers.toMap()
+
+    /** Resolves the target writer pool name based on context target if configured. */
+    fun resolveWriterName(): String {
+        val context = DbContextHolder.current()
+        val target = context.targetWriter?.takeIf { it.isNotBlank() }
+        if (target != null && writers.containsKey(target)) {
+            return target
+        }
+        return ""
+    }
 
     /** Resolves the target reader pool name based on context target or round-robin among healthy readers, with automatic failover. */
     fun resolveReaderName(): String {
