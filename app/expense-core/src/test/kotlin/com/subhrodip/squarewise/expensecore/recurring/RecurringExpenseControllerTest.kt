@@ -24,11 +24,28 @@ import java.time.LocalDate
 import java.util.UUID
 import java.security.Principal
 
+import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupRepository
+import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupMembershipRepository
+import com.subhrodip.squarewise.expensecore.recurring.api.CreateRecurringScheduleRequest
+import com.subhrodip.squarewise.expensecore.recurring.service.RecurringExpenseService
+import com.subhrodip.squarewise.expensecore.recurring.persistence.RecurringExpenseScheduleRepository
+import com.subhrodip.squarewise.expensecore.recurring.persistence.RecurringExpenseOccurrenceRepository
+import com.subhrodip.squarewise.expensecore.expenses.persistence.store.ExpenseStore
+import com.subhrodip.squarewise.expensecore.validation.EntityReferenceValidator
+import jakarta.persistence.EntityManager
+
 @SpringBootTest
 @Transactional
 class RecurringExpenseControllerTest @Autowired constructor(
     private val controller: RecurringExpenseController,
-    private val groupStore: JpaGroupStore
+    private val groupStore: JpaGroupStore,
+    private val recurringService: RecurringExpenseService,
+    private val groupRepository: GroupRepository,
+    private val membershipRepository: GroupMembershipRepository,
+    private val scheduleRepository: RecurringExpenseScheduleRepository,
+    private val occurrenceRepository: RecurringExpenseOccurrenceRepository,
+    private val expenseStore: ExpenseStore,
+    private val entityManager: EntityManager
 ) {
     private val alice = Principal { "alice" }
 
@@ -319,5 +336,96 @@ class RecurringExpenseControllerTest @Autowired constructor(
             controller.createSchedule(group.groupId, request, null)
         }
         assertEquals(CategoryCode.AUTHENTICATION_ERROR, error.definition.category)
+    }
+
+    @Test
+    fun `listSchedules succeeds and reuses group access cache`() {
+        val group = groupStore.create("alice", CreateGroupRequest("Cached Access", "TRIP", "USD"))
+        val list1 = controller.listSchedules(group.groupId, alice)
+        val list2 = controller.listSchedules(group.groupId, alice)
+        assertEquals(list1.size, list2.size)
+    }
+
+    @Test
+    fun `rejects blank principal name`() {
+        val group = groupStore.create("alice", CreateGroupRequest("Blank Principal", "TRIP", "EUR"))
+        val request = CreateRecurringScheduleRequestDto(
+            description = "Blank user",
+            amount = MoneyDto("EUR", "100"),
+            frequency = RecurrenceFrequency.WEEKLY,
+            startDate = LocalDate.of(2026, 10, 1)
+        )
+        val error = assertThrows<SquarewiseException> {
+            controller.createSchedule(group.groupId, request, Principal { "   " })
+        }
+        assertEquals(CategoryCode.AUTHENTICATION_ERROR, error.definition.category)
+    }
+
+    @Test
+    fun `rejects non-existent group`() {
+        val request = CreateRecurringScheduleRequestDto(
+            description = "Missing group",
+            amount = MoneyDto("EUR", "100"),
+            frequency = RecurrenceFrequency.WEEKLY,
+            startDate = LocalDate.of(2026, 10, 1)
+        )
+        val error = assertThrows<SquarewiseException> {
+            controller.createSchedule(UUID.randomUUID(), request, alice)
+        }
+        assertEquals(CategoryCode.NOT_FOUND, error.definition.category)
+    }
+
+    @Test
+    fun `rejects non-member with access hidden`() {
+        val group = groupStore.create("alice", CreateGroupRequest("Bob Excluded", "TRIP", "EUR"))
+        val request = CreateRecurringScheduleRequestDto(
+            description = "Bob schedule",
+            amount = MoneyDto("EUR", "100"),
+            frequency = RecurrenceFrequency.WEEKLY,
+            startDate = LocalDate.of(2026, 10, 1)
+        )
+        val error = assertThrows<SquarewiseException> {
+            controller.createSchedule(group.groupId, request, Principal { "bob" })
+        }
+        assertEquals(CategoryCode.NOT_FOUND, error.definition.category)
+    }
+
+    @Test
+    fun `controller without group access cache functions correctly`() {
+        val uncachedController = RecurringExpenseController(
+            recurringService = recurringService,
+            groupRepository = groupRepository,
+            membershipRepository = membershipRepository,
+            groupAccessCache = null
+        )
+        val group = groupStore.create("alice", CreateGroupRequest("Uncached Controller", "TRIP", "EUR"))
+        val schedules = uncachedController.listSchedules(group.groupId, alice)
+        assertEquals(0, schedules.size)
+    }
+
+    @Test
+    fun `RecurringExpenseService rejects non-existent group on schedule creation`() {
+        val serviceWithValidator = RecurringExpenseService(
+            scheduleRepository = scheduleRepository,
+            occurrenceRepository = occurrenceRepository,
+            expenseStore = expenseStore,
+            groupRepository = groupRepository,
+            entityManager = entityManager,
+            referenceValidator = EntityReferenceValidator(groupRepository, membershipRepository)
+        )
+        val missingGroupId = UUID.randomUUID()
+        val request = CreateRecurringScheduleRequest(
+            description = "Missing group schedule",
+            amountMinor = 1000,
+            currency = "EUR",
+            frequency = RecurrenceFrequency.MONTHLY,
+            dayOfMonth = 1,
+            startDate = LocalDate.of(2026, 10, 1),
+            timezone = "Europe/Vienna"
+        )
+        val error = assertThrows<SquarewiseException> {
+            serviceWithValidator.createSchedule(missingGroupId, request)
+        }
+        assertEquals(CategoryCode.NOT_FOUND, error.definition.category)
     }
 }

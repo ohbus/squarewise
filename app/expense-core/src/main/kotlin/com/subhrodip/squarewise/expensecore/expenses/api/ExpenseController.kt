@@ -21,6 +21,8 @@ import jakarta.validation.Valid
 import java.time.Instant
 import java.security.Principal
 import java.util.UUID
+import com.subhrodip.squarewise.db.routing.DbReader
+import com.subhrodip.squarewise.db.routing.DbWriter
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
@@ -37,7 +39,10 @@ import org.springframework.validation.annotation.Validated
 
 import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
 import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
+import com.subhrodip.squarewise.expensecore.groups.cache.GroupAccessCache
+import org.springframework.beans.factory.annotation.Autowired
 
+import com.subhrodip.squarewise.expensecore.validation.EntityReferenceValidator
 import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
 @RestController
 @Validated
@@ -45,11 +50,17 @@ import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
 class ExpenseController(
     private val expenseStore: ExpenseStore,
     private val membershipRepository: GroupMembershipRepository,
-    private val groupRepository: GroupRepository
+    private val groupRepository: GroupRepository,
+    @Autowired(required = false)
+    private val groupAccessCache: GroupAccessCache? = null,
+    @Autowired(required = false)
+    referenceValidator: EntityReferenceValidator? = null
 ) {
+    private val validator = referenceValidator ?: EntityReferenceValidator(groupRepository, membershipRepository, groupAccessCache)
 
     @PostMapping(ApiEndpoints.ExpenseCore.V1.EXPENSES_SUBPATH)
     @ResponseStatus(HttpStatus.CREATED)
+    @DbWriter("expense.create")
     fun createExpense(
         @PathVariable groupId: UUID,
         @RequestHeader(ApiEndpoints.Headers.IDEMPOTENCY_KEY)
@@ -59,7 +70,7 @@ class ExpenseController(
         principal: Principal?
     ): ExpenseResponse {
         validateRequestBounds(request, idempotencyKey)
-        ensureActiveMember(groupId, principal)
+        val subject = ensureActiveMember(groupId, principal)
         val totalMinor = ExpenseValidator.parseAndValidateAmount(request.amount.minor)
 
         val payerSum = ExpenseValidator.validatePayers(request.payers, request.amount.currency)
@@ -86,12 +97,13 @@ class ExpenseController(
             allocations = domainAllocations
         )
 
-        val saved = expenseStore.create(groupId, record, idempotencyKey, principal?.name)
+        val saved = expenseStore.create(groupId, record, idempotencyKey, subject)
 
         return toResponse(saved)
     }
 
     @PutMapping(ApiEndpoints.ExpenseCore.V1.EXPENSE_BY_ID_SUBPATH)
+    @DbWriter("expense.update")
     fun updateExpense(
         @PathVariable groupId: UUID,
         @PathVariable expenseId: UUID,
@@ -99,7 +111,7 @@ class ExpenseController(
         principal: Principal?
     ): ExpenseResponse {
         validateRequestBounds(request)
-        ensureActiveMember(groupId, principal)
+        val subject = ensureActiveMember(groupId, principal)
         val totalMinor = ExpenseValidator.parseAndValidateAmount(request.amount.minor)
 
         val payerSum = ExpenseValidator.validatePayers(request.payers, request.amount.currency)
@@ -126,24 +138,26 @@ class ExpenseController(
             allocations = domainAllocations
         )
 
-        val updated = expenseStore.update(groupId, expenseId, updateRecord, principal?.name)
+        val updated = expenseStore.update(groupId, expenseId, updateRecord, subject)
 
         return toResponse(updated)
     }
 
     @DeleteMapping(ApiEndpoints.ExpenseCore.V1.EXPENSE_BY_ID_SUBPATH)
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @DbWriter("expense.delete")
     fun deleteExpense(
         @PathVariable groupId: UUID,
         @PathVariable expenseId: UUID,
         @RequestParam(required = false) version: Long?,
         principal: Principal?
     ) {
-        ensureActiveMember(groupId, principal)
-        expenseStore.delete(groupId, expenseId, version, principal?.name)
+        val subject = ensureActiveMember(groupId, principal)
+        expenseStore.delete(groupId, expenseId, version, subject)
     }
 
     @GetMapping(ApiEndpoints.ExpenseCore.V1.EXPENSES_SUBPATH)
+    @DbReader("expense.list")
     fun listExpenses(
         @PathVariable groupId: UUID,
         @RequestParam(required = false) category: String?,
@@ -160,23 +174,15 @@ class ExpenseController(
     }
 
     @GetMapping(ApiEndpoints.ExpenseCore.V1.BALANCES_SUBPATH)
+    @DbReader("expense.balances")
     fun getBalances(@PathVariable groupId: UUID, principal: Principal?): GroupBalancesResponse {
         ensureActiveMember(groupId, principal)
         val balances = expenseStore.balances(groupId)
         return GroupBalancesResponse(groupId, balances)
     }
 
-    private fun ensureActiveMember(groupId: UUID, principal: Principal?) {
-        val subject = principal?.name?.trim()
-            ?.takeIf { it.isNotEmpty() }
-            ?: throw ExpenseDomainException(PlatformErrors.AUTHENTICATION_REQUIRED, "Authenticated subject is required")
-        if (!membershipRepository.existsByGroupIdAndSubject(groupId, subject)) {
-            throw ExpenseDomainException(ExpenseErrors.GROUP_ACCESS_HIDDEN, "Group $groupId not found")
-        }
-        if (groupRepository.findById(groupId).map { it.status }.orElse(null) != "ACTIVE") {
-            throw ExpenseDomainException(ExpenseErrors.GROUP_ARCHIVED, "Group $groupId is archived")
-        }
-    }
+    private fun ensureActiveMember(groupId: UUID, principal: Principal?): String =
+        validator.ensureActiveMember(groupId, principal)
 
     private fun validateRequestBounds(request: CreateExpenseRequest, idempotencyKey: String) {
         if (idempotencyKey.length > ExpenseRequestLimits.MAX_IDEMPOTENCY_KEY_LENGTH) {

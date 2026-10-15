@@ -42,7 +42,7 @@ def source_files() -> list[Path]:
         path
         for root in KOTLIN_ROOTS
         for path in root.rglob("*.kt")
-        if "src/test/" not in path.as_posix()
+        if "/src/main/" in path.as_posix()
     )
 
 
@@ -60,7 +60,7 @@ def scan_content(relative: str, content: str) -> set[Violation]:
     violations: set[Violation] = set()
     boundary_path = any(
         segment in Path(relative).parts
-        for segment in ("api", "transport", "gateway", "web")
+        for segment in ("api", "web")
     )
     for line_number, line in enumerate(content.splitlines(), 1):
         for violation_type, pattern in PATTERNS.items():

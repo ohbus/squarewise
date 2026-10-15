@@ -13,11 +13,13 @@ import com.subhrodip.squarewise.notifications.email.delivery.EmailDeliveryOutcom
 import com.subhrodip.squarewise.notifications.errors.NotificationDomainException
 import com.subhrodip.squarewise.notifications.preferences.persistence.PreferenceStore
 import com.subhrodip.squarewise.errors.catalog.NotificationErrors
+import com.subhrodip.squarewise.errors.code.RetryPolicy
 
 import org.hibernate.exception.ConstraintViolationException
 import org.slf4j.LoggerFactory
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Service
+import java.time.Duration
 import java.time.Instant
 import java.util.UUID
 /**
@@ -41,7 +43,16 @@ class NotificationEventConsumer(
     private val log = LoggerFactory.getLogger(NotificationEventConsumer::class.java)
 
     override fun consume(event: NotificationEvent): NotificationConsumptionOutcome {
-        val outcome = try {
+        val outcome = processEvent(event)
+        val delivery = resolveDelivery(event, outcome)
+        if (shouldDispatch(outcome, delivery)) {
+            executeDispatch(event)
+        }
+        return outcome
+    }
+
+    private fun processEvent(event: NotificationEvent): NotificationConsumptionOutcome {
+        return try {
             processor.process(event)
         } catch (failure: RuntimeException) {
             if (failure.isConstraintViolation() && processedEvents.existsById(event.eventId)) {
@@ -50,24 +61,57 @@ class NotificationEventConsumer(
                 throw failure
             }
         }
+    }
 
-        val delivery = if (outcome == NotificationConsumptionOutcome.APPLIED) {
-            emailDeliveries?.let { repository ->
-                repository.findById(event.notificationId).orElseGet {
-                    repository.save(NotificationEmailDeliveryEntity(event.notificationId))
-                }
+    private fun resolveDelivery(
+        event: NotificationEvent,
+        outcome: NotificationConsumptionOutcome
+    ): NotificationEmailDeliveryEntity? {
+        val repository = emailDeliveries ?: return null
+        return if (outcome == NotificationConsumptionOutcome.APPLIED) {
+            repository.findById(event.notificationId).orElseGet {
+                repository.save(NotificationEmailDeliveryEntity(event.notificationId))
             }
         } else {
-            emailDeliveries?.let { repository -> repository.findById(event.notificationId).orElse(null) }
+            repository.findById(event.notificationId).orElse(null)
         }
-        if (outcome == NotificationConsumptionOutcome.APPLIED || delivery?.status == NotificationEmailDeliveryEntity.PENDING) {
-            if (delivery?.status == NotificationEmailDeliveryEntity.DELIVERED || delivery?.status == NotificationEmailDeliveryEntity.SKIPPED) {
-                return outcome
-            }
-            dispatchEmailIfEnabled(event)
-        }
+    }
 
-        return outcome
+    private fun shouldDispatch(
+        outcome: NotificationConsumptionOutcome,
+        delivery: NotificationEmailDeliveryEntity?
+    ): Boolean {
+        if (delivery?.status == NotificationEmailDeliveryEntity.DELIVERED ||
+            delivery?.status == NotificationEmailDeliveryEntity.SKIPPED
+        ) {
+            return false
+        }
+        return outcome == NotificationConsumptionOutcome.APPLIED ||
+            delivery?.status == NotificationEmailDeliveryEntity.PENDING ||
+            delivery?.status == NotificationEmailDeliveryEntity.DISPATCHING
+    }
+
+    private fun executeDispatch(event: NotificationEvent) {
+        if (emailDeliveries != null) {
+            val now = Instant.now()
+            if (emailDeliveries.claimForDispatch(event.notificationId, now, now.minus(DISPATCH_LEASE)) == 0) {
+                return
+            }
+        }
+        try {
+            dispatchEmailIfEnabled(event)
+        } catch (failure: NotificationDomainException) {
+            val status = if (failure.definition.retryPolicy == RetryPolicy.NEVER) {
+                NotificationEmailDeliveryEntity.SKIPPED
+            } else {
+                NotificationEmailDeliveryEntity.PENDING
+            }
+            markDelivery(event.notificationId, status)
+            throw failure
+        } catch (failure: RuntimeException) {
+            markDelivery(event.notificationId, NotificationEmailDeliveryEntity.PENDING)
+            throw failure
+        }
     }
 
     private fun dispatchEmailIfEnabled(event: NotificationEvent) {
@@ -92,21 +136,30 @@ class NotificationEventConsumer(
         }
         val deliveryOutcome = emailDispatcher.send(recipientEmail, "Notification: ${event.title}", event.body)
         when (deliveryOutcome) {
-            EmailDeliveryOutcome.DELIVERED, EmailDeliveryOutcome.SKIPPED -> Unit
+            EmailDeliveryOutcome.DELIVERED -> markDelivery(
+                event.notificationId,
+                NotificationEmailDeliveryEntity.DELIVERED
+            )
+            EmailDeliveryOutcome.SKIPPED -> markDelivery(
+                event.notificationId,
+                NotificationEmailDeliveryEntity.SKIPPED
+            )
             EmailDeliveryOutcome.RETRYABLE_FAILURE,
             EmailDeliveryOutcome.PERMANENT_FAILURE -> throw NotificationDomainException(
                 NotificationErrors.EMAIL_DISPATCH_FAILED
             )
         }
-        markDelivery(event.notificationId, NotificationEmailDeliveryEntity.DELIVERED)
         log.info("Email dispatch outcome for recipientId={} (notificationId={}): {}", opaqueRecipientId(recipientEmail), event.notificationId, deliveryOutcome)
     }
 
     private fun markDelivery(notificationId: UUID, status: String) {
-        emailDeliveries?.findById(notificationId)?.ifPresent { delivery ->
-            delivery.status = status
-            delivery.updatedAt = Instant.now()
-            emailDeliveries.save(delivery)
+        val updated = emailDeliveries?.updateStatus(notificationId, status, Instant.now()) ?: 0
+        if (updated == 0) {
+            emailDeliveries?.findById(notificationId)?.ifPresent { delivery ->
+                delivery.status = status
+                delivery.updatedAt = Instant.now()
+                emailDeliveries.save(delivery)
+            }
         }
     }
 
@@ -116,6 +169,14 @@ class NotificationEventConsumer(
         }
         val recipient = event.subject.trim()
         return recipient.takeIf { it.contains("@") }
+    }
+
+    private companion object {
+        /**
+         * Bounds recovery time for a consumer that crashes after claiming a dispatch.
+         * A provider may still receive one duplicate if the process crashes after SMTP accepts the mail.
+         */
+        private val DISPATCH_LEASE: Duration = Duration.ofMinutes(5)
     }
 }
 

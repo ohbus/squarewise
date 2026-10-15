@@ -5,7 +5,6 @@ import com.subhrodip.squarewise.expensecore.settlements.domain.SettlementStatus
 import com.subhrodip.squarewise.expensecore.expenses.persistence.entity.BalancePostingEntity
 import com.subhrodip.squarewise.expensecore.expenses.persistence.repository.BalancePostingRepository
 import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupRepository
-import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupMembershipRepository
 import com.subhrodip.squarewise.expensecore.groups.persistence.store.GroupAuditCommandStore
 import com.subhrodip.squarewise.expensecore.groups.domain.GroupAuditEntity
 import com.subhrodip.squarewise.expensecore.groups.domain.GroupEntity
@@ -16,11 +15,16 @@ import com.subhrodip.squarewise.expensecore.messaging.outbox.persistence.OutboxS
 import com.subhrodip.squarewise.ids.generation.UuidGenerator
 import java.util.UUID
 import java.time.Instant
+import com.subhrodip.squarewise.expensecore.groups.cache.GroupAccessCache
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Primary
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import com.subhrodip.squarewise.db.routing.DbWriter
 import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
 import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
+
+import com.subhrodip.squarewise.expensecore.validation.EntityReferenceValidator
 
 /**
  * JPA persistence adapter implementing [SettlementStore] to record settlements and execute reversals.
@@ -35,11 +39,13 @@ import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
 class JpaSettlementStore(
     private val repository: SettlementRepository,
     private val groupRepository: GroupRepository,
-    private val membershipRepository: GroupMembershipRepository,
     private val balancePostingRepository: BalancePostingRepository,
     private val audit: GroupAuditCommandStore,
     private val synchronization: SynchronizationStore,
-    private val outbox: OutboxStore
+    private val outbox: OutboxStore,
+    private val referenceValidator: EntityReferenceValidator,
+    @Autowired(required = false)
+    private val groupAccessCache: GroupAccessCache? = null
 ) : SettlementStore {
 
     /**
@@ -50,6 +56,7 @@ class JpaSettlementStore(
      * @param actorSubject the authenticated subject recording the settlement
      * @return the persisted or existing domain settlement
      */
+    @DbWriter("settlement.record")
     @Transactional
     override fun record(groupId: UUID, settlement: Settlement, actorSubject: String): Settlement {
         val group = lockActiveGroup(groupId, actorSubject)
@@ -87,6 +94,7 @@ class JpaSettlementStore(
             )
         )
         recordMutation(group, actorSubject, "settlement.recorded", saved.toDomain())
+        groupAccessCache?.invalidateBalancesAfterCommit(groupId)
         return saved.toDomain()
     }
 
@@ -100,6 +108,7 @@ class JpaSettlementStore(
      * @return the updated domain settlement with REVERSED status
      * @throws ExpenseDomainException with [ExpenseErrors.SETTLEMENT_NOT_FOUND] if the settlement cannot be found
      */
+    @DbWriter("settlement.reverse")
     @Transactional
     override fun reverse(groupId: UUID, settlementId: UUID, reason: String, actorSubject: String): Settlement {
         val group = lockActiveGroup(groupId, actorSubject)
@@ -123,23 +132,19 @@ class JpaSettlementStore(
         )
         val reversed = repository.save(entity).toDomain()
         recordMutation(group, actorSubject, "settlement.reversed", reversed)
+        groupAccessCache?.invalidateBalancesAfterCommit(groupId)
         return reversed
     }
 
     private fun lockActiveGroup(groupId: UUID, actorSubject: String) = groupRepository.findForMembershipUpdate(groupId)?.also { group ->
         if (group.status == "ARCHIVED") throw ExpenseDomainException(ExpenseErrors.GROUP_ARCHIVED, "Group is archived")
-        if (!membershipRepository.existsByGroupIdAndSubjectAndStatus(groupId, actorSubject, "ACTIVE")) {
+        if (!referenceValidator.isActiveMember(groupId, actorSubject)) {
             throw ExpenseDomainException(ExpenseErrors.GROUP_ACCESS_HIDDEN, "Group $groupId not found")
         }
     } ?: throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group $groupId not found")
 
     private fun validateParticipants(groupId: UUID, settlement: Settlement) {
-        require(settlement.fromParticipantId != settlement.toParticipantId) { "Participants must differ" }
-        if (membershipRepository.findByMembershipIdAndGroupIdAndStatus(settlement.fromParticipantId, groupId, "ACTIVE") == null ||
-            membershipRepository.findByMembershipIdAndGroupIdAndStatus(settlement.toParticipantId, groupId, "ACTIVE") == null
-        ) {
-            throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Settlement participants must be active group members")
-        }
+        referenceValidator.validateSettlementParticipants(groupId, settlement.fromParticipantId, settlement.toParticipantId)
     }
 
     private fun recordMutation(group: GroupEntity, actorSubject: String, action: String, settlement: Settlement) {

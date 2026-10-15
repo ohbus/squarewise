@@ -32,10 +32,10 @@ interface ExpenseRepository : JpaRepository<ExpenseEntity, UUID> {
                    e.amount_minor AS amountMinor
               FROM expenses e
              WHERE e.group_id = :groupId AND e.deleted = FALSE
-               AND (:text = '' OR LOWER(e.description) LIKE CONCAT('%', LOWER(:text), '%'))
+               AND (:text = '' OR LOWER(e.description) LIKE CONCAT('%', LOWER(:text), '%') ESCAPE '\')
                AND (:currency IS NULL OR e.currency = :currency)
                AND (:category IS NULL OR e.category = :category)
-               AND (:afterExpenseId IS NULL OR CAST(e.expense_id AS VARCHAR) > :afterExpenseId)
+               AND (:afterExpenseId IS NULL OR e.expense_id > :afterExpenseId)
              ORDER BY e.expense_id ASC
         """,
         nativeQuery = true
@@ -45,7 +45,7 @@ interface ExpenseRepository : JpaRepository<ExpenseEntity, UUID> {
         text: String,
         currency: String?,
         category: String?,
-        afterExpenseId: String?,
+        afterExpenseId: UUID?,
         pageable: Pageable
     ): List<SearchExpenseProjection>
 

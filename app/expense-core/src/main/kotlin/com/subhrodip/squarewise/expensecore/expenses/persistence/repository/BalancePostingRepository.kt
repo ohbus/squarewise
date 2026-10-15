@@ -5,6 +5,7 @@ import java.util.UUID
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
+import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Repository
 
 /**
@@ -59,6 +60,7 @@ interface BalancePostingRepository : JpaRepository<BalancePostingEntity, UUID> {
      * Aggregates net balance sums grouped by participant ID and currency within a group.
      *
      * @param groupId the group UUID
+     * @param pageable bounded result window
      * @return list of rows containing participantId, currency, and net sum
      */
     @Query(
@@ -67,7 +69,8 @@ interface BalancePostingRepository : JpaRepository<BalancePostingEntity, UUID> {
         from BalancePostingEntity b
         where b.groupId = :groupId
         group by b.participantId, b.currency
+        order by b.participantId, b.currency
         """
     )
-    fun sumBalancesByGroup(@Param("groupId") groupId: UUID): List<Array<Any>>
+    fun sumBalancesByGroup(@Param("groupId") groupId: UUID, pageable: Pageable): List<Array<Any>>
 }

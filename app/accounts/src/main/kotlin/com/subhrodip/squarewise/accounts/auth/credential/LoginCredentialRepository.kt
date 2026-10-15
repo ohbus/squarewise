@@ -51,22 +51,29 @@ interface LoginCredentialRepository : JpaRepository<LoginCredentialEntity, UUID>
     fun findByCredentialDigest(credentialDigest: ByteArray): LoginCredentialEntity?
 
     /**
-     * Purges expired or consumed credentials older than the specified cutoff thresholds.
+     * Purges expired or consumed credentials older than the specified cutoff thresholds in bounded batches.
      *
      * @param expiredCutoff cutoff timestamp for expired credentials.
      * @param consumedCutoff cutoff timestamp for consumed credentials.
+     * @param limit maximum records to delete in one batch.
      * @return count of deleted records.
      */
     @Modifying
     @Query(
-        """
-        DELETE FROM LoginCredentialEntity c
-         WHERE c.expiresAt < :expiredCutoff
-            OR (c.consumedAt IS NOT NULL AND c.consumedAt < :consumedCutoff)
-        """
+        value = """
+            DELETE FROM auth_login_credentials
+            WHERE credential_id IN (
+                SELECT credential_id FROM auth_login_credentials
+                WHERE (expires_at < :expiredCutoff)
+                   OR (consumed_at IS NOT NULL AND consumed_at < :consumedCutoff)
+                LIMIT :limit
+            )
+        """,
+        nativeQuery = true
     )
     fun purgeExpiredOrConsumed(
         @Param("expiredCutoff") expiredCutoff: Instant,
-        @Param("consumedCutoff") consumedCutoff: Instant
+        @Param("consumedCutoff") consumedCutoff: Instant,
+        @Param("limit") limit: Int
     ): Int
 }

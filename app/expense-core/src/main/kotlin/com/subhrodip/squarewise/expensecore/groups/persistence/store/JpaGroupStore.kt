@@ -19,8 +19,8 @@ import com.subhrodip.squarewise.expensecore.messaging.outbox.persistence.OutboxS
 import com.subhrodip.squarewise.expensecore.sync.persistence.SynchronizationStore
 import com.subhrodip.squarewise.ids.generation.UuidGenerator
 import com.subhrodip.squarewise.db.routing.DbContextHolder
-import com.subhrodip.squarewise.db.routing.DbExecutionContext
-import com.subhrodip.squarewise.db.routing.DbOperationKind
+import com.subhrodip.squarewise.db.routing.DbReader
+import com.subhrodip.squarewise.db.routing.DbWriter
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
@@ -29,8 +29,13 @@ import org.springframework.data.domain.Sort
 import org.springframework.context.annotation.Primary
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.transaction.support.TransactionSynchronization
+import org.springframework.transaction.support.TransactionSynchronizationManager
 import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
 import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
+
+import com.subhrodip.squarewise.expensecore.groups.cache.GroupAccessCache
+import org.springframework.beans.factory.annotation.Autowired
 
 /**
  * JPA persistence adapter implementing [GroupStore] for group lifecycle operations,
@@ -49,12 +54,15 @@ class JpaGroupStore(
     private val invitations: GroupInvitationRepository,
     private val audit: GroupAuditCommandStore,
     private val synchronization: SynchronizationStore,
-    private val outbox: OutboxStore
+    private val outbox: OutboxStore,
+    @Autowired(required = false)
+    private val groupAccessCache: GroupAccessCache? = null
 ) : GroupStore {
 
     /**
      * Creates a new expense group with the calling subject as the initial active member.
      */
+    @DbWriter("group.create")
     @Transactional
     override fun create(subject: String, request: CreateGroupRequest): GroupResponse {
         val entity = groups.save(
@@ -73,31 +81,51 @@ class JpaGroupStore(
     /**
      * Lists all groups in which the given user subject is an active member.
      */
+    @DbReader("groups.list")
     @Transactional(readOnly = true)
     override fun list(subject: String): List<GroupResponse> = list(subject, 100)
 
     /** Loads a bounded group page without materializing every membership. */
+    @DbReader("groups.list")
     @Transactional(readOnly = true)
     override fun list(subject: String, limit: Int): List<GroupResponse> {
         require(limit in 1..100) { "group limit must be between 1 and 100" }
-        return DbContextHolder.withContext(DbExecutionContext("groups.list", DbOperationKind.QUERY)) {
+        return DbContextHolder.withReader(operation = "groups.list") {
             memberships.findActiveGroupsBySubject(subject, "ACTIVE", PageRequest.of(0, limit))
                 .map { it.toResponse() }
         }
     }
 
     /** Resolves one active group through the membership join. */
+    @DbReader("group.get")
     @Transactional(readOnly = true)
-    override fun get(groupId: UUID, subject: String): GroupResponse? =
-        memberships.findActiveGroupBySubjectAndId(groupId, subject, "ACTIVE")?.toResponse()
+    override fun get(groupId: UUID, subject: String): GroupResponse? {
+        val isActive = if (groupAccessCache != null) {
+            groupAccessCache.isMember(groupId, subject) {
+                memberships.existsByGroupIdAndSubjectAndStatus(groupId, subject, "ACTIVE")
+            }
+        } else {
+            memberships.existsByGroupIdAndSubjectAndStatus(groupId, subject, "ACTIVE")
+        }
+        if (!isActive) return null
+
+        return if (groupAccessCache != null) {
+            groupAccessCache.groupDetails(groupId) {
+                memberships.findActiveGroupBySubjectAndId(groupId, subject, "ACTIVE")?.toResponse()
+            }
+        } else {
+            memberships.findActiveGroupBySubjectAndId(groupId, subject, "ACTIVE")?.toResponse()
+        }
+    }
 
     /**
      * Updates an existing expense group's name and increments its revision.
      */
+    @DbWriter("group.update")
     @Transactional
     override fun update(groupId: UUID, subject: String, request: UpdateGroupRequest): GroupResponse {
         checkActiveMembership(groupId, subject)
-        val entity = groups.findForMembershipUpdate(groupId) ?: notFound()
+        val entity = groups.findForMembershipUpdate(groupId) ?: throw notFound()
         checkActiveGroup(entity)
         entity.name = request.name.trim()
         entity.revision += 1
@@ -111,16 +139,18 @@ class JpaGroupStore(
             "changedBy" to subject
         )
         recordMutation(groupId, subject, "group.renamed", saved.revision, payload, occurredAt, "group.renamed.v1")
+        invalidateGroupAfterCommit(groupId)
         return saved.toResponse()
     }
 
     /**
      * Archives an active group, transitioning its status to ARCHIVED and incrementing revision.
      */
+    @DbWriter("group.archive")
     @Transactional
     override fun archive(groupId: UUID, subject: String): GroupResponse {
         checkActiveMembership(groupId, subject)
-        val entity = groups.findForMembershipUpdate(groupId) ?: notFound()
+        val entity = groups.findForMembershipUpdate(groupId) ?: throw notFound()
         if (entity.status == "ARCHIVED") {
             throw ExpenseDomainException(ExpenseErrors.GROUP_NAME_CONFLICT, "Group is already archived")
         }
@@ -136,12 +166,14 @@ class JpaGroupStore(
             "changedBy" to subject
         )
         recordMutation(groupId, subject, "group.archived", saved.revision, payload, occurredAt, "group.archived.v1")
+        invalidateGroupAfterCommit(groupId)
         return saved.toResponse()
     }
 
     /**
      * Creates a named placeholder member within an active group.
      */
+    @DbWriter("group.placeholder.create")
     @Transactional
     override fun addPlaceholder(
         groupId: UUID,
@@ -149,7 +181,7 @@ class JpaGroupStore(
         request: CreatePlaceholderRequest
     ): GroupMemberResponse {
         checkActiveMembership(groupId, subject)
-        val group = groups.findForMembershipUpdate(groupId) ?: notFound()
+        val group = groups.findForMembershipUpdate(groupId) ?: throw notFound()
         checkActiveGroup(group)
         val membershipId = UuidGenerator.next()
         val entity = memberships.save(
@@ -168,24 +200,26 @@ class JpaGroupStore(
         val payload = mapOf(
             "groupId" to groupId.toString(),
             "membershipId" to membershipId.toString(),
-            "displayName" to entity.displayName.orEmpty(),
+            "displayName" to entity.displayName,
             "revision" to group.revision,
             "subject" to subject,
             "changedBy" to subject
         )
         recordMutation(groupId, subject, "member.placeholder_added", group.revision, payload, occurredAt, "member.placeholder_added.v1")
+        invalidateGroupAfterCommit(groupId)
         return entity.toResponse()
     }
 
     /**
      * Soft-removes a member from an active group while preserving historical financial records.
      */
+    @DbWriter("group.member.remove")
     @Transactional
     override fun removeMember(groupId: UUID, subject: String, membershipId: UUID) {
         checkActiveMembership(groupId, subject)
-        val group = groups.findForMembershipUpdate(groupId) ?: notFound()
+        val group = groups.findForMembershipUpdate(groupId) ?: throw notFound()
         checkActiveGroup(group)
-        val target = memberships.findByMembershipIdAndGroupId(membershipId, groupId) ?: notFound()
+        val target = memberships.findByMembershipIdAndGroupId(membershipId, groupId) ?: throw notFound()
         if (target.status == "REMOVED") {
             throw ExpenseDomainException(ExpenseErrors.GROUP_NAME_CONFLICT, "Member is already removed")
         }
@@ -204,17 +238,34 @@ class JpaGroupStore(
             "changedBy" to subject
         )
         recordMutation(groupId, subject, "member.removed", group.revision, payload, occurredAt, "member.removed.v1")
+        invalidateGroupAfterCommit(groupId, target.subject)
     }
 
     /**
      * Lists all active members and placeholders registered in the specified group.
      */
+    @DbReader("group.members.list")
     @Transactional(readOnly = true)
     override fun listMembers(groupId: UUID, subject: String, limit: Int): List<GroupMemberResponse> {
         require(limit in 1..100) { "member limit must be between 1 and 100" }
         checkActiveMembership(groupId, subject)
-        val group = groups.findById(groupId).orElse(null) ?: notFound()
-        if (group.status != "ACTIVE") notFound()
+        val status = if (groupAccessCache != null) {
+            groupAccessCache.groupStatus(groupId) {
+                groups.findById(groupId).map { it.status }.orElse(null)
+            }
+        } else {
+            groups.findById(groupId).map { it.status }.orElse(null)
+        }
+        if (status != "ACTIVE") throw notFound()
+        if (groupAccessCache != null) {
+            return groupAccessCache.members(groupId, limit) {
+                memberships.findByGroupIdAndStatus(
+                    groupId,
+                    "ACTIVE",
+                    PageRequest.of(0, limit, Sort.by(Sort.Direction.ASC, "membershipId"))
+                ).map { it.toResponse() }
+            }
+        }
         // shortcut: return the first 100 members until the public contract has cursor pagination.
         return memberships.findByGroupIdAndStatus(
             groupId,
@@ -226,10 +277,11 @@ class JpaGroupStore(
     /**
      * Generates a new invitation token for joining an active group (optionally targeting a placeholder).
      */
+    @DbWriter("group.invite.create")
     @Transactional
     override fun invite(groupId: UUID, subject: String, request: CreateInviteRequest): InviteResponse {
         checkActiveMembership(groupId, subject)
-        val group = groups.findById(groupId).orElse(null) ?: notFound()
+        val group = groups.findById(groupId).orElse(null) ?: throw notFound()
         checkActiveGroup(group)
         if (request.placeholderId != null) {
             val placeholder = memberships.findByMembershipIdAndGroupId(request.placeholderId, groupId)
@@ -246,14 +298,15 @@ class JpaGroupStore(
     /**
      * Revokes a pending invitation token within an active group.
      */
+    @DbWriter("group.invite.revoke")
     @Transactional
     override fun revokeInvite(groupId: UUID, subject: String, token: String) {
         checkActiveMembership(groupId, subject)
-        val group = groups.findForMembershipUpdate(groupId) ?: notFound()
+        val group = groups.findForMembershipUpdate(groupId) ?: throw notFound()
         checkActiveGroup(group)
         val occurredAt = Instant.now()
         if (invitations.revokeIfAvailable(token, groupId, occurredAt) != 1) {
-            conflict("Invite is invalid, already claimed, or already revoked")
+            throw conflict("Invite is invalid, already claimed, or already revoked")
         }
         group.revision += 1
         groups.save(group)
@@ -265,30 +318,32 @@ class JpaGroupStore(
             "changedBy" to subject
         )
         recordMutation(groupId, subject, "invitation.revoked", group.revision, payload, occurredAt, "invitation.revoked.v1")
+        invalidateGroupAfterCommit(groupId)
     }
 
     /**
      * Claims an invitation token, adding the caller subject or binding to a targeted placeholder.
      */
+    @DbWriter("group.invite.claim")
     @Transactional
     override fun claim(token: String, subject: String): GroupResponse {
-        if (!token.matches(INVITATION_TOKEN)) conflict("Invite token is invalid")
+        if (!token.matches(INVITATION_TOKEN)) throw conflict("Invite token is invalid")
         val invitation = invitations.findById(token).orElseThrow { conflict("Invite not found") }
         if (invitation.claimedAt != null || invitation.revokedAt != null || !invitation.expiresAt.isAfter(Instant.now())) {
-            conflict("Invite is invalid, expired, or already claimed/revoked")
+            throw conflict("Invite is invalid, expired, or already claimed/revoked")
         }
-        val group = groups.findForMembershipUpdate(invitation.groupId) ?: notFound()
+        val group = groups.findForMembershipUpdate(invitation.groupId) ?: throw notFound()
         checkActiveGroup(group)
 
         return if (invitation.placeholderId != null) {
             val placeholder = memberships.findByMembershipIdAndGroupId(invitation.placeholderId!!, group.groupId)
-                ?: conflict("Placeholder not found")
+                ?: throw conflict("Placeholder not found")
             if (placeholder.status != "ACTIVE" || placeholder.subject != null) {
-                conflict("Placeholder is no longer available")
+                throw conflict("Placeholder is no longer available")
             }
             val claimedAt = Instant.now()
             if (invitations.claimIfAvailable(token, subject, claimedAt) != 1) {
-                conflict("Invite could not be claimed")
+                throw conflict("Invite could not be claimed")
             }
             placeholder.subject = subject
             placeholder.isPlaceholder = false
@@ -299,10 +354,11 @@ class JpaGroupStore(
                 "groupId" to group.groupId.toString(),
                 "token" to token,
                 "claimedBy" to subject,
-                "placeholderId" to invitation.placeholderId?.toString(),
+                "placeholderId" to invitation.placeholderId!!.toString(),
                 "revision" to saved.revision
             )
             recordMutation(group.groupId, subject, "invitation.claimed", saved.revision, payload, claimedAt, "invitation.claimed.v1")
+            invalidateGroupAfterCommit(group.groupId, subject)
             saved.toResponse()
         } else {
             if (memberships.existsByGroupIdAndSubjectAndStatus(group.groupId, subject, "ACTIVE")) {
@@ -310,7 +366,7 @@ class JpaGroupStore(
             }
             val claimedAt = Instant.now()
             if (invitations.claimIfAvailable(token, subject, claimedAt) != 1) {
-                conflict("Invite could not be claimed")
+                throw conflict("Invite could not be claimed")
             }
             addMembership(group.groupId, subject)
             group.revision += 1
@@ -322,6 +378,7 @@ class JpaGroupStore(
                 "revision" to saved.revision
             )
             recordMutation(group.groupId, subject, "invitation.claimed", saved.revision, payload, claimedAt, "invitation.claimed.v1")
+            invalidateGroupAfterCommit(group.groupId, subject)
             saved.toResponse()
         }
     }
@@ -342,7 +399,14 @@ class JpaGroupStore(
     }
 
     private fun checkActiveMembership(groupId: UUID, subject: String) {
-        if (!memberships.existsByGroupIdAndSubjectAndStatus(groupId, subject, "ACTIVE")) {
+        val isActive = if (groupAccessCache != null) {
+            groupAccessCache.isMember(groupId, subject) {
+                memberships.existsByGroupIdAndSubjectAndStatus(groupId, subject, "ACTIVE")
+            }
+        } else {
+            memberships.existsByGroupIdAndSubjectAndStatus(groupId, subject, "ACTIVE")
+        }
+        if (!isActive) {
             throw ExpenseDomainException(ExpenseErrors.GROUP_ACCESS_HIDDEN, "Group not found")
         }
     }
@@ -391,11 +455,32 @@ class JpaGroupStore(
     private fun invitationToken(): String =
         UuidGenerator.next().toString().replace("-", "") + UuidGenerator.next().toString().replace("-", "")
 
-    private fun conflict(message: String): Nothing =
-        throw ExpenseDomainException(ExpenseErrors.GROUP_NAME_CONFLICT, message)
+    private fun conflict(message: String): ExpenseDomainException =
+        ExpenseDomainException(ExpenseErrors.GROUP_NAME_CONFLICT, message)
 
-    private fun notFound(): Nothing =
-        throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group not found")
+    private fun notFound(): ExpenseDomainException =
+        ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group not found")
+
+    private fun invalidateGroupAfterCommit(groupId: UUID, memberSubject: String? = null) {
+        val cache = groupAccessCache ?: return
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(
+                object : TransactionSynchronization {
+                    override fun afterCommit() {
+                        cache.invalidateGroup(groupId)
+                        if (memberSubject != null) {
+                            cache.invalidateMember(groupId, memberSubject)
+                        }
+                    }
+                }
+            )
+        } else {
+            cache.invalidateGroup(groupId)
+            if (memberSubject != null) {
+                cache.invalidateMember(groupId, memberSubject)
+            }
+        }
+    }
 
     private companion object {
         val INVITATION_TOKEN = Regex("^[a-f0-9]{64}$")

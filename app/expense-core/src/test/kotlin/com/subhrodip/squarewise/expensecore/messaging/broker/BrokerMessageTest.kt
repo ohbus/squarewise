@@ -20,7 +20,8 @@ class BrokerMessageTest {
 
         assertEquals(first, second)
         assertEquals(first.hashCode(), second.hashCode())
-        assertTrue(first.toString().contains("payload=[1, 2, 3]"))
+        assertTrue(first.toString().contains("payloadSize=3"))
+        assertFalse(first.toString().contains("[1, 2, 3]"))
     }
 
     @Test

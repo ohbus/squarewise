@@ -79,18 +79,15 @@ class EmailDispatcher(
 
         if (isTransientFailure(e)) {
             log.warn("Transient email delivery failure for recipientId={} (attempt {}/{})", recipientId, attempt, maxAttempts)
-            if (attempt < maxAttempts) {
-                if (properties.retryDelayMs > 0) {
-                    try {
-                        Thread.sleep(properties.retryDelayMs)
-                    } catch (_: InterruptedException) {
-                        Thread.currentThread().interrupt()
-                        return EmailDeliveryOutcome.RETRYABLE_FAILURE
-                    }
+            if (attempt < maxAttempts && properties.retryDelayMs > 0) {
+                try {
+                    Thread.sleep(properties.retryDelayMs)
+                } catch (_: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                    return EmailDeliveryOutcome.RETRYABLE_FAILURE
                 }
-                return null
             }
-            return EmailDeliveryOutcome.RETRYABLE_FAILURE
+            return null
         }
 
         log.error("Non-retryable email delivery failure for recipientId={}, errorClass={}", recipientId, e::class.simpleName)

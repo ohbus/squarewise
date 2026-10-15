@@ -6,8 +6,9 @@ import java.time.ZoneOffset
 import com.subhrodip.squarewise.expensecore.sync.api.SyncController
 import com.subhrodip.squarewise.expensecore.sync.persistence.InMemorySynchronizationStore
 import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupMembershipRepository
+import com.subhrodip.squarewise.expensecore.groups.cache.GroupAccessCache
 
-import com.subhrodip.squarewise.errors.http.GlobalErrorHandler
+import com.subhrodip.squarewise.errors.web.GlobalErrorAdvice
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
 import java.security.Principal
@@ -25,7 +26,7 @@ import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
 class SyncControllerTest {
     private val store = InMemorySynchronizationStore(Clock.systemUTC())
     private val memberships: GroupMembershipRepository = mock(GroupMembershipRepository::class.java)
-    private val mvc: MockMvc = MockMvcBuilders.standaloneSetup(SyncController(store, memberships)).setControllerAdvice(GlobalErrorHandler()).build()
+    private val mvc: MockMvc = MockMvcBuilders.standaloneSetup(SyncController(store, memberships)).setControllerAdvice(GlobalErrorAdvice()).build()
     private val user = RequestPostProcessor { request -> request.userPrincipal = Principal { "alice" }; request }
     private val groupId = UUID.randomUUID()
 
@@ -89,11 +90,40 @@ class SyncControllerTest {
         otherStore.append(groupId.toString(), "expense-1", "{}")
         val cursor = otherStore.snapshot(groupId.toString(), null, 1).nextCursor!!
         val expiredStore = InMemorySynchronizationStore(Clock.fixed(Instant.parse("2026-01-02T00:00:00Z"), ZoneOffset.UTC))
-        val expiredMvc = MockMvcBuilders.standaloneSetup(SyncController(expiredStore, memberships)).setControllerAdvice(GlobalErrorHandler()).build()
+        val expiredMvc = MockMvcBuilders.standaloneSetup(SyncController(expiredStore, memberships)).setControllerAdvice(GlobalErrorAdvice()).build()
 
         expiredMvc.perform(get(ApiEndpoints.ExpenseCore.V1.groupSyncSnapshot(groupId)).with(user).param("cursor", cursor))
             .andExpect(status().isUnprocessableContent)
         expiredMvc.perform(get(ApiEndpoints.ExpenseCore.V1.groupSyncChanges(groupId)).with(user).param("cursor", cursor))
             .andExpect(status().isUnprocessableContent)
+    }
+
+    @Test
+    fun `page with groupAccessCache successfully checks cached active membership`() {
+        val cache = GroupAccessCache()
+        val cachedMvc = MockMvcBuilders.standaloneSetup(SyncController(store, memberships, cache))
+            .setControllerAdvice(GlobalErrorAdvice())
+            .build()
+
+        cachedMvc.perform(get(ApiEndpoints.ExpenseCore.V1.groupSyncSnapshot(groupId)).with(user))
+            .andExpect(status().isOk)
+
+        // Repeat call: exercises the cache hit branch in GroupAccessCache.isMember
+        cachedMvc.perform(get(ApiEndpoints.ExpenseCore.V1.groupSyncSnapshot(groupId)).with(user))
+            .andExpect(status().isOk)
+    }
+
+    @Test
+    fun `page with groupAccessCache rejects non-member`() {
+        val cache = GroupAccessCache()
+        val cachedMvc = MockMvcBuilders.standaloneSetup(SyncController(store, memberships, cache))
+            .setControllerAdvice(GlobalErrorAdvice())
+            .build()
+
+        cachedMvc.perform(get(ApiEndpoints.ExpenseCore.V1.groupSyncSnapshot(groupId)).with(RequestPostProcessor { request ->
+            request.userPrincipal = Principal { "charlie" }
+            request
+        }))
+            .andExpect(status().isNotFound)
     }
 }

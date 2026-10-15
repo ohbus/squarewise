@@ -21,12 +21,18 @@ import io.micrometer.core.instrument.MeterRegistry
 import org.springframework.scheduling.annotation.EnableScheduling
 import org.springframework.boot.web.servlet.FilterRegistrationBean
 
+import com.subhrodip.squarewise.db.aop.DbRouteAspect
+
 /** Provides the writer/reader datasource topology when explicitly enabled. */
 @AutoConfiguration
 @EnableConfigurationProperties(DbProperties::class)
 @EnableScheduling
 @ConditionalOnProperty(prefix = "squarewise.db", name = ["enabled"], havingValue = "true")
 class DbAutoConfiguration {
+    /** Registers declarative routing aspect for @DbRouteContext and @Transactional methods. */
+    @Bean
+    fun squarewiseDbRouteAspect(): DbRouteAspect = DbRouteAspect()
+
     /** Creates telemetry even when an application has no metrics registry, preserving diagnostics. */
     @Bean
     fun squarewiseDbTelemetry(registry: ObjectProvider<MeterRegistry>): DbTelemetry = DbTelemetry(registry.getIfAvailable())
@@ -69,13 +75,15 @@ class DbAutoConfiguration {
         telemetry: DbTelemetry
     ): DataSource {
         properties.writer.validate("writer")
+        properties.writers.forEach { (name, pool) -> pool.validate("writers.$name") }
         properties.readers.forEach { (name, pool) -> pool.validate("readers.$name") }
+        val writers = properties.writers.mapValues { (name, pool) -> buildDataSource(pool, "writer.$name") }
         val readers = if (properties.readerIsWriterDiagnostic) {
             properties.readers.keys.associateWith { writer }
         } else {
             properties.readers.mapValues { (name, pool) -> buildDataSource(pool, "reader.$name") }
         }
-        return DbRoutingDataSource(writer, readers, readerHealth, telemetry)
+        return DbRoutingDataSource(writer, readers, readerHealth, telemetry, writers = writers)
     }
 
     /** Registers causal HTTP propagation only for stateful applications with routed DB access. */

@@ -11,18 +11,26 @@ import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
 import java.util.UUID
 
+import com.subhrodip.squarewise.accounts.validation.AccountReferenceValidator
+import com.subhrodip.squarewise.db.routing.DbReader
+import com.subhrodip.squarewise.db.routing.DbWriter
+import org.springframework.beans.factory.annotation.Autowired
+
 /**
  * JPA-backed implementation of [ExportRequestStore].
  *
  * Persists data export requests to PostgreSQL via [ExportRequestRepository].
  *
  * @param repository Spring Data JPA repository for export requests.
+ * @param referenceValidator Application-layer referential validator ensuring account active status.
  * @param clock Timestamp supplier, defaulting to [Instant.now].
  */
 @Primary
 @Service
 class JpaExportRequestStore(
     private val repository: ExportRequestRepository,
+    @Autowired(required = false)
+    private val referenceValidator: AccountReferenceValidator? = null,
     private val clock: () -> Instant = Instant::now
 ) : ExportRequestStore {
 
@@ -32,9 +40,11 @@ class JpaExportRequestStore(
      * @param subject OIDC subject identifier.
      * @return Saved [ExportRequest].
      */
+    @DbWriter("accounts.export.request")
     @Transactional
     override fun request(subject: String): ExportRequest {
         ProfileRules.requireSubject(subject)
+        referenceValidator?.validateActiveSubject(subject)
         val entity = AccountExportRequestEntity(
             exportId = UuidGenerator.next(),
             subject = subject,
@@ -50,6 +60,7 @@ class JpaExportRequestStore(
      * @param exportId Unique identifier of the export request.
      * @return [ExportRequest] or null if not found.
      */
+    @DbReader("accounts.export.get")
     @Transactional(readOnly = true)
     override fun get(exportId: UUID): ExportRequest? {
         return repository.findById(exportId).map { it.toRecord() }.orElse(null)
@@ -61,6 +72,7 @@ class JpaExportRequestStore(
      * @param subject OIDC subject identifier.
      * @return List of matching [ExportRequest]s.
      */
+    @DbReader("accounts.export.list")
     @Transactional(readOnly = true)
     override fun listBySubject(subject: String): List<ExportRequest> {
         ProfileRules.requireSubject(subject)
@@ -68,12 +80,14 @@ class JpaExportRequestStore(
     }
 
     /** Reads a bounded newest-first export history page directly from the database. */
+    @DbReader("accounts.export.list")
     @Transactional(readOnly = true)
     override fun listBySubject(subject: String, limit: Int): List<ExportRequest> {
         return listBySubject(subject, 0, limit)
     }
 
     /** Reads a bounded newest-first export history page directly from the database. */
+    @DbReader("accounts.export.list")
     @Transactional(readOnly = true)
     override fun listBySubject(subject: String, page: Int, limit: Int): List<ExportRequest> {
         require(page >= 0) { "export history page must not be negative" }

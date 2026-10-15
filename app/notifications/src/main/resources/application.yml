@@ -50,6 +50,8 @@ squarewise:
   notifications:
     delivery-max-permits: ${SQUAREWISE_NOTIFICATIONS_DELIVERY_MAX_PERMITS:10}
     delivery-window-seconds: ${SQUAREWISE_NOTIFICATIONS_DELIVERY_WINDOW_SECONDS:60}
+    processed-event-retention: ${SQUAREWISE_NOTIFICATIONS_PROCESSED_EVENT_RETENTION:30d}
+    processed-event-cleanup-batch-size: ${SQUAREWISE_NOTIFICATIONS_PROCESSED_EVENT_CLEANUP_BATCH_SIZE:500}
     email:
       host: ${SQUAREWISE_NOTIFICATIONS_EMAIL_HOST}
       port: ${SQUAREWISE_NOTIFICATIONS_EMAIL_PORT}

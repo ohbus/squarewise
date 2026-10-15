@@ -43,8 +43,11 @@ class BffEventDeduplicatorTest {
         val eventId = UUID.randomUUID()
 
         assertTrue(deduplicator.tryClaim(eventId))
+        assertFalse(deduplicator.tryClaim(eventId))
         deduplicator.release(eventId)
 
         assertTrue(deduplicator.tryClaim(eventId))
+        deduplicator.markProcessed(eventId)
+        assertFalse(deduplicator.tryClaim(eventId))
     }
 }

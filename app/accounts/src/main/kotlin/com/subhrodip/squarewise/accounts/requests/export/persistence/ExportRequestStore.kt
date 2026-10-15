@@ -1,6 +1,8 @@
 package com.subhrodip.squarewise.accounts.requests.export.persistence
 
 import com.subhrodip.squarewise.accounts.requests.export.model.ExportRequest
+import com.subhrodip.squarewise.db.routing.DbReader
+import com.subhrodip.squarewise.db.routing.DbWriter
 import java.util.UUID
 
 /**
@@ -13,6 +15,7 @@ interface ExportRequestStore {
      * @param subject OIDC subject identifier.
      * @return [ExportRequest] representing the newly created request.
      */
+    @DbWriter("accounts.export.command")
     fun request(subject: String): ExportRequest
 
     /**
@@ -21,6 +24,7 @@ interface ExportRequestStore {
      * @param exportId Unique identifier of the export request.
      * @return [ExportRequest] or null if not found.
      */
+    @DbReader("accounts.export.query")
     fun get(exportId: UUID): ExportRequest?
 
     /**
@@ -29,12 +33,15 @@ interface ExportRequestStore {
      * @param subject OIDC subject identifier.
      * @return List of [ExportRequest]s.
      */
+    @DbReader("accounts.export.query")
     fun listBySubject(subject: String): List<ExportRequest>
 
     /** Lists at most [limit] newest requests without loading unbounded history. */
+    @DbReader("accounts.export.query")
     fun listBySubject(subject: String, limit: Int): List<ExportRequest> = listBySubject(subject).take(limit)
 
     /** Lists one bounded newest-first page without loading the complete history. */
+    @DbReader("accounts.export.query")
     fun listBySubject(subject: String, page: Int, limit: Int): List<ExportRequest> =
         listBySubject(subject, limit).drop(page * limit)
 }

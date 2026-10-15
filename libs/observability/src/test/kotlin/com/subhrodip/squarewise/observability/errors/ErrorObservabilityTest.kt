@@ -56,6 +56,15 @@ class ErrorObservabilityTest {
         ErrorTraceEnricher.enrich(span, ExpenseErrors.GROUP_NOT_FOUND)
         assertEquals(mapOf("error.code" to "213201", "error.name" to "GROUP_NOT_FOUND", "error.type" to "MISSING"), span.attributes)
         assertFalse(span.failed)
+
+        val serverSpan = RecordingSpan()
+        ErrorTraceEnricher.enrich(serverSpan, PlatformErrors.UNEXPECTED_INTERNAL_ERROR, unexpected = false)
+        assertTrue(serverSpan.failed)
+
+        val nullStatusSpan = RecordingSpan()
+        ErrorTraceEnricher.enrich(nullStatusSpan, PlatformErrors.BROKER_UNAVAILABLE, unexpected = false)
+        assertTrue(nullStatusSpan.failed)
+
         ErrorTraceEnricher.enrich(span, ExpenseErrors.OUTBOX_RELAY_PUBLISH_FAILED, unexpected = true)
         assertTrue(span.failed)
     }
@@ -100,23 +109,42 @@ class ErrorObservabilityTest {
         val registry = SimpleMeterRegistry()
         val recorder = ErrorMetricsRecorder(registry)
 
+        var firstDef: SimpleErrorDefinition? = null
+        for (i in 1..1000) {
+            val seq = String.format("%02d", (i % 99) + 1)
+            val def = SimpleErrorDefinition(
+                numericCode = ErrorCode("1111$seq"),
+                errorName = "ERROR_$i",
+                title = "Error $i",
+                safeDetail = "Detail",
+                messageKey = "error.$i",
+                httpStatus = 500,
+                graphqlClassification = "INTERNAL",
+                retryPolicy = RetryPolicy.NEVER,
+                severity = ErrorSeverity.ERROR,
+                disclosure = DisclosurePolicy.PUBLIC,
+            )
+            if (firstDef == null) firstDef = def
+            recorder.record(def)
+        }
+
+        // Re-recording an already registered dimension should succeed when size >= MAX_DIMENSIONS
+        recorder.record(firstDef!!)
+
         val ex = assertThrows<ObservabilityPlatformException> {
-            for (i in 1..1001) {
-                val seq = String.format("%02d", (i % 99) + 1)
-                val def = SimpleErrorDefinition(
-                    numericCode = ErrorCode("1111$seq"),
-                    errorName = "ERROR_$i",
-                    title = "Error $i",
-                    safeDetail = "Detail",
-                    messageKey = "error.$i",
-                    httpStatus = 500,
-                    graphqlClassification = "INTERNAL",
-                    retryPolicy = RetryPolicy.NEVER,
-                    severity = ErrorSeverity.ERROR,
-                    disclosure = DisclosurePolicy.PUBLIC,
-                )
-                recorder.record(def)
-            }
+            val overflowDef = SimpleErrorDefinition(
+                numericCode = ErrorCode("111199"),
+                errorName = "ERROR_OVERFLOW",
+                title = "Overflow",
+                safeDetail = "Detail",
+                messageKey = "error.overflow",
+                httpStatus = 500,
+                graphqlClassification = "INTERNAL",
+                retryPolicy = RetryPolicy.NEVER,
+                severity = ErrorSeverity.ERROR,
+                disclosure = DisclosurePolicy.PUBLIC,
+            )
+            recorder.record(overflowDef)
         }
         assertEquals("error metric dimension budget exceeded", ex.message)
     }

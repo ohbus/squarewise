@@ -2,6 +2,7 @@ package com.subhrodip.squarewise.notifications
 
 import com.subhrodip.squarewise.notifications.consumer.config.NotificationMessagingProperties
 import com.subhrodip.squarewise.notifications.email.config.EmailProperties
+import java.time.Duration
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
@@ -35,6 +36,15 @@ class NotificationConfigurationPropertiesTest {
         assertThrows(IllegalArgumentException::class.java) {
             NotificationMessagingProperties(deliveryWindowSeconds = 86_401)
         }
+        assertThrows(IllegalArgumentException::class.java) {
+            NotificationMessagingProperties(processedEventRetention = Duration.ZERO)
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            NotificationMessagingProperties(processedEventRetention = Duration.ofSeconds(-1))
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            NotificationMessagingProperties(processedEventCleanupBatchSize = 0)
+        }
         NotificationMessagingProperties(deliveryMaxPermits = 1_000_000, deliveryWindowSeconds = 86_400)
     }
 
@@ -62,6 +72,11 @@ class NotificationConfigurationPropertiesTest {
         messaging.deadLetterQueue = "notifications.test.dlq"
         messaging.authEmailDeadLetterQueue = "auth-email.test.dlq"
 
+        messaging.deliveryMaxPermits = 20
+        messaging.deliveryWindowSeconds = 120
+        messaging.processedEventRetention = Duration.ofDays(7)
+        messaging.processedEventCleanupBatchSize = 100
+
         assertEquals("mail.example.test", email.host)
         assertEquals(1025, email.port)
         assertEquals("noreply@example.test", email.fromAddress)
@@ -73,5 +88,9 @@ class NotificationConfigurationPropertiesTest {
         assertEquals("events.test.dlx", messaging.deadLetterExchange)
         assertEquals("notifications.test.dlq", messaging.deadLetterQueue)
         assertEquals("auth-email.test.dlq", messaging.authEmailDeadLetterQueue)
+        assertEquals(20, messaging.deliveryMaxPermits)
+        assertEquals(120, messaging.deliveryWindowSeconds)
+        assertEquals(Duration.ofDays(7), messaging.processedEventRetention)
+        assertEquals(100, messaging.processedEventCleanupBatchSize)
     }
 }

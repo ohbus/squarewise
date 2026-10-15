@@ -30,6 +30,9 @@ class BrowserOriginPolicyTest {
             BrowserOriginPolicy(listOf("*"))
         }
         assertThrows(IllegalArgumentException::class.java) {
+            BrowserOriginPolicy(listOf(" * "))
+        }
+        assertThrows(IllegalArgumentException::class.java) {
             BrowserOriginPolicy(listOf("https://app.example.test", "*"))
         }
     }

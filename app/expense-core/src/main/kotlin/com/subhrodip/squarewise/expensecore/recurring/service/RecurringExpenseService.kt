@@ -20,6 +20,8 @@ import com.subhrodip.squarewise.expensecore.recurring.domain.RecurringExpenseSch
 import com.subhrodip.squarewise.expensecore.recurring.domain.RecurringExpenseSpecification
 import com.subhrodip.squarewise.expensecore.recurring.persistence.RecurringExpenseOccurrenceRepository
 import com.subhrodip.squarewise.expensecore.recurring.persistence.RecurringExpenseScheduleRepository
+import com.subhrodip.squarewise.expensecore.groups.cache.GroupAccessCache
+import com.subhrodip.squarewise.expensecore.validation.EntityReferenceValidator
 import com.subhrodip.squarewise.ids.generation.UuidGenerator
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext
@@ -45,6 +47,8 @@ import org.springframework.transaction.support.TransactionTemplate
 import org.springframework.transaction.TransactionDefinition
 import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.slf4j.LoggerFactory
+import com.subhrodip.squarewise.db.routing.DbReader
+import com.subhrodip.squarewise.db.routing.DbWriter
 import tools.jackson.databind.ObjectMapper
 import tools.jackson.databind.json.JsonMapper
 import tools.jackson.module.kotlin.KotlinModule
@@ -67,18 +71,18 @@ class RecurringExpenseService(
         .addModule(KotlinModule.Builder().build())
         .build(),
     @Autowired(required = false)
-    private val transactionManager: PlatformTransactionManager? = null
+    private val transactionManager: PlatformTransactionManager? = null,
+    private val referenceValidator: EntityReferenceValidator,
+    @Autowired(required = false)
+    private val groupAccessCache: GroupAccessCache? = null
 ) : RecurringCommandStore, RecurringQueryStore {
     private val log = LoggerFactory.getLogger(RecurringExpenseService::class.java)
 
+    @DbWriter("recurring.schedules.create")
     @Transactional
     override fun createSchedule(groupId: UUID, request: CreateRecurringScheduleRequest): RecurringExpenseSchedule {
         validateSchedule(request)
-
-        if (!groupRepository.existsById(groupId)) {
-            throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group $groupId not found")
-        }
-
+        referenceValidator.validateActiveGroup(groupId)
         val scheduleId = request.scheduleId ?: UuidGenerator.next()
         val schedule = RecurringExpenseSchedule(
             scheduleId = scheduleId,
@@ -102,6 +106,7 @@ class RecurringExpenseService(
         return scheduleRepository.save(schedule)
     }
 
+    @DbWriter("recurring.schedules.update")
     @Transactional
     override fun updateSchedule(
         groupId: UUID,
@@ -114,6 +119,7 @@ class RecurringExpenseService(
         if (schedule.groupId != groupId) {
             throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Schedule $scheduleId not in group $groupId")
         }
+        referenceValidator.validateActiveGroup(groupId)
 
         val effectiveTimezone = request.timezone ?: schedule.timezone
         validateSchedule(request, effectiveTimezone)
@@ -132,6 +138,7 @@ class RecurringExpenseService(
         return scheduleRepository.save(schedule)
     }
 
+    @DbWriter("recurring.schedules.pause")
     @Transactional
     override fun pauseSchedule(scheduleId: UUID): RecurringExpenseSchedule {
         val schedule = scheduleRepository.findById(scheduleId).orElseThrow {
@@ -141,6 +148,7 @@ class RecurringExpenseService(
         return scheduleRepository.save(schedule)
     }
 
+    @DbWriter("recurring.schedules.resume")
     @Transactional
     override fun resumeSchedule(scheduleId: UUID): RecurringExpenseSchedule {
         val schedule = scheduleRepository.findById(scheduleId).orElseThrow {
@@ -162,6 +170,7 @@ class RecurringExpenseService(
 
     private fun processDueOccurrences(asOfDate: LocalDate, maxCatchUpOccurrences: Int, useScheduleTimezone: Boolean): Int {
         val dueSchedules = scheduleRepository.findDueSchedules(asOfDate)
+        val membersByGroup = getGroupMembers(dueSchedules.map { it.groupId }.toSet())
         if (TransactionSynchronizationManager.isActualTransactionActive()) {
             return dueSchedules.sumOf { schedule ->
                 try {
@@ -169,7 +178,7 @@ class RecurringExpenseService(
                         schedule,
                         occurrenceCutoff(schedule, asOfDate, useScheduleTimezone),
                         maxCatchUpOccurrences,
-                        mapOf(schedule.groupId to getGroupMembers(schedule.groupId))
+                        membersByGroup
                     )
                 } catch (error: DateTimeException) {
                     logInvalidTimezone(schedule, error)
@@ -180,7 +189,6 @@ class RecurringExpenseService(
         val manager = requireNotNull(transactionManager) {
             "transactionManager is required when due occurrences run outside a transaction"
         }
-        val membersByGroup = getGroupMembers(dueSchedules.map { it.groupId }.toSet())
         val transactionTemplate = TransactionTemplate(manager).apply {
             propagationBehavior = TransactionDefinition.PROPAGATION_REQUIRES_NEW
         }
@@ -224,16 +232,19 @@ class RecurringExpenseService(
         asOfDate
     }
 
+    @DbReader("recurring.schedules.get")
     @Transactional(readOnly = true)
     override fun getSchedule(scheduleId: UUID): RecurringExpenseSchedule? =
         scheduleRepository.findById(scheduleId).orElse(null)
 
+    @DbReader("recurring.schedules.list")
     @Transactional(readOnly = true)
     override fun listSchedules(groupId: UUID, limit: Int): List<RecurringExpenseSchedule> {
         require(limit in 1..100) { "schedule limit must be between 1 and 100" }
         return scheduleRepository.findByGroupId(groupId, PageRequest.of(0, limit))
     }
 
+    @DbReader("recurring.occurrences.get")
     @Transactional(readOnly = true)
     override fun getOccurrences(scheduleId: UUID, limit: Int): List<RecurringExpenseOccurrence> {
         require(limit in 1..100) { "occurrence limit must be between 1 and 100" }
@@ -290,10 +301,9 @@ class RecurringExpenseService(
     private fun activeMembersOrPause(schedule: RecurringExpenseSchedule, members: List<UUID>): List<UUID>? {
         val custom = readSpecification(schedule)
         val requiresAllMembers = custom == null || custom.allocations.isEmpty()
-        if (members.size <= ExpenseRequestLimits.MAX_PARTICIPANTS &&
-            members.isNotEmpty() && validateMembership(schedule, members)
-        ) return members
-        if (!requiresAllMembers && members.isNotEmpty() && validateMembership(schedule, members)) return members
+        val isValid = members.isNotEmpty() && validateMembership(schedule, members) &&
+            (!requiresAllMembers || members.size <= ExpenseRequestLimits.MAX_PARTICIPANTS)
+        if (isValid) return members
         schedule.paused = true
         scheduleRepository.save(schedule)
         emitSchedulePausedNotification(schedule, "invalid_membership")
@@ -325,6 +335,18 @@ class RecurringExpenseService(
         val requestedIds = (payers.map { it.participantId } + allocations.map { it.participantId }).toSet()
         val missingIds = requestedIds - memberSet
         if (missingIds.isEmpty()) return true
+        val cache = groupAccessCache
+        if (cache != null) {
+            val cachedActiveIds = cache.activeMemberIds(schedule.groupId) {
+                entityManager.createQuery(
+                    "SELECT m.membershipId FROM GroupMembershipEntity m WHERE m.groupId = :groupId AND m.status = 'ACTIVE'",
+                    UUID::class.java
+                ).setParameter("groupId", schedule.groupId)
+                    .resultList
+                    .toSet()
+            }
+            return missingIds.all { it in cachedActiveIds }
+        }
         val activeMissingIds = entityManager.createQuery(
             "SELECT m.membershipId FROM GroupMembershipEntity m WHERE m.groupId = :groupId AND m.membershipId IN :membershipIds AND m.status = 'ACTIVE'",
             UUID::class.java
@@ -368,17 +390,15 @@ class RecurringExpenseService(
         val custom = readSpecification(schedule)
         val (payers, allocations) = if (custom != null && (custom.payers.isNotEmpty() || custom.allocations.isNotEmpty())) {
             val customPayers = custom.payers.ifEmpty {
-                val payerId = members.firstOrNull() ?: schedule.groupId
-                listOf(ExpensePayer(payerId, schedule.amountMinor))
+                listOf(ExpensePayer(members.first(), schedule.amountMinor))
             }
             val customAllocations = custom.allocations.ifEmpty {
-                splitEqually(schedule.amountMinor, members.ifEmpty { listOf(schedule.groupId) })
+                splitEqually(schedule.amountMinor, members)
             }
             customPayers to customAllocations
         } else {
-            val participantIds = members.ifEmpty { listOf(schedule.groupId) }
-            val payers = listOf(ExpensePayer(participantIds.first(), schedule.amountMinor))
-            val allocations = splitEqually(schedule.amountMinor, participantIds)
+            val payers = listOf(ExpensePayer(members.first(), schedule.amountMinor))
+            val allocations = splitEqually(schedule.amountMinor, members)
             payers to allocations
         }
 
@@ -433,15 +453,60 @@ class RecurringExpenseService(
 
     private fun getGroupMembers(groupIds: Set<UUID>): Map<UUID, List<UUID>> {
         if (groupIds.isEmpty()) return emptyMap()
+        val cache = groupAccessCache
+        if (cache != null) {
+            val result = mutableMapOf<UUID, List<UUID>>()
+            val missingGroupIds = mutableSetOf<UUID>()
+            for (groupId in groupIds) {
+                val cached = cache.peekActiveMemberIds(groupId)
+                if (cached != null) {
+                    result[groupId] = cached.toList().sorted()
+                } else {
+                    missingGroupIds.add(groupId)
+                }
+            }
+            if (missingGroupIds.isEmpty()) {
+                return result.toMap()
+            }
+            val rows = entityManager.createQuery(
+                "SELECT m.groupId, m.membershipId FROM GroupMembershipEntity m WHERE m.groupId IN :groupIds AND m.status = 'ACTIVE' ORDER BY m.membershipId ASC",
+                Array<Any>::class.java
+            ).setParameter("groupIds", missingGroupIds)
+                .resultList
+
+            val byGroup = rows.groupBy(
+                { it[0] as UUID },
+                { it[1] as UUID }
+            )
+            for (groupId in missingGroupIds) {
+                val memberIds = byGroup[groupId].orEmpty().toSet()
+                cache.putActiveMemberIds(groupId, memberIds)
+                result[groupId] = memberIds.toList().sorted()
+            }
+            return result.toMap()
+        }
         return groupIds.associateWith { getGroupMembers(it) }
     }
 
-    private fun getGroupMembers(groupId: UUID): List<UUID> = entityManager.createQuery(
-        "SELECT m.membershipId FROM GroupMembershipEntity m WHERE m.groupId = :groupId AND m.status = 'ACTIVE' ORDER BY m.membershipId ASC",
-        UUID::class.java
-    ).setParameter("groupId", groupId)
-        .setMaxResults(ExpenseRequestLimits.MAX_PARTICIPANTS + 1)
-        .resultList
+    private fun getGroupMembers(groupId: UUID): List<UUID> {
+        val cache = groupAccessCache
+        if (cache != null) {
+            return cache.activeMemberIds(groupId) {
+                entityManager.createQuery(
+                    "SELECT m.membershipId FROM GroupMembershipEntity m WHERE m.groupId = :groupId AND m.status = 'ACTIVE' ORDER BY m.membershipId ASC",
+                    UUID::class.java
+                ).setParameter("groupId", groupId)
+                    .setMaxResults(ExpenseRequestLimits.MAX_PARTICIPANTS + 1)
+                    .resultList.toSet()
+            }.toList().sorted()
+        }
+        return entityManager.createQuery(
+            "SELECT m.membershipId FROM GroupMembershipEntity m WHERE m.groupId = :groupId AND m.status = 'ACTIVE' ORDER BY m.membershipId ASC",
+            UUID::class.java
+        ).setParameter("groupId", groupId)
+            .setMaxResults(ExpenseRequestLimits.MAX_PARTICIPANTS + 1)
+            .resultList
+    }
 
     private fun validateSchedule(request: CreateRecurringScheduleRequest) {
         validateScheduleValues(

@@ -143,5 +143,30 @@ class CatalogParityTest {
         assertEquals(false, ErrorCatalog.contains(unregistered))
     }
 
+    @Test
+    fun `SimpleErrorDefinition supports data class copy equals hashCode and toString`() {
+        val def = SimpleErrorDefinition(
+            numericCode = ErrorCode("999999"),
+            errorName = "TEST_DEF",
+            title = "Test",
+            safeDetail = "Detail",
+            messageKey = "key",
+            httpStatus = 500,
+            graphqlClassification = "INTERNAL_ERROR",
+            retryPolicy = RetryPolicy.NEVER,
+            severity = ErrorSeverity.ERROR,
+            disclosure = DisclosurePolicy.PUBLIC,
+        )
+        val copy = def.copy(title = "Copied")
+        assertEquals("Copied", copy.title)
+        assertEquals(def, def.copy())
+        assertEquals(def.hashCode(), def.copy().hashCode())
+        assertEquals(true, def.toString().contains("TEST_DEF"))
+        assertEquals("INTERNAL_ERROR", def.graphqlClassification)
+        assertEquals(RetryPolicy.NEVER, def.retryPolicy)
+        assertEquals(ErrorSeverity.ERROR, def.severity)
+        assertEquals(DisclosurePolicy.PUBLIC, def.disclosure)
+    }
+
     private data class Expected(val numericCode: String, val errorName: String, val title: String, val httpStatus: Int?)
 }

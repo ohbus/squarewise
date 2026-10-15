@@ -6,7 +6,7 @@ import com.subhrodip.squarewise.notifications.preferences.persistence.InMemoryPr
 import com.subhrodip.squarewise.notifications.preferences.persistence.JpaPreferenceStore
 import com.subhrodip.squarewise.notifications.preferences.persistence.NotificationPreferenceRepository
 
-import com.subhrodip.squarewise.errors.http.GlobalErrorHandler
+import com.subhrodip.squarewise.errors.web.GlobalErrorAdvice
 import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -21,7 +21,7 @@ import java.security.Principal
 
 class PreferenceControllerTest {
     private val mvc = MockMvcBuilders.standaloneSetup(PreferenceController(InMemoryPreferenceStore()))
-        .setControllerAdvice(GlobalErrorHandler()).build()
+        .setControllerAdvice(GlobalErrorAdvice()).build()
     private val user = RequestPostProcessor { request -> request.userPrincipal = Principal { "alice" }; request }
     private val blankUser = RequestPostProcessor { request -> request.userPrincipal = Principal { "   " }; request }
 

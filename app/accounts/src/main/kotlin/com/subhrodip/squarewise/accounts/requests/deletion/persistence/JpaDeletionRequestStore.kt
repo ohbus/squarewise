@@ -6,6 +6,8 @@ import com.subhrodip.squarewise.accounts.profile.service.ProfileRules
 import com.subhrodip.squarewise.accounts.profile.persistence.ProfileStore
 import com.subhrodip.squarewise.accounts.profile.persistence.ProfileRepository
 import com.subhrodip.squarewise.accounts.auth.session.AuthSessionRepository
+import com.subhrodip.squarewise.db.routing.DbReader
+import com.subhrodip.squarewise.db.routing.DbWriter
 import org.springframework.context.annotation.Primary
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -41,6 +43,7 @@ class JpaDeletionRequestStore(
      * @param subject OIDC subject identifier.
      * @return [DeletionRequest] representing the saved or existing request.
      */
+    @DbWriter("accounts.deletion.request")
     @Transactional
     override fun request(subject: String): DeletionRequest {
         ProfileRules.requireSubject(subject)
@@ -50,10 +53,10 @@ class JpaDeletionRequestStore(
         }
 
         // Retain historical financial attribution by preserving profile record with deletionRequested = true
+        val account = profileRepository.findBySubject(subject)
         profileStore.requestDeletion(subject)
-        val accountId = profileRepository.findBySubject(subject)?.accountId
-        if (accountId != null) {
-            authSessionRepository.revokeAllForAccount(accountId, clock())
+        if (account != null) {
+            authSessionRepository.revokeAllForAccount(account.accountId, clock())
         }
 
         val entity = AccountDeletionRequestEntity(
@@ -70,6 +73,7 @@ class JpaDeletionRequestStore(
      * @param subject OIDC subject identifier.
      * @return [DeletionRequest] or null if not found.
      */
+    @DbReader("accounts.deletion.get")
     @Transactional(readOnly = true)
     override fun get(subject: String): DeletionRequest? {
         ProfileRules.requireSubject(subject)
@@ -82,6 +86,7 @@ class JpaDeletionRequestStore(
      * @param subject OIDC subject identifier.
      * @return Updated [DeletionRequest] with CANCELLED status, or null if none existed.
      */
+    @DbWriter("accounts.deletion.cancel")
     @Transactional
     override fun cancel(subject: String): DeletionRequest? {
         ProfileRules.requireSubject(subject)
@@ -96,6 +101,7 @@ class JpaDeletionRequestStore(
      * @param subject OIDC subject identifier.
      * @return Updated [DeletionRequest] with COMPLETED status, or null if none existed.
      */
+    @DbWriter("accounts.deletion.complete")
     @Transactional
     override fun complete(subject: String): DeletionRequest? {
         ProfileRules.requireSubject(subject)

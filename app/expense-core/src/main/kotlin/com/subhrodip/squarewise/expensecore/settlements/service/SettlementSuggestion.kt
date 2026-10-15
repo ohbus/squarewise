@@ -1,9 +1,12 @@
 package com.subhrodip.squarewise.expensecore.settlements.service
 
+import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
 import com.subhrodip.squarewise.expensecore.settlements.domain.SuggestedSettlement
 import com.subhrodip.squarewise.expensecore.expenses.api.response.GroupBalanceItem
 import com.subhrodip.squarewise.expensecore.expenses.domain.FinancialArithmetic
+import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseRequestLimits
 import com.subhrodip.squarewise.expensecore.expenses.persistence.store.ExpenseStore
+import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
 
 import org.springframework.stereotype.Service
 import java.util.PriorityQueue
@@ -12,12 +15,31 @@ import java.util.UUID
 @Service
 class SettlementSuggestionEngine(private val expenseStore: ExpenseStore) {
 
+    /**
+     * Calculates settlement suggestions for a group and rejects oversized balance snapshots.
+     *
+     * @param groupId authorized group UUID
+     * @return deterministic settlement suggestions grouped by currency
+     */
     fun suggestSettlements(groupId: UUID): List<SuggestedSettlement> {
         val balances = expenseStore.balances(groupId)
         return calculateSuggestions(balances)
     }
 
+    /**
+     * Calculates settlements without truncating the input balance snapshot.
+     *
+     * @param balances net participant balances grouped by currency
+     * @return settlement suggestions, or an empty list when no opposing balances exist
+     * @throws ExpenseDomainException when the snapshot exceeds the bounded result size
+     */
     fun calculateSuggestions(balances: List<GroupBalanceItem>): List<SuggestedSettlement> {
+        if (balances.size > ExpenseRequestLimits.MAX_BALANCE_ROWS) {
+            throw ExpenseDomainException(
+                ExpenseErrors.EXPENSE_REQUEST_INVALID,
+                "Balance result exceeds ${ExpenseRequestLimits.MAX_BALANCE_ROWS} rows",
+            )
+        }
         val byCurrency = balances.groupBy { it.amount.currency }.toSortedMap()
         val results = mutableListOf<SuggestedSettlement>()
 

@@ -13,5 +13,6 @@ data class BrokerMessage(
 ) {
     override fun equals(other: Any?): Boolean = other is BrokerMessage && eventId == other.eventId && eventType == other.eventType && payload.contentEquals(other.payload) && occurredAt == other.occurredAt && headers == other.headers
     override fun hashCode(): Int = listOf(eventId, eventType, payload.contentHashCode(), occurredAt, headers).hashCode()
-    override fun toString(): String = "BrokerMessage(eventId=$eventId, eventType='$eventType', payload=${payload.contentToString()}, occurredAt=$occurredAt, headers=$headers)"
+    override fun toString(): String =
+        "BrokerMessage(eventId=$eventId, eventType='$eventType', payloadSize=${payload.size}, occurredAt=$occurredAt, headers=$headers)"
 }

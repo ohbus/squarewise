@@ -10,14 +10,16 @@ import com.subhrodip.squarewise.notifications.inbox.persistence.NotificationInbo
 
 import com.subhrodip.squarewise.notifications.inbox.api.InboxController
 import com.subhrodip.squarewise.notifications.inbox.model.InboxItem
+import com.subhrodip.squarewise.notifications.inbox.model.InboxPage
 import com.subhrodip.squarewise.notifications.inbox.persistence.InMemoryNotificationInboxStore
+import com.subhrodip.squarewise.notifications.inbox.persistence.NotificationInboxEntity
 import com.subhrodip.squarewise.notifications.inbox.persistence.NotificationInboxStore
 import com.subhrodip.squarewise.notifications.inbox.service.NotificationInboxService
 
 import com.subhrodip.squarewise.db.routing.DbContextHolder
 import com.subhrodip.squarewise.db.routing.DbOperationKind
 import com.subhrodip.squarewise.db.routing.ReadConsistency
-import com.subhrodip.squarewise.errors.http.GlobalErrorHandler
+import com.subhrodip.squarewise.errors.web.GlobalErrorAdvice
 import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
 import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -39,7 +41,7 @@ class InboxControllerTest {
     private val inbox = NotificationInboxService(recordingStore)
     private val controller = InboxController(inbox)
     private val mvc = MockMvcBuilders.standaloneSetup(controller)
-        .setControllerAdvice(GlobalErrorHandler()).build()
+        .setControllerAdvice(GlobalErrorAdvice()).build()
     private val user = RequestPostProcessor { request -> request.userPrincipal = Principal { "alice" }; request }
 
     @Test
@@ -205,6 +207,29 @@ class InboxControllerTest {
         assertFalse(store.markAsRead("alice", UUID.randomUUID()))
         assertTrue(store.markAsRead("alice", id))
         assertTrue(store.list("alice").first().read)
+    }
+
+    @Test
+    fun `InboxPage data class and NotificationInboxEntity properties work as expected`() {
+        val page = InboxPage(emptyList())
+        assertEquals(emptyList<InboxItem>(), page.items)
+        assertEquals(null, page.nextCursor)
+        val copy = page.copy(nextCursor = "cursor-1")
+        assertEquals("cursor-1", copy.nextCursor)
+        assertEquals(page, page.copy())
+        assertEquals(page.hashCode(), page.copy().hashCode())
+        assertTrue(page.toString().contains("InboxPage"))
+
+        val entity = NotificationInboxEntity(
+            notificationId = UUID.randomUUID(),
+            subject = "alice",
+            eventType = "expense.created",
+            message = "test",
+            occurredAt = Instant.now()
+        )
+        val newId = UUID.randomUUID()
+        entity.notificationId = newId
+        assertEquals(newId, entity.notificationId)
     }
 }
 

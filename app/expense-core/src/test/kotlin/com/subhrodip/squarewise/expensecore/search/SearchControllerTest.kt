@@ -12,12 +12,13 @@ import com.subhrodip.squarewise.expensecore.groups.api.GroupResponse
 import com.subhrodip.squarewise.expensecore.groups.persistence.store.GroupStore
 import com.subhrodip.squarewise.expensecore.groups.persistence.store.InMemoryGroupStore
 
-import com.subhrodip.squarewise.errors.http.GlobalErrorHandler
+import com.subhrodip.squarewise.errors.web.GlobalErrorAdvice
 import com.subhrodip.squarewise.db.routing.DbContextHolder
 import com.subhrodip.squarewise.db.routing.DbOperationKind
 import com.subhrodip.squarewise.db.routing.ReadConsistency
 import com.subhrodip.squarewise.expensecore.categories.ExpenseCategory
 import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -59,7 +60,7 @@ class SearchControllerTest {
         recordingSearchStore = RecordingSearchStore(searchStore)
         val controller = SearchController(groupStore, recordingSearchStore)
         mvc = MockMvcBuilders.standaloneSetup(controller)
-            .setControllerAdvice(GlobalErrorHandler())
+            .setControllerAdvice(GlobalErrorAdvice())
             .build()
     }
 
@@ -265,6 +266,35 @@ class SearchControllerTest {
     }
 
     @Test
+    fun `export forwards requested row bound to persistent search`() {
+        val group = groupStore.create("alice", CreateGroupRequest("Bounded export", "TRIP", "EUR"))
+
+        mvc.perform(
+            get(ApiEndpoints.ExpenseCore.V1.groupExport(group.groupId))
+                .with(alice)
+                .param("maxRows", "2")
+        )
+            .andExpect(status().isOk)
+
+        assertEquals(2, recordingSearchStore.lastQuery?.limit)
+    }
+
+    @Test
+    fun `search filters by currency`() {
+        val group = groupStore.create("alice", CreateGroupRequest("Currency search", "TRIP", "EUR"))
+        val expense = SearchExpense("00000000-0000-0000-0000-000000000001", "Dinner", "EUR", "2500", ExpenseCategory.FOOD)
+        searchStore.saveExpenses(group.groupId, listOf(expense))
+
+        mvc.perform(
+            get(ApiEndpoints.ExpenseCore.V1.groupSearch(group.groupId))
+                .with(alice)
+                .param("currency", "eur")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.expenses.length()").value(1))
+    }
+
+    @Test
     fun `export rejects non-positive maxRows as validation failure`() {
         val group = groupStore.create("alice", CreateGroupRequest("Bounded Export", "TRIP", "EUR"))
 
@@ -272,6 +302,14 @@ class SearchControllerTest {
             get(ApiEndpoints.ExpenseCore.V1.groupExport(group.groupId))
                 .with(alice)
                 .param("maxRows", "0")
+        )
+            .andExpect(status().isUnprocessableContent)
+            .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+
+        mvc.perform(
+            get(ApiEndpoints.ExpenseCore.V1.groupExport(group.groupId))
+                .with(alice)
+                .param("maxRows", "10001")
         )
             .andExpect(status().isUnprocessableContent)
             .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
@@ -292,8 +330,10 @@ class SearchControllerTest {
 
 private class RecordingSearchStore(private val delegate: SearchStore) : SearchStore {
     var context: DbExecutionContext? = null
+    var lastQuery: SearchQuery? = null
 
     override fun findSearchExpenses(query: SearchQuery): List<SearchExpense> {
+        lastQuery = query
         context = DbContextHolder.current()
         return delegate.findSearchExpenses(query)
     }

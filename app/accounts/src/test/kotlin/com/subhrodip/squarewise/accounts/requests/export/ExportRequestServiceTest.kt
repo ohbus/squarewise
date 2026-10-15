@@ -16,5 +16,8 @@ class ExportRequestServiceTest {
         assertEquals("alice", request.subject)
         assertEquals(ExportStatus.REQUESTED, request.status)
         assertEquals(request, service.get(request.exportId))
+        assertEquals(listOf(request), service.listBySubject("alice"))
+        assertEquals(listOf(request), service.listBySubject("alice", 10))
+        assertEquals(listOf(request), service.listBySubject("alice", 0, 10))
     }
 }

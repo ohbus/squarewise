@@ -2,9 +2,11 @@ package com.subhrodip.squarewise.expensecore.recurring.service
 
 import com.subhrodip.squarewise.expensecore.recurring.domain.RecurringExpenseOccurrence
 import com.subhrodip.squarewise.expensecore.recurring.domain.RecurringExpenseSchedule
+import com.subhrodip.squarewise.db.routing.DbReader
 import java.util.UUID
 
 /** Reader-side recurring schedule and occurrence query port. */
+@DbReader("recurring.query")
 interface RecurringQueryStore {
     fun getSchedule(scheduleId: UUID): RecurringExpenseSchedule?
 

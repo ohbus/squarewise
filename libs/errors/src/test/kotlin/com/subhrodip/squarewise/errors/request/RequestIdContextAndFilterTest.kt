@@ -4,6 +4,9 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
+import com.subhrodip.squarewise.errors.catalog.PlatformErrors
+import com.subhrodip.squarewise.errors.exceptions.PlatformDomainException
 import jakarta.servlet.FilterChain
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
@@ -144,10 +147,15 @@ class RequestIdContextAndFilterTest {
     }
 
     @Test
-    fun `RequestIdGenerator produces valid uuid`() {
+    fun `RequestIdGenerator produces valid uuid and wraps runtime exceptions`() {
         val id1 = RequestIdGenerator.next()
         val id2 = RequestIdGenerator.next()
         assertNotEquals(id1, id2)
         assertEquals(7, id1.version())
+
+        val thrown = assertThrows<PlatformDomainException> {
+            RequestIdGenerator.next { throw IllegalStateException("clock failure") }
+        }
+        assertEquals(PlatformErrors.IDENTIFIER_GENERATION_FAILED, thrown.definition)
     }
 }

@@ -23,7 +23,7 @@ import java.security.Principal
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Callable
 import java.util.concurrent.Executors
-import com.subhrodip.squarewise.errors.http.GlobalErrorHandler
+import com.subhrodip.squarewise.errors.web.GlobalErrorAdvice
 import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
 
 /**
@@ -32,7 +32,7 @@ import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
  */
 class GroupControllerTest {
     private val mvc: MockMvc = MockMvcBuilders.standaloneSetup(GroupController(InMemoryGroupStore()))
-        .setControllerAdvice(GlobalErrorHandler()).build()
+        .setControllerAdvice(GlobalErrorAdvice()).build()
     private val alice = RequestPostProcessor { request -> request.userPrincipal = Principal { "alice" }; request }
     private val bob = RequestPostProcessor { request -> request.userPrincipal = Principal { "bob" }; request }
 
@@ -186,7 +186,7 @@ class GroupControllerTest {
         val store = InMemoryGroupStore()
         val controller = GroupController(store)
         val testMvc = MockMvcBuilders.standaloneSetup(controller, InviteClaimController(store))
-            .setControllerAdvice(GlobalErrorHandler()).build()
+            .setControllerAdvice(GlobalErrorAdvice()).build()
 
         val created = testMvc.perform(post(ApiEndpoints.ExpenseCore.V1.PATH_GROUPS).with(alice).contentType(MediaType.APPLICATION_JSON)
             .content("{\"name\":\"Paris Trip\",\"kind\":\"TRIP\",\"currency\":\"EUR\"}"))
@@ -295,7 +295,7 @@ class GroupControllerTest {
         val store = InMemoryGroupStore()
         val controller = GroupController(store)
         val testMvc = MockMvcBuilders.standaloneSetup(controller, InviteClaimController(store))
-            .setControllerAdvice(GlobalErrorHandler()).build()
+            .setControllerAdvice(GlobalErrorAdvice()).build()
 
         val created = testMvc.perform(post(ApiEndpoints.ExpenseCore.V1.PATH_GROUPS).with(alice).contentType(MediaType.APPLICATION_JSON)
             .content("{\"name\":\"Trip\",\"kind\":\"TRIP\",\"currency\":\"EUR\"}"))
@@ -341,7 +341,7 @@ class GroupControllerTest {
         val store = InMemoryGroupStore()
         val controller = GroupController(store)
         val testMvc = MockMvcBuilders.standaloneSetup(controller, InviteClaimController(store))
-            .setControllerAdvice(GlobalErrorHandler()).build()
+            .setControllerAdvice(GlobalErrorAdvice()).build()
 
         val created = testMvc.perform(post(ApiEndpoints.ExpenseCore.V1.PATH_GROUPS).with(alice).contentType(MediaType.APPLICATION_JSON)
             .content("{\"name\":\"Trip\",\"kind\":\"TRIP\",\"currency\":\"EUR\"}"))
@@ -406,7 +406,7 @@ class GroupControllerTest {
         val store = InMemoryGroupStore()
         val controller = GroupController(store)
         val testMvc = MockMvcBuilders.standaloneSetup(controller, InviteClaimController(store))
-            .setControllerAdvice(GlobalErrorHandler()).build()
+            .setControllerAdvice(GlobalErrorAdvice()).build()
 
         testMvc.perform(post(ApiEndpoints.ExpenseCore.V1.inviteClaim(token)).with(bob))
             .andExpect(status().isConflict)

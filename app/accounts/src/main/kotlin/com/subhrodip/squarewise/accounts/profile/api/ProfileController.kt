@@ -19,9 +19,8 @@ import com.subhrodip.squarewise.errors.catalog.AccountsErrors
 import java.security.Principal
 import java.util.UUID
 import com.subhrodip.squarewise.db.routing.DbContextHolder
-import com.subhrodip.squarewise.db.routing.DbExecutionContext
-import com.subhrodip.squarewise.db.routing.DbOperationKind
-import com.subhrodip.squarewise.db.routing.ReadConsistency
+import com.subhrodip.squarewise.db.routing.DbReader
+import com.subhrodip.squarewise.db.routing.DbWriter
 import com.subhrodip.squarewise.observability.db.DbTelemetry
 import com.subhrodip.squarewise.accounts.profile.persistence.ProfileStore
 import org.springframework.security.core.Authentication
@@ -37,10 +36,12 @@ class ProfileController(
     private val dbTelemetry: DbTelemetry = DbTelemetry()
 ) {
     @GetMapping(ApiEndpoints.Accounts.V1.ME)
+    @DbReader(operation = "profile.me", target = "profile")
     fun get(principal: Principal): ProfileResponse =
         profiles.get(principal.name) ?: throw AccountsDomainException(AccountsErrors.AUTHENTICATED_PROFILE_NOT_FOUND)
 
     @PatchMapping(ApiEndpoints.Accounts.V1.ME)
+    @DbWriter("profile.update")
     fun update(
         principal: Principal,
         @Valid @RequestBody request: ProfilePatchRequest
@@ -51,12 +52,14 @@ class ProfileController(
 
     @PostMapping(ApiEndpoints.Accounts.V1.ME_DELETION_REQUEST)
     @ResponseStatus(HttpStatus.ACCEPTED)
+    @DbWriter("profile.deletion.request")
     fun requestDeletion(principal: Principal) {
         deletionService.request(principal.name)
     }
 
     @PostMapping(ApiEndpoints.Accounts.V1.ME_EXPORT_REQUEST)
     @ResponseStatus(HttpStatus.ACCEPTED)
+    @DbWriter("profile.export.request")
     fun requestExport(principal: Principal?): ExportRequestResponse {
         val subject = principal?.name ?: throw AccountsDomainException(AccountsErrors.PROFILE_SUBJECT_INVALID)
         val request = exportService.request(subject)
@@ -64,6 +67,7 @@ class ProfileController(
     }
 
     @GetMapping(ApiEndpoints.Accounts.V1.ME_EXPORT_REQUESTS)
+    @DbReader("export.requests.list")
     fun listExportRequests(
         principal: Principal?,
         @RequestParam(name = "page", defaultValue = "0") page: Int,
@@ -88,6 +92,7 @@ class ProfileController(
      * @throws AccountsDomainException if unauthenticated, unauthorized, or not found.
      */
     @GetMapping(ApiEndpoints.Accounts.V1.PROFILES_BY_ID)
+    @DbReader(operation = "profile.lookup", target = "profile")
     fun getProfileById(
         @PathVariable accountId: UUID,
         principal: Principal?,
@@ -101,7 +106,7 @@ class ProfileController(
             }
         }
         return dbTelemetry.measureQuery("profile.lookup", "approved-query") {
-            DbContextHolder.withContext(profileReadContext("profile.lookup")) {
+            DbContextHolder.withReader(target = "profile", operation = "profile.lookup") {
                 profiles.findById(accountId) ?: throw AccountsDomainException(AccountsErrors.AUTHENTICATED_PROFILE_NOT_FOUND)
             }
         }
@@ -120,6 +125,7 @@ class ProfileController(
      * @throws AccountsDomainException if unauthenticated or unauthorized.
      */
     @PostMapping(ApiEndpoints.Accounts.V1.PROFILES_BATCH)
+    @DbReader(operation = "profile.batch_lookup", target = "profile")
     fun getProfilesBatch(
         @Valid @RequestBody request: BatchProfileRequest,
         principal: Principal?,
@@ -134,16 +140,11 @@ class ProfileController(
             }
         }
         return dbTelemetry.measureQuery("profile.batch_lookup", "approved-query") {
-            DbContextHolder.withContext(profileReadContext("profile.batch_lookup")) { profiles.findByIds(request.accountIds) }
+            DbContextHolder.withReader(target = "profile", operation = "profile.batch_lookup") {
+                profiles.findByIds(request.accountIds)
+            }
         }
     }
-
-    private fun profileReadContext(operationName: String) = DbExecutionContext(
-        operationName = operationName,
-        kind = DbOperationKind.QUERY,
-        consistency = ReadConsistency.EVENTUAL,
-        readerEligible = true
-    )
 
     private fun hasInternalServiceAuthority(principal: Principal?): Boolean =
         (principal as? Authentication)?.authorities?.any { it.authority == INTERNAL_SERVICE_SCOPE } == true

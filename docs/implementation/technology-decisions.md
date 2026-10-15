@@ -14,14 +14,17 @@ future baseline changes require a separately verified technology decision.
 Use Spring Data JPA with Hibernate for ordinary aggregate persistence. This
 reduces mapping code while retaining transactions, optimistic `@Version`
 checks, and fetch planning. Use native SQL only for group-revision locking,
-outbox/job claiming and measured specialized queries. Flyway owns migrations;
-Hibernate validates. Disable Open Session in View, keep entities private, and
-return DTOs. The BFF has no database. Read/write separation is CQRS-oriented,
-not event-sourced: commands and consistency-critical reads use the writer;
-explicit query ports may use named read pools only under a documented
-consistency policy. `libs/db` owns routing, pool budgets, route guards, health,
-and database telemetry; it does not own business entities, repositories, or
-migrations. See `docs/implementation/cqrs-data-access-plan.md`.
+outbox/job claiming and measured specialized queries. Flyway owns schema
+migrations via a single consolidated initial schema (`V1__initial_schema.sql`)
+per stateful service; Hibernate validates against the resulting schema. Disable
+Open Session in View, keep entities private, and return DTOs. The BFF has no database.
+Read/write separation is CQRS-oriented, not event-sourced: commands and consistency-critical
+reads use the writer; explicit query ports may use named read pools under a documented
+consistency policy. `libs/db` owns multi-reader instance routing, atomic round-robin
+replica load-balancing, writer transaction affinity, route guards, replica health, and
+database telemetry via declarative `@DbReader`, `@DbWriter`, and `@DbRouteContext`
+annotations and `DbRouteAspect`. See `docs/implementation/cqrs-data-access-plan.md`
+and `docs/architecture/cqrs-data-access.md`.
 
 PostgreSQL is authoritative for money, audit, balances, synchronization and
 outbox records. Each service has separate credentials and tables. Databases may
@@ -29,15 +32,20 @@ share a cluster initially, but cross-service SQL, foreign keys and entities are
 forbidden. Store monetary values as integer minor units internally and strings
 on JSON/GraphQL boundaries.
 
-Same-service foreign keys remain mandatory for durable relationships such as
-Expense Core groups, expenses, postings, and settlement records. Application
-services perform authorization and domain validation in the writer transaction,
-but those checks supplement rather than replace database referential integrity.
-Before changing a constraint for performance, capture normalized query timing,
-lock waits, child-index usage, and controlled `EXPLAIN (ANALYZE, BUFFERS, WAL)`
-evidence. The existing Expense Core foreign-key columns are indexed for the
-dependent-row checks. `libs/db` may provide routing and telemetry for this work,
-but it must not contain business relationship checks or service entities.
+Under 10M DAU high-throughput write workloads, database-level foreign key
+constraints on writer-intensive tables (`expenses`, `group_memberships`,
+`group_invitations`, `recurring_expense_schedules`, `account_identities`,
+`auth_sessions`, `balance_postings`, `expense_payers`, `expense_allocations`,
+`expense_idempotency`, `recurring_expense_occurrences`) are eliminated to prevent
+shared and exclusive row-lock contention on parent aggregate rows (`expense_groups`,
+`expenses`, `settlements`, `account_profiles`). Referential integrity is strictly
+enforced at the application layer in the writer transaction via dedicated validators
+(`EntityReferenceValidator` in Expense Core and `AccountReferenceValidator` in Accounts),
+backed by composite lookup indexes (`idx_group_memberships_lookup`,
+`idx_group_memberships_group_status`, `balance_postings_expense_idx`, etc.).
+Hot read paths utilize bounded in-memory caches (`GroupAccessCache`, `ProfileCache`,
+`PreferenceCache`) with cache evictions synchronized to transaction `afterCommit`
+to prevent dirty reads and ensure causal consistency.
 
 ## Messaging and API
 

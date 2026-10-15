@@ -2,12 +2,16 @@ package com.subhrodip.squarewise.expensecore.groups
 
 import com.subhrodip.squarewise.errors.code.CategoryCode
 import com.subhrodip.squarewise.expensecore.sync.persistence.SyncChangeRepository
+import java.time.Duration
+import java.time.Instant
 import java.util.UUID
 import org.junit.jupiter.api.assertThrows
 import com.subhrodip.squarewise.expensecore.groups.api.CreateGroupRequest
 import com.subhrodip.squarewise.expensecore.groups.api.CreateInviteRequest
 import com.subhrodip.squarewise.expensecore.groups.api.CreatePlaceholderRequest
 import com.subhrodip.squarewise.expensecore.groups.api.UpdateGroupRequest
+import com.subhrodip.squarewise.expensecore.groups.domain.GroupMembershipEntity
+import com.subhrodip.squarewise.expensecore.groups.domain.GroupInvitationEntity
 import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupAuditRepository
 import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupMembershipRepository
 import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupRepository
@@ -25,12 +29,20 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
+import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.transaction.support.TransactionSynchronizationManager
+import org.springframework.transaction.support.TransactionTemplate
 import tools.jackson.databind.ObjectMapper
 
 /**
  * Integration tests for [JpaGroupStore] verifying transactional persistence, optimistic locking / serialization,
  * audit logging, outbox dispatch, and authorization semantics for groups, archiving, placeholders, member removal, and invitations.
  */
+import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupInvitationRepository
+import com.subhrodip.squarewise.expensecore.groups.persistence.store.GroupAuditCommandStore
+import com.subhrodip.squarewise.expensecore.sync.persistence.SynchronizationStore
+import com.subhrodip.squarewise.expensecore.messaging.outbox.persistence.OutboxStore
+
 @SpringBootTest
 class JpaGroupStoreTest @Autowired constructor(
     private val store: JpaGroupStore,
@@ -39,7 +51,12 @@ class JpaGroupStoreTest @Autowired constructor(
     private val outboxRepository: OutboxRepository,
     private val groupRepository: GroupRepository,
     private val membershipRepository: GroupMembershipRepository,
-    private val objectMapper: ObjectMapper
+    private val objectMapper: ObjectMapper,
+    private val invitations: GroupInvitationRepository,
+    private val audit: GroupAuditCommandStore,
+    private val synchronization: SynchronizationStore,
+    private val outbox: OutboxStore,
+    private val transactionManager: PlatformTransactionManager
 ) {
     /**
      * Verifies that group creation persists the group entity with trimmed name, initial revision 0,
@@ -705,5 +722,337 @@ class JpaGroupStoreTest @Autowired constructor(
         assertThrows<SquarewiseException> {
             store.invite(group.groupId, "placeholder-owner", CreateInviteRequest(24, placeholder.membershipId))
         }
+    }
+
+    /** Verifies that modifying, inviting to, or adding placeholders to an archived group is rejected. */
+    @Test
+    fun `rejects operations on archived group`() {
+        val group = store.create("arch-owner", CreateGroupRequest("To Archive", "HOUSEHOLD", "EUR"))
+        store.archive(group.groupId, "arch-owner")
+
+        assertThrows<SquarewiseException> {
+            store.update(group.groupId, "arch-owner", UpdateGroupRequest("Renamed"))
+        }
+        assertThrows<SquarewiseException> {
+            store.invite(group.groupId, "arch-owner", CreateInviteRequest(24))
+        }
+        assertThrows<SquarewiseException> {
+            store.addPlaceholder(group.groupId, "arch-owner", CreatePlaceholderRequest("Charlie"))
+        }
+    }
+
+    @Test
+    fun `uncached JpaGroupStore resolves get and listMembers`() {
+        val uncachedStore = JpaGroupStore(
+            groups = groupRepository,
+            memberships = membershipRepository,
+            invitations = invitations,
+            audit = audit,
+            synchronization = synchronization,
+            outbox = outbox,
+            groupAccessCache = null
+        )
+        val group = uncachedStore.create("uncached-user", CreateGroupRequest("Uncached Group", "TRIP", "EUR"))
+        val fetched = uncachedStore.get(group.groupId, "uncached-user")
+        assertNotNull(fetched)
+        assertEquals("Uncached Group", fetched?.name)
+
+        val members = uncachedStore.listMembers(group.groupId, "uncached-user", 50)
+        assertEquals(1, members.size)
+
+        // Non-member lookup
+        assertNull(uncachedStore.get(group.groupId, "intruder"))
+    }
+
+    @Test
+    fun `claim successfully claims placeholder invite`() {
+        val group = store.create("owner", CreateGroupRequest("Placeholder Claim Group", "TRIP", "EUR"))
+        val placeholder = store.addPlaceholder(group.groupId, "owner", CreatePlaceholderRequest("Guest"))
+        val invite = store.invite(group.groupId, "owner", CreateInviteRequest(24, placeholder.membershipId))
+
+        val claimed = store.claim(invite.token, "claimed-guest")
+        assertNotNull(claimed)
+        assertEquals(group.groupId, claimed.groupId)
+
+        val members = store.listMembers(group.groupId, "claimed-guest")
+        val updatedMember = members.first { it.membershipId == placeholder.membershipId }
+        assertEquals("claimed-guest", updatedMember.subject)
+        assertFalse(updatedMember.isPlaceholder)
+    }
+
+    @Test
+    fun `claim returns existing group for user who is already an active member`() {
+        val group = store.create("owner", CreateGroupRequest("Already Member Group", "TRIP", "EUR"))
+        val invite = store.invite(group.groupId, "owner", CreateInviteRequest(24))
+
+        val result = store.claim(invite.token, "owner")
+        assertEquals(group.groupId, result.groupId)
+    }
+
+    @Test
+    fun `claim rejects invalid token format`() {
+        assertThrows<SquarewiseException> {
+            store.claim("not-a-64-hex-token", "user")
+        }
+    }
+
+    @Test
+    fun `operations reject nonexistent group id`() {
+        val missingId = UUID.randomUUID()
+        assertThrows<SquarewiseException> {
+            store.update(missingId, "owner", UpdateGroupRequest("Renamed"))
+        }
+        assertThrows<SquarewiseException> {
+            store.archive(missingId, "owner")
+        }
+        assertThrows<SquarewiseException> {
+            store.invite(missingId, "owner", CreateInviteRequest(24))
+        }
+        assertThrows<SquarewiseException> {
+            store.addPlaceholder(missingId, "owner", CreatePlaceholderRequest("New Guest"))
+        }
+    }
+
+    @Test
+    fun `invite rejects nonexistent placeholder id`() {
+        val group = store.create("owner", CreateGroupRequest("Missing Placeholder Group", "TRIP", "EUR"))
+        assertThrows<SquarewiseException> {
+            store.invite(group.groupId, "owner", CreateInviteRequest(24, UUID.randomUUID()))
+        }
+    }
+
+    @Test
+    fun `addPlaceholder and invite reject non-member actor`() {
+        val group = store.create("owner", CreateGroupRequest("Non-Member Group", "TRIP", "EUR"))
+        assertThrows<SquarewiseException> {
+            store.addPlaceholder(group.groupId, "stranger", CreatePlaceholderRequest("Bob"))
+        }
+        assertThrows<SquarewiseException> {
+            store.invite(group.groupId, "stranger", CreateInviteRequest(24))
+        }
+    }
+
+    @Test
+    fun `archive rejects archiving already archived group`() {
+        val group = store.create("owner", CreateGroupRequest("Double Archive", "TRIP", "EUR"))
+        store.archive(group.groupId, "owner")
+        assertThrows<SquarewiseException> {
+            store.archive(group.groupId, "owner")
+        }
+    }
+
+    @Test
+    fun `invalidateGroupAfterCommit executes callbacks in afterCommit and handles non-synced transactions`() {
+        val group = store.create("owner", CreateGroupRequest("Sync Invalidation", "TRIP", "EUR"))
+        val template = TransactionTemplate(transactionManager)
+        template.execute {
+            store.update(group.groupId, "owner", UpdateGroupRequest("Renamed In Sync"))
+            val syncs = TransactionSynchronizationManager.getSynchronizations()
+            syncs.forEach { it.afterCommit() }
+        }
+
+        val uncachedStore = JpaGroupStore(
+            groups = groupRepository,
+            memberships = membershipRepository,
+            invitations = invitations,
+            audit = audit,
+            synchronization = synchronization,
+            outbox = outbox,
+            groupAccessCache = null
+        )
+        template.execute {
+            TransactionSynchronizationManager.clearSynchronization()
+            try {
+                uncachedStore.update(group.groupId, "owner", UpdateGroupRequest("Renamed Uncached"))
+            } finally {
+                TransactionSynchronizationManager.initSynchronization()
+            }
+        }
+    }
+
+
+
+    @Test
+    fun `claim by existing active member succeeds without duplicate membership`() {
+        val group = store.create("existing-owner", CreateGroupRequest("Self Claim", "TRIP", "EUR"))
+        val invite = store.invite(group.groupId, "existing-owner", CreateInviteRequest(24))
+        val claimedGroup = store.claim(invite.token, "existing-owner")
+        assertEquals(group.groupId, claimedGroup.groupId)
+        val members = store.listMembers(group.groupId, "existing-owner")
+        assertEquals(1, members.count { it.subject == "existing-owner" && it.status == "ACTIVE" })
+    }
+
+    @Test
+    fun `claim rejects expired invitation`() {
+        val group = store.create("owner", CreateGroupRequest("Expired Invite Group", "TRIP", "EUR"))
+        val invite = store.invite(group.groupId, "owner", CreateInviteRequest(24))
+        val template = TransactionTemplate(transactionManager)
+        template.execute {
+            val entity = invitations.findById(invite.token).get()
+            entity.expiresAt = Instant.now().minus(Duration.ofHours(2))
+            invitations.save(entity)
+        }
+        assertThrows<SquarewiseException> {
+            store.claim(invite.token, "guest")
+        }
+    }
+
+    @Test
+    fun `claim rejects invitation with placeholder belonging to different group`() {
+        val groupA = store.create("owner-a", CreateGroupRequest("Group A", "TRIP", "EUR"))
+        val groupB = store.create("owner-b", CreateGroupRequest("Group B", "TRIP", "EUR"))
+        val placeholderA = store.addPlaceholder(groupA.groupId, "owner-a", CreatePlaceholderRequest("Target in A"))
+        val token = "c".repeat(64)
+        invitations.save(
+            GroupInvitationEntity(
+                token = token,
+                groupId = groupB.groupId,
+                expiresAt = Instant.now().plus(Duration.ofHours(24)),
+                placeholderId = placeholderA.membershipId
+            )
+        )
+        assertThrows<SquarewiseException> {
+            store.claim(token, "guest")
+        }
+    }
+
+    @Test
+    fun `claim rejects placeholder already bound to a subject`() {
+        val group = store.create("owner", CreateGroupRequest("Bound Placeholder Claim", "TRIP", "EUR"))
+        val placeholder = store.addPlaceholder(group.groupId, "owner", CreatePlaceholderRequest("Bound Target"))
+        val invite = store.invite(group.groupId, "owner", CreateInviteRequest(24, placeholder.membershipId))
+        val template = TransactionTemplate(transactionManager)
+        template.execute {
+            val entity = membershipRepository.findById(placeholder.membershipId).get()
+            entity.subject = "already-bound"
+            membershipRepository.save(entity)
+        }
+        assertThrows<SquarewiseException> {
+            store.claim(invite.token, "guest")
+        }
+    }
+
+    @Test
+    fun `removeMember rejects already removed member`() {
+        val group = store.create("owner", CreateGroupRequest("Double Remove", "TRIP", "EUR"))
+        val placeholder = store.addPlaceholder(group.groupId, "owner", CreatePlaceholderRequest("Target"))
+        store.removeMember(group.groupId, "owner", placeholder.membershipId)
+        assertThrows<SquarewiseException> {
+            store.removeMember(group.groupId, "owner", placeholder.membershipId)
+        }
+    }
+
+    @Test
+    fun `listMembers rejects archived group`() {
+        val group = store.create("owner", CreateGroupRequest("Archived Members", "TRIP", "EUR"))
+        store.archive(group.groupId, "owner")
+        assertThrows<SquarewiseException> {
+            store.listMembers(group.groupId, "owner")
+        }
+    }
+
+    @Test
+    fun `removeMember invalidates cache when synchronization is inactive`() {
+        val group = store.create("owner", CreateGroupRequest("Sync Inactive Removal", "TRIP", "EUR"))
+        val placeholder = store.addPlaceholder(group.groupId, "owner", CreatePlaceholderRequest("Inactive Sync Target"))
+        val template = TransactionTemplate(transactionManager)
+        template.execute {
+            TransactionSynchronizationManager.clearSynchronization()
+            try {
+                store.removeMember(group.groupId, "owner", placeholder.membershipId)
+            } finally {
+                TransactionSynchronizationManager.initSynchronization()
+            }
+        }
+    }
+
+    @Test
+    fun `get on archived group returns null for both cached and uncached stores`() {
+        val group = store.create("owner", CreateGroupRequest("Archived Get Group", "TRIP", "EUR"))
+        store.archive(group.groupId, "owner")
+        assertNull(store.get(group.groupId, "owner"))
+
+        val uncachedStore = JpaGroupStore(
+            groups = groupRepository,
+            memberships = membershipRepository,
+            invitations = invitations,
+            audit = audit,
+            synchronization = synchronization,
+            outbox = outbox,
+            groupAccessCache = null
+        )
+        assertNull(uncachedStore.get(group.groupId, "owner"))
+    }
+
+    @Test
+    fun `update and addPlaceholder invalidate cache when synchronization is inactive`() {
+        val group = store.create("owner", CreateGroupRequest("Sync Inactive Updates", "TRIP", "EUR"))
+        val template = TransactionTemplate(transactionManager)
+        template.execute {
+            TransactionSynchronizationManager.clearSynchronization()
+            try {
+                store.update(group.groupId, "owner", UpdateGroupRequest("Renamed Inactive"))
+                store.addPlaceholder(group.groupId, "owner", CreatePlaceholderRequest("Inactive Guest"))
+            } finally {
+                TransactionSynchronizationManager.initSynchronization()
+            }
+        }
+    }
+
+    @Test
+    fun `removeMember rejects missing membership id`() {
+        val group = store.create("owner", CreateGroupRequest("Remove Missing", "TRIP", "EUR"))
+        assertThrows<SquarewiseException> {
+            store.removeMember(group.groupId, "owner", UUID.randomUUID())
+        }
+    }
+
+    @Test
+    fun `revokeInvite rejects revoking an already revoked invite`() {
+        val group = store.create("owner", CreateGroupRequest("Revoke Invite Group", "TRIP", "EUR"))
+        val invite = store.invite(group.groupId, "owner", CreateInviteRequest(24))
+        store.revokeInvite(group.groupId, "owner", invite.token)
+
+        assertThrows<SquarewiseException> {
+            store.revokeInvite(group.groupId, "owner", invite.token)
+        }
+    }
+
+    @Test
+    fun `claim rejects nonexistent token and revoked invite`() {
+        assertThrows<SquarewiseException> {
+            store.claim("0".repeat(64), "user")
+        }
+
+        val group = store.create("owner", CreateGroupRequest("Revoked Claim Group", "TRIP", "EUR"))
+        val invite = store.invite(group.groupId, "owner", CreateInviteRequest(24))
+        store.revokeInvite(group.groupId, "owner", invite.token)
+
+        assertThrows<SquarewiseException> {
+            store.claim(invite.token, "guest")
+        }
+    }
+
+    @Test
+    fun `claim rejects claiming placeholder invite when placeholder is removed`() {
+        val group = store.create("owner", CreateGroupRequest("Removed Placeholder Claim", "TRIP", "EUR"))
+        val placeholder = store.addPlaceholder(group.groupId, "owner", CreatePlaceholderRequest("Guest"))
+        val invite = store.invite(group.groupId, "owner", CreateInviteRequest(24, placeholder.membershipId))
+
+        store.removeMember(group.groupId, "owner", placeholder.membershipId)
+
+        assertThrows<SquarewiseException> {
+            store.claim(invite.token, "claimed-guest")
+        }
+    }
+
+    @Test
+    fun `removeMember on placeholder member invalidates cache with null subject`() {
+        val group = store.create("owner", CreateGroupRequest("Placeholder Removal", "TRIP", "EUR"))
+        val placeholder = store.addPlaceholder(group.groupId, "owner", CreatePlaceholderRequest("To Remove"))
+        store.removeMember(group.groupId, "owner", placeholder.membershipId)
+
+        val members = store.listMembers(group.groupId, "owner")
+        assertTrue(members.none { it.membershipId == placeholder.membershipId && it.status == "ACTIVE" })
     }
 }

@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
+import java.time.ZoneOffset
 
 @SpringBootTest(properties = ["squarewise.recurring.enabled=true", "squarewise.recurring.poll-delay-ms=5000"])
 @Transactional
@@ -34,7 +35,7 @@ class RecurringExpenseWorkerTest @Autowired constructor(
                 amountMinor = 300,
                 currency = "EUR",
                 frequency = RecurrenceFrequency.WEEKLY,
-                startDate = LocalDate.now()
+                startDate = LocalDate.now(ZoneOffset.UTC)
             )
         )
 
@@ -44,7 +45,7 @@ class RecurringExpenseWorkerTest @Autowired constructor(
     @Test
     fun `worker executes due occurrences when enabled`() {
         val group = groupStore.create("alice", CreateGroupRequest("Apartment 101", "HOUSEHOLD", "EUR"))
-        val today = LocalDate.now()
+        val today = LocalDate.now(ZoneOffset.UTC)
 
         service.createSchedule(
             group.groupId,
@@ -70,7 +71,7 @@ class RecurringExpenseWorkerTest @Autowired constructor(
     @Test
     fun `worker does not execute when disabled`() {
         val group = groupStore.create("alice", CreateGroupRequest("Apartment 102", "HOUSEHOLD", "EUR"))
-        val today = LocalDate.now()
+        val today = LocalDate.now(ZoneOffset.UTC)
 
         service.createSchedule(
             group.groupId,

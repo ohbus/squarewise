@@ -91,5 +91,15 @@ class GroupMembershipRepositoryContractTest {
         assertEquals(Triple(groupId, subject, "ACTIVE"), existsCalledWith)
         assertEquals(Pair(subject, "ACTIVE"), findAllCalledWith)
         assertEquals(Pair(groupId, "ACTIVE"), findByGroupCalledWith)
+
+        val defaultImplsClass = Class.forName("com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupMembershipRepository\$DefaultImpls")
+        val existsMethod = defaultImplsClass.getMethod("existsByGroupIdAndSubject", GroupMembershipRepository::class.java, UUID::class.java, String::class.java)
+        assertEquals(true, existsMethod.invoke(null, stub, groupId, subject))
+
+        val findAllMethod = defaultImplsClass.getMethod("findAllBySubjectOrderByMembershipId", GroupMembershipRepository::class.java, String::class.java)
+        assertEquals(emptyList<GroupMembershipEntity>(), findAllMethod.invoke(null, stub, subject))
+
+        val findByGroupMethod = defaultImplsClass.getMethod("findByGroupId", GroupMembershipRepository::class.java, UUID::class.java)
+        assertEquals(emptyList<GroupMembershipEntity>(), findByGroupMethod.invoke(null, stub, groupId))
     }
 }
