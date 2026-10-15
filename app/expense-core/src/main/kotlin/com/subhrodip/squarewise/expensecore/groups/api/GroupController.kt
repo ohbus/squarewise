@@ -33,7 +33,7 @@ class GroupController(private val groups: GroupStore) {
         groups.create(principal.name, request)
 
     @GetMapping
-    @DbReader("group.list")
+    @DbReader("groups.list")
     fun list(
         @RequestParam(defaultValue = "100") limit: Int = 100,
         principal: Principal

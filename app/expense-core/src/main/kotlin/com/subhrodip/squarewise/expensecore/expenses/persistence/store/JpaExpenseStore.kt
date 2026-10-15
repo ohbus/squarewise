@@ -200,10 +200,8 @@ class JpaExpenseStore(
     }
 
     private fun requireActiveMembership(groupId: UUID, actorSubject: String?) {
-        if (actorSubject != null) {
-            if (!referenceValidator.isActiveMember(groupId, actorSubject)) {
-                throw ExpenseDomainException(ExpenseErrors.GROUP_ACCESS_HIDDEN, "Group $groupId not found")
-            }
+        if (actorSubject != null && !referenceValidator.isActiveMember(groupId, actorSubject)) {
+            throw ExpenseDomainException(ExpenseErrors.GROUP_ACCESS_HIDDEN, "Group $groupId not found")
         }
     }
 

@@ -466,7 +466,7 @@ class RecurringExpenseService(
                 }
             }
             if (missingGroupIds.isEmpty()) {
-                return result
+                return result.toMap()
             }
             val rows = entityManager.createQuery(
                 "SELECT m.groupId, m.membershipId FROM GroupMembershipEntity m WHERE m.groupId IN :groupIds AND m.status = 'ACTIVE' ORDER BY m.membershipId ASC",
@@ -483,7 +483,7 @@ class RecurringExpenseService(
                 cache.putActiveMemberIds(groupId, memberIds)
                 result[groupId] = memberIds.toList().sorted()
             }
-            return result
+            return result.toMap()
         }
         return groupIds.associateWith { getGroupMembers(it) }
     }

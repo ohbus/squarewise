@@ -81,16 +81,16 @@ class JpaGroupStore(
     /**
      * Lists all groups in which the given user subject is an active member.
      */
-    @DbReader("group.list")
+    @DbReader("groups.list")
     @Transactional(readOnly = true)
     override fun list(subject: String): List<GroupResponse> = list(subject, 100)
 
     /** Loads a bounded group page without materializing every membership. */
-    @DbReader("group.list")
+    @DbReader("groups.list")
     @Transactional(readOnly = true)
     override fun list(subject: String, limit: Int): List<GroupResponse> {
         require(limit in 1..100) { "group limit must be between 1 and 100" }
-        return DbContextHolder.withReader(operation = "group.list") {
+        return DbContextHolder.withReader(operation = "groups.list") {
             memberships.findActiveGroupsBySubject(subject, "ACTIVE", PageRequest.of(0, limit))
                 .map { it.toResponse() }
         }

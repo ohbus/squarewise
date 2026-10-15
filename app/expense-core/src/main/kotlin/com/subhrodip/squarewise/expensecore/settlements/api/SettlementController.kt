@@ -6,6 +6,7 @@ import com.subhrodip.squarewise.expensecore.settlements.domain.SuggestedSettleme
 import com.subhrodip.squarewise.expensecore.settlements.service.SettlementService
 import com.subhrodip.squarewise.expensecore.settlements.service.SettlementSuggestionEngine
 import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupMembershipRepository
+import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupRepository
 
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
@@ -37,9 +38,11 @@ class SettlementController(
     @Autowired(required = false)
     private val groupAccessCache: GroupAccessCache? = null,
     @Autowired(required = false)
-    referenceValidator: EntityReferenceValidator? = null
+    referenceValidator: EntityReferenceValidator? = null,
+    @Autowired(required = false)
+    groupRepository: GroupRepository? = null
 ) {
-    private val validator = referenceValidator ?: EntityReferenceValidator(membershipRepository = membershipRepository, groupAccessCache = groupAccessCache)
+    private val validator = referenceValidator ?: EntityReferenceValidator(groupRepository, membershipRepository, groupAccessCache)
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)

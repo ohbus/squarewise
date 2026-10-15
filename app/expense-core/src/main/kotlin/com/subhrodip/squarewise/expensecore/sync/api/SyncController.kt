@@ -4,6 +4,7 @@ import com.subhrodip.squarewise.errors.catalog.PlatformErrors
 import com.subhrodip.squarewise.expensecore.sync.persistence.SynchronizationStore
 import com.subhrodip.squarewise.expensecore.sync.api.toResponse
 import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupMembershipRepository
+import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupRepository
 
 import com.subhrodip.squarewise.expensecore.groups.cache.GroupAccessCache
 import com.subhrodip.squarewise.expensecore.validation.EntityReferenceValidator
@@ -28,9 +29,11 @@ class SyncController(
     @Autowired(required = false)
     private val groupAccessCache: GroupAccessCache? = null,
     @Autowired(required = false)
-    referenceValidator: EntityReferenceValidator? = null
+    referenceValidator: EntityReferenceValidator? = null,
+    @Autowired(required = false)
+    groupRepository: GroupRepository? = null
 ) {
-    private val validator = referenceValidator ?: EntityReferenceValidator(membershipRepository = memberships, groupAccessCache = groupAccessCache)
+    private val validator = referenceValidator ?: EntityReferenceValidator(groupRepository, memberships, groupAccessCache)
 
     @GetMapping(ApiEndpoints.ExpenseCore.V1.SYNC_SNAPSHOT_RELATIVE_SUBPATH, ApiEndpoints.ExpenseCore.V1.SYNC_CHANGES_RELATIVE_SUBPATH)
     @DbReader("expense.sync.page")

@@ -1,5 +1,6 @@
 package com.subhrodip.squarewise.expensecore.groups.cache
 
+import com.subhrodip.squarewise.expensecore.groups.domain.GroupEntity
 import org.springframework.stereotype.Component
 import org.springframework.transaction.support.TransactionSynchronization
 import org.springframework.transaction.support.TransactionSynchronizationManager
@@ -36,6 +37,7 @@ class GroupAccessCache(
     private val balancesCache = ConcurrentHashMap<UUID, CacheEntry<List<*>>>()
     private val memberIdsCache = ConcurrentHashMap<UUID, CacheEntry<Set<UUID>>>()
     private val groupDetailsCache = ConcurrentHashMap<UUID, CacheEntry<Any?>>()
+    private val groupEntityCache = ConcurrentHashMap<UUID, CacheEntry<GroupEntity?>>()
     private val invalidationTimestamps = ConcurrentHashMap<Pair<UUID, String>, Instant>()
     private val groupGenerations = ConcurrentHashMap<UUID, Long>()
 
@@ -208,6 +210,28 @@ class GroupAccessCache(
     }
 
     /**
+     * Resolves group entity, using cached entity if valid.
+     *
+     * @param groupId unique group identifier.
+     * @param loader fallback supplier to query the database on cache miss.
+     * @return resolved group entity or null.
+     */
+    fun groupEntity(groupId: UUID, loader: () -> GroupEntity?): GroupEntity? {
+        val now = Instant.now()
+        val cached = groupEntityCache[groupId]
+        if (cached != null && !cached.isExpired(now)) {
+            return cached.value
+        }
+        val gen = currentGeneration(groupId)
+        val computed = loader()
+        if (gen == currentGeneration(groupId)) {
+            evictIfOversized(groupEntityCache)
+            groupEntityCache[groupId] = CacheEntry(computed, Instant.now().plus(ttl))
+        }
+        return computed
+    }
+
+    /**
      * Invalidates all cached status, memberships, rosters, details, and balances for the given group.
      *
      * @param groupId unique group identifier to invalidate.
@@ -217,6 +241,7 @@ class GroupAccessCache(
         incrementGeneration(groupId)
         groupStatusCache.remove(groupId)
         groupDetailsCache.remove(groupId)
+        groupEntityCache.remove(groupId)
         val iterator = membershipCache.keys.iterator()
         while (iterator.hasNext()) {
             val key = iterator.next()
@@ -286,6 +311,7 @@ class GroupAccessCache(
         membershipCache.clear()
         groupStatusCache.clear()
         groupDetailsCache.clear()
+        groupEntityCache.clear()
         membersListCache.clear()
         balancesCache.clear()
         memberIdsCache.clear()

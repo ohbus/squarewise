@@ -113,7 +113,7 @@ class EntityReferenceValidator(
      */
     fun validateActiveGroup(groupId: UUID): GroupEntity {
         val group = if (groupAccessCache != null) {
-            groupAccessCache.groupDetails(groupId) {
+            groupAccessCache.groupEntity(groupId) {
                 groupRepository?.findById(groupId)?.orElse(null)
             }
         } else {

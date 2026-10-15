@@ -10,6 +10,7 @@ import java.time.Duration
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
 import org.springframework.transaction.support.TransactionSynchronizationManager
+import com.subhrodip.squarewise.expensecore.groups.domain.GroupEntity
 
 /**
  * Unit tests verifying [GroupAccessCache] hit/miss behavior, TTL expiration, and invalidation.
@@ -173,6 +174,32 @@ class GroupAccessCacheTest {
         val res3 = cache.groupDetails(groupId) { calls.incrementAndGet(); details }
         assertEquals(details, res3)
         assertEquals(2, calls.get())
+    }
+
+    @Test
+    fun `groupEntity caches entity and does not collide with groupDetails for the same groupId`() {
+        val groupId = UUID.randomUUID()
+        val entityCalls = AtomicInteger(0)
+        val detailsCalls = AtomicInteger(0)
+        val entity = GroupEntity(groupId, "Trip", "TRIP", "EUR", "ACTIVE", 0L)
+        val details = "group-response-$groupId"
+
+        val e1 = cache.groupEntity(groupId) { entityCalls.incrementAndGet(); entity }
+        val d1 = cache.groupDetails(groupId) { detailsCalls.incrementAndGet(); details }
+        val e2 = cache.groupEntity(groupId) { entityCalls.incrementAndGet(); entity }
+        val d2 = cache.groupDetails(groupId) { detailsCalls.incrementAndGet(); details }
+
+        assertEquals(entity, e1)
+        assertEquals(entity, e2)
+        assertEquals(details, d1)
+        assertEquals(details, d2)
+        assertEquals(1, entityCalls.get())
+        assertEquals(1, detailsCalls.get())
+
+        cache.invalidateGroup(groupId)
+        val e3 = cache.groupEntity(groupId) { entityCalls.incrementAndGet(); entity }
+        assertEquals(entity, e3)
+        assertEquals(2, entityCalls.get())
     }
 
     @Test

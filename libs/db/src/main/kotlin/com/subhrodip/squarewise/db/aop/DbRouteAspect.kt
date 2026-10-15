@@ -219,6 +219,7 @@ class DbRouteAspect {
                 val annotation = AnnotationUtils.findAnnotation(declaredMethod, annotationClass)
                 if (annotation != null) return annotation
             } catch (_: NoSuchMethodException) {
+                // Method not declared on this class; continue hierarchy traversal
             }
             queue.addAll(currentClass.interfaces)
             currentClass = currentClass.superclass
@@ -231,6 +232,7 @@ class DbRouteAspect {
                     val annotation = AnnotationUtils.findAnnotation(ifaceMethod, annotationClass)
                     if (annotation != null) return annotation
                 } catch (_: NoSuchMethodException) {
+                    // Method not declared on this interface; continue hierarchy traversal
                 }
                 queue.addAll(iface.interfaces)
             }
@@ -256,28 +258,37 @@ class DbRouteAspect {
         method: Method?,
         annotationClass: Class<A>
     ): A? {
-        val visited = mutableSetOf<Class<*>>()
         val queue = ArrayDeque<Class<*>>()
+        val annotation = findClassAnnotationOnSuperclasses(rootClass, annotationClass, queue)
+        if (annotation != null) return annotation
+        return searchClassAnnotationOnInterfaces(queue, method, annotationClass)
+    }
+
+    private fun <A : Annotation> findClassAnnotationOnSuperclasses(
+        rootClass: Class<*>,
+        annotationClass: Class<A>,
+        interfaceQueue: ArrayDeque<Class<*>>
+    ): A? {
         var currentClass: Class<*>? = rootClass
         while (currentClass != null && currentClass != Any::class.java) {
             val classAnnotation = currentClass.getAnnotation(annotationClass)
             if (classAnnotation != null) return classAnnotation
-            queue.addAll(currentClass.interfaces)
+            interfaceQueue.addAll(currentClass.interfaces)
             currentClass = currentClass.superclass
         }
+        return null
+    }
+
+    private fun <A : Annotation> searchClassAnnotationOnInterfaces(
+        queue: ArrayDeque<Class<*>>,
+        method: Method?,
+        annotationClass: Class<A>
+    ): A? {
+        val visited = mutableSetOf<Class<*>>()
         while (queue.isNotEmpty()) {
             val iface = queue.removeFirst()
             if (visited.add(iface)) {
-                val declaresMethod = if (method != null) {
-                    try {
-                        iface.getMethod(method.name, *method.parameterTypes)
-                        true
-                    } catch (_: NoSuchMethodException) {
-                        false
-                    }
-                } else true
-
-                if (declaresMethod) {
+                if (interfaceDeclaresMethod(iface, method)) {
                     val ifaceAnnotation = iface.getAnnotation(annotationClass)
                     if (ifaceAnnotation != null) return ifaceAnnotation
                 }
@@ -285,6 +296,17 @@ class DbRouteAspect {
             }
         }
         return null
+    }
+
+    private fun interfaceDeclaresMethod(iface: Class<*>, method: Method?): Boolean {
+        if (method == null) return true
+        return try {
+            iface.getMethod(method.name, *method.parameterTypes)
+            true
+        } catch (_: NoSuchMethodException) {
+            // Method not declared on this interface
+            false
+        }
     }
 
     private fun resolveOperationName(declared: String, method: Method?, targetClass: Class<*>?): String {

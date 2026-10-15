@@ -28,6 +28,7 @@ import java.time.ZoneOffset
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicInteger
 
 class LiveUpdateFanoutTest {
     @Test
@@ -727,15 +728,20 @@ class LiveUpdateFanoutTest {
         val constructor = channelClass.getDeclaredConstructor(Int::class.javaPrimitiveType).apply { isAccessible = true }
         val channel = constructor.newInstance(100_000)
         val reserveMethod = channelClass.getDeclaredMethod("reserve").apply { isAccessible = true }
+        val pendingField = channelClass.getDeclaredField("pending").apply { isAccessible = true }
 
         val pool = Executors.newFixedThreadPool(8)
         val barrier = java.util.concurrent.CyclicBarrier(8)
+        val successfulReservations = AtomicInteger(0)
         try {
             val tasks = (1..8).map {
                 pool.submit {
                     barrier.await()
                     for (i in 0 until 5_000) {
-                        reserveMethod.invoke(channel)
+                        val admitted = reserveMethod.invoke(channel) as Boolean
+                        if (admitted) {
+                            successfulReservations.incrementAndGet()
+                        }
                     }
                 }
             }
@@ -743,6 +749,22 @@ class LiveUpdateFanoutTest {
         } finally {
             pool.shutdownNow()
         }
+
+        val pending = (pendingField.get(channel) as AtomicInteger).get()
+        assertThat(successfulReservations.get()).isEqualTo(40_000)
+        assertThat(pending).isEqualTo(40_000)
+
+        // Small-capacity phase verifying capacity enforcement directly
+        val smallChannel = constructor.newInstance(5)
+        var smallAdmitted = 0
+        for (i in 0 until 10) {
+            if (reserveMethod.invoke(smallChannel) as Boolean) {
+                smallAdmitted++
+            }
+        }
+        val smallPending = (pendingField.get(smallChannel) as AtomicInteger).get()
+        assertThat(smallAdmitted).isEqualTo(5)
+        assertThat(smallPending).isEqualTo(5)
     }
 
 
