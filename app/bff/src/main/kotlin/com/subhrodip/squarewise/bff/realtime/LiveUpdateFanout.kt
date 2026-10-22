@@ -12,6 +12,7 @@ import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.PriorityBlockingQueue
 import java.util.concurrent.atomic.AtomicInteger
 import org.springframework.scheduling.annotation.Scheduled
 
@@ -34,6 +35,7 @@ class LiveUpdateFanout(
     private val maxSubscriptionsPerUser: Int = DEFAULT_MAX_SUBSCRIPTIONS_PER_USER
 ) {
     private val subscriptions = ConcurrentHashMap<String, LiveSubscription>()
+    private val expirationQueue = PriorityBlockingQueue<ExpirationEntry>(11, compareBy { it.expiresAt })
     private val groupSubscriptions = ConcurrentHashMap<String, MutableSet<String>>()
     private val userSubscriptions = ConcurrentHashMap<String, MutableSet<String>>()
 
@@ -138,6 +140,7 @@ class LiveUpdateFanout(
             subscriptionInvalidations[subscription.id] =
                 SubscriptionInvalidationChannel(queueCapacity)
             subscriptions[subscription.id] = subscription
+            expirationQueue.offer(ExpirationEntry(subscription.id, subscription.expiresAt))
             revocationSignals[subscription.id] = Sinks.one()
             userSubscriptions.compute(userId) { _, set ->
                 (set ?: ConcurrentHashMap.newKeySet()).apply { add(subscription.id) }
@@ -217,28 +220,19 @@ class LiveUpdateFanout(
     private fun removeExpired(maxEntries: Int) {
         val now = Instant.now(clock)
         var removed = 0
-        val iterator = subscriptions.entries.iterator()
-        while (iterator.hasNext() && removed < maxEntries) {
-            val entry = iterator.next()
-            val expired = !now.isBefore(entry.value.expiresAt)
-            if (expired) {
-                val subId = entry.key
-                val sub = entry.value
-                revocationSignals.remove(subId)?.tryEmitEmpty()
-                subscriptionInvalidations.remove(subId)?.complete()
-                userSubscriptions.computeIfPresent(sub.userId) { _, set ->
-                    set.remove(subId)
-                    if (set.isEmpty()) null else set
-                }
-                groupSubscriptions.computeIfPresent(sub.groupId) { _, set ->
-                    set.remove(subId)
-                    if (set.isEmpty()) null else set
-                }
-                iterator.remove()
+        while (removed < maxEntries) {
+            val candidate = expirationQueue.peek() ?: break
+            if (candidate.expiresAt.isAfter(now)) break
+            expirationQueue.poll()
+            val subscription = subscriptions[candidate.subscriptionId]
+            if (subscription != null && !now.isBefore(subscription.expiresAt)) {
+                unsubscribe(candidate.subscriptionId)
                 removed++
             }
         }
     }
+
+    private data class ExpirationEntry(val subscriptionId: String, val expiresAt: Instant)
 
     /** Bounded per-subscription channel that exposes overflow before a subscriber attaches. */
     private class SubscriptionInvalidationChannel(private val capacity: Int) {

@@ -4,7 +4,14 @@ import com.subhrodip.squarewise.bff.realtime.LiveUpdateFanout
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import java.time.Clock
 import java.time.Duration
+import java.time.Instant
+import java.time.ZoneId
+import java.time.ZoneOffset
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 class LiveUpdateFanoutTest {
     @Test
@@ -15,7 +22,7 @@ class LiveUpdateFanoutTest {
         fanout.emitInvalidation("group-2", 1)
         fanout.emitInvalidation("group-1", 2)
 
-        val result = fanout.invalidations(matching.id).take(1).blockFirst()!!
+        val result = fanout.invalidations(matching.id).take(1).blockFirst(Duration.ofSeconds(1))!!
         assertThat(result.groupId).isEqualTo("group-1")
         assertThat(result.revision).isEqualTo(2)
     }
@@ -49,18 +56,59 @@ class LiveUpdateFanoutTest {
 
     @Test
     fun `expired subscriptions are reclaimed by bounded sweeps`() {
+        val clock = MutableClock()
         val fanout = LiveUpdateFanout(
-            subscriptionTtl = Duration.ofMillis(10),
+            clock = clock,
+            subscriptionTtl = Duration.ofSeconds(1),
             maxSubscriptionsPerUser = 2
         )
         val first = fanout.subscribe("user-1", "group-1")
         fanout.subscribe("user-1", "group-2")
 
-        Thread.sleep(25)
-        fanout.removeExpired()
+        clock.advance(Duration.ofSeconds(2))
+        fanout.sweepExpired()
 
         assertThat(fanout.revocationSignal(first.id).block(Duration.ofSeconds(1))).isNull()
         fanout.subscribe("user-1", "group-3")
+    }
+
+    @Test
+    fun `expiry sweep releases user and group indexes`() {
+        val clock = MutableClock()
+        val fanout = LiveUpdateFanout(clock = clock, subscriptionTtl = Duration.ofSeconds(1))
+        val expired = fanout.subscribe("user-1", "group-1")
+
+        clock.advance(Duration.ofSeconds(2))
+        fanout.sweepExpired()
+
+        assertThat(fanout.revokeUser("user-1")).isZero()
+        assertThat(fanout.revokeUserFromGroup("user-1", "group-1")).isZero()
+
+        val active = fanout.subscribe("user-2", "group-1")
+        fanout.emitInvalidation("group-1", 1)
+        assertThat(fanout.invalidations(active.id).take(1).blockFirst(Duration.ofSeconds(1))?.groupId)
+            .isEqualTo("group-1")
+        assertThat(fanout.revocationSignal(expired.id).block(Duration.ofSeconds(1))).isNull()
+    }
+
+    @Test
+    fun `subscription limit admits only one concurrent subscription`() {
+        val fanout = LiveUpdateFanout(maxSubscriptionsPerUser = 1)
+        val start = CountDownLatch(1)
+        val executor = Executors.newFixedThreadPool(8)
+        try {
+            val attempts = (1..8).map { index ->
+                executor.submit<Boolean> {
+                    start.await()
+                    runCatching { fanout.subscribe("user-1", "group-$index") }.isSuccess
+                }
+            }
+            start.countDown()
+            val admitted = attempts.count { it.get(1, TimeUnit.SECONDS) }
+            assertThat(admitted).isEqualTo(1)
+        } finally {
+            executor.shutdownNow()
+        }
     }
 
     @Test
@@ -72,5 +120,17 @@ class LiveUpdateFanoutTest {
         fanout.emitInvalidation("group-1", 2)
 
         assertThat(fanout.revocationSignal(subscription.id).block(Duration.ofSeconds(1))).isNull()
+    }
+
+    private class MutableClock(private var current: Instant = Instant.EPOCH) : Clock() {
+        override fun getZone(): ZoneId = ZoneOffset.UTC
+
+        override fun withZone(zone: ZoneId): Clock = this
+
+        override fun instant(): Instant = current
+
+        fun advance(duration: Duration) {
+            current = current.plus(duration)
+        }
     }
 }

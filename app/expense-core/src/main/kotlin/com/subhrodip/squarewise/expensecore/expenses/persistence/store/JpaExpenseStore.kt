@@ -68,7 +68,8 @@ class JpaExpenseStore(
         groupId: UUID,
         expense: ExpenseRecord,
         idempotencyKey: String,
-        actorSubject: String?
+        actorSubject: String?,
+        validateParticipants: Boolean
     ): ExpenseRecord {
         val actor = actorSubject ?: "<unknown>"
         val payloadHash = expensePayloadHash(expense)
@@ -78,7 +79,7 @@ class JpaExpenseStore(
         val group = groupRepository.findForMembershipUpdate(groupId)
             ?: throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group $groupId not found")
         requireActiveMembership(groupId, actorSubject)
-        if (actorSubject != null || idempotencyKey.startsWith(RECURRING_IDEMPOTENCY_PREFIX)) {
+        if (validateParticipants) {
             validateFinancialParticipants(groupId, expense)
         }
         if (group.status == "ARCHIVED") {
@@ -202,7 +203,6 @@ class JpaExpenseStore(
     }
 
     private companion object {
-        const val RECURRING_IDEMPOTENCY_PREFIX = "recurring:"
     }
 
     private fun requireActiveMembership(groupId: UUID, actorSubject: String?) {

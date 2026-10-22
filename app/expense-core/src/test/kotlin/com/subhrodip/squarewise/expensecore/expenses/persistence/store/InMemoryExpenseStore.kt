@@ -28,7 +28,8 @@ class InMemoryExpenseStore : ExpenseStore {
         groupId: UUID,
         expense: ExpenseRecord,
         idempotencyKey: String,
-        actorSubject: String?
+        actorSubject: String?,
+        validateParticipants: Boolean
     ): ExpenseRecord {
         val existing = expenses[expense.expenseId]
         if (existing != null) {

@@ -20,6 +20,7 @@ import java.time.ZoneOffset
 import java.util.UUID
 import org.springframework.dao.DataIntegrityViolationException
 import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers.anyBoolean
 import org.mockito.ArgumentMatchers.anyString
 import org.mockito.ArgumentMatchers.isNull
 import org.mockito.Mockito.doThrow
@@ -104,7 +105,8 @@ class RecurringExpenseOptionalOutboxTest {
                     emptyList()
                 ),
                 anyString(),
-                isNull()
+                isNull(),
+                anyBoolean()
             )
 
         val service = RecurringExpenseService(
@@ -173,7 +175,8 @@ class RecurringExpenseOptionalOutboxTest {
                 UUID(0, 0), UUID(0, 0), "", "", "EUR", 0, 1, "EQUAL", Instant.EPOCH, emptyList(), emptyList()
             ),
             anyString(),
-            isNull()
+            isNull(),
+            anyBoolean()
         )
 
         val service = RecurringExpenseService(
@@ -243,7 +246,8 @@ class RecurringExpenseOptionalOutboxTest {
                 UUID(0, 0), UUID(0, 0), "", "", "EUR", 0, 1, "EQUAL", Instant.EPOCH, emptyList(), emptyList()
             ),
             anyString(),
-            isNull()
+            isNull(),
+            anyBoolean()
         )
 
         val service = RecurringExpenseService(

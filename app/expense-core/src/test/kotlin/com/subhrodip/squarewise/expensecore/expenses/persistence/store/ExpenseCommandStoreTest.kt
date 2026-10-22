@@ -13,6 +13,7 @@ class ExpenseCommandStoreTest {
     @Test
     fun `verifies interface default arguments pass null actorSubject`() {
         var createActor: String? = "sentinel"
+        var createValidation = true
         var updateActor: String? = "sentinel"
         var deleteActor: String? = "sentinel"
 
@@ -31,8 +32,15 @@ class ExpenseCommandStoreTest {
         )
 
         val store = object : ExpenseCommandStore {
-            override fun create(groupId: UUID, expense: ExpenseRecord, idempotencyKey: String, actorSubject: String?): ExpenseRecord {
+            override fun create(
+                groupId: UUID,
+                expense: ExpenseRecord,
+                idempotencyKey: String,
+                actorSubject: String?,
+                validateParticipants: Boolean
+            ): ExpenseRecord {
                 createActor = actorSubject
+                createValidation = validateParticipants
                 return expense
             }
 
@@ -51,6 +59,10 @@ class ExpenseCommandStoreTest {
 
         store.create(gId, sampleRecord, "key-1")
         assertEquals(null, createActor)
+        assertEquals(false, createValidation)
+
+        store.create(gId, sampleRecord, "internal-key", validateParticipants = true)
+        assertTrue(createValidation)
 
         store.update(gId, eId, sampleRecord)
         assertEquals(null, updateActor)

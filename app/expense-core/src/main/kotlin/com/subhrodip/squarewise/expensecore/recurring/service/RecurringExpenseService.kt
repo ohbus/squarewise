@@ -268,7 +268,12 @@ class RecurringExpenseService(
             if (!alreadyExists) {
                 try {
                     val expenseRecord = buildExpenseRecord(schedule, occurrenceId, members)
-                    expenseStore.create(schedule.groupId, expenseRecord, "recurring:$occurrenceId")
+                    expenseStore.create(
+                        schedule.groupId,
+                        expenseRecord,
+                        "recurring:$occurrenceId",
+                        validateParticipants = true
+                    )
 
                     val occurrence = RecurringExpenseOccurrence(
                         occurrenceId = occurrenceId,

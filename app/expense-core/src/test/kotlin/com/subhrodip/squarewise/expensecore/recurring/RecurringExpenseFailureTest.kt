@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers.anyBoolean
 import org.mockito.ArgumentMatchers.isNull
 import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.doThrow
@@ -48,7 +49,8 @@ class RecurringExpenseFailureTest @Autowired constructor(
                     UUID(0, 0), UUID(0, 0), "", "", "", 0, 1, "", Instant.EPOCH, emptyList(), emptyList()
                 ),
                 any(String::class.java) ?: "test-idempotency",
-                isNull(String::class.java)
+                isNull(String::class.java),
+                anyBoolean()
             )
 
         val group = groupStore.create("recurring-failure-owner", CreateGroupRequest("Failure group", "TRIP", "EUR"))
@@ -82,7 +84,8 @@ class RecurringExpenseFailureTest @Autowired constructor(
                     UUID(0, 0), UUID(0, 0), "", "", "", 0, 1, "", Instant.EPOCH, emptyList(), emptyList()
                 ),
                 any(String::class.java) ?: "test-idempotency",
-                isNull(String::class.java)
+                isNull(String::class.java),
+                anyBoolean()
             )
 
         val group = groupStore.create("recurring-data-access", CreateGroupRequest("Data access group", "TRIP", "EUR"))
@@ -112,7 +115,8 @@ class RecurringExpenseFailureTest @Autowired constructor(
                     UUID(0, 0), UUID(0, 0), "", "", "", 0, 1, "", Instant.EPOCH, emptyList(), emptyList()
                 ),
                 any(String::class.java) ?: "test-idempotency",
-                isNull(String::class.java)
+                isNull(String::class.java),
+                anyBoolean()
             )
 
         val group = groupStore.create("recurring-timeout", CreateGroupRequest("Timeout group", "TRIP", "EUR"))
@@ -143,7 +147,8 @@ class RecurringExpenseFailureTest @Autowired constructor(
                     UUID(0, 0), UUID(0, 0), "", "", "", 0, 1, "", Instant.EPOCH, emptyList(), emptyList()
                 ),
                 any(String::class.java) ?: "test-idempotency",
-                isNull(String::class.java)
+                isNull(String::class.java),
+                anyBoolean()
             )
 
         val group = groupStore.create("recurring-cancel", CreateGroupRequest("Cancellation group", "TRIP", "EUR"))
