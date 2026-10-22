@@ -86,7 +86,7 @@ The BFF real-time subscription interface uses the RFC 6455 WebSocket transport r
 | **Capacity and latency** | Production-like load profile (60-min soak + burst), p50/p95/p99 artifacts, saturation metrics | 🟡 Local baseline verified (OPS-22/23); Target environment run required before launch | p50 < 100ms, p95 < 500ms, p99 < 1s, error < 0.1% | Phase 7 (PR-12, PR-16) |
 | **Failover and restore** | Database/broker/service recovery rehearsal with data-integrity proof, RPO/RTO measured | 🟡 Local chaos passed (OPS-20/QA-07); Target multi-node drill required | RPO < 1 min, RTO < 5 min | Phase 7 (PR-16) |
 | **Security scanning** | Dependency, image, secret, and API security scans with reviewed exceptions | 🟢 Clean repository baseline; container registry scanning required in release pipeline | Zero critical/high unresolved | Phase 6 (PR-11) |
-| **Rollback** | Deployment rollback rehearsal, post-rollback reconciliation, version-skew evidence | 🟡 Backward-compatible migrations verified; Rollback drill required during staging deployment | Zero data loss on rollback | Phase 7 (PR-14, PR-16) |
+| **Rollback** | Deployment rollback rehearsal, post-rollback reconciliation, version-skew evidence | 🟡 Fresh-install baseline only; existing-database rollback evidence is blocked until the approved rebuild/baseline staging drill completes | Zero data loss on rollback | Phase 7 (PR-14, PR-16) |
 | **WebSocket protocol** | Malformed frames, duplicate IDs, backpressure, replay-after-reconnect, timeout/retry semantics | 🟢 Specified by contract above; local conformance verified in QA-07 and E2E suites | Stable under 100K+ connections | Phase 7 (PR-16) |
 | **Secret rotation** | JWT signing key, DB credential, broker credential, OIDC secret rotation without downtime | 🟡 Decoupled config validated; Live zero-downtime rotation drill required | Zero user-visible interruption | Phase 4 (PR-07) |
 | **Alert routing** | Each alert condition triggers correct on-call notification within SLA | 🟡 Alerts defined in `infra/observability/rules/squarewise.yml`; PagerDuty/webhook routing verified in target environment | Alert delivery < 5 min | Phase 7 (PR-16) |
@@ -115,14 +115,15 @@ The BFF real-time subscription interface uses the RFC 6455 WebSocket transport r
 3. Validate software supply chain using `make sbom-validate`.
 
 ### 4.4 Rollback procedure and version-skew verification
-1. Deploy release candidate (version $N+1$).
+1. Back up the target service databases and run the staging role/ownership
+   reconciliation command before changing application credentials.
 2. For a new installation, provision empty service databases and apply the
-   consolidated V1 baselines. The current branch is not an upgrade path for
-   databases created by the retired multi-version chain.
-3. Do not perform this version-skew rollback procedure against an existing
-   database until a separately approved compatibility/rebuild process exists.
-4. Record the fresh-install result and defer existing-database rollback
-   evidence to that compatibility process.
+   consolidated V1 baselines.
+3. Do not perform version-skew rollback against a database created by the
+   retired multi-version chain until the separately approved rebuild/baseline
+   process exists.
+4. Record fresh-install results and keep existing-database rollback evidence
+   blocked until that process is rehearsed.
 
 ---
 

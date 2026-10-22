@@ -89,9 +89,11 @@ The staging overlay provisions separate PostgreSQL roles and RabbitMQ users for
 Accounts, Expense Core, and Notifications. Supply the per-service credential
 variables documented by `infra/deploy/docker-compose.staging.yml`; do not reuse
 the bootstrap PostgreSQL or RabbitMQ credentials in application containers.
-The database and broker initialization scripts run only on a fresh volume, so
-credential rotation or an existing volume requires the normal operator
-provisioning procedure before rollout.
+Initialization scripts run only on a fresh volume. Before rotating credentials
+on an existing volume, back up PostgreSQL and run
+`/opt/squarewise/upgrade-service-access.sh` through `docker compose exec` so
+roles, database ownership, schema ownership, and existing-object privileges are
+reconciled idempotently.
 
 Before public production launch, configure Prometheus retention and alert
 ownership, Grafana dashboards, paging routes, SLO thresholds, backup/restore

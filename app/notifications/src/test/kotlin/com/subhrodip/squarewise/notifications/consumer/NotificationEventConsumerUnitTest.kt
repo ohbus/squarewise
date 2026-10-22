@@ -124,9 +124,15 @@ class NotificationEventConsumerUnitTest {
         NotificationEventConsumer(processor, processedEvents, preferenceStore, emailDispatcher, deliveryRateLimiter, deliveries)
             .consume(rateDenied)
 
-        verify(deliveries, times(2)).updateStatusIfClaimed(
-            any(UUID::class.java) ?: UUID(0, 0),
-            anyString(),
+        verify(deliveries).updateStatusIfClaimed(
+            eq(invalidRecipient.notificationId) ?: UUID(0, 0),
+            eq(NotificationEmailDeliveryEntity.SKIPPED) ?: "",
+            any(Instant::class.java) ?: Instant.EPOCH,
+            any(Instant::class.java) ?: Instant.EPOCH
+        )
+        verify(deliveries).updateStatusIfClaimed(
+            eq(rateDenied.notificationId) ?: UUID(0, 0),
+            eq(NotificationEmailDeliveryEntity.SKIPPED) ?: "",
             any(Instant::class.java) ?: Instant.EPOCH,
             any(Instant::class.java) ?: Instant.EPOCH
         )
@@ -226,8 +232,8 @@ class NotificationEventConsumerUnitTest {
             .consume(event)
 
         verify(deliveries).updateStatusIfClaimed(
-            any(UUID::class.java) ?: UUID(0, 0),
-            anyString(),
+            eq(event.notificationId) ?: UUID(0, 0),
+            eq(NotificationEmailDeliveryEntity.SKIPPED) ?: "",
             any(Instant::class.java) ?: Instant.EPOCH,
             any(Instant::class.java) ?: Instant.EPOCH
         )
@@ -338,8 +344,8 @@ class NotificationEventConsumerUnitTest {
         }
 
         verify(deliveries).updateStatusIfClaimed(
-            any(UUID::class.java) ?: UUID(0, 0),
-            anyString(),
+            eq(event.notificationId) ?: UUID(0, 0),
+            eq(NotificationEmailDeliveryEntity.SKIPPED) ?: "",
             any(Instant::class.java) ?: Instant.EPOCH,
             any(Instant::class.java) ?: Instant.EPOCH
         )

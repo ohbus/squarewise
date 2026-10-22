@@ -6,8 +6,10 @@ This runbook covers startup or deployment failure caused by an unapplied or fail
 
 The current branch uses one fresh-install `V1__initial_schema.sql` per service.
 An existing database with the retired multi-version history is not an upgrade
-target for this revision; stop the rollout and follow the explicitly approved
-database rebuild/baseline process instead of repairing history by hand.
+target for this revision; stop the rollout and follow the approved rebuild or
+baseline process. Never edit migration history by hand. For staging credential
+changes, run `/opt/squarewise/upgrade-service-access.sh` before rollout; that
+command reconciles role ownership only and does not change schema history.
 
 ## Severity
 
@@ -30,7 +32,9 @@ docker compose exec postgres psql -U squarewise -d squarewise -c 'select install
 
 ## Remediation Steps
 
-Stop rollout, restore the last known compatible artifact, and repair only through the approved migration procedure. Never edit migration history by hand without an incident record.
+Stop rollout, restore the last known compatible artifact, and repair only through
+the approved rebuild/baseline procedure. Never edit migration history by hand
+without an incident record.
 
 ## Rollback Procedures
 

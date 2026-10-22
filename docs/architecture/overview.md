@@ -42,8 +42,10 @@ tests prohibit cycles, domain dependencies on web/persistence adapters, and
 cross-service entities/repositories. Do not create empty packages just to match a
 pattern. Application services own transaction boundaries; controllers do not.
 
-Each stateful service owns a PostgreSQL database, credentials, and a forward-only
-Flyway migration history. Cross-service SQL, cross-service database foreign keys,
+Each stateful service owns a PostgreSQL database, credentials, and one
+fresh-install Flyway baseline. Databases created by the retired multi-version
+chains require an explicitly approved rebuild or baseline process before this
+revision is deployed. Cross-service SQL, cross-service database foreign keys,
 and shared persistent domain models are prohibited. Same-service foreign keys
 remain the durable referential-integrity guard; application-layer validation
 (`EntityReferenceValidator` and `AccountReferenceValidator`) provides early

@@ -5,6 +5,7 @@ import org.springframework.stereotype.Component
 import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Thread-safe bounded in-memory cache for user notification preferences.
@@ -23,6 +24,7 @@ class PreferenceCache(
     private val cache = ConcurrentHashMap<String, Entry>()
     private val invalidationTimestamps = ConcurrentHashMap<String, Instant>()
     private val inFlightLoads = ConcurrentHashMap.newKeySet<String>()
+    private val lastCleanupNanos = AtomicLong(0)
 
     /**
      * Resolves notification preferences for a user, using cached state if valid.
@@ -73,6 +75,7 @@ class PreferenceCache(
     fun clear() {
         cache.clear()
         invalidationTimestamps.clear()
+        lastCleanupNanos.set(0)
     }
 
     private fun evictIfOversized() {
@@ -88,9 +91,24 @@ class PreferenceCache(
     }
 
     private fun cleanupInvalidationTimestamps(now: Instant) {
+        val nowNanos = System.nanoTime()
+        val lastCleanup = lastCleanupNanos.get()
+        if (lastCleanup != 0L &&
+            nowNanos - lastCleanup < CLEANUP_INTERVAL_NANOS
+        ) {
+            return
+        }
+        if (!lastCleanupNanos.compareAndSet(lastCleanup, nowNanos)) {
+            return
+        }
         val cutoff = now.minus(ttl)
         invalidationTimestamps.entries.removeIf { (subject, invalidatedAt) ->
             !inFlightLoads.contains(subject) && invalidatedAt.isBefore(cutoff)
         }
+    }
+
+    private companion object {
+        /** Keeps cache hits O(1) while bounding stale-marker retention to a short interval. */
+        const val CLEANUP_INTERVAL_NANOS = 1_000_000_000L
     }
 }

@@ -19,7 +19,8 @@ fresh-install baseline migration per service. This repository intentionally
 does not upgrade databases created by the retired multi-version migration
 chains; deployments using this baseline must provision empty service
 databases or complete an explicitly managed database rebuild/baseline outside
-the application rollout. Hibernate validates against the resulting schema.
+the application rollout. Existing staging volumes still use the checked-in
+role/ownership reconciliation command before application credentials rotate.
 Disable
 Open Session in View, keep entities private, and return DTOs. The BFF has no database.
 Read/write separation is CQRS-oriented, not event-sourced: commands and consistency-critical
@@ -42,8 +43,8 @@ including the writer-intensive tables listed above. Application validators
 Accounts) provide friendly authorization and input errors before persistence;
 they do not replace database constraints. The fresh-install baseline retains
 same-service constraints and contains no cross-service foreign keys. Any future
-constraint change requires a separately reviewed migration and compatibility
-plan. Hot read paths utilize bounded in-memory
+constraint change requires a separately reviewed additive migration and
+compatibility plan. Hot read paths utilize bounded in-memory
 caches (`GroupAccessCache`, `ProfileCache`, `PreferenceCache`) with cache
 evictions synchronized to transaction `afterCommit` to prevent dirty reads and
 ensure causal consistency.
