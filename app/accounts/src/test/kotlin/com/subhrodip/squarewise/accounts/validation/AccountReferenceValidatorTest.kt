@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.verify
 import org.mockito.Mockito.verifyNoInteractions
 import org.mockito.Mockito.`when`
 import java.time.Instant
@@ -369,18 +370,20 @@ class AccountReferenceValidatorTest {
     }
 
     @Test
-    fun `validateActiveSubject returns ProfileEntity from cache without querying profileRepository`() {
+    fun `validateActiveSubject checks the repository even when cache has a profile`() {
         val cache = ProfileCache()
         val cachedValidator = AccountReferenceValidator(profileRepository, sessionRepository, cache)
         val accountId = UUID.randomUUID()
         cache.put(ProfileResponse(accountId, "Cached User", "UTC", "EUR"), "cached-sub@example.com")
+        val profile = ProfileEntity(accountId, "cached-sub@example.com", "Authoritative User", "UTC", "EUR", false)
+        `when`(profileRepository.findBySubject("cached-sub@example.com")).thenReturn(profile)
 
         val result = cachedValidator.validateActiveSubject("cached-sub@example.com")
         assertEquals(accountId, result.accountId)
         assertEquals("cached-sub@example.com", result.subject)
-        assertEquals("Cached User", result.displayName)
+        assertEquals("Authoritative User", result.displayName)
         assertFalse(result.deletionRequested)
-        verifyNoInteractions(profileRepository)
+        verify(profileRepository).findBySubject("cached-sub@example.com")
     }
 
     @Test

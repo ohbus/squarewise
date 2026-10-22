@@ -88,17 +88,6 @@ class AccountReferenceValidator(
      * @throws AccountsDomainException if the profile does not exist or has deletion requested.
      */
     fun validateActiveSubject(subject: String): ProfileEntity {
-        val cached = profileCache?.peekBySubject(subject)
-        if (cached != null) {
-            return ProfileEntity(
-                accountId = cached.accountId,
-                subject = subject,
-                displayName = cached.displayName,
-                timezone = cached.timezone,
-                defaultCurrency = cached.defaultCurrency,
-                deletionRequested = false
-            )
-        }
         val profile = profileRepository.findBySubject(subject)
             ?: throw AccountsDomainException(AccountsErrors.AUTHENTICATED_PROFILE_NOT_FOUND)
         if (profile.deletionRequested) {

@@ -112,6 +112,25 @@ class LiveUpdateFanoutTest {
     }
 
     @Test
+    fun `expiry queue compacts stale churn before bounded sweep`() {
+        val clock = MutableClock()
+        val fanout = LiveUpdateFanout(clock = clock, subscriptionTtl = Duration.ofSeconds(1))
+
+        repeat(1_025) { index ->
+            val subscription = fanout.subscribe("stale-$index", "group-$index")
+            fanout.unsubscribe(subscription.id)
+        }
+
+        clock.advance(Duration.ofSeconds(2))
+        val active = fanout.subscribe("active", "active-group")
+        clock.advance(Duration.ofSeconds(10))
+        fanout.sweepExpired()
+
+        assertThat(fanout.revokeUser("active")).isZero()
+        assertThat(fanout.revocationSignal(active.id).block(Duration.ofSeconds(1))).isNull()
+    }
+
+    @Test
     fun `queue overflow revokes the subscription`() {
         val fanout = LiveUpdateFanout(queueCapacity = 1)
         val subscription = fanout.subscribe("user-1", "group-1")

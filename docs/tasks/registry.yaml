@@ -1801,6 +1801,10 @@
         "CORE-13"
       ],
       "owned_paths": [
+        "app/accounts/src/main/kotlin/com/subhrodip/squarewise/accounts/validation/AccountReferenceValidator.kt",
+        "app/accounts/src/main/kotlin/com/subhrodip/squarewise/accounts/requests/export/persistence/JpaExportRequestStore.kt",
+        "app/accounts/src/test/kotlin/com/subhrodip/squarewise/accounts/validation/AccountReferenceValidatorTest.kt",
+        "app/accounts/src/test/kotlin/com/subhrodip/squarewise/accounts/requests/export/persistence/JpaExportRequestStoreTest.kt",
         "app/expense-core/src/main/kotlin/com/subhrodip/squarewise/expensecore/recurring/",
         "app/expense-core/src/main/resources/db/migration/",
         "app/expense-core/src/test/kotlin/com/subhrodip/squarewise/expensecore/recurring/"
@@ -9490,6 +9494,7 @@
       ],
       "specification": "docs/tasks/details/PR-50.md",
       "acceptance_criteria": [
+        "Export-request admission always checks the writer-backed profile and cannot be bypassed by a local profile-cache hit or missing validator bean.",
         "Recurring worker reads active memberships after schedule locking, uses a bounded per-group query, and validates internally generated participants on the writer.",
         "Internal participant validation is selected explicitly rather than inferred from an idempotency-key prefix.",
         "Explicitly unknown writer targets fail with a governed configuration error instead of falling back to the primary writer.",

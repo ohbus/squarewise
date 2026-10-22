@@ -48,7 +48,7 @@ The aspect automatically respects active transactions: write transactions retain
 ## In-Memory Caching and Transactional Invalidation
 
 Hot, read-heavy domains utilize bounded in-memory caches to reduce database load:
-- `GroupAccessCache`: Caches group metadata, active memberships, and aggregate balance summaries.
+- `GroupAccessCache`: Caches group metadata and active memberships.
 - `ProfileCache`: Caches user account profiles and batch profile resolution results, ensuring fast GET `/me` reads.
 - `PreferenceCache`: Caches notification preferences.
 

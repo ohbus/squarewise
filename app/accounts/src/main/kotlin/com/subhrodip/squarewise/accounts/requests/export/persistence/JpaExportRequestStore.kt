@@ -14,7 +14,6 @@ import java.util.UUID
 import com.subhrodip.squarewise.accounts.validation.AccountReferenceValidator
 import com.subhrodip.squarewise.db.routing.DbReader
 import com.subhrodip.squarewise.db.routing.DbWriter
-import org.springframework.beans.factory.annotation.Autowired
 
 /**
  * JPA-backed implementation of [ExportRequestStore].
@@ -29,8 +28,7 @@ import org.springframework.beans.factory.annotation.Autowired
 @Service
 class JpaExportRequestStore(
     private val repository: ExportRequestRepository,
-    @Autowired(required = false)
-    private val referenceValidator: AccountReferenceValidator? = null,
+    private val referenceValidator: AccountReferenceValidator,
     private val clock: () -> Instant = Instant::now
 ) : ExportRequestStore {
 
@@ -44,7 +42,7 @@ class JpaExportRequestStore(
     @Transactional
     override fun request(subject: String): ExportRequest {
         ProfileRules.requireSubject(subject)
-        referenceValidator?.validateActiveSubject(subject)
+        referenceValidator.validateActiveSubject(subject)
         val entity = AccountExportRequestEntity(
             exportId = UuidGenerator.next(),
             subject = subject,

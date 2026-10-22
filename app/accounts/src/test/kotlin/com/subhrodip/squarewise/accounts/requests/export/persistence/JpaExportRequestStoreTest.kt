@@ -2,6 +2,7 @@ package com.subhrodip.squarewise.accounts.requests.export.persistence
 
 import com.subhrodip.squarewise.accounts.requests.export.model.ExportStatus
 import com.subhrodip.squarewise.accounts.errors.AccountsDomainException
+import com.subhrodip.squarewise.accounts.validation.AccountReferenceValidator
 import java.time.Instant
 import java.util.Optional
 import java.util.UUID
@@ -16,13 +17,14 @@ import org.springframework.data.domain.PageRequest
 /** Verifies the JPA export adapter validates subjects and maps bounded repository results. */
 class JpaExportRequestStoreTest {
     private val repository = mock(ExportRequestRepository::class.java)
+    private val validator = mock(AccountReferenceValidator::class.java)
     private val request = AccountExportRequestEntity(
         exportId = UUID.randomUUID(),
         subject = "alice",
         status = ExportStatus.REQUESTED,
         requestedAt = Instant.EPOCH,
     )
-    private val store = JpaExportRequestStore(repository) { Instant.EPOCH }
+    private val store = JpaExportRequestStore(repository, validator) { Instant.EPOCH }
 
     @Test
     fun `lists maps and retrieves requests for a subject`() {

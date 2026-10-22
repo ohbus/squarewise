@@ -36,6 +36,7 @@ class LiveUpdateFanout(
 ) {
     private val subscriptions = ConcurrentHashMap<String, LiveSubscription>()
     private val expirationQueue = PriorityBlockingQueue<ExpirationEntry>(11, compareBy { it.expiresAt })
+    private val expirationQueueLock = Any()
     private val groupSubscriptions = ConcurrentHashMap<String, MutableSet<String>>()
     private val userSubscriptions = ConcurrentHashMap<String, MutableSet<String>>()
 
@@ -139,8 +140,10 @@ class LiveUpdateFanout(
             )
             subscriptionInvalidations[subscription.id] =
                 SubscriptionInvalidationChannel(queueCapacity)
-            subscriptions[subscription.id] = subscription
-            expirationQueue.offer(ExpirationEntry(subscription.id, subscription.expiresAt))
+            synchronized(expirationQueueLock) {
+                subscriptions[subscription.id] = subscription
+                expirationQueue.offer(ExpirationEntry(subscription.id, subscription.expiresAt))
+            }
             revocationSignals[subscription.id] = Sinks.one()
             userSubscriptions.compute(userId) { _, set ->
                 (set ?: ConcurrentHashMap.newKeySet()).apply { add(subscription.id) }
@@ -165,6 +168,7 @@ class LiveUpdateFanout(
                 set.remove(subscriptionId)
                 if (set.isEmpty()) null else set
             }
+            compactExpirationQueueIfNeeded()
         }
     }
 
@@ -219,17 +223,29 @@ class LiveUpdateFanout(
 
     private fun removeExpired(maxEntries: Int) {
         val now = Instant.now(clock)
-        var removed = 0
         var inspected = 0
         while (inspected < maxEntries) {
-            val candidate = expirationQueue.peek() ?: break
-            if (candidate.expiresAt.isAfter(now)) break
-            expirationQueue.poll()
+            val candidate = synchronized(expirationQueueLock) {
+                val next = expirationQueue.peek() ?: return@synchronized null
+                if (next.expiresAt.isAfter(now)) return@synchronized null
+                expirationQueue.poll()
+            } ?: break
             inspected++
             val subscription = subscriptions[candidate.subscriptionId]
             if (subscription != null && !now.isBefore(subscription.expiresAt)) {
                 unsubscribe(candidate.subscriptionId)
-                removed++
+            }
+        }
+    }
+
+    private fun compactExpirationQueueIfNeeded() {
+        synchronized(expirationQueueLock) {
+            val activeCount = subscriptions.size
+            if (expirationQueue.size <= activeCount * 2 + EXPIRATION_QUEUE_SLACK) return
+            // shortcut: retain at most a small stale-entry slack; use an indexed expiry store if churn exceeds this bound.
+            expirationQueue.clear()
+            subscriptions.values.forEach { subscription ->
+                expirationQueue.offer(ExpirationEntry(subscription.id, subscription.expiresAt))
             }
         }
     }
@@ -272,6 +288,7 @@ class LiveUpdateFanout(
         const val DEFAULT_QUEUE_CAPACITY = 64
         const val DEFAULT_MAX_SUBSCRIPTIONS_PER_USER = 20
         private const val MAX_EXPIRATION_SWEEP = 1_000
+        private const val EXPIRATION_QUEUE_SLACK = 1_024
         val DEFAULT_SUBSCRIPTION_TTL: Duration = Duration.ofMinutes(30)
     }
 }
