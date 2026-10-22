@@ -103,7 +103,7 @@ def main() -> int:
     """Stop Accounts and verify resource authorization continues locally."""
     clear_rate_limit_namespace()
     accounts_before = statement_count(ACCOUNTS_URL, "groups.list")
-    expense_before = statement_count(EXPENSE_CORE_URL, "groups.list")
+    expense_before = statement_count(EXPENSE_CORE_URL, "groups.authorization")
     expense_status, expense_response = request_json(
         f"{EXPENSE_CORE_URL}/expense-core/v1/groups"
     )
@@ -119,18 +119,18 @@ def main() -> int:
             f"BFF groups request failed before isolation check: HTTP {bff_status} ({bff_response})"
         )
     accounts_after = statement_count(ACCOUNTS_URL, "groups.list")
-    expense_after = statement_count(EXPENSE_CORE_URL, "groups.list")
+    expense_after = statement_count(EXPENSE_CORE_URL, "groups.authorization")
     if accounts_after != accounts_before:
         raise AssertionError(
             f"ordinary group reads changed Accounts groups.list SQL count: {accounts_before} -> {accounts_after}"
         )
     if expense_after <= expense_before:
         raise AssertionError(
-            f"ordinary group reads produced no Expense Core groups.list SQL: {expense_before} -> {expense_after}"
+            f"ordinary group reads produced no Expense Core groups.authorization SQL: {expense_before} -> {expense_after}"
         )
     print(
         "  SQL telemetry: Accounts groups.list "
-        f"{accounts_before}->{accounts_after}; Expense Core groups.list {expense_before}->{expense_after}"
+        f"{accounts_before}->{accounts_after}; Expense Core groups.authorization {expense_before}->{expense_after}"
     )
     compose("stop", "accounts")
     try:

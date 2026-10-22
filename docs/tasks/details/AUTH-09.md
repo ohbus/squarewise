@@ -478,6 +478,12 @@ create/archive write. The rebuilt local run recorded Accounts `groups.list`
 21.43 ms for group creation. These are local representative measurements, not
 production SLO or capacity evidence.
 
+After writer-authoritative membership checks relabeled the Expense Core query as
+`groups.authorization`, both query probes now read that counter while retaining
+the Accounts `groups.list` zero-lookup assertion. The local RabbitMQ health probe
+also runs as the image's `rabbitmq` user so a concurrent startup probe cannot
+create a root-owned Erlang cookie and prevent broker startup.
+
 Notifications delivery policy values are now bounded configuration properties,
 and both general notification dispatch and protected auth-email dispatch invoke
 the shared limiter immediately before provider dispatch. Unit/component tests

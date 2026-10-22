@@ -38,7 +38,7 @@ services:
       RABBITMQ_ERLANG_COOKIE: ${RABBITMQ_ERLANG_COOKIE:-squarewise-local-erlang-cookie}
     ports: ["${SQUAREWISE_RABBITMQ_PORT:-28672}:5672", "${SQUAREWISE_RABBITMQ_MANAGEMENT_PORT:-28673}:15672"]
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      test: ["CMD", "gosu", "rabbitmq", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 5s
       timeout: 3s
       retries: 20

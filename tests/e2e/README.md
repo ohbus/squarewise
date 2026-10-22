@@ -91,8 +91,8 @@ The end-to-end test suites run against the live local environment (`infra/local/
    - Measures repeated public Expense Core and BFF authenticated group reads and
      a real Expense Core group create/archive write.
    - Records bounded p95 request latency and requires the Accounts
-     `groups.list` SQL counter to remain unchanged while Expense Core query
-     telemetry increases.
+     `groups.list` SQL counter to remain unchanged while Expense Core
+     `groups.authorization` telemetry increases.
    - Run with `make e2e-auth-query-latency`; this is local measurement evidence,
      not a production SLO or capacity claim.
 

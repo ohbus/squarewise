@@ -49,7 +49,8 @@ service containers. The CI-only RabbitMQ service uses the protocol image rather
 than the management variant because verification and Sonar do not use the
 management UI; the local Compose topology retains management for operator
 inspection. Docker health checks (`pg_isready` and
-`rabbitmq-diagnostics ping`) must pass before job steps begin. RabbitMQ receives
+`rabbitmq-diagnostics ping`) must pass before job steps begin. Compose runs the
+RabbitMQ diagnostic as the `rabbitmq` user to preserve Erlang-cookie ownership. RabbitMQ receives
 a 60-second health-check start period, 10-second health-check timeout, and 24
 five-second retries to accommodate slow hosted-runner startup without weakening
 the readiness command. No service
