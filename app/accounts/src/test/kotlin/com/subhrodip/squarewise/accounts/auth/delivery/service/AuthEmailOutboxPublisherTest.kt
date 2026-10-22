@@ -17,6 +17,7 @@ import org.mockito.Mockito.verify
 import org.springframework.amqp.AmqpException
 import org.springframework.amqp.core.Message
 import org.springframework.amqp.core.MessageProperties
+import org.springframework.amqp.rabbit.core.RabbitOperations
 import org.springframework.amqp.rabbit.core.RabbitTemplate
 import tools.jackson.databind.ObjectMapper
 
@@ -84,6 +85,20 @@ class AuthEmailOutboxPublisherTest {
         verify(outbox, never()).acknowledge(eventId, now)
     }
 
+    /** A negative publisher confirmation schedules retry instead of acknowledging delivery. */
+    @Test
+    fun `publisher confirmation failure schedules retry`() {
+        val outbox = mock(AuthEmailOutboxService::class.java)
+        val rabbit = RecordingRabbitTemplate(failWithConfirmException = true)
+        `when`(outbox.claim(now, lease)).thenReturn(record())
+
+        val outcome = publisher(outbox, rabbit, ObjectMapper()).publishOne()
+
+        assertEquals(AuthEmailPublishOutcome.RETRY_SCHEDULED, outcome)
+        verify(outbox).reject(eventId, now, retryAfter, 3)
+        verify(outbox, never()).acknowledge(eventId, now)
+    }
+
     /** Serialization failure follows the same retry path and does not send a partial message. */
     @Test
     fun `serialization failure schedules retry without sending`() {
@@ -113,6 +128,7 @@ class AuthEmailOutboxPublisherTest {
         lease = lease,
         retryAfter = retryAfter,
         maximumAttempts = 3,
+        confirmTimeoutMs = 5_000,
         clock = { now }
     )
 
@@ -130,7 +146,8 @@ class AuthEmailOutboxPublisherTest {
     )
 
     private class RecordingRabbitTemplate(
-        private val failWithAmqpException: Boolean = false
+        private val failWithAmqpException: Boolean = false,
+        private val failWithConfirmException: Boolean = false
     ) : RabbitTemplate() {
         var sentMessage: Message? = null
         var sentExchange: String? = null
@@ -143,6 +160,15 @@ class AuthEmailOutboxPublisherTest {
             sentMessage = message
             sentExchange = exchange
             sentRoutingKey = routingKey
+        }
+
+        override fun <T> invoke(action: RabbitOperations.OperationsCallback<T>): T =
+            action.doInRabbit(this)
+
+        override fun waitForConfirmsOrDie(timeout: Long) {
+            if (failWithConfirmException) {
+                throw AmqpException("publisher confirmation rejected")
+            }
         }
     }
 

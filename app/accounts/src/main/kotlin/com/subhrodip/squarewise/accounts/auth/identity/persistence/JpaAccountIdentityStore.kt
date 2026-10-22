@@ -4,6 +4,7 @@ import com.subhrodip.squarewise.accounts.errors.AccountsInputException
 
 import com.subhrodip.squarewise.accounts.auth.identity.AccountIdentity
 import com.subhrodip.squarewise.accounts.auth.identity.AccountIdentityStore
+import com.subhrodip.squarewise.accounts.auth.identity.EmailAddress
 import com.subhrodip.squarewise.accounts.profile.persistence.ProfileRepository
 import java.time.Instant
 import java.util.UUID
@@ -112,11 +113,12 @@ class JpaAccountIdentityStore(
         email: String,
         verified: Boolean
     ): AccountIdentity {
+        val canonicalEmail = EmailAddress.parse(email).value
         val existing = identityRepository.findByIssuerAndProviderSubject(issuer, providerSubject)
         val profile = referenceValidator.validateActiveAccount(accountId)
 
         val entity = if (existing != null) {
-            existing.email = email
+            existing.email = canonicalEmail
             existing.emailVerified = verified
             existing.updatedAt = Instant.now()
             identityRepository.save(existing)
@@ -126,7 +128,7 @@ class JpaAccountIdentityStore(
                 accountId = accountId,
                 issuer = issuer,
                 providerSubject = providerSubject,
-                email = email,
+                email = canonicalEmail,
                 emailVerified = verified,
                 status = "ACTIVE",
                 createdAt = Instant.now(),
@@ -138,7 +140,7 @@ class JpaAccountIdentityStore(
         return AccountIdentity(
             accountId = entity.accountId,
             subject = entity.providerSubject,
-            email = entity.email ?: email,
+            email = entity.email ?: canonicalEmail,
             deletionRequested = profile.deletionRequested,
             issuer = entity.issuer
         )
@@ -154,12 +156,13 @@ class JpaAccountIdentityStore(
     @DbWriter("accounts.identity.updateEmail")
     @Transactional
     override fun updateEmail(accountId: UUID, email: String, verified: Boolean): AccountIdentity {
+        val canonicalEmail = EmailAddress.parse(email).value
         val identity = identityRepository.findFirstByAccountIdOrderByIdentityIdAsc(accountId)
             ?: throw AccountsInputException("No identity found for account $accountId")
 
         val profile = referenceValidator.validateActiveAccount(accountId)
 
-        identity.email = email
+        identity.email = canonicalEmail
         identity.emailVerified = verified
         identity.updatedAt = Instant.now()
         identityRepository.save(identity)
@@ -167,7 +170,7 @@ class JpaAccountIdentityStore(
         return AccountIdentity(
             accountId = accountId,
             subject = identity.providerSubject,
-            email = email,
+            email = canonicalEmail,
             deletionRequested = profile.deletionRequested,
             issuer = identity.issuer
         )

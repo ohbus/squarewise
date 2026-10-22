@@ -22,8 +22,13 @@ class AuthEmailOutboxPublisher(
     private val lease: Duration,
     private val retryAfter: Duration,
     private val maximumAttempts: Int,
+    private val confirmTimeoutMs: Long = 5_000,
     private val clock: () -> Instant = Instant::now
 ) {
+    init {
+        require(confirmTimeoutMs > 0) { "confirmTimeoutMs must be positive" }
+    }
+
     private val log = LoggerFactory.getLogger(AuthEmailOutboxPublisher::class.java)
 
     /** Claims and publishes at most one event, returning its lifecycle outcome. */
@@ -53,7 +58,11 @@ class AuthEmailOutboxPublisher(
                 messageId = record.eventId.toString()
                 timestamp = Date.from(record.createdAt)
             }
-            rabbitTemplate.send(exchange, routingKey, Message(body, properties))
+            rabbitTemplate.invoke { operations ->
+                operations.send(exchange, routingKey, Message(body, properties))
+                operations.waitForConfirmsOrDie(confirmTimeoutMs)
+                null
+            }
             outbox.acknowledge(record.eventId, clock())
             AuthEmailPublishOutcome.PUBLISHED
         } catch (error: AmqpException) {

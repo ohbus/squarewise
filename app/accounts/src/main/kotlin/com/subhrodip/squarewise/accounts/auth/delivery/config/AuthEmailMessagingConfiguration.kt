@@ -18,5 +18,5 @@ class AuthEmailMessagingConfiguration {
     @Bean
     @ConditionalOnProperty(prefix = "squarewise.auth-email-outbox", name = ["enabled"], havingValue = "true")
     fun authEmailOutboxPublisher(outbox: AuthEmailOutboxService, rabbitTemplate: RabbitTemplate, objectMapper: ObjectMapper, properties: AuthEmailOutboxProperties): AuthEmailOutboxPublisher =
-        AuthEmailOutboxPublisher(outbox, rabbitTemplate, objectMapper, properties.exchange, properties.routingKey, Duration.ofSeconds(properties.leaseSeconds), Duration.ofSeconds(properties.retryAfterSeconds), properties.maximumAttempts)
+        AuthEmailOutboxPublisher(outbox, rabbitTemplate, objectMapper, properties.exchange, properties.routingKey, Duration.ofSeconds(properties.leaseSeconds), Duration.ofSeconds(properties.retryAfterSeconds), properties.maximumAttempts, properties.confirmTimeoutMs)
 }
