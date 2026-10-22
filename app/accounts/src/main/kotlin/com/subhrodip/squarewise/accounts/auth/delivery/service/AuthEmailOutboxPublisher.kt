@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.amqp.AmqpException
 import org.springframework.amqp.core.Message
 import org.springframework.amqp.core.MessageProperties
+import org.springframework.amqp.rabbit.connection.CorrelationData
 import org.springframework.amqp.rabbit.core.RabbitTemplate
 import tools.jackson.databind.ObjectMapper
 
@@ -59,8 +60,12 @@ class AuthEmailOutboxPublisher(
                 timestamp = Date.from(record.createdAt)
             }
             rabbitTemplate.invoke { operations ->
-                operations.send(exchange, routingKey, Message(body, properties))
+                val correlation = CorrelationData(record.eventId.toString())
+                operations.send(exchange, routingKey, Message(body, properties), correlation)
                 operations.waitForConfirmsOrDie(confirmTimeoutMs)
+                correlation.returned?.let { returned ->
+                    throw AmqpException("Auth email message was returned: ${returned.replyText}")
+                }
                 null
             }
             outbox.acknowledge(record.eventId, clock())
