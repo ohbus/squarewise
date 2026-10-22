@@ -45,9 +45,10 @@ they do not replace database constraints. The fresh-install baseline retains
 same-service constraints and contains no cross-service foreign keys. Any future
 constraint change requires a separately reviewed additive migration and
 compatibility plan. Hot read paths utilize bounded in-memory
-caches (`GroupAccessCache`, `ProfileCache`, `PreferenceCache`) with cache
-evictions synchronized to transaction `afterCommit` to prevent dirty reads and
-ensure causal consistency.
+caches (`GroupAccessCache`, `ProfileCache`, `PreferenceCache`) with local cache
+evictions synchronized to transaction `afterCommit` to prevent dirty reads on the
+same instance. Cross-instance caches remain eventually consistent until invalidation
+propagation or TTL expiry; balances and authorization are writer-bound.
 
 ## Messaging and API
 

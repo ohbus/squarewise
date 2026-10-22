@@ -309,7 +309,7 @@ class EntityReferenceValidatorTest {
             cachedValidator.validateActivePlaceholder(groupId, placeholderId)
         }
         assertSame(ExpenseErrors.GROUP_NOT_FOUND, ex.definition)
-        org.mockito.Mockito.verify(membershipRepository)
+        verify(membershipRepository)
             .findByMembershipIdAndGroupId(placeholderId, groupId)
     }
 

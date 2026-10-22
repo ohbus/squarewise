@@ -162,7 +162,7 @@ class ExpenseController(
     }
 
     @GetMapping(ApiEndpoints.ExpenseCore.V1.BALANCES_SUBPATH)
-    @DbReader("expense.balances")
+    @DbWriter("expense.balances")
     fun getBalances(@PathVariable groupId: UUID, principal: Principal?): GroupBalancesResponse {
         ensureActiveMember(groupId, principal)
         val balances = expenseStore.balances(groupId)

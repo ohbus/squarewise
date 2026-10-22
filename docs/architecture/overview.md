@@ -51,8 +51,10 @@ remain the durable referential-integrity guard; application-layer validation
 (`EntityReferenceValidator` and `AccountReferenceValidator`) provides early
 authorization and input errors before persistence. Hot read paths are accelerated
 with bounded in-memory caching (`GroupAccessCache`, `ProfileCache`, `PreferenceCache`)
-with transactional `afterCommit` invalidations, and high-volume read endpoints route to
-load-balanced reader replicas via `@DbReader` and `@DbRouteContext`.
+with local `afterCommit` invalidations, and approved high-volume query endpoints route to
+load-balanced reader replicas via `@DbReader` and `@DbRouteContext`. Authorization,
+financial state, and post-mutation reads remain writer-bound; local caches can remain
+stale across instances until invalidation propagation or TTL expiry.
 The BFF accesses only REST and event infrastructure. Shared libraries contain
 technical configuration rather than business rules or service-to-service DTOs.
 Fallback, retry, defaulting, and degradation behavior is catalogued in the

@@ -52,7 +52,12 @@ Hot, read-heavy domains utilize bounded in-memory caches to reduce database load
 - `ProfileCache`: Caches user account profiles and batch profile resolution results, ensuring fast GET `/me` reads.
 - `PreferenceCache`: Caches notification preferences.
 
-To guarantee causal consistency and prevent dirty reads, all write-path cache invalidations are coordinated using Spring's `TransactionSynchronizationManager.registerSynchronization(afterCommit)`. Cache entries are evicted only after the PostgreSQL transaction successfully commits.
+Write-path cache invalidations are coordinated locally with Spring's
+`TransactionSynchronizationManager.registerSynchronization(afterCommit)` when a
+transaction is active. This prevents dirty reads on the same instance, but does not
+make caches or replica reads globally causal: other instances may remain stale until
+invalidation propagation or TTL expiry. Financial balances and authorization bypass
+these caches and use the writer.
 
 ## Local and Staging Topology
 

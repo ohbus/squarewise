@@ -40,14 +40,18 @@ class TwoReplicaBffFanoutTest {
         // Replica A setup
         val fanoutA = LiveUpdateFanout()
         val consumerA = BffEventConsumer(fanoutA, BffEventDeduplicator())
-        fanoutA.subscribe("user-alice", groupIdStr)
+        val subscriptionA = fanoutA.subscribe("user-alice", groupIdStr)
+        val perSubscriptionA = mutableListOf<GroupInvalidation>()
+        val perSubscriptionDisposableA = fanoutA.invalidations(subscriptionA.id).subscribe { perSubscriptionA.add(it) }
         val invalidationsA = mutableListOf<GroupInvalidation>()
         val disposableA = fanoutA.invalidations().subscribe { invalidationsA.add(it) }
 
         // Replica B setup
         val fanoutB = LiveUpdateFanout()
         val consumerB = BffEventConsumer(fanoutB, BffEventDeduplicator())
-        fanoutB.subscribe("user-bob", groupIdStr)
+        val subscriptionB = fanoutB.subscribe("user-bob", groupIdStr)
+        val perSubscriptionB = mutableListOf<GroupInvalidation>()
+        val perSubscriptionDisposableB = fanoutB.invalidations(subscriptionB.id).subscribe { perSubscriptionB.add(it) }
         val invalidationsB = mutableListOf<GroupInvalidation>()
         val disposableB = fanoutB.invalidations().subscribe { invalidationsB.add(it) }
 
@@ -90,14 +94,21 @@ class TwoReplicaBffFanoutTest {
             // Assert Replica B local delivery
             assertEquals(1, invalidationsB.size)
             assertEquals(7L, invalidationsB[0].revision)
+            assertEquals(1, perSubscriptionA.size)
+            assertEquals(7L, perSubscriptionA[0].revision)
+            assertEquals(1, perSubscriptionB.size)
+            assertEquals(7L, perSubscriptionB[0].revision)
 
             // Assert duplicate delivery to Replica A is ignored without redundant fanout
             val duplicateResultA = consumerA.consume(envelopeA)
             assertEquals(eventId, (duplicateResultA as DuplicateConsumptionResult).eventId)
             assertEquals(1, invalidationsA.size) // No new invalidation emitted
+            assertEquals(1, perSubscriptionA.size)
         } finally {
             disposableA.dispose()
             disposableB.dispose()
+            perSubscriptionDisposableA.dispose()
+            perSubscriptionDisposableB.dispose()
         }
     }
 }

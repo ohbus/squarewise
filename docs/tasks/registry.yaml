@@ -9472,8 +9472,18 @@
         "libs/db/src/main/kotlin/com/subhrodip/squarewise/db/config/",
         "app/expense-core/src/test/",
         "app/bff/src/test/",
+        "app/notifications/src/main/kotlin/com/subhrodip/squarewise/notifications/preferences/cache/",
+        "app/notifications/src/test/kotlin/com/subhrodip/squarewise/notifications/consumer/",
         "libs/db/src/test/",
+        "infra/deploy/docker-compose.staging.yml",
+        "infra/deploy/postgres/upgrade-service-access.sh",
+        "docs/architecture/overview.md",
         "docs/architecture/cqrs-data-access.md",
+        "docs/architecture/database-and-cache-access-patterns.md",
+        "docs/implementation/production-readiness-roadmap.md",
+        "docs/implementation/technology-decisions.md",
+        "docs/operations/quickstart.md",
+        "docs/operations/runbooks/errors/flyway-migration-failed.md",
         "docs/tasks/details/PR-50.md",
         "docs/tasks/progress.md",
         "docs/tasks/board.md"
@@ -9489,7 +9499,9 @@
       ],
       "validation_commands": [
         "./gradlew :libs:db:test :app:bff:test :app:expense-core:test --rerun-tasks --no-daemon --console=plain",
+        "./gradlew :app:notifications:test --rerun-tasks --no-daemon --console=plain",
         "./gradlew test --rerun-tasks --no-daemon --console=plain",
+        "sh -n infra/deploy/postgres/upgrade-service-access.sh",
         "git diff --check"
       ],
       "evidence": [

@@ -216,9 +216,10 @@ class LiveUpdateFanout(
 
     private fun removeExpired(maxEntries: Int) {
         val now = Instant.now(clock)
-        var inspected = 0
-        subscriptions.entries.removeIf { entry ->
-            if (inspected++ >= maxEntries) return@removeIf false
+        var removed = 0
+        val iterator = subscriptions.entries.iterator()
+        while (iterator.hasNext() && removed < maxEntries) {
+            val entry = iterator.next()
             val expired = !now.isBefore(entry.value.expiresAt)
             if (expired) {
                 val subId = entry.key
@@ -233,8 +234,9 @@ class LiveUpdateFanout(
                     set.remove(subId)
                     if (set.isEmpty()) null else set
                 }
+                iterator.remove()
+                removed++
             }
-            expired
         }
     }
 

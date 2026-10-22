@@ -2,6 +2,7 @@
 set -eu
 
 : "${POSTGRES_USER:?POSTGRES_USER is required}"
+: "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
 : "${POSTGRES_DB:?POSTGRES_DB is required}"
 : "${POSTGRES_ACCOUNTS_USER:?POSTGRES_ACCOUNTS_USER is required}"
 : "${POSTGRES_ACCOUNTS_PASSWORD:?POSTGRES_ACCOUNTS_PASSWORD is required}"
@@ -11,7 +12,7 @@ set -eu
 : "${POSTGRES_NOTIFICATIONS_PASSWORD:?POSTGRES_NOTIFICATIONS_PASSWORD is required}"
 
 psql_admin() {
-  psql --set=ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" "$@"
+  PGPASSWORD="$POSTGRES_PASSWORD" psql --set=ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" "$@"
 }
 
 ensure_role() {
@@ -39,10 +40,35 @@ SQL
 SELECT format('GRANT CONNECT ON DATABASE %I TO %I', :'database_name', :'database_owner');
 \gexec
 SQL
-  psql --set=ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$database" \
+  PGPASSWORD="$POSTGRES_PASSWORD" psql --set=ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$database" \
     --set=database_owner="$role" --set=legacy_owner="$POSTGRES_USER" <<'SQL'
-SELECT format('REASSIGN OWNED BY %I TO %I', :'legacy_owner', :'database_owner')
-WHERE :'legacy_owner' <> :'database_owner';
+SELECT format(
+  'ALTER %s %s OWNER TO %I',
+  CASE c.relkind
+    WHEN 'S' THEN 'SEQUENCE'
+    WHEN 'v' THEN 'VIEW'
+    WHEN 'm' THEN 'MATERIALIZED VIEW'
+    WHEN 'f' THEN 'FOREIGN TABLE'
+    ELSE 'TABLE'
+  END,
+  c.oid::regclass,
+  :'database_owner'
+)
+FROM pg_class c
+JOIN pg_namespace n ON n.oid = c.relnamespace
+WHERE n.nspname = 'public'
+  AND c.relkind IN ('r', 'p', 'S', 'v', 'm', 'f')
+  AND pg_get_userbyid(c.relowner) = :'legacy_owner'
+  AND NOT (
+    c.relkind = 'S'
+    AND EXISTS (
+      SELECT 1
+      FROM pg_depend d
+      WHERE d.objid = c.oid
+        AND d.deptype IN ('a', 'i')
+    )
+  )
+ORDER BY c.relkind = 'S', c.oid;
 \gexec
 SELECT format('ALTER SCHEMA public OWNER TO %I', :'database_owner');
 \gexec

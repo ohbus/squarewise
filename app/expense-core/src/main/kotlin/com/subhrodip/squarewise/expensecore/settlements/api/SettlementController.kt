@@ -48,7 +48,7 @@ class SettlementController(
     }
 
     @GetMapping(ApiEndpoints.ExpenseCore.V1.SETTLEMENT_SUGGESTIONS_RELATIVE_SUBPATH)
-    @DbReader("settlement.suggestions")
+    @DbWriter("settlement.suggestions")
     fun getSuggestions(@PathVariable groupId: UUID, principal: Principal?): List<SuggestedSettlement> {
         ensureMembership(groupId, principal)
         return service.suggestions(groupId)

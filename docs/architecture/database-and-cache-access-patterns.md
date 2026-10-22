@@ -18,9 +18,9 @@ This document details the database (PostgreSQL) and cache (Redis) access pattern
    - The BFF microservice has zero database or cache connections, acting strictly as a GraphQL-to-REST facade.
 5. **In-Memory Bounded Domain Caches with Coordinated Transactional Eviction**:
    - Hot read queries (`GroupAccessCache` in Expense Core, `ProfileCache` in Accounts, `PreferenceCache` in Notifications) hit local in-memory caches, yielding 0 DB queries on cache hits.
-   - Cache invalidations are synchronized to transaction completion (`afterCommit`), guaranteeing read-after-write consistency without stale dirty reads.
+   - Cache invalidations are synchronized to local transaction completion (`afterCommit`), preventing dirty reads on that instance. Cross-instance caches remain eventually consistent until invalidation propagation or TTL expiry.
 6. **CQRS Reader Replica Routing & Database Referential Integrity**:
-   - High-throughput read endpoints (`/sync/page`, `/search`, `/export`, `/inbox`, `/preferences`, `/profiles/me`, `/profiles/batch`, `/groups/{id}/balances`) route to healthy read replicas via `@DbReader` and `@DbRouteContext` using round-robin load-balancing with automatic failover to the primary writer.
+   - Approved high-throughput query endpoints (`/sync/page`, `/search`, `/export`, `/inbox`, `/preferences`, `/profiles/me`, `/profiles/batch`) route to healthy read replicas via `@DbReader` and `@DbRouteContext` using round-robin load-balancing with automatic failover to the primary writer. Authorization and financial balances remain writer-bound.
    - Same-service foreign keys remain the durable referential-integrity guard. Application validators (`EntityReferenceValidator`, `AccountReferenceValidator`) provide early authorization and input errors; they do not replace database constraints or permit cross-service foreign keys.
 
 ---

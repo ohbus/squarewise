@@ -125,6 +125,7 @@ For production, build and scan each immutable image with `infra/docker/Dockerfil
 The current branch uses one fresh-install `V1__initial_schema.sql` per service.
 Existing databases with the retired multi-version history require an approved
 rebuild/baseline before deployment. For an existing staging volume, back it up and run
+
 ```sh
 docker compose -f infra/deploy/docker-compose.prod.yml \
   -f infra/deploy/docker-compose.staging.yml \
