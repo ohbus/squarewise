@@ -181,7 +181,7 @@ This phase ensures every API operation has one unambiguous meaning.
 | 5 | Retry semantics | Every operation specifies: safe to retry (yes/no), retry-after hint, backoff recommendation | **Retry Pattern** with **Circuit Breaker** awareness |
 | 6 | GraphQL error policy | Upstream failures → GraphQL `errors[]` with extensions; partial-result behavior documented; never silently empty | **Error Propagation** through BFF layer |
 | 7 | Event compatibility policy | Schema versioning, backward compatibility rules, envelope format, consumer tolerance | **Schema Evolution**: see [contracts/events/](../../contracts/events/) |
-| 8 | Migration policy | Expand/contract sequencing, forward-only migrations, rollback procedure | **Expand/Contract Migration Pattern** (see below) |
+| 8 | Migration policy | Fresh-install baseline for the current branch; any future existing-database rollout requires a separately approved compatibility/rebuild procedure | **Flyway baseline plus explicit database lifecycle** |
 
 > 📖 **What is the Expand/Contract Migration Pattern?**
 >

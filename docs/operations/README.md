@@ -79,7 +79,10 @@ Production begins as stateless pinned containers behind a load balancer, with
 managed PostgreSQL and RabbitMQ where possible. The deployment must provide TLS,
 private service networking, scoped secrets, health/readiness endpoints, graceful
 shutdown, and expand/contract migrations. A migration runs before an application
-rollout and rollback uses a previously tested image digest.
+rollout and rollback uses a previously tested image digest. The current branch
+uses a fresh-install-only Flyway baseline: do not point it at a database with
+the retired multi-version history; provision or explicitly re-baseline each
+service database first.
 
 Observe request success/latency, database pool saturation, outbox age, queue
 lag/retries, dead letters, sync resets, subscription counts, recurring backlog,

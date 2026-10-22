@@ -4,6 +4,11 @@
 
 This runbook covers startup or deployment failure caused by an unapplied or failed Flyway migration. The requested code is retained as the operational name; verify the active catalog code before paging.
 
+The current branch uses one fresh-install `V1__initial_schema.sql` per service.
+An existing database with the retired multi-version history is not an upgrade
+target for this revision; stop the rollout and follow the explicitly approved
+database rebuild/baseline process instead of repairing history by hand.
+
 ## Severity
 
 Critical; do not allow a partially migrated writer into service.

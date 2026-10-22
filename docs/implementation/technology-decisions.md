@@ -14,10 +14,13 @@ future baseline changes require a separately verified technology decision.
 Use Spring Data JPA with Hibernate for ordinary aggregate persistence. This
 reduces mapping code while retaining transactions, optimistic `@Version`
 checks, and fetch planning. Use native SQL only for group-revision locking,
-outbox/job claiming and measured specialized queries. Flyway owns the
-forward-only per-service migration history; historical migrations remain
-unchanged and new schema changes are additive. Hibernate validates against the
-resulting schema. Disable
+outbox/job claiming and measured specialized queries. Flyway owns one
+fresh-install baseline migration per service. This repository intentionally
+does not upgrade databases created by the retired multi-version migration
+chains; deployments using this baseline must provision empty service
+databases or complete an explicitly managed database rebuild/baseline outside
+the application rollout. Hibernate validates against the resulting schema.
+Disable
 Open Session in View, keep entities private, and return DTOs. The BFF has no database.
 Read/write separation is CQRS-oriented, not event-sourced: commands and consistency-critical
 reads use the writer; explicit query ports may use named read pools under a documented
@@ -37,9 +40,10 @@ Same-service foreign keys remain the durable referential-integrity guard,
 including the writer-intensive tables listed above. Application validators
 (`EntityReferenceValidator` in Expense Core and `AccountReferenceValidator` in
 Accounts) provide friendly authorization and input errors before persistence;
-they do not replace database constraints. The 10M DAU rollout therefore requires
-orphan scans, additive migrations, lock-wait/plan evidence, and a tested rollback
-path before any constraint is relaxed. Hot read paths utilize bounded in-memory
+they do not replace database constraints. The fresh-install baseline retains
+same-service constraints and contains no cross-service foreign keys. Any future
+constraint change requires a separately reviewed migration and compatibility
+plan. Hot read paths utilize bounded in-memory
 caches (`GroupAccessCache`, `ProfileCache`, `PreferenceCache`) with cache
 evictions synchronized to transaction `afterCommit` to prevent dirty reads and
 ensure causal consistency.

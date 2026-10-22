@@ -116,10 +116,13 @@ The BFF real-time subscription interface uses the RFC 6455 WebSocket transport r
 
 ### 4.4 Rollback procedure and version-skew verification
 1. Deploy release candidate (version $N+1$).
-2. Apply database migrations (must be strictly additive / backward-compatible).
-3. Roll back application services to previous release (version $N$).
-4. Verify that version $N$ operates normally against the updated database schema without errors.
-5. Re-promote release candidate (version $N+1$).
+2. For a new installation, provision empty service databases and apply the
+   consolidated V1 baselines. The current branch is not an upgrade path for
+   databases created by the retired multi-version chain.
+3. Do not perform this version-skew rollback procedure against an existing
+   database until a separately approved compatibility/rebuild process exists.
+4. Record the fresh-install result and defer existing-database rollback
+   evidence to that compatibility process.
 
 ---
 
