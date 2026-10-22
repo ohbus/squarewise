@@ -2,6 +2,9 @@ package com.subhrodip.squarewise.expensecore.messaging.outbox.persistence
 
 import com.subhrodip.squarewise.expensecore.messaging.outbox.model.OutboxMessage
 import com.subhrodip.squarewise.expensecore.messaging.outbox.model.OutboxStatus
+import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupRepository
+import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
+import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
 import jakarta.persistence.EntityManager
 import java.time.Duration
 import java.time.Instant
@@ -23,6 +26,7 @@ import tools.jackson.databind.ObjectMapper
 @Service
 class JpaOutboxStore(
     private val repository: OutboxRepository,
+    private val groupRepository: GroupRepository,
     private val entityManager: EntityManager,
     private val objectMapper: ObjectMapper
 ) : OutboxStore {
@@ -33,6 +37,9 @@ class JpaOutboxStore(
     @DbWriter("outbox.append")
     @Transactional
     override fun append(message: OutboxMessage) {
+        if (!groupRepository.existsById(message.groupId)) {
+            throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group ${message.groupId} not found")
+        }
         require(!repository.existsById(message.eventId)) { "eventId already exists" }
         repository.save(message.toEntity(objectMapper))
     }

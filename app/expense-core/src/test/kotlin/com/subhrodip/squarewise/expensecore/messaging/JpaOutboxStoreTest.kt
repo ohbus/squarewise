@@ -19,6 +19,8 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
+import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
 
 /**
  * Integration tests for [JpaOutboxStore] verifying transactional claim, retry,
@@ -75,6 +77,17 @@ class JpaOutboxStoreTest @Autowired constructor(
         assertEquals(OutboxStatus.PUBLISHED, snapshot.getValue(publishedId).status)
         assertEquals(mapOf("amount" to 1250, "currency" to "EUR"), snapshot.getValue(retryId).payload)
         assertTrue(store.claim(10, Duration.ofMinutes(1)).isEmpty())
+    }
+
+    /** Rejects an outbox event whose group parent does not exist before persistence. */
+    @Test
+    fun `rejects event for missing group before persistence`() {
+        val error = assertThrows(ExpenseDomainException::class.java) {
+            store.append(message(UUID.randomUUID(), Instant.now(), groupId = UUID.randomUUID()))
+        }
+
+        assertEquals(ExpenseErrors.GROUP_NOT_FOUND, error.definition)
+        assertTrue(repository.findAll().isEmpty())
     }
 
     /**
@@ -203,12 +216,13 @@ class JpaOutboxStoreTest @Autowired constructor(
     private fun message(
         eventId: UUID,
         occurredAt: Instant,
-        payload: Map<String, Any?> = emptyMap()
+        payload: Map<String, Any?> = emptyMap(),
+        groupId: UUID = testGroupId
     ) = OutboxMessage(
         eventId = eventId,
         eventType = "expense.created",
         aggregateId = UUID.randomUUID(),
-        groupId = testGroupId,
+        groupId = groupId,
         groupRevision = 1,
         occurredAt = occurredAt,
         payload = payload
