@@ -27,6 +27,7 @@ import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.doThrow
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.never
+import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import com.subhrodip.squarewise.errors.catalog.NotificationErrors
@@ -113,9 +114,6 @@ class NotificationEventConsumerUnitTest {
         NotificationEventConsumer(processor, processedEvents, preferenceStore, emailDispatcher, deliveryRateLimiter, deliveries)
             .consume(invalidRecipient)
 
-        assertEquals(NotificationEmailDeliveryEntity.SKIPPED, invalidDelivery.status)
-        verify(deliveries).save(invalidDelivery)
-
         val rateDenied = sampleEvent(subject = "rate@example.com")
         val rateDelivery = NotificationEmailDeliveryEntity(rateDenied.notificationId)
         doReturn(NotificationConsumptionOutcome.APPLIED).`when`(processor).process(rateDenied)
@@ -126,8 +124,12 @@ class NotificationEventConsumerUnitTest {
         NotificationEventConsumer(processor, processedEvents, preferenceStore, emailDispatcher, deliveryRateLimiter, deliveries)
             .consume(rateDenied)
 
-        assertEquals(NotificationEmailDeliveryEntity.SKIPPED, rateDelivery.status)
-        verify(deliveries).save(rateDelivery)
+        verify(deliveries, times(2)).updateStatusIfClaimed(
+            any(UUID::class.java) ?: UUID(0, 0),
+            anyString(),
+            any(Instant::class.java) ?: Instant.EPOCH,
+            any(Instant::class.java) ?: Instant.EPOCH
+        )
     }
 
     @Test
@@ -223,8 +225,12 @@ class NotificationEventConsumerUnitTest {
         NotificationEventConsumer(processor, processedEvents, preferenceStore, emailDispatcher, deliveryRateLimiter, deliveries)
             .consume(event)
 
-        assertEquals(NotificationEmailDeliveryEntity.SKIPPED, delivery.status)
-        verify(deliveries).save(delivery)
+        verify(deliveries).updateStatusIfClaimed(
+            any(UUID::class.java) ?: UUID(0, 0),
+            anyString(),
+            any(Instant::class.java) ?: Instant.EPOCH,
+            any(Instant::class.java) ?: Instant.EPOCH
+        )
     }
 
     @Test
@@ -331,12 +337,16 @@ class NotificationEventConsumerUnitTest {
             consumerWithDeliveries.consume(event)
         }
 
-        assertEquals(NotificationEmailDeliveryEntity.SKIPPED, delivery.status)
-        verify(deliveries).save(delivery)
+        verify(deliveries).updateStatusIfClaimed(
+            any(UUID::class.java) ?: UUID(0, 0),
+            anyString(),
+            any(Instant::class.java) ?: Instant.EPOCH,
+            any(Instant::class.java) ?: Instant.EPOCH
+        )
     }
 
     @Test
-    fun `markDelivery uses direct updateStatus avoiding findById and save`() {
+    fun `markDelivery updates only the current dispatch lease`() {
         val deliveries = mock(NotificationEmailDeliveryRepository::class.java)
         doReturn(1).`when`(deliveries).claimForDispatch(
             any(UUID::class.java) ?: UUID(0, 0),
@@ -351,9 +361,10 @@ class NotificationEventConsumerUnitTest {
         doReturn(true).`when`(deliveryRateLimiter).allow("user@example.com")
         doReturn(EmailDeliveryOutcome.DELIVERED).`when`(emailDispatcher)
             .send("user@example.com", "Notification: expense.created", "Dinner was added")
-        doReturn(1).`when`(deliveries).updateStatus(
+        doReturn(1).`when`(deliveries).updateStatusIfClaimed(
             any(UUID::class.java) ?: UUID(0, 0),
             anyString(),
+            any(Instant::class.java) ?: Instant.EPOCH,
             any(Instant::class.java) ?: Instant.EPOCH
         )
 
@@ -364,11 +375,50 @@ class NotificationEventConsumerUnitTest {
         val outcome = consumerWithDeliveries.consume(event)
         assertEquals(NotificationConsumptionOutcome.APPLIED, outcome)
 
-        verify(deliveries).updateStatus(
+        verify(deliveries).updateStatusIfClaimed(
             any(UUID::class.java) ?: UUID(0, 0),
             anyString(),
+            any(Instant::class.java) ?: Instant.EPOCH,
             any(Instant::class.java) ?: Instant.EPOCH
         )
+        verify(deliveries, never()).save(any(NotificationEmailDeliveryEntity::class.java) ?: NotificationEmailDeliveryEntity(UUID(0, 0)))
+    }
+
+    @Test
+    fun `stale dispatch claimant cannot overwrite a newer status`() {
+        val deliveries = mock(NotificationEmailDeliveryRepository::class.java)
+        val event = sampleEvent(subject = "stale@example.com")
+        val delivery = NotificationEmailDeliveryEntity(
+            event.notificationId,
+            status = NotificationEmailDeliveryEntity.PENDING
+        )
+        doReturn(NotificationConsumptionOutcome.APPLIED).`when`(processor).process(event)
+        doReturn(Optional.of(delivery)).`when`(deliveries).findById(event.notificationId)
+        doReturn(1).`when`(deliveries).claimForDispatch(
+            any(UUID::class.java) ?: UUID(0, 0),
+            any(Instant::class.java) ?: Instant.EPOCH,
+            any(Instant::class.java) ?: Instant.EPOCH
+        )
+        doReturn(NotificationPreferences(emailEnabled = true)).`when`(preferenceStore).get("stale@example.com")
+        doReturn(true).`when`(deliveryRateLimiter).allow("stale@example.com")
+        doReturn(EmailDeliveryOutcome.DELIVERED).`when`(emailDispatcher)
+            .send("stale@example.com", "Notification: expense.created", "Dinner was added")
+        doReturn(0).`when`(deliveries).updateStatusIfClaimed(
+            any(UUID::class.java) ?: UUID(0, 0),
+            anyString(),
+            any(Instant::class.java) ?: Instant.EPOCH,
+            any(Instant::class.java) ?: Instant.EPOCH
+        )
+
+        NotificationEventConsumer(
+            processor,
+            processedEvents,
+            preferenceStore,
+            emailDispatcher,
+            deliveryRateLimiter,
+            deliveries
+        ).consume(event)
+
         verify(deliveries, never()).save(any(NotificationEmailDeliveryEntity::class.java) ?: NotificationEmailDeliveryEntity(UUID(0, 0)))
     }
 

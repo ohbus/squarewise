@@ -4,6 +4,8 @@ import com.subhrodip.squarewise.expensecore.messaging.outbox.persistence.JpaOutb
 import com.subhrodip.squarewise.expensecore.messaging.outbox.model.OutboxMessage
 import com.subhrodip.squarewise.expensecore.messaging.outbox.persistence.OutboxRepository
 import com.subhrodip.squarewise.expensecore.messaging.outbox.model.OutboxStatus
+import com.subhrodip.squarewise.expensecore.groups.domain.GroupEntity
+import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupRepository
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
@@ -28,8 +30,10 @@ import org.springframework.boot.test.context.SpringBootTest
 @SpringBootTest
 class JpaOutboxStoreTest @Autowired constructor(
     private val store: JpaOutboxStore,
-    private val repository: OutboxRepository
+    private val repository: OutboxRepository,
+    private val groupRepository: GroupRepository
 ) {
+    private lateinit var testGroupId: UUID
     /**
      * Purges all existing outbox messages prior to each test invocation, guaranteeing
      * an isolated baseline independent of test execution order.
@@ -37,6 +41,8 @@ class JpaOutboxStoreTest @Autowired constructor(
     @BeforeEach
     fun setUp() {
         repository.deleteAll()
+        testGroupId = UUID.randomUUID()
+        groupRepository.save(GroupEntity(testGroupId, "Outbox test", "HOUSEHOLD", "EUR"))
     }
 
     /**
@@ -202,7 +208,7 @@ class JpaOutboxStoreTest @Autowired constructor(
         eventId = eventId,
         eventType = "expense.created",
         aggregateId = UUID.randomUUID(),
-        groupId = UUID.randomUUID(),
+        groupId = testGroupId,
         groupRevision = 1,
         occurredAt = occurredAt,
         payload = payload

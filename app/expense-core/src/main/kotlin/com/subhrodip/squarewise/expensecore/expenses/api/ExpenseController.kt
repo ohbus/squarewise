@@ -14,8 +14,6 @@ import com.subhrodip.squarewise.expensecore.expenses.api.response.ExpenseAllocat
 import com.subhrodip.squarewise.expensecore.expenses.api.response.GroupBalancesResponse
 import com.subhrodip.squarewise.expensecore.expenses.persistence.store.ExpenseStore
 import com.subhrodip.squarewise.expensecore.expenses.service.ExpenseValidator
-import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupMembershipRepository
-import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupRepository
 
 import jakarta.validation.Valid
 import java.time.Instant
@@ -39,9 +37,6 @@ import org.springframework.validation.annotation.Validated
 
 import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
 import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
-import com.subhrodip.squarewise.expensecore.groups.cache.GroupAccessCache
-import org.springframework.beans.factory.annotation.Autowired
-
 import com.subhrodip.squarewise.expensecore.validation.EntityReferenceValidator
 import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
 @RestController
@@ -49,15 +44,8 @@ import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
 @RequestMapping(ApiEndpoints.ExpenseCore.V1.PATH_GROUP_BY_ID)
 class ExpenseController(
     private val expenseStore: ExpenseStore,
-    private val membershipRepository: GroupMembershipRepository,
-    private val groupRepository: GroupRepository,
-    @Autowired(required = false)
-    private val groupAccessCache: GroupAccessCache? = null,
-    @Autowired(required = false)
-    referenceValidator: EntityReferenceValidator? = null
+    private val validator: EntityReferenceValidator
 ) {
-    private val validator = referenceValidator ?: EntityReferenceValidator(groupRepository, membershipRepository, groupAccessCache)
-
     @PostMapping(ApiEndpoints.ExpenseCore.V1.EXPENSES_SUBPATH)
     @ResponseStatus(HttpStatus.CREATED)
     @DbWriter("expense.create")

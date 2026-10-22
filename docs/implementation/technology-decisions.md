@@ -14,9 +14,10 @@ future baseline changes require a separately verified technology decision.
 Use Spring Data JPA with Hibernate for ordinary aggregate persistence. This
 reduces mapping code while retaining transactions, optimistic `@Version`
 checks, and fetch planning. Use native SQL only for group-revision locking,
-outbox/job claiming and measured specialized queries. Flyway owns schema
-migrations via a single consolidated initial schema (`V1__initial_schema.sql`)
-per stateful service; Hibernate validates against the resulting schema. Disable
+outbox/job claiming and measured specialized queries. Flyway owns the
+forward-only per-service migration history; historical migrations remain
+unchanged and new schema changes are additive. Hibernate validates against the
+resulting schema. Disable
 Open Session in View, keep entities private, and return DTOs. The BFF has no database.
 Read/write separation is CQRS-oriented, not event-sourced: commands and consistency-critical
 reads use the writer; explicit query ports may use named read pools under a documented
@@ -32,20 +33,16 @@ share a cluster initially, but cross-service SQL, foreign keys and entities are
 forbidden. Store monetary values as integer minor units internally and strings
 on JSON/GraphQL boundaries.
 
-Under 10M DAU high-throughput write workloads, database-level foreign key
-constraints on writer-intensive tables (`expenses`, `group_memberships`,
-`group_invitations`, `recurring_expense_schedules`, `account_identities`,
-`auth_sessions`, `balance_postings`, `expense_payers`, `expense_allocations`,
-`expense_idempotency`, `recurring_expense_occurrences`) are eliminated to prevent
-shared and exclusive row-lock contention on parent aggregate rows (`expense_groups`,
-`expenses`, `settlements`, `account_profiles`). Referential integrity is strictly
-enforced at the application layer in the writer transaction via dedicated validators
-(`EntityReferenceValidator` in Expense Core and `AccountReferenceValidator` in Accounts),
-backed by composite lookup indexes (`idx_group_memberships_lookup`,
-`idx_group_memberships_group_status`, `balance_postings_expense_idx`, etc.).
-Hot read paths utilize bounded in-memory caches (`GroupAccessCache`, `ProfileCache`,
-`PreferenceCache`) with cache evictions synchronized to transaction `afterCommit`
-to prevent dirty reads and ensure causal consistency.
+Same-service foreign keys remain the durable referential-integrity guard,
+including the writer-intensive tables listed above. Application validators
+(`EntityReferenceValidator` in Expense Core and `AccountReferenceValidator` in
+Accounts) provide friendly authorization and input errors before persistence;
+they do not replace database constraints. The 10M DAU rollout therefore requires
+orphan scans, additive migrations, lock-wait/plan evidence, and a tested rollback
+path before any constraint is relaxed. Hot read paths utilize bounded in-memory
+caches (`GroupAccessCache`, `ProfileCache`, `PreferenceCache`) with cache
+evictions synchronized to transaction `afterCommit` to prevent dirty reads and
+ensure causal consistency.
 
 ## Messaging and API
 

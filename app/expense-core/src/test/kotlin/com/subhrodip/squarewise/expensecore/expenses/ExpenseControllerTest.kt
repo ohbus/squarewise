@@ -37,6 +37,7 @@ import jakarta.servlet.Filter
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletRequestWrapper
 import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
+import com.subhrodip.squarewise.expensecore.validation.EntityReferenceValidator
 
 class ExpenseControllerTest {
     private val store = InMemoryExpenseStore()
@@ -56,7 +57,7 @@ class ExpenseControllerTest {
             Optional.of(GroupEntity(groupId, "Test", "TRIP", "EUR", if (groupId in archivedGroups) "ARCHIVED" else "ACTIVE"))
         } else null
     } as GroupRepository
-    private val controller = ExpenseController(store, memberships, groups)
+    private val controller = ExpenseController(store, EntityReferenceValidator(groups, memberships))
     private val authenticatedPrincipalFilter = Filter { request, response, chain ->
         val authenticatedRequest = object : HttpServletRequestWrapper(request as HttpServletRequest) {
             override fun getUserPrincipal(): Principal =

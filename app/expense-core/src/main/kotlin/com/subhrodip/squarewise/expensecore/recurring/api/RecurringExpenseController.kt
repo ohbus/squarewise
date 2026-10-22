@@ -28,7 +28,6 @@ import com.subhrodip.squarewise.db.routing.DbWriter
 
 import com.subhrodip.squarewise.expensecore.groups.cache.GroupAccessCache
 import com.subhrodip.squarewise.expensecore.validation.EntityReferenceValidator
-import org.springframework.beans.factory.annotation.Autowired
 
 /**
  * REST controller exposing authenticated recurring expense schedule management transport.
@@ -42,13 +41,9 @@ class RecurringExpenseController(
     private val recurringService: RecurringExpenseService,
     private val groupRepository: GroupRepository,
     private val membershipRepository: GroupMembershipRepository,
-    @Autowired(required = false)
-    private val groupAccessCache: GroupAccessCache? = null,
-    @Autowired(required = false)
-    referenceValidator: EntityReferenceValidator? = null
+    private val groupAccessCache: GroupAccessCache?,
+    private val validator: EntityReferenceValidator
 ) {
-    private val validator = referenceValidator ?: EntityReferenceValidator(groupRepository, membershipRepository, groupAccessCache)
-
     @PostMapping(ApiEndpoints.ExpenseCore.V1.SCHEDULES_SUBPATH)
     @ResponseStatus(HttpStatus.CREATED)
     @DbWriter("recurring.schedules.create")

@@ -332,7 +332,7 @@ class EntityReferenceValidatorTest {
     }
 
     @Test
-    fun `validateFinancialParticipants and validateSettlementParticipants leverage cached memberIds`() {
+    fun `financial participant validation uses the bounded repository query even with a cache`() {
         val cache = GroupAccessCache()
         val cachedValidator = EntityReferenceValidator(groupRepository, membershipRepository, cache)
         val groupId = UUID.randomUUID()
@@ -341,17 +341,37 @@ class EntityReferenceValidatorTest {
         val m1 = GroupMembershipEntity(p1, groupId, "alice")
         val m2 = GroupMembershipEntity(p2, groupId, "bob")
 
-        `when`(membershipRepository.findByGroupIdAndStatus(groupId, "ACTIVE")).thenReturn(listOf(m1, m2))
+        `when`(
+            membershipRepository.findByGroupIdAndMembershipIdInAndStatus(
+                groupId,
+                setOf(p1, p2),
+                "ACTIVE"
+            )
+        ).thenReturn(listOf(m1, m2))
 
         val participants = cachedValidator.validateFinancialParticipants(groupId, listOf(p1), listOf(p2))
         assertEquals(setOf(p1, p2), participants)
 
-        // Second call uses cached activeMemberIds and does not query repository again
+        // The writer-authoritative bounded query is repeated for each financial check.
+        `when`(
+            membershipRepository.findByGroupIdAndMembershipIdInAndStatus(
+                groupId,
+                setOf(p1),
+                "ACTIVE"
+            )
+        ).thenReturn(listOf(m1))
         val active = cachedValidator.validateActiveParticipants(groupId, listOf(p1, p2))
         assertEquals(setOf(p1, p2), active)
 
+        `when`(
+            membershipRepository.findByGroupIdAndMembershipIdInAndStatus(
+                groupId,
+                setOf(p1, p2),
+                "ACTIVE"
+            )
+        ).thenReturn(listOf(m1, m2))
         cachedValidator.validateSettlementParticipants(groupId, p1, p2)
-        verify(membershipRepository, times(1)).findByGroupIdAndStatus(groupId, "ACTIVE")
+        verify(membershipRepository, never()).findByGroupIdAndStatus(groupId, "ACTIVE")
     }
 
     @Test
@@ -389,14 +409,20 @@ class EntityReferenceValidatorTest {
     }
 
     @Test
-    fun `validateSettlementParticipants rejects with cached memberIds when counterparty not in group`() {
+    fun `validateSettlementParticipants rejects with a writer query when counterparty is missing`() {
         val cache = GroupAccessCache()
         val cachedValidator = EntityReferenceValidator(groupRepository, membershipRepository, cache)
         val groupId = UUID.randomUUID()
         val from = UUID.randomUUID()
         val to = UUID.randomUUID()
         val mFrom = GroupMembershipEntity(from, groupId, "alice")
-        `when`(membershipRepository.findByGroupIdAndStatus(groupId, "ACTIVE")).thenReturn(listOf(mFrom))
+        `when`(
+            membershipRepository.findByGroupIdAndMembershipIdInAndStatus(
+                groupId,
+                setOf(from, to),
+                "ACTIVE"
+            )
+        ).thenReturn(listOf(mFrom))
 
         val ex = assertThrows(ExpenseDomainException::class.java) {
             cachedValidator.validateSettlementParticipants(groupId, from, to)
@@ -488,8 +514,8 @@ class EntityReferenceValidatorTest {
     }
 
     @Test
-    fun `validator without groupRepository supports ensureMembership and isActiveMember`() {
-        val standaloneValidator = EntityReferenceValidator(membershipRepository = membershipRepository)
+    fun `validator requires groupRepository for membership-only checks`() {
+        val standaloneValidator = EntityReferenceValidator(groupRepository, membershipRepository)
         val groupId = UUID.randomUUID()
         `when`(membershipRepository.existsByGroupIdAndSubjectAndStatus(groupId, "carol", "ACTIVE")).thenReturn(true)
 

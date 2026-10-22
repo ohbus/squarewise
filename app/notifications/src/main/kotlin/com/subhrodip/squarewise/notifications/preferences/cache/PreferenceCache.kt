@@ -22,6 +22,7 @@ class PreferenceCache(
 
     private val cache = ConcurrentHashMap<String, Entry>()
     private val invalidationTimestamps = ConcurrentHashMap<String, Instant>()
+    private val inFlightLoads = ConcurrentHashMap.newKeySet<String>()
 
     /**
      * Resolves notification preferences for a user, using cached state if valid.
@@ -32,18 +33,28 @@ class PreferenceCache(
      */
     fun get(subject: String, loader: () -> NotificationPreferences): NotificationPreferences {
         val now = Instant.now()
+        cleanupInvalidationTimestamps(now)
         val cached = cache[subject]
         if (cached != null && !cached.isExpired(now)) {
             return cached.preferences
         }
         val loadStart = Instant.now()
-        val computed = loader()
-        val invalidatedAt = invalidationTimestamps[subject]
-        if (invalidatedAt == null || !invalidatedAt.isAfter(loadStart)) {
+        inFlightLoads.add(subject)
+        try {
+            val computed = loader()
             evictIfOversized()
-            cache[subject] = Entry(computed, now.plus(ttl))
+            cache.compute(subject) { _, existing ->
+                val invalidatedAt = invalidationTimestamps[subject]
+                if (invalidatedAt == null || !invalidatedAt.isAfter(loadStart)) {
+                    Entry(computed, Instant.now().plus(ttl))
+                } else {
+                    existing
+                }
+            }
+            return computed
+        } finally {
+            inFlightLoads.remove(subject)
         }
-        return computed
     }
 
     /**
@@ -52,8 +63,10 @@ class PreferenceCache(
      * @param subject user subject identifier.
      */
     fun invalidate(subject: String) {
-        invalidationTimestamps[subject] = Instant.now()
+        val now = Instant.now()
+        invalidationTimestamps[subject] = now
         cache.remove(subject)
+        cleanupInvalidationTimestamps(now)
     }
 
     /** Clears all cached preferences. */
@@ -64,14 +77,20 @@ class PreferenceCache(
 
     private fun evictIfOversized() {
         val now = Instant.now()
-        val cutoff = now.minus(ttl)
-        invalidationTimestamps.entries.removeIf { it.value.isBefore(cutoff) }
+        cleanupInvalidationTimestamps(now)
         if (cache.size > maxEntries) {
             cache.entries.removeIf { it.value.isExpired(now) }
             if (cache.size > maxEntries) {
                 val target = maxEntries / 4
                 cache.keys.take(target).forEach { cache.remove(it) }
             }
+        }
+    }
+
+    private fun cleanupInvalidationTimestamps(now: Instant) {
+        val cutoff = now.minus(ttl)
+        invalidationTimestamps.entries.removeIf { (subject, invalidatedAt) ->
+            !inFlightLoads.contains(subject) && invalidatedAt.isBefore(cutoff)
         }
     }
 }

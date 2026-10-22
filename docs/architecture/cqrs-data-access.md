@@ -37,10 +37,11 @@ The aspect automatically respects active transactions: write transactions retain
 
 ## Replica Selection and Load Balancing
 
-`DbRoutingDataSource` implements atomic round-robin load-balancing across configured, healthy read replicas:
+`DbRoutingDataSource` implements atomic round-robin load-balancing across configured, healthy read replicas. Configured writer pools are explicit shard/target pools, not an implicit load-balancing set:
 - Reader replicas are health-checked continuously via `DbReaderHealth`. Unhealthy, disconnected, or circuit-broken replicas are excluded from rotation.
 - If all reader replicas are degraded or unavailable, queries that permit fallback dynamically fail over to the primary writer without dropping client requests.
 - Queries requiring strict `STRONG` consistency or running inside write transactions bypass replica rotation and target the writer directly.
+- An unqualified write always targets the primary writer; a named writer is selected only when the operation explicitly supplies `targetWriter`.
 
 ## In-Memory Caching and Transactional Invalidation
 

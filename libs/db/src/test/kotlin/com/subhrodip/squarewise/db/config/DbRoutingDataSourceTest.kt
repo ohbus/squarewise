@@ -340,19 +340,14 @@ class DbRoutingDataSourceTest {
     }
 
     @Test
-    fun `connection load balances round-robin across configured writers when no target is specified`() {
+    fun `connection uses primary writer when no target is specified`() {
         val writer = mock(DataSource::class.java)
         val w1 = mock(DataSource::class.java)
         val w2 = mock(DataSource::class.java)
         val routing = DbRoutingDataSource(writer, emptyMap(), writers = linkedMapOf("writer1" to w1, "writer2" to w2))
 
         DbContextHolder.withContext(DbExecutionContext("expense.create", DbOperationKind.COMMAND)) {
-            val first = routing.resolveWriterName()
-            val second = routing.resolveWriterName()
-            val third = routing.resolveWriterName()
-            assertEquals("writer1", first)
-            assertEquals("writer2", second)
-            assertEquals("writer1", third)
+            assertEquals("", routing.resolveWriterName())
         }
     }
 }

@@ -396,7 +396,8 @@ class RecurringExpenseControllerTest @Autowired constructor(
             recurringService = recurringService,
             groupRepository = groupRepository,
             membershipRepository = membershipRepository,
-            groupAccessCache = null
+            groupAccessCache = null,
+            validator = EntityReferenceValidator(groupRepository, membershipRepository)
         )
         val group = groupStore.create("alice", CreateGroupRequest("Uncached Controller", "TRIP", "EUR"))
         val schedules = uncachedController.listSchedules(group.groupId, alice)

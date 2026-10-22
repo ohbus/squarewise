@@ -5,9 +5,6 @@ import com.subhrodip.squarewise.expensecore.settlements.domain.Settlement
 import com.subhrodip.squarewise.expensecore.settlements.domain.SuggestedSettlement
 import com.subhrodip.squarewise.expensecore.settlements.service.SettlementService
 import com.subhrodip.squarewise.expensecore.settlements.service.SettlementSuggestionEngine
-import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupMembershipRepository
-import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupRepository
-
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.GetMapping
@@ -26,23 +23,14 @@ import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
 import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
 
 import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
-import com.subhrodip.squarewise.expensecore.groups.cache.GroupAccessCache
 import com.subhrodip.squarewise.expensecore.validation.EntityReferenceValidator
-import org.springframework.beans.factory.annotation.Autowired
 
 @RestController
 @RequestMapping(ApiEndpoints.ExpenseCore.V1.PATH_GROUP_SETTLEMENTS)
 class SettlementController(
     private val service: SettlementService,
-    private val membershipRepository: GroupMembershipRepository,
-    @Autowired(required = false)
-    private val groupAccessCache: GroupAccessCache? = null,
-    @Autowired(required = false)
-    referenceValidator: EntityReferenceValidator? = null,
-    @Autowired(required = false)
-    groupRepository: GroupRepository? = null
+    private val validator: EntityReferenceValidator
 ) {
-    private val validator = referenceValidator ?: EntityReferenceValidator(groupRepository, membershipRepository, groupAccessCache)
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)

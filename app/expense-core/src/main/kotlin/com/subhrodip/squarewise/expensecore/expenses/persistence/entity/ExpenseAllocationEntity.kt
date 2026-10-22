@@ -1,11 +1,7 @@
 package com.subhrodip.squarewise.expensecore.expenses.persistence.entity
 
-import com.subhrodip.squarewise.expensecore.expenses.persistence.entity.ExpenseEntity
-
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
-import jakarta.persistence.ConstraintMode
-import jakarta.persistence.ForeignKey
 import jakarta.persistence.FetchType
 import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
@@ -30,7 +26,7 @@ class ExpenseAllocationEntity(
     var allocationId: UUID,
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "expense_id", nullable = false, foreignKey = ForeignKey(ConstraintMode.NO_CONSTRAINT))
+    @JoinColumn(name = "expense_id", nullable = false)
     var expense: ExpenseEntity,
 
     @Column(name = "participant_id", nullable = false)

@@ -9,7 +9,9 @@ import com.subhrodip.squarewise.expensecore.expenses.domain.ExpensePayer
 import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseRecord
 import com.subhrodip.squarewise.expensecore.expenses.persistence.store.InMemoryExpenseStore
 import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupMembershipRepository
+import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupRepository
 import com.subhrodip.squarewise.expensecore.groups.cache.GroupAccessCache
+import com.subhrodip.squarewise.expensecore.validation.EntityReferenceValidator
 
 import org.junit.jupiter.api.Test
 import org.springframework.http.MediaType
@@ -24,6 +26,7 @@ import java.time.Instant
 import java.security.Principal
 import java.lang.reflect.Proxy
 import org.springframework.test.web.servlet.request.RequestPostProcessor
+import org.mockito.Mockito.mock
 import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
 
 class SettlementControllerTest {
@@ -36,7 +39,8 @@ class SettlementControllerTest {
     ) { _, method, args ->
         if (method.name.startsWith("existsByGroupIdAndSubject")) args?.getOrNull(1) == "test-user" else null
     } as GroupMembershipRepository
-    private val controller = SettlementController(service, memberships)
+    private val groups = mock(GroupRepository::class.java)
+    private val controller = SettlementController(service, EntityReferenceValidator(groups, memberships))
     private val mvc = MockMvcBuilders.standaloneSetup(controller)
         .setControllerAdvice(GlobalErrorAdvice()).build()
     private val user = RequestPostProcessor { request -> request.userPrincipal = Principal { "test-user" }; request }
@@ -211,7 +215,7 @@ class SettlementControllerTest {
     @Test
     fun `controller with groupAccessCache validates and caches active membership`() {
         val cache = GroupAccessCache()
-        val cachedController = SettlementController(service, memberships, cache)
+        val cachedController = SettlementController(service, EntityReferenceValidator(groups, memberships, cache))
         val cachedMvc = MockMvcBuilders.standaloneSetup(cachedController)
             .setControllerAdvice(GlobalErrorAdvice()).build()
 

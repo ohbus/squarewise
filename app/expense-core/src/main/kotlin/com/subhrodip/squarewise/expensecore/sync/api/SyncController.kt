@@ -3,12 +3,7 @@ package com.subhrodip.squarewise.expensecore.sync.api
 import com.subhrodip.squarewise.errors.catalog.PlatformErrors
 import com.subhrodip.squarewise.expensecore.sync.persistence.SynchronizationStore
 import com.subhrodip.squarewise.expensecore.sync.api.toResponse
-import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupMembershipRepository
-import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupRepository
-
-import com.subhrodip.squarewise.expensecore.groups.cache.GroupAccessCache
 import com.subhrodip.squarewise.expensecore.validation.EntityReferenceValidator
-import org.springframework.beans.factory.annotation.Autowired
 import java.security.Principal
 import java.util.UUID
 import org.springframework.web.bind.annotation.GetMapping
@@ -25,15 +20,8 @@ import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
 @RequestMapping(ApiEndpoints.ExpenseCore.V1.PATH_GROUP_SYNC)
 class SyncController(
     private val store: SynchronizationStore,
-    private val memberships: GroupMembershipRepository,
-    @Autowired(required = false)
-    private val groupAccessCache: GroupAccessCache? = null,
-    @Autowired(required = false)
-    referenceValidator: EntityReferenceValidator? = null,
-    @Autowired(required = false)
-    groupRepository: GroupRepository? = null
+    private val validator: EntityReferenceValidator
 ) {
-    private val validator = referenceValidator ?: EntityReferenceValidator(groupRepository, memberships, groupAccessCache)
 
     @GetMapping(ApiEndpoints.ExpenseCore.V1.SYNC_SNAPSHOT_RELATIVE_SUBPATH, ApiEndpoints.ExpenseCore.V1.SYNC_CHANGES_RELATIVE_SUBPATH)
     @DbReader("expense.sync.page")

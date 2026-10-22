@@ -26,7 +26,6 @@ class DbRoutingDataSource(
     private val writers: Map<String, DataSource> = emptyMap()
 ) : AbstractDataSource() {
     private val roundRobinCounter = AtomicInteger(0)
-    private val writerRoundRobinCounter = AtomicInteger(0)
 
     init { readers.keys.forEach(readerHealth::register) }
 
@@ -81,17 +80,12 @@ class DbRoutingDataSource(
     /** Returns the configured writer pools for diagnostics. */
     fun writerDataSources(): Map<String, DataSource> = writers.toMap()
 
-    /** Resolves the target writer pool name based on context target or round-robin among configured writers. */
+    /** Resolves only an explicitly selected writer; unqualified writes use the primary pool. */
     fun resolveWriterName(): String {
         val context = DbContextHolder.current()
         val target = context.targetWriter?.takeIf { it.isNotBlank() }
         if (target != null && writers.containsKey(target)) {
             return target
-        }
-        if (writers.isNotEmpty()) {
-            val writerKeys = writers.keys.toList()
-            val idx = (writerRoundRobinCounter.getAndIncrement() and Int.MAX_VALUE) % writerKeys.size
-            return writerKeys[idx]
         }
         return ""
     }

@@ -92,38 +92,39 @@ class NotificationEventConsumer(
     }
 
     private fun executeDispatch(event: NotificationEvent) {
-        if (emailDeliveries != null) {
+        val claimAt = emailDeliveries?.let { repository ->
             val now = Instant.now()
-            if (emailDeliveries.claimForDispatch(event.notificationId, now, now.minus(DISPATCH_LEASE)) == 0) {
+            if (repository.claimForDispatch(event.notificationId, now, now.minus(DISPATCH_LEASE)) == 0) {
                 return
             }
+            now
         }
         try {
-            dispatchEmailIfEnabled(event)
+            dispatchEmailIfEnabled(event, claimAt)
         } catch (failure: NotificationDomainException) {
             val status = if (failure.definition.retryPolicy == RetryPolicy.NEVER) {
                 NotificationEmailDeliveryEntity.SKIPPED
             } else {
                 NotificationEmailDeliveryEntity.PENDING
             }
-            markDelivery(event.notificationId, status)
+            markDelivery(event.notificationId, status, claimAt)
             throw failure
         } catch (failure: RuntimeException) {
-            markDelivery(event.notificationId, NotificationEmailDeliveryEntity.PENDING)
+            markDelivery(event.notificationId, NotificationEmailDeliveryEntity.PENDING, claimAt)
             throw failure
         }
     }
 
-    private fun dispatchEmailIfEnabled(event: NotificationEvent) {
+    private fun dispatchEmailIfEnabled(event: NotificationEvent, claimAt: Instant?) {
         val recipientId = event.recipientId
         val preferences = preferenceStore.get(recipientId)
         if (!preferences.emailEnabled) {
-            markDelivery(event.notificationId, NotificationEmailDeliveryEntity.SKIPPED)
+            markDelivery(event.notificationId, NotificationEmailDeliveryEntity.SKIPPED, claimAt)
             log.info("Email notifications disabled for recipientId={}; skipping dispatch", opaqueRecipientId(recipientId))
             return
         }
         val recipientEmail = resolveRecipientEmail(event) ?: run {
-            markDelivery(event.notificationId, NotificationEmailDeliveryEntity.SKIPPED)
+            markDelivery(event.notificationId, NotificationEmailDeliveryEntity.SKIPPED, claimAt)
             return
         }
         if (!deliveryRateLimiter.allow(recipientId)) {
@@ -131,18 +132,20 @@ class NotificationEventConsumer(
                 "Email delivery rate limit reached for recipientId={}; suppressing delivery",
                 opaqueRecipientId(recipientId)
             )
-            markDelivery(event.notificationId, NotificationEmailDeliveryEntity.SKIPPED)
+            markDelivery(event.notificationId, NotificationEmailDeliveryEntity.SKIPPED, claimAt)
             return
         }
         val deliveryOutcome = emailDispatcher.send(recipientEmail, "Notification: ${event.title}", event.body)
         when (deliveryOutcome) {
             EmailDeliveryOutcome.DELIVERED -> markDelivery(
                 event.notificationId,
-                NotificationEmailDeliveryEntity.DELIVERED
+                NotificationEmailDeliveryEntity.DELIVERED,
+                claimAt
             )
             EmailDeliveryOutcome.SKIPPED -> markDelivery(
                 event.notificationId,
-                NotificationEmailDeliveryEntity.SKIPPED
+                NotificationEmailDeliveryEntity.SKIPPED,
+                claimAt
             )
             EmailDeliveryOutcome.RETRYABLE_FAILURE,
             EmailDeliveryOutcome.PERMANENT_FAILURE -> throw NotificationDomainException(
@@ -152,15 +155,9 @@ class NotificationEventConsumer(
         log.info("Email dispatch outcome for recipientId={} (notificationId={}): {}", opaqueRecipientId(recipientEmail), event.notificationId, deliveryOutcome)
     }
 
-    private fun markDelivery(notificationId: UUID, status: String) {
-        val updated = emailDeliveries?.updateStatus(notificationId, status, Instant.now()) ?: 0
-        if (updated == 0) {
-            emailDeliveries?.findById(notificationId)?.ifPresent { delivery ->
-                delivery.status = status
-                delivery.updatedAt = Instant.now()
-                emailDeliveries.save(delivery)
-            }
-        }
+    private fun markDelivery(notificationId: UUID, status: String, claimAt: Instant?) {
+        if (emailDeliveries == null || claimAt == null) return
+        emailDeliveries.updateStatusIfClaimed(notificationId, status, Instant.now(), claimAt)
     }
 
     private fun resolveRecipientEmail(event: NotificationEvent): String? {

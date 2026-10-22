@@ -27,7 +27,11 @@ interface NotificationEmailDeliveryRepository : JpaRepository<NotificationEmailD
     )
     fun claimForDispatch(notificationId: UUID, now: Instant, leaseCutoff: Instant): Int
 
-    /** Direct atomic status update avoiding a prior SELECT. */
+    /**
+     * Updates the status only while the caller still owns the dispatch lease.
+     *
+     * @return one when the lease owner updated the row, otherwise zero.
+     */
     @Modifying
     @Transactional
     @Query(
@@ -35,13 +39,16 @@ interface NotificationEmailDeliveryRepository : JpaRepository<NotificationEmailD
             UPDATE notification_email_deliveries
                SET status = :status, updated_at = :now
              WHERE notification_id = :notificationId
+               AND status = 'DISPATCHING'
+               AND updated_at = :claimAt
         """,
         nativeQuery = true
     )
-    fun updateStatus(
+    fun updateStatusIfClaimed(
         @Param("notificationId") notificationId: UUID,
         @Param("status") status: String,
-        @Param("now") now: Instant
+        @Param("now") now: Instant,
+        @Param("claimAt") claimAt: Instant
     ): Int
 
     /**

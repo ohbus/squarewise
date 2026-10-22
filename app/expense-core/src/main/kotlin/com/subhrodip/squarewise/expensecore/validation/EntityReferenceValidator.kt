@@ -8,7 +8,6 @@ import com.subhrodip.squarewise.expensecore.groups.domain.GroupMembershipEntity
 import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupMembershipRepository
 import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupRepository
 import com.subhrodip.squarewise.expensecore.groups.cache.GroupAccessCache
-import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 import java.security.Principal
 import java.util.UUID
@@ -17,15 +16,13 @@ import java.util.UUID
  * Standardized application-level foreign key and entity referential integrity validator.
  *
  * Ensures that all parent relationships (groups, memberships, financial participants)
- * are validated in memory and via bounded single queries prior to persisting dependent
- * ledger and allocation child records, freeing writer database tables from row lock contention.
+ * are validated before dependent records are persisted, while database constraints
+ * remain the durable referential-integrity guard.
  */
 @Component
 class EntityReferenceValidator(
-    @Autowired(required = false)
-    private val groupRepository: GroupRepository? = null,
+    private val groupRepository: GroupRepository,
     private val membershipRepository: GroupMembershipRepository,
-    @Autowired(required = false)
     private val groupAccessCache: GroupAccessCache? = null
 ) {
 
@@ -96,10 +93,10 @@ class EntityReferenceValidator(
     fun isActiveGroup(groupId: UUID): Boolean {
         val status = if (groupAccessCache != null) {
             groupAccessCache.groupStatus(groupId) {
-                groupRepository?.findById(groupId)?.map { it.status }?.orElse(null)
+                groupRepository.findById(groupId).map { it.status }.orElse(null)
             }
         } else {
-            groupRepository?.findById(groupId)?.map { it.status }?.orElse(null)
+            groupRepository.findById(groupId).map { it.status }.orElse(null)
         }
         return status == "ACTIVE"
     }
@@ -114,10 +111,10 @@ class EntityReferenceValidator(
     fun validateActiveGroup(groupId: UUID): GroupEntity {
         val group = if (groupAccessCache != null) {
             groupAccessCache.groupEntity(groupId) {
-                groupRepository?.findById(groupId)?.orElse(null)
+                groupRepository.findById(groupId).orElse(null)
             }
         } else {
-            groupRepository?.findById(groupId)?.orElse(null)
+            groupRepository.findById(groupId).orElse(null)
         } ?: throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group $groupId not found")
         if (group.status == "ARCHIVED") {
             throw ExpenseDomainException(ExpenseErrors.GROUP_ARCHIVED, "Group $groupId is archived")
@@ -162,18 +159,7 @@ class EntityReferenceValidator(
         val allParticipantIds = (payerIds + allocationIds).toSet()
         if (allParticipantIds.isEmpty()) return emptySet()
 
-        val activeMembers = if (groupAccessCache != null) {
-            groupAccessCache.activeMemberIds(groupId) {
-                membershipRepository.findByGroupIdAndStatus(groupId, "ACTIVE")
-                    .map { it.membershipId }.toSet()
-            }
-        } else {
-            membershipRepository.findByGroupIdAndMembershipIdInAndStatus(
-                groupId,
-                allParticipantIds,
-                "ACTIVE"
-            ).map { it.membershipId }.toSet()
-        }
+        val activeMembers = findActiveParticipantIds(groupId, allParticipantIds)
 
         if (!activeMembers.containsAll(allParticipantIds)) {
             throw ExpenseDomainException(
@@ -204,18 +190,7 @@ class EntityReferenceValidator(
         }
         if (distinctIds.isEmpty()) return emptySet()
 
-        val activeMembers = if (groupAccessCache != null) {
-            groupAccessCache.activeMemberIds(groupId) {
-                membershipRepository.findByGroupIdAndStatus(groupId, "ACTIVE")
-                    .map { it.membershipId }.toSet()
-            }
-        } else {
-            membershipRepository.findByGroupIdAndMembershipIdInAndStatus(
-                groupId,
-                distinctIds,
-                "ACTIVE"
-            ).map { it.membershipId }.toSet()
-        }
+        val activeMembers = findActiveParticipantIds(groupId, distinctIds)
 
         if (!activeMembers.containsAll(distinctIds)) {
             throw ExpenseDomainException(
@@ -236,18 +211,7 @@ class EntityReferenceValidator(
      */
     fun validateSettlementParticipants(groupId: UUID, fromParticipantId: UUID, toParticipantId: UUID) {
         require(fromParticipantId != toParticipantId) { "Participants must differ" }
-        val activeMembers = if (groupAccessCache != null) {
-            groupAccessCache.activeMemberIds(groupId) {
-                membershipRepository.findByGroupIdAndStatus(groupId, "ACTIVE")
-                    .map { it.membershipId }.toSet()
-            }
-        } else {
-            membershipRepository.findByGroupIdAndMembershipIdInAndStatus(
-                groupId,
-                setOf(fromParticipantId, toParticipantId),
-                "ACTIVE"
-            ).map { it.membershipId }.toSet()
-        }
+        val activeMembers = findActiveParticipantIds(groupId, setOf(fromParticipantId, toParticipantId))
         if (!activeMembers.contains(fromParticipantId) || !activeMembers.contains(toParticipantId)) {
             throw ExpenseDomainException(
                 ExpenseErrors.GROUP_NOT_FOUND,
@@ -255,6 +219,19 @@ class EntityReferenceValidator(
             )
         }
     }
+
+    /**
+     * Reads participant membership from the writer-authoritative bounded query.
+     *
+     * Financial authorization must not use the eventually consistent membership
+     * cache because a removal on another node could otherwise be accepted.
+     */
+    private fun findActiveParticipantIds(groupId: UUID, participantIds: Set<UUID>): Set<UUID> =
+        membershipRepository.findByGroupIdAndMembershipIdInAndStatus(
+            groupId,
+            participantIds,
+            "ACTIVE"
+        ).map { it.membershipId }.toSet()
 
     /**
      * Verifies that the specified placeholder member belongs to the group and has active status.

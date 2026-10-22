@@ -42,13 +42,12 @@ tests prohibit cycles, domain dependencies on web/persistence adapters, and
 cross-service entities/repositories. Do not create empty packages just to match a
 pattern. Application services own transaction boundaries; controllers do not.
 
-Each stateful service owns a PostgreSQL database, credentials, and a consolidated
-initial Flyway schema (`V1__initial_schema.sql`). Cross-service SQL, cross-service
-database foreign keys, and shared persistent domain models are prohibited. Under
-high-concurrency 10M DAU write loads, database-level foreign key constraints on
-writer-intensive tables are replaced with application-layer referential integrity
-validation (`EntityReferenceValidator` and `AccountReferenceValidator`) backed by
-composite lookup indexes to eliminate parent row locks. Hot read paths are accelerated
+Each stateful service owns a PostgreSQL database, credentials, and a forward-only
+Flyway migration history. Cross-service SQL, cross-service database foreign keys,
+and shared persistent domain models are prohibited. Same-service foreign keys
+remain the durable referential-integrity guard; application-layer validation
+(`EntityReferenceValidator` and `AccountReferenceValidator`) provides early
+authorization and input errors before persistence. Hot read paths are accelerated
 with bounded in-memory caching (`GroupAccessCache`, `ProfileCache`, `PreferenceCache`)
 with transactional `afterCommit` invalidations, and high-volume read endpoints route to
 load-balanced reader replicas via `@DbReader` and `@DbRouteContext`.
