@@ -695,6 +695,11 @@ authenticated `tests/acceptance/run.sh --require-services` path passed all
 live acceptance scenarios. Production Compose requirements remain mandatory;
 the placeholders are scoped only to config validation.
 
+The local OIDC fixture provisioner now restores `deletion_requested = FALSE`
+when refreshing its deterministic CI profiles. This keeps the destructive Bruno
+deletion check isolated from the later product journey while leaving production
+deletion and writer-backed export authorization unchanged.
+
 With fresh local Keycloak bearer tokens, `mingw32-make e2e-all` passed the
 complete local aggregate: cache resilience, authenticated admission surfaces,
 Accounts lookup isolation, passwordless auth-email, product lifecycle, offline

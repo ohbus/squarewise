@@ -78,7 +78,8 @@ VALUES (:'account_id'::uuid, :'subject', :'display_name', 'UTC', 'EUR')
 ON CONFLICT (subject) DO UPDATE
 SET display_name = EXCLUDED.display_name,
     timezone = EXCLUDED.timezone,
-    default_currency = EXCLUDED.default_currency;
+    default_currency = EXCLUDED.default_currency,
+    deletion_requested = FALSE;
 
 -- Email is the stable fixture key when Keycloak recreates provider subjects.
 UPDATE account_identities
