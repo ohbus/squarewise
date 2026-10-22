@@ -9506,8 +9506,8 @@
       ],
       "evidence": [
         "Recurring generation now queries at most 101 active memberships after each schedule lock, validates recurring participants on the writer, and no longer uses a cross-schedule snapshot or membership cache.",
-        "Unknown writer targets raise PLATFORM_CONFIGURATION_INVALID; authorization membership/group checks force writer contexts; BFF subscription expiry has both reactive boundary enforcement and a bounded scheduled sweep; the imperative LiveUpdate queue was deleted.",
-        "Focused DB/BFF/Expense Core tests and ./gradlew test --rerun-tasks --no-daemon --console=plain passed all 59 actionable tasks; git diff --check and registry JSON validation passed. Implementation commit: acde4d1e43e050e271ef8b7456d3a39fa3b33af6."
+        "Unknown writer targets raise PLATFORM_CONFIGURATION_INVALID; authorization membership/group checks force writer contexts; balances and settlement suggestions are writer-bound; BFF subscription expiry has both reactive boundary enforcement and a bounded scheduled sweep; the imperative LiveUpdate queue was deleted.",
+        "Focused DB/BFF/Expense Core/Notifications tests, ./gradlew test --rerun-tasks --no-daemon --console=plain (59 actionable tasks), sh -n, contracts, architecture, security hygiene, and git diff --check passed. Implementation commit: 997beb79."
       ],
       "reviewer": "/root",
       "blocker": null
