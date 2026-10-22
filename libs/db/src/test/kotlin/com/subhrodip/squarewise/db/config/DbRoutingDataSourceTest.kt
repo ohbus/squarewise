@@ -327,15 +327,13 @@ class DbRoutingDataSourceTest {
     }
 
     @Test
-    fun `connection falls back to primary writer when targetWriter is unconfigured`() {
+    fun `connection rejects an unknown targetWriter instead of falling back`() {
         val writer = mock(DataSource::class.java)
-        val connPrimary = mock(Connection::class.java)
-        `when`(writer.connection).thenReturn(connPrimary)
         val routing = DbRoutingDataSource(writer, emptyMap(), writers = emptyMap())
 
         DbContextHolder.withContext(DbExecutionContext("expense.create", DbOperationKind.COMMAND, targetWriter = "shard-unknown")) {
-            assertEquals("", routing.resolveWriterName())
-            assertSame(connPrimary, routing.connection(DbRoute.WRITER))
+            assertFailsWith<DbPlatformException> { routing.resolveWriterName() }
+            assertFailsWith<DbPlatformException> { routing.connection(DbRoute.WRITER) }
         }
     }
 

@@ -78,7 +78,9 @@ class JpaExpenseStore(
         val group = groupRepository.findForMembershipUpdate(groupId)
             ?: throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group $groupId not found")
         requireActiveMembership(groupId, actorSubject)
-        validateFinancialParticipants(groupId, expense, actorSubject)
+        if (actorSubject != null || idempotencyKey.startsWith(RECURRING_IDEMPOTENCY_PREFIX)) {
+            validateFinancialParticipants(groupId, expense)
+        }
         if (group.status == "ARCHIVED") {
             throw ExpenseDomainException(ExpenseErrors.GROUP_ARCHIVED, "Group is archived")
         }
@@ -199,15 +201,18 @@ class JpaExpenseStore(
             .joinToString("") { byte -> "%02x".format(byte) }
     }
 
+    private companion object {
+        const val RECURRING_IDEMPOTENCY_PREFIX = "recurring:"
+    }
+
     private fun requireActiveMembership(groupId: UUID, actorSubject: String?) {
         if (actorSubject != null && !referenceValidator.isActiveMember(groupId, actorSubject)) {
             throw ExpenseDomainException(ExpenseErrors.GROUP_ACCESS_HIDDEN, "Group $groupId not found")
         }
     }
 
-    /** Rejects public postings for arbitrary or duplicate participant identifiers. */
-    private fun validateFinancialParticipants(groupId: UUID, expense: ExpenseRecord, actorSubject: String?) {
-        if (actorSubject == null) return
+    /** Rejects arbitrary or duplicate participant identifiers for both public and internal postings. */
+    private fun validateFinancialParticipants(groupId: UUID, expense: ExpenseRecord) {
         referenceValidator.validateFinancialParticipants(
             groupId,
             expense.payers.map { it.participantId },
@@ -232,7 +237,9 @@ class JpaExpenseStore(
         val group = groupRepository.findForMembershipUpdate(groupId)
             ?: throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group $groupId not found")
         requireActiveMembership(groupId, actorSubject)
-        validateFinancialParticipants(groupId, update, actorSubject)
+        if (actorSubject != null) {
+            validateFinancialParticipants(groupId, update)
+        }
         if (group.status == "ARCHIVED") {
             throw ExpenseDomainException(ExpenseErrors.GROUP_ARCHIVED, "Group is archived")
         }

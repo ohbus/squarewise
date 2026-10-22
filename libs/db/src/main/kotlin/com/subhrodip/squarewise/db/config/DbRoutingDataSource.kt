@@ -84,7 +84,13 @@ class DbRoutingDataSource(
     fun resolveWriterName(): String {
         val context = DbContextHolder.current()
         val target = context.targetWriter?.takeIf { it.isNotBlank() }
-        if (target != null && writers.containsKey(target)) {
+        if (target != null) {
+            if (target !in writers) {
+                throw DbPlatformException(
+                    PlatformErrors.PLATFORM_CONFIGURATION_INVALID,
+                    "Unknown writer target: $target"
+                )
+            }
             return target
         }
         return ""

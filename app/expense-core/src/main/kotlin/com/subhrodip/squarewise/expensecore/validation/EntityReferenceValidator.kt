@@ -7,6 +7,7 @@ import com.subhrodip.squarewise.expensecore.groups.domain.GroupEntity
 import com.subhrodip.squarewise.expensecore.groups.domain.GroupMembershipEntity
 import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupMembershipRepository
 import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupRepository
+import com.subhrodip.squarewise.db.routing.DbContextHolder
 import com.subhrodip.squarewise.expensecore.groups.cache.GroupAccessCache
 import org.springframework.stereotype.Component
 import java.security.Principal
@@ -23,13 +24,13 @@ import java.util.UUID
 class EntityReferenceValidator(
     private val groupRepository: GroupRepository,
     private val membershipRepository: GroupMembershipRepository,
-    private val groupAccessCache: GroupAccessCache? = null
+    @Suppress("unused") private val groupAccessCache: GroupAccessCache? = null
 ) {
 
     /**
      * Asserts that the authenticated principal is present and is an active member of an active group.
      *
-     * Leverages bounded [GroupAccessCache] to eliminate database lookups at 10M DAU scale.
+     * Uses a writer-authoritative membership check even when called from a reader-scoped query.
      *
      * @param groupId unique group identifier.
      * @param principal authenticated user principal.
@@ -51,7 +52,7 @@ class EntityReferenceValidator(
     /**
      * Asserts that the authenticated principal is present and holds active membership in the group.
      *
-     * Leverages bounded [GroupAccessCache] to eliminate database lookups at 10M DAU scale.
+     * Uses a writer-authoritative membership check even when called from a reader-scoped query.
      *
      * @param groupId unique group identifier.
      * @param principal authenticated user principal.
@@ -68,34 +69,26 @@ class EntityReferenceValidator(
     }
 
     /**
-     * Checks whether the specified subject holds an active membership, consulting cache when available.
+     * Checks whether the specified subject holds an active membership on the writer.
      *
      * @param groupId unique group identifier.
      * @param actorSubject user subject.
      * @return true if active member, false otherwise.
      */
     fun isActiveMember(groupId: UUID, actorSubject: String): Boolean {
-        return if (groupAccessCache != null) {
-            groupAccessCache.isMember(groupId, actorSubject) {
-                membershipRepository.existsByGroupIdAndSubjectAndStatus(groupId, actorSubject, "ACTIVE")
-            }
-        } else {
+        return DbContextHolder.withWriter(operation = "group.membership.authorize") {
             membershipRepository.existsByGroupIdAndSubjectAndStatus(groupId, actorSubject, "ACTIVE")
         }
     }
 
     /**
-     * Checks whether the specified group exists and is active, consulting cache when available.
+     * Checks whether the specified group exists and is active on the writer.
      *
      * @param groupId unique group identifier.
      * @return true if group exists and is active, false otherwise.
      */
     fun isActiveGroup(groupId: UUID): Boolean {
-        val status = if (groupAccessCache != null) {
-            groupAccessCache.groupStatus(groupId) {
-                groupRepository.findById(groupId).map { it.status }.orElse(null)
-            }
-        } else {
+        val status = DbContextHolder.withWriter(operation = "group.status.authorize") {
             groupRepository.findById(groupId).map { it.status }.orElse(null)
         }
         return status == "ACTIVE"
@@ -129,13 +122,10 @@ class EntityReferenceValidator(
      * @throws ExpenseDomainException if the caller is not an active member.
      */
     fun validateActiveMembership(groupId: UUID, actorSubject: String): GroupMembershipEntity {
-        if (groupAccessCache != null && !groupAccessCache.isMember(groupId, actorSubject) {
-            membershipRepository.existsByGroupIdAndSubjectAndStatus(groupId, actorSubject, "ACTIVE")
-        }) {
-            throw ExpenseDomainException(ExpenseErrors.GROUP_ACCESS_HIDDEN, "Group $groupId not found")
+        return DbContextHolder.withWriter(operation = "group.membership.validate") {
+            membershipRepository.findByGroupIdAndSubjectAndStatus(groupId, actorSubject, "ACTIVE")
+                ?: throw ExpenseDomainException(ExpenseErrors.GROUP_ACCESS_HIDDEN, "Group $groupId not found")
         }
-        return membershipRepository.findByGroupIdAndSubjectAndStatus(groupId, actorSubject, "ACTIVE")
-            ?: throw ExpenseDomainException(ExpenseErrors.GROUP_ACCESS_HIDDEN, "Group $groupId not found")
     }
 
     /**
@@ -225,11 +215,13 @@ class EntityReferenceValidator(
      * cache because a removal on another node could otherwise be accepted.
      */
     private fun findActiveParticipantIds(groupId: UUID, participantIds: Set<UUID>): Set<UUID> =
-        membershipRepository.findByGroupIdAndMembershipIdInAndStatus(
-            groupId,
-            participantIds,
-            "ACTIVE"
-        ).map { it.membershipId }.toSet()
+        DbContextHolder.withWriter(operation = "group.participants.validate") {
+            membershipRepository.findByGroupIdAndMembershipIdInAndStatus(
+                groupId,
+                participantIds,
+                "ACTIVE"
+            ).map { it.membershipId }.toSet()
+        }
 
     /**
      * Verifies that the specified placeholder member belongs to the group and has active status.
@@ -240,20 +232,13 @@ class EntityReferenceValidator(
      * @throws ExpenseDomainException if placeholder not found, not active, or not in group.
      */
     fun validateActivePlaceholder(groupId: UUID, placeholderId: UUID): GroupMembershipEntity {
-        if (groupAccessCache != null) {
-            val activeIds = groupAccessCache.activeMemberIds(groupId) {
-                membershipRepository.findByGroupIdAndStatus(groupId, "ACTIVE")
-                    .map { it.membershipId }.toSet()
+        return DbContextHolder.withWriter(operation = "group.placeholder.validate") {
+            val member = membershipRepository.findByMembershipIdAndGroupId(placeholderId, groupId)
+                ?: throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Placeholder $placeholderId not found in group $groupId")
+            if (member.status != "ACTIVE" || !member.isPlaceholder) {
+                throw ExpenseDomainException(ExpenseErrors.EXPENSE_REQUEST_INVALID, "Member $placeholderId is not an active placeholder")
             }
-            if (!activeIds.contains(placeholderId)) {
-                throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Placeholder $placeholderId not found in group $groupId")
-            }
+            member
         }
-        val member = membershipRepository.findByMembershipIdAndGroupId(placeholderId, groupId)
-            ?: throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Placeholder $placeholderId not found in group $groupId")
-        if (member.status != "ACTIVE" || !member.isPlaceholder) {
-            throw ExpenseDomainException(ExpenseErrors.EXPENSE_REQUEST_INVALID, "Member $placeholderId is not an active placeholder")
-        }
-        return member
     }
 }

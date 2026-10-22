@@ -61,6 +61,7 @@ class GroupGraphqlController(
                 liveFanout.invalidations(subscription.id)
                     .filter { it.groupId == groupId }
                     .takeUntilOther(liveFanout.revocationSignal(subscription.id))
+                    .takeUntilOther(liveFanout.expirySignal(subscription.id))
                     .publish { events -> gateway.getGroup(groupId, bearerToken(principal)).thenMany(events) }
             },
             { subscription -> liveFanout.unsubscribe(subscription.id) }

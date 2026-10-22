@@ -25,6 +25,8 @@ claims, idempotency records, revision allocation, outbox writes, delivery
 leases/attempts, authentication/session/rate-limit state, migrations, and
 reconciliation all remain writer-bound. Reader pools are read-only credentials
 and are not used by Flyway or Hibernate schema validation.
+Authorization helpers also force a writer context when nested inside a reader
+query, so an eventual read cannot resurrect a revoked membership.
 
 ## Declarative Routing Annotations
 

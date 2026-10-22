@@ -20,7 +20,6 @@ import com.subhrodip.squarewise.expensecore.recurring.domain.RecurringExpenseSch
 import com.subhrodip.squarewise.expensecore.recurring.domain.RecurringExpenseSpecification
 import com.subhrodip.squarewise.expensecore.recurring.persistence.RecurringExpenseOccurrenceRepository
 import com.subhrodip.squarewise.expensecore.recurring.persistence.RecurringExpenseScheduleRepository
-import com.subhrodip.squarewise.expensecore.groups.cache.GroupAccessCache
 import com.subhrodip.squarewise.expensecore.validation.EntityReferenceValidator
 import com.subhrodip.squarewise.ids.generation.UuidGenerator
 import jakarta.persistence.EntityManager
@@ -73,8 +72,6 @@ class RecurringExpenseService(
     @Autowired(required = false)
     private val transactionManager: PlatformTransactionManager? = null,
     private val referenceValidator: EntityReferenceValidator,
-    @Autowired(required = false)
-    private val groupAccessCache: GroupAccessCache? = null
 ) : RecurringCommandStore, RecurringQueryStore {
     private val log = LoggerFactory.getLogger(RecurringExpenseService::class.java)
 
@@ -170,15 +167,13 @@ class RecurringExpenseService(
 
     private fun processDueOccurrences(asOfDate: LocalDate, maxCatchUpOccurrences: Int, useScheduleTimezone: Boolean): Int {
         val dueSchedules = scheduleRepository.findDueSchedules(asOfDate)
-        val membersByGroup = getGroupMembers(dueSchedules.map { it.groupId }.toSet())
         if (TransactionSynchronizationManager.isActualTransactionActive()) {
             return dueSchedules.sumOf { schedule ->
                 try {
                     processScheduleOccurrences(
                         schedule,
                         occurrenceCutoff(schedule, asOfDate, useScheduleTimezone),
-                        maxCatchUpOccurrences,
-                        membersByGroup
+                        maxCatchUpOccurrences
                     )
                 } catch (error: DateTimeException) {
                     logInvalidTimezone(schedule, error)
@@ -201,7 +196,7 @@ class RecurringExpenseService(
                     if (schedule.paused || schedule.nextOccurrenceDate.isAfter(cutoff)) {
                         0
                     } else {
-                        processScheduleOccurrences(schedule, cutoff, maxCatchUpOccurrences, membersByGroup)
+                        processScheduleOccurrences(schedule, cutoff, maxCatchUpOccurrences)
                     }
                 }
             } catch (error: DataAccessException) {
@@ -254,16 +249,15 @@ class RecurringExpenseService(
     private fun processScheduleOccurrences(
         schedule: RecurringExpenseSchedule,
         asOfDate: LocalDate,
-        maxCatchUpOccurrences: Int,
-        membersByGroup: Map<UUID, List<UUID>>
+        maxCatchUpOccurrences: Int
     ): Int {
+        // Read membership after the schedule lock; the writer-side participant validation below is the final race check.
+        val members = activeMembersOrPause(schedule, getGroupMembers(schedule.groupId)) ?: return 0
         var generated = 0
         while (!schedule.paused && !schedule.nextOccurrenceDate.isAfter(asOfDate) && generated < maxCatchUpOccurrences) {
             if (schedule.endDate != null && schedule.nextOccurrenceDate.isAfter(schedule.endDate)) {
                 break
             }
-
-            val members = activeMembersOrPause(schedule, membersByGroup[schedule.groupId].orEmpty()) ?: break
 
             val occurrenceDate = schedule.nextOccurrenceDate
             val occurrenceId = OccurrenceIdentity.id(schedule.scheduleId, occurrenceDate)
@@ -274,7 +268,7 @@ class RecurringExpenseService(
             if (!alreadyExists) {
                 try {
                     val expenseRecord = buildExpenseRecord(schedule, occurrenceId, members)
-                    expenseStore.create(schedule.groupId, expenseRecord, occurrenceId.toString())
+                    expenseStore.create(schedule.groupId, expenseRecord, "recurring:$occurrenceId")
 
                     val occurrence = RecurringExpenseOccurrence(
                         occurrenceId = occurrenceId,
@@ -335,18 +329,6 @@ class RecurringExpenseService(
         val requestedIds = (payers.map { it.participantId } + allocations.map { it.participantId }).toSet()
         val missingIds = requestedIds - memberSet
         if (missingIds.isEmpty()) return true
-        val cache = groupAccessCache
-        if (cache != null) {
-            val cachedActiveIds = cache.activeMemberIds(schedule.groupId) {
-                entityManager.createQuery(
-                    "SELECT m.membershipId FROM GroupMembershipEntity m WHERE m.groupId = :groupId AND m.status = 'ACTIVE'",
-                    UUID::class.java
-                ).setParameter("groupId", schedule.groupId)
-                    .resultList
-                    .toSet()
-            }
-            return missingIds.all { it in cachedActiveIds }
-        }
         val activeMissingIds = entityManager.createQuery(
             "SELECT m.membershipId FROM GroupMembershipEntity m WHERE m.groupId = :groupId AND m.membershipId IN :membershipIds AND m.status = 'ACTIVE'",
             UUID::class.java
@@ -451,55 +433,7 @@ class RecurringExpenseService(
         }
     }
 
-    private fun getGroupMembers(groupIds: Set<UUID>): Map<UUID, List<UUID>> {
-        if (groupIds.isEmpty()) return emptyMap()
-        val cache = groupAccessCache
-        if (cache != null) {
-            val result = mutableMapOf<UUID, List<UUID>>()
-            val missingGroupIds = mutableSetOf<UUID>()
-            for (groupId in groupIds) {
-                val cached = cache.peekActiveMemberIds(groupId)
-                if (cached != null) {
-                    result[groupId] = cached.toList().sorted()
-                } else {
-                    missingGroupIds.add(groupId)
-                }
-            }
-            if (missingGroupIds.isEmpty()) {
-                return result.toMap()
-            }
-            val rows = entityManager.createQuery(
-                "SELECT m.groupId, m.membershipId FROM GroupMembershipEntity m WHERE m.groupId IN :groupIds AND m.status = 'ACTIVE' ORDER BY m.membershipId ASC",
-                Array<Any>::class.java
-            ).setParameter("groupIds", missingGroupIds)
-                .resultList
-
-            val byGroup = rows.groupBy(
-                { it[0] as UUID },
-                { it[1] as UUID }
-            )
-            for (groupId in missingGroupIds) {
-                val memberIds = byGroup[groupId].orEmpty().toSet()
-                cache.putActiveMemberIds(groupId, memberIds)
-                result[groupId] = memberIds.toList().sorted()
-            }
-            return result.toMap()
-        }
-        return groupIds.associateWith { getGroupMembers(it) }
-    }
-
     private fun getGroupMembers(groupId: UUID): List<UUID> {
-        val cache = groupAccessCache
-        if (cache != null) {
-            return cache.activeMemberIds(groupId) {
-                entityManager.createQuery(
-                    "SELECT m.membershipId FROM GroupMembershipEntity m WHERE m.groupId = :groupId AND m.status = 'ACTIVE' ORDER BY m.membershipId ASC",
-                    UUID::class.java
-                ).setParameter("groupId", groupId)
-                    .setMaxResults(ExpenseRequestLimits.MAX_PARTICIPANTS + 1)
-                    .resultList.toSet()
-            }.toList().sorted()
-        }
         return entityManager.createQuery(
             "SELECT m.membershipId FROM GroupMembershipEntity m WHERE m.groupId = :groupId AND m.status = 'ACTIVE' ORDER BY m.membershipId ASC",
             UUID::class.java

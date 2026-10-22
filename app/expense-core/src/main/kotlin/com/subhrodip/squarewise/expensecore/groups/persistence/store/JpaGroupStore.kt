@@ -90,7 +90,7 @@ class JpaGroupStore(
     @Transactional(readOnly = true)
     override fun list(subject: String, limit: Int): List<GroupResponse> {
         require(limit in 1..100) { "group limit must be between 1 and 100" }
-        return DbContextHolder.withReader(operation = "groups.list") {
+        return DbContextHolder.withWriter(operation = "groups.authorization") {
             memberships.findActiveGroupsBySubject(subject, "ACTIVE", PageRequest.of(0, limit))
                 .map { it.toResponse() }
         }
@@ -100,12 +100,8 @@ class JpaGroupStore(
     @DbReader("group.get")
     @Transactional(readOnly = true)
     override fun get(groupId: UUID, subject: String): GroupResponse? {
-        val isActive = if (groupAccessCache != null) {
-            groupAccessCache.isMember(groupId, subject) {
+        val isActive = DbContextHolder.withWriter(operation = "group.authorization") {
                 memberships.existsByGroupIdAndSubjectAndStatus(groupId, subject, "ACTIVE")
-            }
-        } else {
-            memberships.existsByGroupIdAndSubjectAndStatus(groupId, subject, "ACTIVE")
         }
         if (!isActive) return null
 
@@ -399,12 +395,8 @@ class JpaGroupStore(
     }
 
     private fun checkActiveMembership(groupId: UUID, subject: String) {
-        val isActive = if (groupAccessCache != null) {
-            groupAccessCache.isMember(groupId, subject) {
+        val isActive = DbContextHolder.withWriter(operation = "group.authorization") {
                 memberships.existsByGroupIdAndSubjectAndStatus(groupId, subject, "ACTIVE")
-            }
-        } else {
-            memberships.existsByGroupIdAndSubjectAndStatus(groupId, subject, "ACTIVE")
         }
         if (!isActive) {
             throw ExpenseDomainException(ExpenseErrors.GROUP_ACCESS_HIDDEN, "Group not found")

@@ -9451,6 +9451,50 @@
       ],
       "reviewer": "/root",
       "blocker": "Requires ERRC-30 completion plus an explicit future API-major charter and product approval before any breaking v2 design is authorized."
+    },
+    {
+      "id": "PR-50",
+      "parent_id": "MILESTONE-PRODUCTION-HARDENING",
+      "title": "Remediate six independent PR #19 correctness and resource findings",
+      "phase": "production_hardening",
+      "status": "in_progress",
+      "owner_role": "coordinator",
+      "owner_agent": "/root",
+      "depends_on": ["PR-45", "DB-15", "CORE-31", "PR-30", "PR-49"],
+      "owned_paths": [
+        "app/expense-core/src/main/kotlin/com/subhrodip/squarewise/expensecore/recurring/",
+        "app/expense-core/src/main/kotlin/com/subhrodip/squarewise/expensecore/validation/",
+        "app/expense-core/src/main/kotlin/com/subhrodip/squarewise/expensecore/groups/persistence/store/",
+        "app/expense-core/src/main/kotlin/com/subhrodip/squarewise/expensecore/expenses/persistence/store/",
+        "app/bff/src/main/kotlin/com/subhrodip/squarewise/bff/realtime/",
+        "app/bff/src/main/kotlin/com/subhrodip/squarewise/bff/graphql/",
+        "app/bff/src/main/kotlin/com/subhrodip/squarewise/bff/messaging/",
+        "libs/db/src/main/kotlin/com/subhrodip/squarewise/db/config/",
+        "app/expense-core/src/test/",
+        "app/bff/src/test/",
+        "libs/db/src/test/",
+        "docs/architecture/cqrs-data-access.md",
+        "docs/tasks/details/PR-50.md",
+        "docs/tasks/progress.md",
+        "docs/tasks/board.md"
+      ],
+      "specification": "docs/tasks/details/PR-50.md",
+      "acceptance_criteria": [
+        "Recurring worker reads active memberships after schedule locking, uses a bounded per-group query, and validates internally generated participants on the writer.",
+        "Explicitly unknown writer targets fail with a governed configuration error instead of falling back to the primary writer.",
+        "Membership authorization remains writer-authoritative when nested inside eventual-reader query contexts.",
+        "Subscription streams terminate at their TTL and release all indexes/signals without relying on a later event.",
+        "The unused in-process LiveUpdate queue and its result accounting are removed; reactive invalidation remains the only production fanout path.",
+        "Focused regressions and the repository test gate pass, with exact evidence recorded."
+      ],
+      "validation_commands": [
+        "./gradlew :libs:db:test :app:bff:test :app:expense-core:test --rerun-tasks --no-daemon --console=plain",
+        "./gradlew test --rerun-tasks --no-daemon --console=plain",
+        "git diff --check"
+      ],
+      "evidence": [],
+      "reviewer": "/root",
+      "blocker": null
     }
   ]
 }

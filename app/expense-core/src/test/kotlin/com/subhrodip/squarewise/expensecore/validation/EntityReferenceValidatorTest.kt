@@ -101,7 +101,7 @@ class EntityReferenceValidatorTest {
     }
 
     @Test
-    fun `validateActiveMembership fast fails from cache when cached non-member without querying findByGroupIdAndSubjectAndStatus`() {
+    fun `validateActiveMembership uses the writer query even when cache says non-member`() {
         val groupId = UUID.randomUUID()
         val cache = GroupAccessCache()
         // Populate cache as non-member
@@ -112,7 +112,7 @@ class EntityReferenceValidatorTest {
             cachedValidator.validateActiveMembership(groupId, "charlie")
         }
         assertSame(ExpenseErrors.GROUP_ACCESS_HIDDEN, ex.definition)
-        verify(membershipRepository, never()).findByGroupIdAndSubjectAndStatus(groupId, "charlie", "ACTIVE")
+        verify(membershipRepository).findByGroupIdAndSubjectAndStatus(groupId, "charlie", "ACTIVE")
     }
 
     @Test
@@ -297,7 +297,7 @@ class EntityReferenceValidatorTest {
     }
 
     @Test
-    fun `validateActivePlaceholder rejects non-active members using GroupAccessCache without querying membershipRepository`() {
+    fun `validateActivePlaceholder rejects non-active members using the writer query`() {
         val cache = GroupAccessCache()
         val cachedValidator = EntityReferenceValidator(groupRepository, membershipRepository, cache)
         val groupId = UUID.randomUUID()
@@ -309,7 +309,7 @@ class EntityReferenceValidatorTest {
             cachedValidator.validateActivePlaceholder(groupId, placeholderId)
         }
         assertSame(ExpenseErrors.GROUP_NOT_FOUND, ex.definition)
-        org.mockito.Mockito.verify(membershipRepository, org.mockito.Mockito.never())
+        org.mockito.Mockito.verify(membershipRepository)
             .findByMembershipIdAndGroupId(placeholderId, groupId)
     }
 

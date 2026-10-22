@@ -6,7 +6,6 @@ import com.subhrodip.squarewise.bff.messaging.model.DuplicateConsumptionResult
 import com.subhrodip.squarewise.bff.messaging.model.ProcessedConsumptionResult
 import com.subhrodip.squarewise.bff.messaging.persistence.BffEventDeduplicator
 
-import com.subhrodip.squarewise.bff.realtime.LiveUpdate
 import com.subhrodip.squarewise.bff.realtime.LiveUpdateFanout
 import org.slf4j.LoggerFactory
 
@@ -14,7 +13,7 @@ import org.slf4j.LoggerFactory
  * Processes incoming committed group events from Expense Core.
  *
  * Deduplicates events by [BffEventEnvelope.eventId], then emits an invalidation event
- * to reactive subscription sinks and publishes a live update to subscriber queues.
+ * to reactive subscription sinks.
  */
 class BffEventConsumer(
     private val fanout: LiveUpdateFanout,
@@ -46,18 +45,11 @@ class BffEventConsumer(
             }
 
             val invalidation = fanout.emitInvalidation(groupIdStr, revision, changeIdStr)
-            val deliveredQueues = fanout.publish(LiveUpdate(groupIdStr, revision))
             deduplicator.markProcessed(envelope.eventId)
 
-            log.debug(
-                "Processed group event {} for group {}, revision {}, delivered to {} queue(s)",
-                envelope.eventId,
-                groupIdStr,
-                revision,
-                deliveredQueues
-            )
+            log.debug("Processed group event {} for group {}, revision {}", envelope.eventId, groupIdStr, revision)
 
-            return ProcessedConsumptionResult(invalidation, deliveredQueues)
+            return ProcessedConsumptionResult(invalidation)
         } catch (failure: Exception) {
             deduplicator.release(envelope.eventId)
             throw failure

@@ -15,6 +15,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Import
+import org.springframework.scheduling.annotation.EnableScheduling
 import org.springframework.beans.factory.annotation.Value
 import io.micrometer.core.instrument.MeterRegistry
 import org.springframework.http.HttpStatus
@@ -27,6 +28,7 @@ import tools.jackson.databind.ObjectMapper
 
 /** Root Spring Boot composition for the GraphQL BFF application. */
 @SpringBootApplication(excludeName = ["org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration"])
+@EnableScheduling
 @Import(OidcConfigurationGuard::class, RateLimitRedisHealthIndicator::class)
 class BffApplication {
     /** Creates the mandatory Redis-backed distributed limiter for BFF admission. */

@@ -9,7 +9,6 @@ import com.subhrodip.squarewise.bff.messaging.model.ProcessedConsumptionResult
 import com.subhrodip.squarewise.bff.messaging.service.BffEventConsumer
 import com.subhrodip.squarewise.bff.messaging.persistence.BffEventDeduplicator
 import com.subhrodip.squarewise.bff.realtime.GroupInvalidation
-import com.subhrodip.squarewise.bff.realtime.LiveUpdate
 import com.subhrodip.squarewise.bff.realtime.LiveUpdateFanout
 
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -41,14 +40,14 @@ class TwoReplicaBffFanoutTest {
         // Replica A setup
         val fanoutA = LiveUpdateFanout()
         val consumerA = BffEventConsumer(fanoutA, BffEventDeduplicator())
-        val subscriberA = fanoutA.subscribe("user-alice", groupIdStr)
+        fanoutA.subscribe("user-alice", groupIdStr)
         val invalidationsA = mutableListOf<GroupInvalidation>()
         val disposableA = fanoutA.invalidations().subscribe { invalidationsA.add(it) }
 
         // Replica B setup
         val fanoutB = LiveUpdateFanout()
         val consumerB = BffEventConsumer(fanoutB, BffEventDeduplicator())
-        val subscriberB = fanoutB.subscribe("user-bob", groupIdStr)
+        fanoutB.subscribe("user-bob", groupIdStr)
         val invalidationsB = mutableListOf<GroupInvalidation>()
         val disposableB = fanoutB.invalidations().subscribe { invalidationsB.add(it) }
 
@@ -85,26 +84,17 @@ class TwoReplicaBffFanoutTest {
             val resultB = consumerB.consume(envelopeB)
 
             // Assert Replica A local delivery
-            assertEquals(1, (resultA as ProcessedConsumptionResult).deliveredQueues)
             assertEquals(1, invalidationsA.size)
             assertEquals(7L, invalidationsA[0].revision)
-            val updateA = fanoutA.poll(subscriberA.id)
-            assertNotNull(updateA)
-            assertEquals(7L, updateA?.revision)
 
             // Assert Replica B local delivery
-            assertEquals(1, (resultB as ProcessedConsumptionResult).deliveredQueues)
             assertEquals(1, invalidationsB.size)
             assertEquals(7L, invalidationsB[0].revision)
-            val updateB = fanoutB.poll(subscriberB.id)
-            assertNotNull(updateB)
-            assertEquals(7L, updateB?.revision)
 
             // Assert duplicate delivery to Replica A is ignored without redundant fanout
             val duplicateResultA = consumerA.consume(envelopeA)
             assertEquals(eventId, (duplicateResultA as DuplicateConsumptionResult).eventId)
             assertEquals(1, invalidationsA.size) // No new invalidation emitted
-            assertEquals(0, fanoutA.pendingCount(subscriberA.id)) // Queue remains drained
         } finally {
             disposableA.dispose()
             disposableB.dispose()
