@@ -220,10 +220,12 @@ class LiveUpdateFanout(
     private fun removeExpired(maxEntries: Int) {
         val now = Instant.now(clock)
         var removed = 0
-        while (removed < maxEntries) {
+        var inspected = 0
+        while (inspected < maxEntries) {
             val candidate = expirationQueue.peek() ?: break
             if (candidate.expiresAt.isAfter(now)) break
             expirationQueue.poll()
+            inspected++
             val subscription = subscriptions[candidate.subscriptionId]
             if (subscription != null && !now.isBefore(subscription.expiresAt)) {
                 unsubscribe(candidate.subscriptionId)
