@@ -9457,7 +9457,7 @@
       "parent_id": "MILESTONE-PRODUCTION-HARDENING",
       "title": "Remediate six independent PR #19 correctness and resource findings",
       "phase": "production_hardening",
-      "status": "in_progress",
+      "status": "done",
       "owner_role": "coordinator",
       "owner_agent": "/root",
       "depends_on": ["PR-45", "DB-15", "CORE-31", "PR-30", "PR-49"],
@@ -9492,7 +9492,11 @@
         "./gradlew test --rerun-tasks --no-daemon --console=plain",
         "git diff --check"
       ],
-      "evidence": [],
+      "evidence": [
+        "Recurring generation now queries at most 101 active memberships after each schedule lock, validates recurring participants on the writer, and no longer uses a cross-schedule snapshot or membership cache.",
+        "Unknown writer targets raise PLATFORM_CONFIGURATION_INVALID; authorization membership/group checks force writer contexts; BFF subscription expiry has both reactive boundary enforcement and a bounded scheduled sweep; the imperative LiveUpdate queue was deleted.",
+        "Focused DB/BFF/Expense Core tests and ./gradlew test --rerun-tasks --no-daemon --console=plain passed all 59 actionable tasks; git diff --check and registry JSON validation passed. Implementation commit: acde4d1e43e050e271ef8b7456d3a39fa3b33af6."
+      ],
       "reviewer": "/root",
       "blocker": null
     }
