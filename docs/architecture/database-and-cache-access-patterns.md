@@ -88,7 +88,7 @@ flowchart TD
 | **Expense Core** *(Queries)* | `GET /groups` | **0** | **1 read** | Join on `group_memberships` for caller subject. |
 | | `GET /groups/{id}` | **0** | **2 reads** | Verify caller membership + fetch group details. |
 | | `GET /groups/{id}/expenses` | **0** | **2 reads** | Verify membership + keyset/offset page query from `expenses`. |
-| | `GET /groups/{id}/balances` | **0** | **2 reads** | Verify membership + aggregate ledger balance query (`balance_postings` sum). |
+| | `GET /groups/{id}/balances` | **0** | **2 reads** | Writer-bound verification plus aggregate ledger balance query (`balance_postings` sum); never served from a replica or balance cache. |
 | | `GET /groups/{id}/search` | **0** | **2 reads** | Verify membership + indexed filtered query on expenses. |
 | | `GET /groups/{id}/sync/changes` | **0** | **2 reads** | Verify membership + fetch sync change feed by revision cursor. |
 | **Notifications** | `GET /inbox` | **0** | **1 read** | Cursor-paginated read from `notifications_inbox` by recipient subject. |
