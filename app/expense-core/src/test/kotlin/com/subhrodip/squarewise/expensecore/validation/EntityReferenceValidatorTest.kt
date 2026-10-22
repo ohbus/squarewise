@@ -64,7 +64,7 @@ class EntityReferenceValidatorTest {
     }
 
     @Test
-    fun `validateActiveGroup uses groupAccessCache to eliminate duplicate repository lookups`() {
+    fun `validateActiveGroup uses writer lookup even when cache is configured`() {
         val cache = GroupAccessCache()
         val cachedValidator = EntityReferenceValidator(groupRepository, membershipRepository, cache)
         val groupId = UUID.randomUUID()
@@ -76,7 +76,7 @@ class EntityReferenceValidatorTest {
 
         assertEquals("Vacation", first.name)
         assertEquals("Vacation", second.name)
-        verify(groupRepository, times(1)).findById(groupId)
+        verify(groupRepository, times(2)).findById(groupId)
     }
 
     @Test

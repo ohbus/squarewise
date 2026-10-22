@@ -102,20 +102,18 @@ class EntityReferenceValidator(
     }
 
     /**
-     * Verifies that the specified group exists and is currently active.
+     * Verifies that the specified group exists and is currently active on the writer.
+     *
+     * This method is used immediately before persisting rows with a group foreign key,
+     * so it deliberately bypasses the eventually consistent access cache.
      *
      * @param groupId the unique identifier of the target group.
      * @return the resolved [GroupEntity].
      * @throws ExpenseDomainException if the group does not exist or has been archived.
      */
     fun validateActiveGroup(groupId: UUID): GroupEntity {
-        val group = if (groupAccessCache != null) {
-            groupAccessCache.groupEntity(groupId) {
-                groupRepository.findById(groupId).orElse(null)
-            }
-        } else {
-            groupRepository.findById(groupId).orElse(null)
-        } ?: throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group $groupId not found")
+        val group = groupRepository.findById(groupId).orElse(null)
+            ?: throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group $groupId not found")
         if (group.status == "ARCHIVED") {
             throw ExpenseDomainException(ExpenseErrors.GROUP_ARCHIVED, "Group $groupId is archived")
         }
