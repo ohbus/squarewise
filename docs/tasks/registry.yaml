@@ -9491,9 +9491,11 @@
       "specification": "docs/tasks/details/PR-50.md",
       "acceptance_criteria": [
         "Recurring worker reads active memberships after schedule locking, uses a bounded per-group query, and validates internally generated participants on the writer.",
+        "Internal participant validation is selected explicitly rather than inferred from an idempotency-key prefix.",
         "Explicitly unknown writer targets fail with a governed configuration error instead of falling back to the primary writer.",
         "Membership authorization remains writer-authoritative when nested inside eventual-reader query contexts.",
         "Subscription streams terminate at their TTL and release all indexes/signals without relying on a later event.",
+        "Scheduled expiry cleanup is bounded by due entries and does not scan the full live-subscription map per pass.",
         "The unused in-process LiveUpdate queue and its result accounting are removed; reactive invalidation remains the only production fanout path.",
         "Focused regressions and the repository test gate pass, with exact evidence recorded."
       ],
@@ -9507,7 +9509,7 @@
       "evidence": [
         "Recurring generation now queries at most 101 active memberships after each schedule lock, validates recurring participants on the writer, and no longer uses a cross-schedule snapshot or membership cache.",
         "Unknown writer targets raise PLATFORM_CONFIGURATION_INVALID; authorization membership/group checks force writer contexts; balances and settlement suggestions are writer-bound; BFF subscription expiry has both reactive boundary enforcement and a bounded scheduled sweep; the imperative LiveUpdate queue was deleted.",
-        "Focused DB/BFF/Expense Core/Notifications tests, ./gradlew test --rerun-tasks --no-daemon --console=plain (59 actionable tasks), sh -n, contracts, architecture, security hygiene, and git diff --check passed. Implementation commit: 997beb79."
+        "Focused BFF and Expense Core tests cover explicit recurring participant validation, deterministic expiry/index cleanup, and concurrent admission; ./gradlew test --rerun-tasks --no-daemon --console=plain passed all 59 actionable tasks; git diff --check passed. Implementation commits: 997beb79 and a7f62525."
       ],
       "reviewer": "/root",
       "blocker": null
