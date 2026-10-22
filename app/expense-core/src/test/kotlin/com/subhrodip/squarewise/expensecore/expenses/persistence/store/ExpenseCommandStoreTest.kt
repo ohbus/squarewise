@@ -13,7 +13,7 @@ class ExpenseCommandStoreTest {
     @Test
     fun `verifies interface default arguments pass null actorSubject`() {
         var createActor: String? = "sentinel"
-        var createValidation = true
+        var createValidation = false
         var updateActor: String? = "sentinel"
         var deleteActor: String? = "sentinel"
 
@@ -59,10 +59,10 @@ class ExpenseCommandStoreTest {
 
         store.create(gId, sampleRecord, "key-1")
         assertEquals(null, createActor)
-        assertEquals(false, createValidation)
-
-        store.create(gId, sampleRecord, "internal-key", validateParticipants = true)
         assertTrue(createValidation)
+
+        store.create(gId, sampleRecord, "unchecked-test-fixture", validateParticipants = false)
+        assertEquals(false, createValidation)
 
         store.update(gId, eId, sampleRecord)
         assertEquals(null, updateActor)
