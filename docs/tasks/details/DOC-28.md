@@ -89,6 +89,8 @@ git diff --check
 - Repository milestone #1 (`Production readiness`) is assigned to epics #20/#21
   and release-gated children #23-#26/#28-#31. The owner reports all configured
   Project workflows active; public project data does not expose their settings.
+- GitHub's public dependency API verifies #23 blocks #24/#25/#26 and the rollout
+  dependency chain is #28 → #29 → #30 → #31 → #32.
 - Local contract and public-surface validation, GitHub YAML lint, workflow
   validation, Python type checking, three aggregate-gate unit tests, and
   whitespace validation pass. Hosted `Required CI` evidence awaits this commit.

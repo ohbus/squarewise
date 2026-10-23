@@ -8219,11 +8219,12 @@
         "Verified the lean repository label taxonomy and applied type:epic to #20-#22 and type:task to #23-#33.",
         "Verified repository milestone #1 (Production readiness) and assigned it to epics #20/#21 and release-gated children #23-#26/#28-#31.",
         "The owner confirmed all configured Project workflows are active; workflow configuration is not exposed by the public project response.",
+        "Verified native dependencies through GitHub's public API: #24/#25/#26 are blocked by #23 and #29/#30/#31/#32 are blocked by #28/#29/#30/#31 respectively.",
         "Added issue forms, CODEOWNERS, weekly grouped Dependabot updates, and the stable Required CI aggregate with typed unit coverage.",
         "Contract and public-surface validation, GitHub YAML lint, workflow validation, Python type checking, three Required CI unit tests, and git diff checks passed locally."
       ],
       "reviewer": "/root",
-      "blocker": "The Backlog OR-filter correction, item field values, native blocking relationships, repository settings, and ruleset changes require owner action in GitHub; cutover also waits for the new Required CI check to complete on a hosted pull request."
+      "blocker": "Repository settings and ruleset changes require owner action in GitHub; cutover also waits for the new Required CI check to complete on a hosted pull request."
     },
     {
       "id": "OPS-32",
