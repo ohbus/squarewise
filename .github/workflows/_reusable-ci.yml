@@ -756,3 +756,43 @@ jobs:
           if [ "${{ needs.scope.outputs.run_product }}" = true ]; then args+=(--product-selected); fi
           if [ "${{ needs.scope.outputs.run_chaos }}" = true ]; then args+=(--chaos-selected); fi
           uv run --frozen --no-build python tools/ci/e2e_gate.py "${args[@]}"
+
+  required-ci:
+    name: Required CI
+    if: always()
+    needs:
+      - scope
+      - preflight
+      - dependency-review
+      - lint
+      - verify
+      - sonar
+      - e2e-artifacts
+      - e2e-edge-and-security
+      - e2e-product-and-offline
+      - e2e-concurrency-and-chaos
+      - e2e-gate
+    runs-on: ubuntu-slim
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Set up isolated Python tooling
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - name: Aggregate required workflow results
+        run: |
+          uv run --frozen --no-build python tools/ci/required_ci_gate.py \
+            --result "scope=${{ needs.scope.result }}" \
+            --result "preflight=${{ needs.preflight.result }}" \
+            --result "dependency-review=${{ needs.dependency-review.result }}" \
+            --result "lint=${{ needs.lint.result }}" \
+            --result "verify=${{ needs.verify.result }}" \
+            --result "sonar=${{ needs.sonar.result }}" \
+            --result "e2e-artifacts=${{ needs.e2e-artifacts.result }}" \
+            --result "e2e-edge-and-security=${{ needs.e2e-edge-and-security.result }}" \
+            --result "e2e-product-and-offline=${{ needs.e2e-product-and-offline.result }}" \
+            --result "e2e-concurrency-and-chaos=${{ needs.e2e-concurrency-and-chaos.result }}" \
+            --result "e2e-gate=${{ needs.e2e-gate.result }}"

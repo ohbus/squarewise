@@ -1,6 +1,9 @@
 name: Feature request
 description: Propose a scoped improvement to Squarewise
 title: "[Feature]: "
+labels:
+  - "type:feature"
+  - "needs-triage"
 body:
   - type: markdown
     attributes:

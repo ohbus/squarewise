@@ -1,5 +1,24 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
+  "execution_tracking": {
+    "cutover_status": "pending_project_setup",
+    "target_authority": "github",
+    "repository": "ohbus/squarewise",
+    "project_url": null,
+    "issue_map": {
+      "OPS-20": "https://github.com/ohbus/squarewise/issues/23",
+      "OPS-22": "https://github.com/ohbus/squarewise/issues/24",
+      "QA-08": "https://github.com/ohbus/squarewise/issues/25",
+      "AUTH-09": "https://github.com/ohbus/squarewise/issues/26",
+      "OPS-32": "https://github.com/ohbus/squarewise/issues/27",
+      "ERRC-26": "https://github.com/ohbus/squarewise/issues/28",
+      "ERRC-28": "https://github.com/ohbus/squarewise/issues/29",
+      "ERRC-29": "https://github.com/ohbus/squarewise/issues/30",
+      "ERRC-30": "https://github.com/ohbus/squarewise/issues/31",
+      "ERRC-31": "https://github.com/ohbus/squarewise/issues/32",
+      "DOC-28": "https://github.com/ohbus/squarewise/issues/33"
+    }
+  },
   "documentation_gate": {
     "status": "passed",
     "passed_at": "2026-09-17",
@@ -8149,6 +8168,57 @@
       ],
       "reviewer": "/root",
       "blocker": null
+    },
+    {
+      "id": "DOC-28",
+      "parent_id": "MILESTONE-DOCUMENTATION",
+      "title": "Establish GitHub-native delivery management",
+      "phase": "documentation",
+      "status": "in_progress",
+      "owner_role": "coordinator",
+      "owner_agent": "/root",
+      "depends_on": [
+        "DOC-08",
+        "DOC-27"
+      ],
+      "owned_paths": [
+        ".github/",
+        "tools/ci/required_ci_gate.py",
+        "tests/tools/test_required_ci_gate.py",
+        "AGENTS.md",
+        "CONTRIBUTING.md",
+        "docs/working-agreement.md",
+        "docs/operations/ci.md",
+        "docs/tasks/README.md",
+        "docs/tasks/github-project-setup.md",
+        "docs/tasks/registry.yaml",
+        "docs/tasks/board.md",
+        "docs/tasks/progress.md",
+        "docs/tasks/details/DOC-28.md"
+      ],
+      "specification": "docs/tasks/details/DOC-28.md",
+      "acceptance_criteria": [
+        "GitHub Issues and Squarewise Delivery own mutable execution state while repository documents retain durable specifications and evidence.",
+        "Three epics, the ten tasks incomplete at migration start, and DOC-28 are represented without importing completed registry history.",
+        "Issue forms, project fields and views, workflow automation, and default-branch governance implement the reviewed delivery workflow.",
+        "Contract, workflow, YAML, link, and whitespace validation pass with hosted evidence and limitations recorded."
+      ],
+      "validation_commands": [
+        "uv run --frozen --no-build python tools/contracts/validate.py",
+        "uv run --frozen --no-build python tools/contracts/validate_public_surface.py",
+        "uv run --frozen --no-build yamllint -d '{extends: relaxed, rules: {truthy: disable, line-length: disable}}' .github",
+        "make workflow-validate",
+        "make python-typecheck",
+        "python3 -m unittest tests.tools.test_required_ci_gate",
+        "git diff --check"
+      ],
+      "evidence": [
+        "Created GitHub epics #20-#22 and task issues #23-#33, including explicit body-based parent and blocking links pending native relationship conversion.",
+        "Added issue forms, CODEOWNERS, weekly grouped Dependabot updates, and the stable Required CI aggregate with typed unit coverage.",
+        "Contract and public-surface validation, GitHub YAML lint, workflow validation, Python type checking, three Required CI unit tests, and git diff checks passed locally."
+      ],
+      "reviewer": "/root",
+      "blocker": "Project creation and configuration, labels, milestone, native issue relationships, repository settings, and ruleset changes require owner action in GitHub; cutover also waits for the new Required CI check to complete on a hosted pull request."
     },
     {
       "id": "OPS-32",

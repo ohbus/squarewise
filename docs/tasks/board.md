@@ -1,8 +1,11 @@
 # Task board
 
-The coordinator owns this board and `registry.yaml`. The registry is the source
-of truth. Its JSON formatting is valid YAML 1.2 and permits dependency-free
-validation with Python's standard library.
+The coordinator owns this migration snapshot and `registry.yaml`. Live execution
+will move to the mapped GitHub issues and `Squarewise Delivery` project when
+`registry.yaml.execution_tracking.cutover_status` becomes `complete`. Until then,
+this board remains the fallback work queue. The registry's JSON formatting is
+valid YAML 1.2 and permits dependency-free validation with Python's standard
+library. See [`README.md`](README.md) for the authority boundary.
 
 ## CQRS data-access and PostgreSQL reader-scaling milestone
 
@@ -38,6 +41,7 @@ query classification, and evidence gates are complete.
 | ID | Owner | Status | Deliverable |
 | --- | --- | --- | --- |
 | DOC-27 | coordinator | done | GitHub community standards, security reporting, issue/PR templates, MIT license, and accessibility statement |
+| DOC-28 | coordinator | in_progress | GitHub-native issues, project workflow, labels, milestones, and repository governance |
 
 ## Exhaustive public-interface coverage
 

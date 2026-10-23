@@ -1,0 +1,75 @@
+name: Maintainer task
+description: Register scoped implementation, quality, operations, or documentation work
+title: "[Task]: "
+labels:
+  - "type:task"
+  - "needs-triage"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for actionable work. Large outcomes should be parent epic issues with smaller child tasks.
+  - type: input
+    id: task_id
+    attributes:
+      label: Task ID
+      description: Stable repository identifier, if one already exists.
+      placeholder: OPS-00
+    validations:
+      required: false
+  - type: textarea
+    id: objective
+    attributes:
+      label: Objective
+      description: State the observable outcome and why it is needed.
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Parent and dependencies
+      description: Link the parent issue and every issue that blocks this work. Write None when independent.
+    validations:
+      required: true
+  - type: textarea
+    id: owned_paths
+    attributes:
+      label: Owned paths
+      description: List repository paths this task may change and identify any explicit handoff.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Provide a checkable list of required behavior and evidence.
+      placeholder: "- [ ] Observable outcome"
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation commands
+      description: List the exact commands or hosted checks that must pass.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: risk
+    attributes:
+      label: Risk, compatibility, and rollback
+      description: Cover public contracts, data, security/privacy, operations, and rollback where applicable.
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Registration checklist
+      options:
+        - label: I searched for an existing issue and reviewed the relevant product and architecture documents.
+          required: true
+        - label: The owned paths do not overlap active work without an explicit handoff.
+          required: true
+        - label: This issue contains no credentials, personal data, or vulnerability details.
+          required: true

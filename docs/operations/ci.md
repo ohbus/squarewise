@@ -95,6 +95,15 @@ unselected streams are reported as not evaluated and do not fail the gate. If no
 stream is selected, the gate is skipped rather than falsely reporting a full E2E pass.
 Master always selects all three streams.
 
+The final `required-ci` job runs with `if: always()` and reduces every reusable
+workflow result to one stable `Required CI` check. `success` and an intentional
+`skipped` are neutral; failures, cancellation, timeouts, or missing outcomes fail
+the aggregate. Default-branch protection should require
+`Pull request verification (reusable) / Required CI` after that check has run at
+least once on GitHub. The typed evaluator is
+`tools/ci/required_ci_gate.py`, with behavior tests in
+`tests/tools/test_required_ci_gate.py`.
+
 The matrix tests every application and library in parallel after a single
 preflight, validates contracts, REST path structure, GraphQL schema/resolver
 parity, and Compose files, runs Gradle `test`, `check`, and JaCoCo, and builds
@@ -108,6 +117,9 @@ The Expense Core matrix shard also runs the opt-in PostgreSQL tests against the
 other shards retain their normal test configuration.
 Jobs use Microsoft Build of OpenJDK. Python dependencies
 and tooling are deterministically managed via `pyproject.toml` and `uv.lock`.
+Dependabot checks Gradle, GitHub Actions, uv, and repository Docker manifests on
+one bounded weekly schedule from `.github/dependabot.yml`; minor and patch
+updates are grouped per ecosystem to avoid unnecessary pull-request churn.
 CI workflows install dependencies via the immutable commit
 `astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7` (the `v10.2.0` tag)
 with `uv sync --frozen --no-build`, running tools and scripts via

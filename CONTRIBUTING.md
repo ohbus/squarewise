@@ -63,11 +63,16 @@ Before building a major new capability or changing service boundaries:
    to outline its motivation, desired outcome, design trade-offs, and boundary
    implications.
 
-### Working Agreement & Task Registry
+### Working Agreement & Delivery Tracking
 Squarewise operates under a strict documentation-first workflow:
-- The authoritative task registry lives in [`docs/tasks/registry.yaml`](docs/tasks/registry.yaml).
-- The current work queue is visible in [`docs/tasks/board.md`](docs/tasks/board.md).
+- Live status, assignment, priority, iteration, milestones, and blockers move to
+  mapped GitHub issues and the `Squarewise Delivery` project after the DOC-28
+  cutover recorded in [`docs/tasks/registry.yaml`](docs/tasks/registry.yaml).
+- Durable task specifications remain under [`docs/tasks/details/`](docs/tasks/details/),
+  with stable IDs and issue mappings in the registry.
 - Verified implementation evidence is logged in [`docs/tasks/progress.md`](docs/tasks/progress.md).
+- The authority boundary and migration rules are documented in
+  [`docs/tasks/README.md`](docs/tasks/README.md).
 - Read [`docs/working-agreement.md`](docs/working-agreement.md) for full context on our execution protocol.
 
 ---

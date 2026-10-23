@@ -1,6 +1,9 @@
 name: Bug report
 description: Report a reproducible defect in Squarewise
 title: "[Bug]: "
+labels:
+  - "type:bug"
+  - "needs-triage"
 body:
   - type: markdown
     attributes:
