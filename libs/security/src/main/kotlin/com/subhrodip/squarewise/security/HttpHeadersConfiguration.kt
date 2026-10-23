@@ -1,5 +1,3 @@
-@file:Suppress("DEPRECATION")
-
 package com.subhrodip.squarewise.security
 
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
@@ -47,7 +45,7 @@ object HttpHeadersConfiguration {
                     .preload(true)
             }
             .contentSecurityPolicy { csp -> csp.policyDirectives(contentSecurityPolicy) }
-            .permissionsPolicy { permissions -> permissions.policy(DEFAULT_PERMISSIONS_POLICY) }
+            .permissionsPolicyHeader { permissions -> permissions.policy(DEFAULT_PERMISSIONS_POLICY) }
     }
 
     /**

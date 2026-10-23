@@ -10,7 +10,6 @@ import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseRecord
 import com.subhrodip.squarewise.expensecore.expenses.persistence.store.InMemoryExpenseStore
 import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupMembershipRepository
 import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupRepository
-import com.subhrodip.squarewise.expensecore.groups.cache.GroupAccessCache
 import com.subhrodip.squarewise.expensecore.validation.EntityReferenceValidator
 
 import org.junit.jupiter.api.Test
@@ -234,24 +233,23 @@ class SettlementControllerTest {
     }
 
     @Test
-    fun `controller with groupAccessCache validates and caches active membership`() {
-        val cache = GroupAccessCache()
-        val cachedController = SettlementController(service, EntityReferenceValidator(groups, memberships, cache))
-        val cachedMvc = MockMvcBuilders.standaloneSetup(cachedController)
+    fun `controller validates active membership`() {
+        val controller = SettlementController(service, EntityReferenceValidator(groups, memberships))
+        val mvc = MockMvcBuilders.standaloneSetup(controller)
             .setControllerAdvice(GlobalErrorAdvice()).build()
 
         val groupId = UUID.randomUUID()
-        // Suggestions call checks membership via cache
-        cachedMvc.perform(get(ApiEndpoints.ExpenseCore.V1.groupSettlementSuggestions(groupId)).with(user))
+        // Suggestions call checks membership.
+        mvc.perform(get(ApiEndpoints.ExpenseCore.V1.groupSettlementSuggestions(groupId)).with(user))
             .andExpect(status().isOk)
 
-        // Subsequent call exercises cache hit in GroupAccessCache.isMember
-        cachedMvc.perform(get(ApiEndpoints.ExpenseCore.V1.groupSettlementSuggestions(groupId)).with(user))
+        // Subsequent call remains valid for the same group.
+        mvc.perform(get(ApiEndpoints.ExpenseCore.V1.groupSettlementSuggestions(groupId)).with(user))
             .andExpect(status().isOk)
 
         // Non-member request
         val nonMember = RequestPostProcessor { request -> request.userPrincipal = Principal { "other-user" }; request }
-        cachedMvc.perform(get(ApiEndpoints.ExpenseCore.V1.groupSettlementSuggestions(groupId)).with(nonMember))
+        mvc.perform(get(ApiEndpoints.ExpenseCore.V1.groupSettlementSuggestions(groupId)).with(nonMember))
             .andExpect(status().isNotFound)
     }
 

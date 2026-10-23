@@ -228,7 +228,7 @@ class JpaSettlementStoreTest @Autowired constructor(
             audit = audit,
             synchronization = synchronization,
             outbox = outbox,
-            referenceValidator = EntityReferenceValidator(groupRepository, membershipRepository, null),
+            referenceValidator = EntityReferenceValidator(groupRepository, membershipRepository),
             groupAccessCache = null
         )
         val groupId = UUID.randomUUID()

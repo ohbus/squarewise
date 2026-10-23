@@ -1,5 +1,8 @@
 package com.subhrodip.squarewise.expensecore.groups.cache
 
+import com.subhrodip.squarewise.expensecore.expenses.api.response.GroupBalanceItem
+import com.subhrodip.squarewise.expensecore.groups.api.GroupMemberResponse
+import com.subhrodip.squarewise.expensecore.groups.api.GroupResponse
 import com.subhrodip.squarewise.expensecore.groups.domain.GroupEntity
 import org.springframework.stereotype.Component
 import org.springframework.transaction.support.TransactionSynchronization
@@ -33,10 +36,10 @@ class GroupAccessCache(
 
     private val membershipCache = ConcurrentHashMap<Pair<UUID, String>, CacheEntry<Boolean>>()
     private val groupStatusCache = ConcurrentHashMap<UUID, CacheEntry<String?>>()
-    private val membersListCache = ConcurrentHashMap<Pair<UUID, Int>, CacheEntry<List<*>>>()
-    private val balancesCache = ConcurrentHashMap<UUID, CacheEntry<List<*>>>()
+    private val membersListCache = ConcurrentHashMap<Pair<UUID, Int>, CacheEntry<List<GroupMemberResponse>>>()
+    private val balancesCache = ConcurrentHashMap<UUID, CacheEntry<List<GroupBalanceItem>>>()
     private val memberIdsCache = ConcurrentHashMap<UUID, CacheEntry<Set<UUID>>>()
-    private val groupDetailsCache = ConcurrentHashMap<UUID, CacheEntry<Any?>>()
+    private val groupDetailsCache = ConcurrentHashMap<UUID, CacheEntry<GroupResponse?>>()
     private val groupEntityCache = ConcurrentHashMap<UUID, CacheEntry<GroupEntity?>>()
     private val invalidationTimestamps = ConcurrentHashMap<Pair<UUID, String>, Instant>()
     private val groupGenerations = ConcurrentHashMap<UUID, Long>()
@@ -101,13 +104,12 @@ class GroupAccessCache(
      * @param loader fallback supplier to query the database on cache miss.
      * @return list of group members.
      */
-    @Suppress("UNCHECKED_CAST")
-    fun <T> members(groupId: UUID, limit: Int, loader: () -> List<T>): List<T> {
+    fun members(groupId: UUID, limit: Int, loader: () -> List<GroupMemberResponse>): List<GroupMemberResponse> {
         val key = groupId to limit
         val now = Instant.now()
         val cached = membersListCache[key]
         if (cached != null && !cached.isExpired(now)) {
-            return cached.value as List<T>
+            return cached.value
         }
         val gen = currentGeneration(groupId)
         val computed = loader()
@@ -125,12 +127,11 @@ class GroupAccessCache(
      * @param loader fallback supplier to query the database on cache miss.
      * @return list of computed balance items.
      */
-    @Suppress("UNCHECKED_CAST")
-    fun <T> balances(groupId: UUID, loader: () -> List<T>): List<T> {
+    fun balances(groupId: UUID, loader: () -> List<GroupBalanceItem>): List<GroupBalanceItem> {
         val now = Instant.now()
         val cached = balancesCache[groupId]
         if (cached != null && !cached.isExpired(now)) {
-            return cached.value as List<T>
+            return cached.value
         }
         val gen = currentGeneration(groupId)
         val computed = loader()
@@ -193,12 +194,11 @@ class GroupAccessCache(
      * @param loader fallback supplier to query the database on cache miss.
      * @return resolved group details or null.
      */
-    @Suppress("UNCHECKED_CAST")
-    fun <T> groupDetails(groupId: UUID, loader: () -> T?): T? {
+    fun groupDetails(groupId: UUID, loader: () -> GroupResponse?): GroupResponse? {
         val now = Instant.now()
         val cached = groupDetailsCache[groupId]
         if (cached != null && !cached.isExpired(now)) {
-            return cached.value as? T
+            return cached.value
         }
         val gen = currentGeneration(groupId)
         val computed = loader()

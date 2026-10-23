@@ -3,7 +3,6 @@ package com.subhrodip.squarewise.expensecore.validation
 import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
 import com.subhrodip.squarewise.errors.catalog.PlatformErrors
 import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
-import com.subhrodip.squarewise.expensecore.groups.cache.GroupAccessCache
 import com.subhrodip.squarewise.expensecore.groups.domain.GroupEntity
 import com.subhrodip.squarewise.expensecore.groups.domain.GroupMembershipEntity
 import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupMembershipRepository
@@ -64,15 +63,14 @@ class EntityReferenceValidatorTest {
     }
 
     @Test
-    fun `validateActiveGroup uses writer lookup even when cache is configured`() {
-        val cache = GroupAccessCache()
-        val cachedValidator = EntityReferenceValidator(groupRepository, membershipRepository, cache)
+    fun `validateActiveGroup uses writer lookup on repeat calls`() {
+        val repeatedValidator = EntityReferenceValidator(groupRepository, membershipRepository)
         val groupId = UUID.randomUUID()
         val group = GroupEntity(groupId, "Vacation", "TRIP", "EUR", status = "ACTIVE")
         `when`(groupRepository.findById(groupId)).thenReturn(Optional.of(group))
 
-        val first = cachedValidator.validateActiveGroup(groupId)
-        val second = cachedValidator.validateActiveGroup(groupId)
+        val first = repeatedValidator.validateActiveGroup(groupId)
+        val second = repeatedValidator.validateActiveGroup(groupId)
 
         assertEquals("Vacation", first.name)
         assertEquals("Vacation", second.name)
@@ -101,15 +99,12 @@ class EntityReferenceValidatorTest {
     }
 
     @Test
-    fun `validateActiveMembership uses the writer query even when cache says non-member`() {
+    fun `validateActiveMembership uses the writer query`() {
         val groupId = UUID.randomUUID()
-        val cache = GroupAccessCache()
-        // Populate cache as non-member
-        cache.isMember(groupId, "charlie") { false }
-        val cachedValidator = EntityReferenceValidator(groupRepository, membershipRepository, cache)
+        val writerValidator = EntityReferenceValidator(groupRepository, membershipRepository)
 
         val ex = assertThrows(ExpenseDomainException::class.java) {
-            cachedValidator.validateActiveMembership(groupId, "charlie")
+            writerValidator.validateActiveMembership(groupId, "charlie")
         }
         assertSame(ExpenseErrors.GROUP_ACCESS_HIDDEN, ex.definition)
         verify(membershipRepository).findByGroupIdAndSubjectAndStatus(groupId, "charlie", "ACTIVE")
@@ -298,15 +293,11 @@ class EntityReferenceValidatorTest {
 
     @Test
     fun `validateActivePlaceholder rejects non-active members using the writer query`() {
-        val cache = GroupAccessCache()
-        val cachedValidator = EntityReferenceValidator(groupRepository, membershipRepository, cache)
+        val writerValidator = EntityReferenceValidator(groupRepository, membershipRepository)
         val groupId = UUID.randomUUID()
         val placeholderId = UUID.randomUUID()
-        val activeMemberId = UUID.randomUUID()
-        cache.putActiveMemberIds(groupId, setOf(activeMemberId))
-
         val ex = assertThrows(ExpenseDomainException::class.java) {
-            cachedValidator.validateActivePlaceholder(groupId, placeholderId)
+            writerValidator.validateActivePlaceholder(groupId, placeholderId)
         }
         assertSame(ExpenseErrors.GROUP_NOT_FOUND, ex.definition)
         verify(membershipRepository)
@@ -314,27 +305,25 @@ class EntityReferenceValidatorTest {
     }
 
     @Test
-    fun `isActiveMember and isActiveGroup leverage GroupAccessCache`() {
-        val cache = GroupAccessCache()
-        val cachedValidator = EntityReferenceValidator(groupRepository, membershipRepository, cache)
+    fun `isActiveMember and isActiveGroup query the writer`() {
+        val writerValidator = EntityReferenceValidator(groupRepository, membershipRepository)
         val groupId = UUID.randomUUID()
         val subject = "cached-user"
 
         `when`(membershipRepository.existsByGroupIdAndSubjectAndStatus(groupId, subject, "ACTIVE")).thenReturn(true)
         `when`(groupRepository.findById(groupId)).thenReturn(Optional.of(GroupEntity(groupId, "Trip", "TRIP", "USD", status = "ACTIVE")))
 
-        assertTrue(cachedValidator.isActiveMember(groupId, subject))
-        assertTrue(cachedValidator.isActiveGroup(groupId))
+        assertTrue(writerValidator.isActiveMember(groupId, subject))
+        assertTrue(writerValidator.isActiveGroup(groupId))
 
-        // On second invocation, cache serves without invoking repositories again
-        assertTrue(cachedValidator.isActiveMember(groupId, subject))
-        assertTrue(cachedValidator.isActiveGroup(groupId))
+        // Both calls remain writer-authoritative.
+        assertTrue(writerValidator.isActiveMember(groupId, subject))
+        assertTrue(writerValidator.isActiveGroup(groupId))
     }
 
     @Test
-    fun `financial participant validation uses the bounded repository query even with a cache`() {
-        val cache = GroupAccessCache()
-        val cachedValidator = EntityReferenceValidator(groupRepository, membershipRepository, cache)
+    fun `financial participant validation uses the bounded repository query`() {
+        val writerValidator = EntityReferenceValidator(groupRepository, membershipRepository)
         val groupId = UUID.randomUUID()
         val p1 = UUID.randomUUID()
         val p2 = UUID.randomUUID()
@@ -349,7 +338,7 @@ class EntityReferenceValidatorTest {
             )
         ).thenReturn(listOf(m1, m2))
 
-        val participants = cachedValidator.validateFinancialParticipants(groupId, listOf(p1), listOf(p2))
+        val participants = writerValidator.validateFinancialParticipants(groupId, listOf(p1), listOf(p2))
         assertEquals(setOf(p1, p2), participants)
 
         // The writer-authoritative bounded query is repeated for each financial check.
@@ -360,7 +349,7 @@ class EntityReferenceValidatorTest {
                 "ACTIVE"
             )
         ).thenReturn(listOf(m1))
-        val active = cachedValidator.validateActiveParticipants(groupId, listOf(p1, p2))
+        val active = writerValidator.validateActiveParticipants(groupId, listOf(p1, p2))
         assertEquals(setOf(p1, p2), active)
 
         `when`(
@@ -370,7 +359,7 @@ class EntityReferenceValidatorTest {
                 "ACTIVE"
             )
         ).thenReturn(listOf(m1, m2))
-        cachedValidator.validateSettlementParticipants(groupId, p1, p2)
+        writerValidator.validateSettlementParticipants(groupId, p1, p2)
         verify(membershipRepository, never()).findByGroupIdAndStatus(groupId, "ACTIVE")
     }
 
@@ -410,8 +399,7 @@ class EntityReferenceValidatorTest {
 
     @Test
     fun `validateSettlementParticipants rejects with a writer query when counterparty is missing`() {
-        val cache = GroupAccessCache()
-        val cachedValidator = EntityReferenceValidator(groupRepository, membershipRepository, cache)
+        val writerValidator = EntityReferenceValidator(groupRepository, membershipRepository)
         val groupId = UUID.randomUUID()
         val from = UUID.randomUUID()
         val to = UUID.randomUUID()
@@ -425,7 +413,7 @@ class EntityReferenceValidatorTest {
         ).thenReturn(listOf(mFrom))
 
         val ex = assertThrows(ExpenseDomainException::class.java) {
-            cachedValidator.validateSettlementParticipants(groupId, from, to)
+            writerValidator.validateSettlementParticipants(groupId, from, to)
         }
         assertSame(ExpenseErrors.GROUP_NOT_FOUND, ex.definition)
     }

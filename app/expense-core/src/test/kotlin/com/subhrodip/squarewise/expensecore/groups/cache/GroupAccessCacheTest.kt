@@ -10,6 +10,10 @@ import java.time.Duration
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
 import org.springframework.transaction.support.TransactionSynchronizationManager
+import com.subhrodip.squarewise.expensecore.expenses.api.request.MoneyDto
+import com.subhrodip.squarewise.expensecore.expenses.api.response.GroupBalanceItem
+import com.subhrodip.squarewise.expensecore.groups.api.GroupMemberResponse
+import com.subhrodip.squarewise.expensecore.groups.api.GroupResponse
 import com.subhrodip.squarewise.expensecore.groups.domain.GroupEntity
 
 /**
@@ -18,6 +22,15 @@ import com.subhrodip.squarewise.expensecore.groups.domain.GroupEntity
 class GroupAccessCacheTest {
 
     private lateinit var cache: GroupAccessCache
+
+    private fun member(groupId: UUID, subject: String): GroupMemberResponse =
+        GroupMemberResponse(groupId, groupId, subject)
+
+    private fun balance(participantId: String): GroupBalanceItem =
+        GroupBalanceItem(participantId, MoneyDto("EUR", "0"))
+
+    private fun groupDetailsValue(groupId: UUID): GroupResponse =
+        GroupResponse(groupId, "Trip", "TRIP", 0L)
 
     @BeforeEach
     fun setUp() {
@@ -106,7 +119,7 @@ class GroupAccessCacheTest {
     fun `members caches roster and avoids repeat loader calls`() {
         val groupId = UUID.randomUUID()
         val calls = AtomicInteger(0)
-        val roster = listOf("alice", "bob")
+        val roster = listOf(member(groupId, "alice"), member(groupId, "bob"))
 
         val res1 = cache.members(groupId, 50) { calls.incrementAndGet(); roster }
         val res2 = cache.members(groupId, 50) { calls.incrementAndGet(); roster }
@@ -124,7 +137,7 @@ class GroupAccessCacheTest {
     fun `balances caches balance list and invalidates appropriately`() {
         val groupId = UUID.randomUUID()
         val calls = AtomicInteger(0)
-        val sampleBalances = listOf("balance-1", "balance-2")
+        val sampleBalances = listOf(balance("balance-1"), balance("balance-2"))
 
         val res1 = cache.balances(groupId) { calls.incrementAndGet(); sampleBalances }
         val res2 = cache.balances(groupId) { calls.incrementAndGet(); sampleBalances }
@@ -161,7 +174,7 @@ class GroupAccessCacheTest {
     fun `groupDetails caches group entity and invalidates on invalidateGroup`() {
         val groupId = UUID.randomUUID()
         val calls = AtomicInteger(0)
-        val details = "group-details-$groupId"
+        val details = groupDetailsValue(groupId)
 
         val res1 = cache.groupDetails(groupId) { calls.incrementAndGet(); details }
         val res2 = cache.groupDetails(groupId) { calls.incrementAndGet(); details }
@@ -182,7 +195,7 @@ class GroupAccessCacheTest {
         val entityCalls = AtomicInteger(0)
         val detailsCalls = AtomicInteger(0)
         val entity = GroupEntity(groupId, "Trip", "TRIP", "EUR", "ACTIVE", 0L)
-        val details = "group-response-$groupId"
+        val details = groupDetailsValue(groupId)
 
         val e1 = cache.groupEntity(groupId) { entityCalls.incrementAndGet(); entity }
         val d1 = cache.groupDetails(groupId) { detailsCalls.incrementAndGet(); details }
@@ -206,12 +219,12 @@ class GroupAccessCacheTest {
     fun `invalidateBalancesAfterCommit purges balance cache`() {
         val groupId = UUID.randomUUID()
         val calls = AtomicInteger(0)
-        cache.balances(groupId) { calls.incrementAndGet(); listOf("b1") }
-        cache.balances(groupId) { calls.incrementAndGet(); listOf("b1") }
+        cache.balances(groupId) { calls.incrementAndGet(); listOf(balance("b1")) }
+        cache.balances(groupId) { calls.incrementAndGet(); listOf(balance("b1")) }
         assertEquals(1, calls.get())
 
         cache.invalidateBalancesAfterCommit(groupId)
-        cache.balances(groupId) { calls.incrementAndGet(); listOf("b1") }
+        cache.balances(groupId) { calls.incrementAndGet(); listOf(balance("b1")) }
         assertEquals(2, calls.get())
     }
 
@@ -221,16 +234,16 @@ class GroupAccessCacheTest {
         val subject = "user-clear"
         cache.isMember(groupId, subject) { true }
         cache.groupStatus(groupId) { "ACTIVE" }
-        cache.members(groupId, 10) { listOf("m1") }
-        cache.balances(groupId) { listOf("b1") }
+        cache.members(groupId, 10) { listOf(member(groupId, "m1")) }
+        cache.balances(groupId) { listOf(balance("b1")) }
 
         cache.clear()
 
         val calls = AtomicInteger(0)
         cache.isMember(groupId, subject) { calls.incrementAndGet(); true }
         cache.groupStatus(groupId) { calls.incrementAndGet(); "ACTIVE" }
-        cache.members(groupId, 10) { calls.incrementAndGet(); listOf("m1") }
-        cache.balances(groupId) { calls.incrementAndGet(); listOf("b1") }
+        cache.members(groupId, 10) { calls.incrementAndGet(); listOf(member(groupId, "m1")) }
+        cache.balances(groupId) { calls.incrementAndGet(); listOf(balance("b1")) }
 
         assertEquals(4, calls.get())
     }
@@ -285,15 +298,15 @@ class GroupAccessCacheTest {
         assertEquals(2, statusLoads)
 
         var rosterLoads = 0
-        fastCache.members(groupId, 10) { rosterLoads++; listOf("alice") }
+        fastCache.members(groupId, 10) { rosterLoads++; listOf(member(groupId, "alice")) }
         Thread.sleep(10)
-        fastCache.members(groupId, 10) { rosterLoads++; listOf("alice") }
+        fastCache.members(groupId, 10) { rosterLoads++; listOf(member(groupId, "alice")) }
         assertEquals(2, rosterLoads)
 
         var balanceLoads = 0
-        fastCache.balances(groupId) { balanceLoads++; listOf("b1") }
+        fastCache.balances(groupId) { balanceLoads++; listOf(balance("b1")) }
         Thread.sleep(10)
-        fastCache.balances(groupId) { balanceLoads++; listOf("b1") }
+        fastCache.balances(groupId) { balanceLoads++; listOf(balance("b1")) }
         assertEquals(2, balanceLoads)
 
         var idsLoads = 0
@@ -303,9 +316,9 @@ class GroupAccessCacheTest {
         assertEquals(2, idsLoads)
 
         var detailsLoads = 0
-        fastCache.groupDetails(groupId) { detailsLoads++; "details" }
+        fastCache.groupDetails(groupId) { detailsLoads++; groupDetailsValue(groupId) }
         Thread.sleep(10)
-        fastCache.groupDetails(groupId) { detailsLoads++; "details" }
+        fastCache.groupDetails(groupId) { detailsLoads++; groupDetailsValue(groupId) }
         assertEquals(2, detailsLoads)
     }
 
@@ -345,20 +358,20 @@ class GroupAccessCacheTest {
 
         val m1 = cache.members(groupId, 10) {
             cache.invalidateMembers(groupId)
-            listOf("m1")
+            listOf(member(groupId, "m1"))
         }
-        assertEquals(listOf("m1"), m1)
+        assertEquals(listOf(member(groupId, "m1")), m1)
         var mLoads = 0
-        cache.members(groupId, 10) { mLoads++; listOf("m1") }
+        cache.members(groupId, 10) { mLoads++; listOf(member(groupId, "m1")) }
         assertEquals(1, mLoads)
 
         val b1 = cache.balances(groupId) {
             cache.invalidateGroup(groupId)
-            listOf("b1")
+            listOf(balance("b1"))
         }
-        assertEquals(listOf("b1"), b1)
+        assertEquals(listOf(balance("b1")), b1)
         var bLoads = 0
-        cache.balances(groupId) { bLoads++; listOf("b1") }
+        cache.balances(groupId) { bLoads++; listOf(balance("b1")) }
         assertEquals(1, bLoads)
 
         val id = UUID.randomUUID()
@@ -373,11 +386,11 @@ class GroupAccessCacheTest {
 
         val d1 = cache.groupDetails(groupId) {
             cache.invalidateGroup(groupId)
-            "details"
+            groupDetailsValue(groupId)
         }
-        assertEquals("details", d1)
+        assertEquals(groupDetailsValue(groupId), d1)
         var dLoads = 0
-        cache.groupDetails(groupId) { dLoads++; "details" }
+        cache.groupDetails(groupId) { dLoads++; groupDetailsValue(groupId) }
         assertEquals(1, dLoads)
     }
 
@@ -385,9 +398,9 @@ class GroupAccessCacheTest {
     fun `groupDetails caches and returns null when loader returns null`() {
         val groupId = UUID.randomUUID()
         val calls = AtomicInteger(0)
-        val r1 = cache.groupDetails<String>(groupId) { calls.incrementAndGet(); null }
+        val r1 = cache.groupDetails(groupId) { calls.incrementAndGet(); null }
         assertNull(r1)
-        val r2 = cache.groupDetails<String>(groupId) { calls.incrementAndGet(); "should-not-load" }
+        val r2 = cache.groupDetails(groupId) { calls.incrementAndGet(); groupDetailsValue(groupId) }
         assertNull(r2)
         assertEquals(1, calls.get())
     }
@@ -395,7 +408,7 @@ class GroupAccessCacheTest {
     @Test
     fun `invalidateBalancesAfterCommit registers afterCommit hook when synchronization active`() {
         val groupId = UUID.randomUUID()
-        cache.balances(groupId) { listOf("b1") }
+        cache.balances(groupId) { listOf(balance("b1")) }
 
         TransactionSynchronizationManager.initSynchronization()
         try {
@@ -430,7 +443,7 @@ class GroupAccessCacheTest {
         }
         val testGroup = UUID.randomUUID()
         tinyCache.invalidateBalances(testGroup)
-        val loaded = tinyCache.balances(testGroup) { listOf("b-$testGroup") }
-        assertEquals(listOf("b-$testGroup"), loaded)
+        val loaded = tinyCache.balances(testGroup) { listOf(balance(testGroup.toString())) }
+        assertEquals(listOf(balance(testGroup.toString())), loaded)
     }
 }

@@ -8,7 +8,6 @@ import com.subhrodip.squarewise.expensecore.groups.domain.GroupMembershipEntity
 import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupMembershipRepository
 import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupRepository
 import com.subhrodip.squarewise.db.routing.DbContextHolder
-import com.subhrodip.squarewise.expensecore.groups.cache.GroupAccessCache
 import org.springframework.stereotype.Component
 import java.security.Principal
 import java.util.UUID
@@ -23,8 +22,7 @@ import java.util.UUID
 @Component
 class EntityReferenceValidator(
     private val groupRepository: GroupRepository,
-    private val membershipRepository: GroupMembershipRepository,
-    @Suppress("unused") private val groupAccessCache: GroupAccessCache? = null
+    private val membershipRepository: GroupMembershipRepository
 ) {
 
     /**

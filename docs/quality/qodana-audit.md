@@ -24,11 +24,33 @@ The completed scan's remaining 35 findings were `CanConvertToMultiDollarString`,
 - BFF configuration and gateways: `ProductionSecurityConfig.kt`, `UpstreamConfiguration.kt`, `AccountsGateway.kt`, and `ExpenseCoreGateway.kt`.
 - Expense Core scheduled/configuration code: `ExpenseIdempotencyCleanup.kt`, `OutboxRelayDaemon.kt`, `RecurringExpenseWorker.kt`, and `ProductionSecurityConfig.kt`.
 - Notifications configuration/listeners: `RabbitNotificationListener.kt`, `AuthEmailRabbitListener.kt`, `AuthEmailSecurityConfiguration.kt`, and `ProductionSecurityConfig.kt`.
-- Shared infrastructure: `GlobalErrorHandler.kt` and `OidcConfigurationGuard.kt`.
+- Shared infrastructure: `OidcConfigurationGuard.kt`. The historical SARIF named
+  `GlobalErrorHandler.kt`; the current implementation is `GlobalErrorAdvice.kt`,
+  which does not carry this file-level suppression.
 
 This inspection recommends Kotlin's multi-dollar string syntax when a literal contains a dollar sign. The flagged values are predominantly Spring `${...}` placeholders escaped specifically for Spring's property resolver, while the remaining ordinary interpolations are short diagnostic strings. Converting them would add a non-standard delimiter to configuration-heavy code without changing behavior or improving safety. Each finding is now covered by a narrow file-level `@file:Suppress("CanConvertToMultiDollarString")`; no global suppression was added. The suppressions are intentional reviewed-false-positive decisions and keep the warning set closed in the checked-in profile.
 
 Qodana also displayed suggested inspections such as unused symbols and imports. Those suggestions are outside the enabled profile result set and were not changed without a concrete compiler or behavior justification.
+
+## Current suppression inventory
+
+The follow-up source audit found 36 warning annotations before cleanup. The
+current source retains only the reviewed, localized cases:
+
+- 17 `CanConvertToMultiDollarString` file-level suppressions for Spring property
+  placeholders and short diagnostic interpolations.
+- 1 `UnstableApiUsage` suppression in `settings.gradle.kts` for intentional Gradle
+  repository-mode configuration.
+- 7 test-only `UNCHECKED_CAST` suppressions for Mockito/raw-Java generic interop.
+- 6 `UNUSED_PARAMETER` suppressions for safe Spring exception handlers and one
+  reflection fixture.
+
+The stale file-wide `DEPRECATION` suppression in `HttpHeadersConfiguration.kt`,
+the unused `GroupAccessCache` constructor dependency in
+`EntityReferenceValidator`, and three production generic cache casts were
+removed. Group access caches now use concrete API DTO types, so the compiler no
+longer needs unchecked-cast suppressions in production code. No global compiler,
+Gradle, or Qodana warning suppression was added.
 
 ## Reproduction
 

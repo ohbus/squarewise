@@ -963,7 +963,7 @@ class JpaExpenseStoreTest @Autowired constructor(
             groupRepository = groupRepository,
             outboxStore = outboxStore,
             syncStore = syncStore,
-            referenceValidator = EntityReferenceValidator(groupRepository, membershipRepository, null),
+            referenceValidator = EntityReferenceValidator(groupRepository, membershipRepository),
             groupAccessCache = null
         )
         val group = groupStore.create("alice", CreateGroupRequest("Uncached Balances", "TRIP", "EUR"))
@@ -987,7 +987,7 @@ class JpaExpenseStoreTest @Autowired constructor(
             groupRepository = groupRepository,
             outboxStore = outboxStore,
             syncStore = syncStore,
-            referenceValidator = EntityReferenceValidator(groupRepository, membershipRepository, null),
+            referenceValidator = EntityReferenceValidator(groupRepository, membershipRepository),
             groupAccessCache = null
         )
 

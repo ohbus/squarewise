@@ -7,7 +7,6 @@ import com.subhrodip.squarewise.expensecore.sync.api.SyncController
 import com.subhrodip.squarewise.expensecore.sync.persistence.InMemorySynchronizationStore
 import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupMembershipRepository
 import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupRepository
-import com.subhrodip.squarewise.expensecore.groups.cache.GroupAccessCache
 import com.subhrodip.squarewise.expensecore.validation.EntityReferenceValidator
 
 import com.subhrodip.squarewise.errors.web.GlobalErrorAdvice
@@ -107,32 +106,30 @@ class SyncControllerTest {
     }
 
     @Test
-    fun `page with groupAccessCache successfully checks cached active membership`() {
-        val cache = GroupAccessCache()
-        val cachedMvc = MockMvcBuilders.standaloneSetup(
-            SyncController(store, EntityReferenceValidator(groups, memberships, cache))
+    fun `page successfully checks active membership`() {
+        val repeatedMvc = MockMvcBuilders.standaloneSetup(
+            SyncController(store, EntityReferenceValidator(groups, memberships))
         )
             .setControllerAdvice(GlobalErrorAdvice())
             .build()
 
-        cachedMvc.perform(get(ApiEndpoints.ExpenseCore.V1.groupSyncSnapshot(groupId)).with(user))
+        repeatedMvc.perform(get(ApiEndpoints.ExpenseCore.V1.groupSyncSnapshot(groupId)).with(user))
             .andExpect(status().isOk)
 
-        // Repeat call: exercises the cache hit branch in GroupAccessCache.isMember
-        cachedMvc.perform(get(ApiEndpoints.ExpenseCore.V1.groupSyncSnapshot(groupId)).with(user))
+        // Repeat call: verifies the route remains stable across repeated reads.
+        repeatedMvc.perform(get(ApiEndpoints.ExpenseCore.V1.groupSyncSnapshot(groupId)).with(user))
             .andExpect(status().isOk)
     }
 
     @Test
-    fun `page with groupAccessCache rejects non-member`() {
-        val cache = GroupAccessCache()
-        val cachedMvc = MockMvcBuilders.standaloneSetup(
-            SyncController(store, EntityReferenceValidator(groups, memberships, cache))
+    fun `page rejects non-member`() {
+        val nonMemberMvc = MockMvcBuilders.standaloneSetup(
+            SyncController(store, EntityReferenceValidator(groups, memberships))
         )
             .setControllerAdvice(GlobalErrorAdvice())
             .build()
 
-        cachedMvc.perform(get(ApiEndpoints.ExpenseCore.V1.groupSyncSnapshot(groupId)).with(RequestPostProcessor { request ->
+        nonMemberMvc.perform(get(ApiEndpoints.ExpenseCore.V1.groupSyncSnapshot(groupId)).with(RequestPostProcessor { request ->
             request.userPrincipal = Principal { "charlie" }
             request
         }))
