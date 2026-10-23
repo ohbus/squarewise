@@ -11,7 +11,7 @@ the repository. Add these fields:
 
 | Field | Type | Values |
 | --- | --- | --- |
-| Status | Single select | Backlog, Ready, In progress, In review, Waiting, Done |
+| Status | Single select | Backlog, Ready, In progress, In review, Done |
 | Priority | Single select | P0, P1, P2, P3 |
 | Workstream | Multi select | Accounts, Expense Core, Notifications, BFF, Platform, Operations, Security, Quality, Contracts, Docs |
 | Size | Single select | XS, S, M, L |
@@ -25,11 +25,11 @@ relevant Workstream value for cross-cutting work.
 Configure views:
 
 1. `Inbox`: table filtered to `label:needs-triage`.
-2. `Delivery`: board with Status columns, grouped by Workstream; set column
-   limits of three on In progress and In review.
+2. `Delivery`: board with Status columns, grouped by Workstream; do not enforce
+   column limits.
 3. `Current iteration`: table filtered to the current iteration, grouped by
    assignee and sorted by Priority.
-4. `Waiting room`: table filtered to `Status:Waiting`.
+4. `Blocked`: table filtered to `label:blocked`.
 5. `Roadmap`: roadmap using Iteration or Target date, grouped by milestone.
 6. `Review queue`: table filtered to open pull requests.
 

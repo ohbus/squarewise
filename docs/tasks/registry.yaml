@@ -8214,12 +8214,13 @@
       ],
       "evidence": [
         "Created public GitHub Project 4, epics #20-#22, and task issues #23-#33; native parent/sub-issue relationships report 4, 5, and 2 children for epics #20, #21, and #22.",
-        "Verified live Priority, multi-select Workstream, Size, two-week Iteration, and Target Date fields and all 14 migrated issues in Project 4.",
+        "Verified live five-state Status, Priority, multi-select Workstream, Size, two-week Iteration, and Target Date fields and all 14 migrated issues in Project 4.",
+        "Verified the Delivery board groups by Workstream and the Current iteration table groups by assignee without enforced WIP limits.",
         "Added issue forms, CODEOWNERS, weekly grouped Dependabot updates, and the stable Required CI aggregate with typed unit coverage.",
         "Contract and public-surface validation, GitHub YAML lint, workflow validation, Python type checking, three Required CI unit tests, and git diff checks passed locally."
       ],
       "reviewer": "/root",
-      "blocker": "The Waiting status, remaining Workstream options, saved views/workflows, labels, milestone, native blocking relationships, repository settings, and ruleset changes require owner action in GitHub; cutover also waits for the new Required CI check to complete on a hosted pull request."
+      "blocker": "Remaining saved views/workflows, labels, milestone, native blocking relationships, repository settings, and ruleset changes require owner action in GitHub; cutover also waits for the new Required CI check to complete on a hosted pull request."
     },
     {
       "id": "OPS-32",

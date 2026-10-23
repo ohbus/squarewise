@@ -22,15 +22,15 @@ cutover complete, agents must read live state from the GitHub issue and Project.
 
 ## GitHub workflow
 
-The Project uses six statuses: Backlog, Ready, In progress, In review, Waiting,
-and Done. Triage is a label and saved view, not a seventh status. Rejected work
-uses GitHub's `not planned` close reason.
+The Project uses five statuses: Backlog, Ready, In progress, In review, and Done.
+Triage is a label and saved view, not another status. Rejected work uses GitHub's
+`not planned` close reason.
 
 The delivery board uses Status columns and a multi-select Workstream field, so
 cross-cutting items can appear in every relevant stream. Repository `area:*`
 labels remain useful outside the Project but do not duplicate Project workflow
-state. In progress and In review each have an informational limit of three
-items. Waiting items require a blocker explanation and a next-review date.
+state. The board does not enforce WIP limits. Native blocked-by relationships,
+or a `blocked` label for external blockers, keep stalled work visible.
 
 Large outcomes use parent epic issues, executable work uses child issues, and
 GitHub blocking relationships represent active dependencies. Pull requests link
