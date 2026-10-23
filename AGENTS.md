@@ -37,7 +37,8 @@ this order:
 5. Inspect `git status --short`, recent commits, and the relevant owned paths.
    Confirm that the task is registered, its dependencies are complete, and its
    owned paths do not overlap another active task without a handoff.
-6. State the task ID, objective, dependencies, owned paths, planned files,
+6. State the GitHub issue number (or legacy task ID before cutover), objective,
+   dependencies, owned paths, planned files,
    validation commands, and expected evidence in the progress update before
    editing.
 
@@ -64,7 +65,7 @@ state, and contracts control externally visible behavior.
 | Technology and versions | `docs/implementation/technology-decisions.md`, `gradle/libs.versions.toml`, `infra/versions.env.example` | Record evidence for version changes; never duplicate versions in build files |
 | REST, GraphQL, events, errors | `contracts/` | Change and validate the contract before changing an API |
 | Work status, assignment, priority, schedule | Mapped GitHub issue and `Squarewise Delivery` after cutover; registry/board before cutover | Update the active authority before work starts and when execution state changes |
-| Task specification and stable ID | `docs/tasks/details/`, `docs/tasks/registry.yaml` | Keep objective, owned paths, acceptance, validation, and issue mapping synchronized |
+| Task specification and identifier | GitHub issue after cutover; `docs/tasks/details/` and `docs/tasks/registry.yaml` for migrated history | Keep objective, owned paths, acceptance, validation, and migration mapping synchronized |
 | Verification history | `docs/tasks/progress.md` | Record commands, evidence, limitations, and commit hashes for every completed increment |
 | Test policy | `docs/quality/` and `tests/` | Add meaningful tests for public behavior and update acceptance evidence |
 | Operations and local development | `infra/`, `Makefile`, `docs/operations/` | Keep clone-and-run workflows and version references synchronized |
@@ -105,7 +106,8 @@ contracts and a verified scaffold with a reserved UI workspace.
 
 ## Task tracking and parallel work
 
-- Every delegated subagent must have a registered task ID before starting work.
+- Every delegated subagent must have a GitHub issue before starting work after
+  cutover; legacy work keeps its registered task ID until it closes.
 - Only the coordinator edits `docs/tasks/registry.yaml` and the fallback
   `docs/tasks/board.md`, or changes shared GitHub Project fields and workflows.
 - Each task has one owner, dependencies, owned paths, acceptance criteria, and

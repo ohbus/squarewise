@@ -5,7 +5,7 @@
     "target_authority": "github",
     "repository": "ohbus/squarewise",
     "project_url": "https://github.com/users/ohbus/projects/4",
-    "issue_map": {
+    "legacy_issue_map": {
       "OPS-20": "https://github.com/ohbus/squarewise/issues/23",
       "OPS-22": "https://github.com/ohbus/squarewise/issues/24",
       "QA-08": "https://github.com/ohbus/squarewise/issues/25",

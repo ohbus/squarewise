@@ -68,8 +68,9 @@ Squarewise operates under a strict documentation-first workflow:
 - Live status, assignment, priority, iteration, milestones, and blockers move to
   mapped GitHub issues and the `Squarewise Delivery` project after the DOC-28
   cutover recorded in [`docs/tasks/registry.yaml`](docs/tasks/registry.yaml).
-- Durable task specifications remain under [`docs/tasks/details/`](docs/tasks/details/),
-  with stable IDs and issue mappings in the registry.
+- Migrated task specifications remain under [`docs/tasks/details/`](docs/tasks/details/),
+  with deprecated historical IDs and issue mappings in the registry. New work
+  uses its GitHub issue number and issue body instead of allocating a local ID.
 - Verified implementation evidence is logged in [`docs/tasks/progress.md`](docs/tasks/progress.md).
 - The authority boundary and migration rules are documented in
   [`docs/tasks/README.md`](docs/tasks/README.md).

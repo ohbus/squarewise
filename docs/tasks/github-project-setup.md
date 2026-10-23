@@ -13,27 +13,29 @@ the repository. Add these fields:
 | --- | --- | --- |
 | Status | Single select | Backlog, Ready, In progress, In review, Waiting, Done |
 | Priority | Single select | P0, P1, P2, P3 |
-| Workstream | Single select | Accounts, Expense Core, Notifications, BFF, Platform/Operations, Quality/Security, Contracts/Docs |
 | Size | Single select | XS, S, M, L |
 | Iteration | Iteration | Two-week iterations created only when scheduled |
 | Target date | Date | No default |
 
-Do not duplicate the stable repository task ID in a Project field. It remains in
-the issue title/body and `registry.yaml` issue map. Keep Workstream single-select
-so every item has one accountable delivery stream and board grouping remains
-unambiguous; represent cross-cutting scope with area labels or linked child
-issues.
+Do not create Task ID or Workstream custom fields. Existing repository task IDs
+are deprecated migration aliases, and new work uses its GitHub issue number.
+Apply every relevant `area:*` label to represent multiple workstreams.
 
 Configure views:
 
 1. `Inbox`: table filtered to `label:needs-triage`.
-2. `Delivery`: board with Status columns, grouped by Workstream; set column
-   limits of three on In progress and In review.
+2. `Delivery`: board with Status columns; set column limits of three on In
+   progress and In review.
 3. `Current iteration`: table filtered to the current iteration, grouped by
    assignee and sorted by Priority.
 4. `Waiting room`: table filtered to `Status:Waiting`.
 5. `Roadmap`: roadmap using Iteration or Target date, grouped by milestone.
 6. `Review queue`: table filtered to open pull requests.
+
+Create saved table views for useful workstream combinations with filters such
+as `label:area:accounts` or `label:area:platform,label:area:operations`.
+GitHub labels are intentionally multi-valued; the board cannot use them as
+grouped swimlanes.
 
 Enable built-in workflows to add open issues and pull requests, set newly added
 items to Backlog, set closed/merged items to Done, set reopened issues to Ready,

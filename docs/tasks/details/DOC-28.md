@@ -32,7 +32,8 @@ durable task specifications, acceptance criteria, validation, and evidence.
 1. GitHub Issues and the linked `Squarewise Delivery` project own live status,
    assignment, priority, iteration, milestone, blockers, and scheduling.
 2. The project uses Backlog, Ready, In progress, In review, Waiting, and Done;
-   its delivery board groups horizontally by Workstream.
+   its delivery board uses Status columns and multi-valued area labels for
+   workstreams.
 3. Three active-work epics, the ten tasks incomplete at migration start, and
    DOC-28 are created as linked GitHub issues without importing the 251
    completed tasks.
@@ -75,9 +76,10 @@ git diff --check
 - The public `Squarewise Delivery` project exists at
   `https://github.com/users/ohbus/projects/4`; its fields, views, workflows, and
   item migration remain part of the hosted setup.
-- The Project does not duplicate the stable task ID already carried by issue
-  titles/bodies and the registry mapping. Workstream remains single-select for
-  clear ownership and grouping; labels and child issues cover cross-cutting work.
+- Local task IDs are deprecated migration aliases. New work uses GitHub issue
+  numbers and issue bodies. Multi-valued `area:*` labels represent workstreams;
+  filtered views replace workstream swimlanes because labels cannot group a
+  GitHub Projects board.
 - Local contract and public-surface validation, GitHub YAML lint, workflow
   validation, Python type checking, three aggregate-gate unit tests, and
   whitespace validation pass. Hosted `Required CI` evidence awaits this commit.

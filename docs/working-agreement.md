@@ -23,8 +23,9 @@ log. Code, CI, and operations must agree with those sources.
    and adhere strictly to project standards before writing any code.
 4. Inspect `git status --short`, recent commits, and the diff/history for the
    owned paths. Check for overlapping active work before editing.
-5. In a progress update, state the task ID, objective, dependencies, owned and
-   planned paths, validation commands, expected evidence, and any assumptions.
+5. In a progress update, state the GitHub issue number (or legacy task ID before
+   cutover), objective, dependencies, owned and planned paths, validation
+   commands, expected evidence, and any assumptions.
 
 ## During implementation
 
