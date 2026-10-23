@@ -86,6 +86,9 @@ git diff --check
   blocked-by relationships or a `blocked` label instead of a Waiting status.
 - A Backlog table is the Jira-style overview for Backlog and Ready work, grouped
   by Workstream and retaining native parent/sub-issue hierarchy.
+- Repository milestone #1 (`Production readiness`) is assigned to epics #20/#21
+  and release-gated children #23-#26/#28-#31. The owner reports all configured
+  Project workflows active; public project data does not expose their settings.
 - Local contract and public-surface validation, GitHub YAML lint, workflow
   validation, Python type checking, three aggregate-gate unit tests, and
   whitespace validation pass. Hosted `Required CI` evidence awaits this commit.
