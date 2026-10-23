@@ -42,3 +42,6 @@ documented Docker Compose development workflow.
 - Each bootstrap remains the sole class in its service root package so default
   Spring component scanning covers the complete application. The IntelliJ
   configuration and Spring Boot `mainClass` setting target that root launcher.
+- The shared JVM test configuration declares `externalSystemIdString=GRADLE`;
+  omitting it leaves IntelliJ unable to serialize or render the Gradle run
+  configuration because its external-system identifier is null.
