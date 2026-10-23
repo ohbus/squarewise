@@ -121,10 +121,15 @@ class DbRoutingDataSource(
         val route = when (decision) {
             DbReaderDecision.Reader -> DbRoute.READER
             DbReaderDecision.Writer -> DbRoute.WRITER
-            DbReaderDecision.Fail -> throw DbPlatformException(
-                PlatformErrors.DATABASE_UNAVAILABLE,
-                "No healthy reader is available"
-            )
+            DbReaderDecision.Fail -> if (!context.isWriterOnly()) {
+                telemetry.fallback(context.operationName)
+                DbRoute.WRITER
+            } else {
+                throw DbPlatformException(
+                    PlatformErrors.DATABASE_UNAVAILABLE,
+                    "No healthy reader is available"
+                )
+            }
         }
         return route to readerName
     }

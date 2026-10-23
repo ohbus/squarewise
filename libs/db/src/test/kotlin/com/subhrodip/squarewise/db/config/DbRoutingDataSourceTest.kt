@@ -130,19 +130,21 @@ class DbRoutingDataSourceTest {
         assertEquals(DbReaderState.OPEN, health.state("replica"))
     }
 
-    /** A failed reader circuit prevents implicit query acquisition until recovery. */
+    /** An approved eventual query falls back to the writer while the reader circuit is open. */
     @Test
-    fun `implicit query routing fails when reader circuit is open`() {
+    fun `implicit query routing falls back when reader circuit is open`() {
         val writer = mock(DataSource::class.java)
         val reader = mock(DataSource::class.java)
+        val connection = mock(Connection::class.java)
         val health = DbReaderHealth(failureThreshold = 1)
         health.markFailure("replica")
+        `when`(writer.connection).thenReturn(connection)
         val routing = DbRoutingDataSource(writer, mapOf("replica" to reader), health)
 
         DbContextHolder.withContext(
             DbExecutionContext("expense.search", DbOperationKind.QUERY, ReadConsistency.EVENTUAL, readerEligible = true)
         ) {
-            assertFailsWith<DbPlatformException> { routing.getConnection() }
+            assertSame(connection, routing.getConnection())
         }
     }
 
@@ -162,13 +164,16 @@ class DbRoutingDataSourceTest {
     }
 
     @Test
-    fun `implicit eventual query fails closed when no readers are configured`() {
-        val routing = DbRoutingDataSource(mock(DataSource::class.java), emptyMap())
+    fun `implicit eventual query falls back when no readers are configured`() {
+        val writer = mock(DataSource::class.java)
+        val connection = mock(Connection::class.java)
+        `when`(writer.connection).thenReturn(connection)
+        val routing = DbRoutingDataSource(writer, emptyMap())
 
         DbContextHolder.withContext(
             DbExecutionContext("expense.search", DbOperationKind.QUERY, ReadConsistency.EVENTUAL, readerEligible = true)
         ) {
-            assertFailsWith<DbPlatformException> { routing.getConnection() }
+            assertSame(connection, routing.getConnection())
         }
     }
 
@@ -243,16 +248,18 @@ class DbRoutingDataSourceTest {
     }
 
     @Test
-    fun `throws database unavailable when reader health decision is Fail`() {
+    fun `routes approved eventual query to writer when reader health decision is Fail`() {
         val writer = mock(DataSource::class.java)
         val reader = mock(DataSource::class.java)
+        val connection = mock(Connection::class.java)
         val health = mock(DbReaderHealth::class.java)
         val context = DbExecutionContext("expense.search", DbOperationKind.QUERY, ReadConsistency.EVENTUAL, readerEligible = true)
         `when`(health.route(context, "replica")).thenReturn(DbReaderDecision.Fail)
+        `when`(writer.connection).thenReturn(connection)
         val routing = DbRoutingDataSource(writer, mapOf("replica" to reader), health)
 
         DbContextHolder.withContext(context) {
-            assertFailsWith<DbPlatformException> { routing.getConnection() }
+            assertSame(connection, routing.getConnection())
         }
     }
 
