@@ -84,6 +84,8 @@ git diff --check
   Redundant body checklists and `Parent epic` lines were removed.
 - The live Delivery board groups by Workstream. Blocked work uses native
   blocked-by relationships or a `blocked` label instead of a Waiting status.
+- A Backlog table is the Jira-style overview for Backlog and Ready work, grouped
+  by Workstream and retaining native parent/sub-issue hierarchy.
 - Local contract and public-surface validation, GitHub YAML lint, workflow
   validation, Python type checking, three aggregate-gate unit tests, and
   whitespace validation pass. Hosted `Required CI` evidence awaits this commit.

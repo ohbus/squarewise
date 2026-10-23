@@ -28,9 +28,11 @@ Triage is a label and saved view, not another status. Rejected work uses GitHub'
 
 The delivery board uses Status columns and a multi-select Workstream field, so
 cross-cutting items can appear in every relevant stream. Repository `area:*`
-labels remain useful outside the Project but do not duplicate Project workflow
-state. The board does not enforce WIP limits. Native blocked-by relationships,
-or a `blocked` label for external blockers, keep stalled work visible.
+labels are not used because they would duplicate Project state. The Backlog
+table provides the Jira-style overview of Backlog and Ready work with native
+parent/sub-issue hierarchy. The board does not enforce WIP limits. Native
+blocked-by relationships, or a `blocked` label for external blockers, keep
+stalled work visible.
 
 Large outcomes use parent epic issues, executable work uses child issues, and
 GitHub blocking relationships represent active dependencies. Pull requests link

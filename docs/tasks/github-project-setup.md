@@ -25,13 +25,15 @@ relevant Workstream value for cross-cutting work.
 Configure views:
 
 1. `Inbox`: table filtered to `label:needs-triage`.
-2. `Delivery`: board with Status columns, grouped by Workstream; do not enforce
+2. `Backlog`: table filtered to `Status:Backlog,Ready`, grouped by Workstream,
+   sorted by Priority, with parent/sub-issue hierarchy enabled.
+3. `Delivery`: board with Status columns, grouped by Workstream; do not enforce
    column limits.
-3. `Current iteration`: table filtered to the current iteration, grouped by
+4. `Current iteration`: table filtered to the current iteration, grouped by
    assignee and sorted by Priority.
-4. `Blocked`: table filtered to `label:blocked`.
-5. `Roadmap`: roadmap using Iteration or Target date, grouped by milestone.
-6. `Review queue`: table filtered to open pull requests.
+5. `Blocked`: table filtered to `label:blocked`.
+6. `Roadmap`: roadmap using Iteration or Target date, grouped by milestone.
+7. `Review queue`: table filtered to open pull requests.
 
 Create saved table views for useful Workstream combinations when the delivery
 board would otherwise be too dense.
@@ -42,23 +44,19 @@ and archive Done items after fourteen days.
 
 ## Labels and milestone
 
-Rename the compatible default labels and create the remaining labels:
+Rename compatible default labels and create only this repository taxonomy:
 
 - Type: `type:bug`, `type:feature`, `type:task`, `type:docs`, `type:epic`,
   `type:accessibility`.
-- Area: `area:accounts`, `area:expense-core`, `area:notifications`, `area:bff`,
-  `area:platform`, `area:operations`, `area:security`, `area:quality`,
-  `area:contracts`, `area:docs`.
-- Intake/contribution: `needs-triage`, `needs-info`, `good first issue`,
-  `help wanted`.
+- Intake/contribution: `needs-triage`, `needs-info`, `blocked`,
+  `good first issue`, `help wanted`.
 - Resolution: `duplicate`, `invalid`.
 
-Do not create status or priority labels. Create one milestone named
-`Production readiness` without a due date.
+Do not create status, priority, or workstream labels; those values belong to the
+Project. Create one milestone named `Production readiness` without a due date.
 
-Apply `type:epic` to issues #20–#22. Apply `type:task` and the appropriate area
-label to issues #23–#33. Add #20–#33 to the Project, then set the initial Status
-from each issue body.
+Apply `type:epic` to issues #20–#22 and `type:task` to issues #23–#33. Add
+#20–#33 to the Project, then set Status and Workstream values there.
 
 ## Native hierarchy and dependencies
 
