@@ -11,16 +11,12 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.springframework.core.MethodParameter
-import org.springframework.dao.OptimisticLockingFailureException
 import org.springframework.http.HttpStatus
-import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.validation.BeanPropertyBindingResult
 import org.springframework.validation.FieldError
 import org.springframework.web.HttpMediaTypeNotAcceptableException
 import org.springframework.web.HttpRequestMethodNotSupportedException
 import org.springframework.web.bind.MethodArgumentNotValidException
-import org.springframework.web.bind.ServletRequestBindingException
-import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
 
 /** Verifies additive problem mapping and containment of cause text. */
 class GlobalErrorAdviceTest {
@@ -164,7 +160,7 @@ class GlobalErrorAdviceTest {
     @Test
     fun `illegalArgument maps to 422 and VALIDATION_ERROR`() {
         val advice = GlobalErrorAdvice("expense-core")
-        val response = advice.illegalArgument(IllegalArgumentException("Invalid parameter"))
+        val response = advice.illegalArgument()
         assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, response.statusCode)
         assertEquals(CategoryCode.VALIDATION_ERROR.name, response.body?.code)
         assertEquals(PlatformErrors.REQUEST_VALUE_INVALID.safeDetail, response.body?.detail)
@@ -173,7 +169,7 @@ class GlobalErrorAdviceTest {
     @Test
     fun `optimisticLock maps to CONFLICT`() {
         val advice = GlobalErrorAdvice("expense-core")
-        val response = advice.optimisticLock(OptimisticLockingFailureException("Version mismatch"))
+        val response = advice.optimisticLock()
         assertEquals(HttpStatus.CONFLICT, response.statusCode)
         assertEquals(CategoryCode.STATE_CONFLICT.name, response.body?.code)
     }
@@ -189,11 +185,8 @@ class GlobalErrorAdviceTest {
     @Test
     fun `binding and type mismatch use stable fallback responses`() {
         val advice = GlobalErrorAdvice("accounts")
-        val binding = advice.requestBinding(ServletRequestBindingException("missing header"))
-        val param = MethodParameter(GlobalErrorAdviceTest::class.java.getDeclaredMethod("sampleMethod", String::class.java), 0)
-        val mismatch = advice.argumentTypeMismatch(
-            MethodArgumentTypeMismatchException("x", Int::class.java, "page", param, null)
-        )
+        val binding = advice.requestBinding()
+        val mismatch = advice.argumentTypeMismatch()
 
         assertEquals(PlatformErrors.REQUEST_VALUE_INVALID.safeDetail, binding.body?.detail)
         assertEquals(PlatformErrors.REQUEST_VALUE_INVALID.title, mismatch.body?.title)

@@ -42,8 +42,7 @@ current source retains only the reviewed, localized cases:
 - 1 `UnstableApiUsage` suppression in `settings.gradle.kts` for intentional Gradle
   repository-mode configuration.
 - 7 test-only `UNCHECKED_CAST` suppressions for Mockito/raw-Java generic interop.
-- 6 `UNUSED_PARAMETER` suppressions for safe Spring exception handlers and one
-  reflection fixture.
+- 1 test-only `UNUSED_PARAMETER` suppression for a reflection fixture.
 
 The stale file-wide `DEPRECATION` suppression in `HttpHeadersConfiguration.kt`,
 the unused `GroupAccessCache` constructor dependency in
