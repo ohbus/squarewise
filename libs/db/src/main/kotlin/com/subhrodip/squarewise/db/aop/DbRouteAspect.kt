@@ -168,8 +168,7 @@ class DbRouteAspect {
         activeContext: DbExecutionContext?
     ): DbExecutionContext? {
         if (rawContext == null) return null
-        val isInsideWriterTx = activeContext != null &&
-            (!activeContext.readerEligible || activeContext.kind == DbOperationKind.COMMAND)
+        val isInsideWriterTx = activeContext?.isWriterOnly() == true
 
         if (isInsideWriterTx) {
             return rawContext.copy(

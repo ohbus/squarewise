@@ -296,6 +296,7 @@ class DbRouteAspectTest {
         val parentContext = DbExecutionContext(
             operationName = "outer.read",
             kind = DbOperationKind.QUERY,
+            consistency = ReadConsistency.EVENTUAL,
             readerEligible = true,
             targetReader = "analytics"
         )
@@ -324,6 +325,7 @@ class DbRouteAspectTest {
             DbExecutionContext(
                 "outer.read",
                 DbOperationKind.QUERY,
+                consistency = ReadConsistency.EVENTUAL,
                 readerEligible = true,
                 targetWriter = "writer-shard"
             )
@@ -332,6 +334,39 @@ class DbRouteAspectTest {
         }
 
         assertEquals("inherited-writer-target", result)
+    }
+
+    @Test
+    fun `pins nested reader to writer under a strong parent`() {
+        val target = BlankTargetReaderService()
+        val method = BlankTargetReaderService::class.java.getMethod("readBlank")
+        val joinPoint = mock(ProceedingJoinPoint::class.java)
+        val signature = mock(MethodSignature::class.java)
+
+        `when`(joinPoint.signature).thenReturn(signature)
+        `when`(signature.method).thenReturn(method)
+        `when`(joinPoint.target).thenReturn(target)
+        `when`(joinPoint.proceed()).thenAnswer {
+            val context = DbContextHolder.current()
+            assertEquals(DbOperationKind.COMMAND, context.kind)
+            assertFalse(context.readerEligible)
+            assertEquals("writer-shard", context.targetWriter)
+            "pinned-to-writer"
+        }
+
+        val result = DbContextHolder.withContext(
+            DbExecutionContext(
+                "outer.read",
+                DbOperationKind.QUERY,
+                consistency = ReadConsistency.STRONG,
+                readerEligible = true,
+                targetWriter = "writer-shard"
+            )
+        ) {
+            aspect.aroundRoutedMethod(joinPoint)
+        }
+
+        assertEquals("pinned-to-writer", result)
     }
 
     @Test

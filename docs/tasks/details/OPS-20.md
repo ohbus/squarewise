@@ -38,3 +38,10 @@ the release record.
 The repository gate and local acceptance results do not close OPS-20. Reviewed
 production-like restore, failover, rotation, scanning, rollback, capacity, and
 alert-routing artifacts are required before launch.
+
+## PR #19 routing review follow-up
+
+Nested reads now inherit every writer-only parent constraint, including strong
+read consistency, through the existing `DbExecutionContext.isWriterOnly()`
+policy. A focused regression test proves that a nested reader remains pinned to
+the writer; eligible eventual-read fixtures declare that policy explicitly.
