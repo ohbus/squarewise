@@ -143,13 +143,13 @@ class LiveUpdateFanout(
             synchronized(expirationQueueLock) {
                 subscriptions[subscription.id] = subscription
                 expirationQueue.offer(ExpirationEntry(subscription.id, subscription.expiresAt))
-            }
-            revocationSignals[subscription.id] = Sinks.one()
-            userSubscriptions.compute(userId) { _, set ->
-                (set ?: ConcurrentHashMap.newKeySet()).apply { add(subscription.id) }
-            }
-            groupSubscriptions.compute(groupId) { _, set ->
-                (set ?: ConcurrentHashMap.newKeySet()).apply { add(subscription.id) }
+                revocationSignals[subscription.id] = Sinks.one()
+                userSubscriptions.compute(userId) { _, set ->
+                    (set ?: ConcurrentHashMap.newKeySet()).apply { add(subscription.id) }
+                }
+                groupSubscriptions.compute(groupId) { _, set ->
+                    (set ?: ConcurrentHashMap.newKeySet()).apply { add(subscription.id) }
+                }
             }
             subscription
         }
