@@ -23,6 +23,11 @@ import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
 import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
 import java.security.Principal
 import java.util.UUID
+import com.subhrodip.squarewise.db.routing.DbReader
+import com.subhrodip.squarewise.db.routing.DbWriter
+
+import com.subhrodip.squarewise.expensecore.groups.cache.GroupAccessCache
+import com.subhrodip.squarewise.expensecore.validation.EntityReferenceValidator
 
 /**
  * REST controller exposing authenticated recurring expense schedule management transport.
@@ -35,11 +40,13 @@ import java.util.UUID
 class RecurringExpenseController(
     private val recurringService: RecurringExpenseService,
     private val groupRepository: GroupRepository,
-    private val membershipRepository: GroupMembershipRepository
+    private val membershipRepository: GroupMembershipRepository,
+    private val groupAccessCache: GroupAccessCache?,
+    private val validator: EntityReferenceValidator
 ) {
-
     @PostMapping(ApiEndpoints.ExpenseCore.V1.SCHEDULES_SUBPATH)
     @ResponseStatus(HttpStatus.CREATED)
+    @DbWriter("recurring.schedules.create")
     fun createSchedule(
         @PathVariable groupId: UUID,
         @Valid @RequestBody request: CreateRecurringScheduleRequestDto,
@@ -67,6 +74,7 @@ class RecurringExpenseController(
 
     @GetMapping(ApiEndpoints.ExpenseCore.V1.SCHEDULES_SUBPATH)
     /** Returns the first bounded page of schedules visible to the authenticated member. */
+    @DbReader("recurring.schedules.list")
     fun listSchedules(
         @PathVariable groupId: UUID,
         principal: Principal?,
@@ -77,6 +85,7 @@ class RecurringExpenseController(
     }
 
     @GetMapping(ApiEndpoints.ExpenseCore.V1.SCHEDULE_BY_ID_SUBPATH)
+    @DbReader("recurring.schedules.get")
     fun getSchedule(
         @PathVariable groupId: UUID,
         @PathVariable scheduleId: UUID,
@@ -88,6 +97,7 @@ class RecurringExpenseController(
     }
 
     @PutMapping(ApiEndpoints.ExpenseCore.V1.SCHEDULE_BY_ID_SUBPATH)
+    @DbWriter("recurring.schedules.update")
     fun updateSchedule(
         @PathVariable groupId: UUID,
         @PathVariable scheduleId: UUID,
@@ -115,6 +125,7 @@ class RecurringExpenseController(
     }
 
     @PostMapping(ApiEndpoints.ExpenseCore.V1.SCHEDULE_PAUSE_SUBPATH)
+    @DbWriter("recurring.schedules.pause")
     fun pauseSchedule(
         @PathVariable groupId: UUID,
         @PathVariable scheduleId: UUID,
@@ -126,6 +137,7 @@ class RecurringExpenseController(
     }
 
     @PostMapping(ApiEndpoints.ExpenseCore.V1.SCHEDULE_RESUME_SUBPATH)
+    @DbWriter("recurring.schedules.resume")
     fun resumeSchedule(
         @PathVariable groupId: UUID,
         @PathVariable scheduleId: UUID,
@@ -137,12 +149,19 @@ class RecurringExpenseController(
     }
 
     private fun verifyGroupAndMembership(groupId: UUID, principal: Principal?) {
-        if (!groupRepository.existsById(groupId)) {
+        val groupExists = if (groupAccessCache != null) {
+            groupAccessCache.groupStatus(groupId) {
+                groupRepository.findById(groupId).map { it.status }.orElse(null)
+            } != null
+        } else {
+            groupRepository.existsById(groupId)
+        }
+        if (!groupExists) {
             throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group $groupId not found")
         }
         val subject = principal?.name?.takeIf { it.isNotBlank() }
             ?: throw ExpenseDomainException(PlatformErrors.AUTHENTICATION_REQUIRED, "Authenticated subject is required")
-        if (!membershipRepository.existsByGroupIdAndSubject(groupId, subject)) {
+        if (!validator.isActiveMember(groupId, subject)) {
             throw ExpenseDomainException(ExpenseErrors.GROUP_ACCESS_HIDDEN, "Group $groupId not found")
         }
     }

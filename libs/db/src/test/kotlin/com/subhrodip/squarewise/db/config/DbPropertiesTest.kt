@@ -70,6 +70,7 @@ class DbPropertiesTest {
     /** Every required pool bound rejects values outside its documented safe range. */
     @Test
     fun `pool endpoint and timing bounds are enforced`() {
+        assertFailsWith<DbPlatformException> { validPool.copy(url = "").validate("writer") }
         assertFailsWith<DbPlatformException> { validPool.copy(username = "").validate("writer") }
         assertFailsWith<DbPlatformException> { validPool.copy(url = " ").validate("writer") }
         assertFailsWith<DbPlatformException> { validPool.copy(username = " ").validate("writer") }

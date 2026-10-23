@@ -1,5 +1,6 @@
 package com.subhrodip.squarewise.expensecore.groups.api
 
+import com.subhrodip.squarewise.db.routing.DbWriter
 import com.subhrodip.squarewise.expensecore.groups.persistence.store.GroupStore
 import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
 import java.security.Principal
@@ -14,5 +15,6 @@ import org.springframework.web.bind.annotation.RestController
 class InviteClaimController(private val groups: GroupStore) {
     /** Claims an invitation for the authenticated subject. */
     @PostMapping("/{token}/claim")
+    @DbWriter("group.invite.claim")
     fun claim(@PathVariable token: String, principal: Principal): GroupResponse = groups.claim(token, principal.name)
 }

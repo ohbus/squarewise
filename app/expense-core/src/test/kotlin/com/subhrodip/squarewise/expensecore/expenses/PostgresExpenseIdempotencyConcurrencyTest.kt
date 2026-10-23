@@ -5,6 +5,8 @@ import com.subhrodip.squarewise.expensecore.expenses.domain.ExpensePayer
 import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseRecord
 import com.subhrodip.squarewise.expensecore.expenses.persistence.store.JpaExpenseStore
 import com.subhrodip.squarewise.expensecore.groups.api.CreateGroupRequest
+import com.subhrodip.squarewise.expensecore.groups.domain.GroupMembershipEntity
+import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupMembershipRepository
 import com.subhrodip.squarewise.expensecore.groups.persistence.store.JpaGroupStore
 
 import java.time.Duration
@@ -35,6 +37,7 @@ import org.springframework.transaction.support.TransactionTemplate
 class PostgresExpenseIdempotencyConcurrencyTest @Autowired constructor(
     private val expenseStore: JpaExpenseStore,
     private val groupStore: JpaGroupStore,
+    private val memberships: GroupMembershipRepository,
     private val jdbc: JdbcTemplate,
     private val transactionTemplate: TransactionTemplate
 ) {
@@ -44,6 +47,7 @@ class PostgresExpenseIdempotencyConcurrencyTest @Autowired constructor(
         val group = groupStore.create("postgres-owner", CreateGroupRequest("Idempotency", "TRIP", "EUR"))
         val expenseId = UUID.randomUUID()
         val participant = UUID.randomUUID()
+        memberships.save(GroupMembershipEntity(participant, group.groupId, "postgres-participant"))
         val record = ExpenseRecord(
             expenseId = expenseId,
             groupId = group.groupId,
@@ -62,14 +66,14 @@ class PostgresExpenseIdempotencyConcurrencyTest @Autowired constructor(
         val executor = Executors.newFixedThreadPool(2)
         val first = executor.submit {
             transactionTemplate.execute {
-                expenseStore.create(group.groupId, record, "same-key")
+                expenseStore.create(group.groupId, record, "same-key-concurrency")
                 entered.countDown()
                 check(release.await(10, TimeUnit.SECONDS)) { "lock release was not signalled" }
             }
         }
         check(entered.await(10, TimeUnit.SECONDS)) { "first transaction did not start" }
         val second = executor.submit(Callable {
-            transactionTemplate.execute { expenseStore.create(group.groupId, record, "same-key") }
+            transactionTemplate.execute { expenseStore.create(group.groupId, record, "same-key-concurrency") }
         })
 
         assertTimeoutPreemptively(Duration.ofMillis(500)) {
@@ -90,7 +94,7 @@ class PostgresExpenseIdempotencyConcurrencyTest @Autowired constructor(
             "SELECT count(*) FROM expense_idempotency WHERE group_id = ? AND idempotency_key = ?",
             Long::class.java,
             group.groupId,
-            "same-key"
+            "same-key-concurrency"
         ))
         assertEquals(2L, jdbc.queryForObject(
             "SELECT count(*) FROM balance_postings WHERE expense_id = ?",

@@ -7,10 +7,12 @@ import com.subhrodip.squarewise.accounts.requests.export.persistence.ExportReque
 import com.subhrodip.squarewise.accounts.requests.export.model.ExportStatus
 import com.subhrodip.squarewise.accounts.requests.export.persistence.JpaExportRequestStore
 import com.subhrodip.squarewise.accounts.profile.api.ProfilePatchRequest
+import com.subhrodip.squarewise.accounts.profile.api.ProfileResponse
 import com.subhrodip.squarewise.accounts.profile.persistence.JpaProfileStore
 import com.subhrodip.squarewise.accounts.profile.persistence.ProfileRepository
 import com.subhrodip.squarewise.accounts.auth.session.AuthSessionEntity
 import com.subhrodip.squarewise.accounts.auth.session.AuthSessionRepository
+import com.subhrodip.squarewise.accounts.errors.AccountsDomainException
 import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
 
 import java.time.Instant
@@ -97,6 +99,8 @@ class JpaRequestStoresTest @Autowired constructor(
     @Test
     fun `persists and queries export requests by id and subject`() {
         val subject = "oidc|user-${UUID.randomUUID()}"
+        assertThrows(AccountsDomainException::class.java) { exportStore.request(subject) }
+        profileStore.create(UUID.randomUUID(), subject, subject)
 
         val exp1 = exportStore.request(subject)
         assertNotNull(exp1.exportId)
@@ -188,6 +192,11 @@ class JpaRequestStoresTest @Autowired constructor(
         assertEquals("UTC", displayNameOnly.timezone)
         assertEquals("USD", displayNameOnly.defaultCurrency)
 
+        val currencyOnly = profileStore.update(subject, ProfilePatchRequest(defaultCurrency = "GBP"))
+        assertEquals("Alice Again", currencyOnly.displayName)
+        assertEquals("UTC", currencyOnly.timezone)
+        assertEquals("GBP", currencyOnly.defaultCurrency)
+
         assertThrows(SquarewiseException::class.java) {
             profileStore.update(subject, ProfilePatchRequest(timezone = "Not/AZone"))
         }
@@ -198,6 +207,26 @@ class JpaRequestStoresTest @Autowired constructor(
             profileStore.update("oidc|missing-${UUID.randomUUID()}", ProfilePatchRequest(displayName = "Missing"))
         }
         assertEquals(profile.accountId, profileStore.get(subject)?.accountId)
+        assertEquals(profile.accountId, profileStore.findById(profile.accountId)?.accountId)
+
+        // findByIds coverage
+        assertEquals(emptyList<ProfileResponse>(), profileStore.findByIds(emptyList()))
+        val batchResult = profileStore.findByIds(listOf(profile.accountId, UUID.randomUUID()))
+        assertEquals(1, batchResult.size)
+        assertEquals(profile.accountId, batchResult.first().accountId)
+
+        // Repeat findByIds when all requested are already in cache
+        val allCachedResult = profileStore.findByIds(listOf(profile.accountId))
+        assertEquals(1, allCachedResult.size)
+        assertEquals(profile.accountId, allCachedResult.first().accountId)
+
+        // Store without cache coverage
+        val uncachedStore = JpaProfileStore(profileRepository, profileCache = null)
+        assertEquals(profile.accountId, uncachedStore.get(subject)?.accountId)
+        assertEquals(profile.accountId, uncachedStore.findById(profile.accountId)?.accountId)
+        val uncachedBatch = uncachedStore.findByIds(listOf(profile.accountId, UUID.randomUUID()))
+        assertEquals(1, uncachedBatch.size)
+        assertEquals(profile.accountId, uncachedBatch.first().accountId)
     }
 
     @Test

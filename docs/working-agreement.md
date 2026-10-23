@@ -4,25 +4,28 @@
   <img src="visuals/squarewise-logo.svg" alt="Squarewise Logo" width="300">
 </p>
 
-This repository is documentation-first and tracker-driven. The registry is
-the state machine, the board is the work queue, task details are the scoped
-specification, and the progress ledger is the evidence log. Code, compose
-files, CI, and operational guides must agree with those sources.
+This repository is documentation-first and tracker-driven. After the DOC-28
+cutover, mapped GitHub issues and the `Squarewise Delivery` project are the live
+execution state machine. Until then, the registry and board remain the fallback.
+Task details are scoped specifications and the progress ledger is the evidence
+log. Code, CI, and operations must agree with those sources.
 
 ## Starting in the middle of work
 
 1. Read `AGENTS.md` and `README.md`.
-2. Read `docs/tasks/registry.yaml`, `docs/tasks/board.md`, and
-   `docs/tasks/progress.md`; identify the task owner, status, dependencies,
-   owned paths, acceptance criteria, and latest evidence.
+2. Read `docs/tasks/registry.yaml` and `docs/tasks/README.md`; use the mapped
+   GitHub issue/Project for live state only when the recorded cutover is
+   complete, otherwise read `docs/tasks/board.md`. Then read
+   `docs/tasks/progress.md` for the latest evidence.
 3. Read `docs/implementation/plan.md`, the task detail, and the relevant
    product, architecture, contract, quality, and operations documents.
    Every delegated subagent must thoroughly review all relevant documentation
    and adhere strictly to project standards before writing any code.
 4. Inspect `git status --short`, recent commits, and the diff/history for the
    owned paths. Check for overlapping active work before editing.
-5. In a progress update, state the task ID, objective, dependencies, owned and
-   planned paths, validation commands, expected evidence, and any assumptions.
+5. In a progress update, state the GitHub issue number (or legacy task ID before
+   cutover), objective, dependencies, owned and planned paths, validation
+   commands, expected evidence, and any assumptions.
 
 ## During implementation
 
@@ -53,14 +56,16 @@ Run the task's declared checks and record exact results, limitations, and the
 commit hash in `docs/tasks/progress.md`. Review the diff for unrelated files,
 duplicate versions, stale documentation, and principle violations. Commit one
 coherent increment with a descriptive message. The coordinator alone updates
-`docs/tasks/registry.yaml` and `docs/tasks/board.md`; status changes must be
-reflected there and in the progress ledger. Leave the tree clean unless a
-documented handoff says otherwise.
+shared GitHub Project state, `docs/tasks/registry.yaml`, and the fallback board.
+After cutover, status changes belong only in GitHub; evidence still belongs in
+the progress ledger. Leave the tree clean unless a documented handoff says
+otherwise.
 
 ## Source-of-truth order
 
-User decisions control scope. The task registry controls execution status;
+User decisions control scope. The execution authority selected by
+`registry.yaml.execution_tracking.cutover_status` controls live task state;
 accepted contracts control externally visible behavior; architecture and
 technology decisions control boundaries and versions; operations docs control
-clone-and-run workflows. When documents disagree, stop, record the conflict,
-and resolve it through the coordinator before implementation.
+clone-and-run workflows. When sources disagree, stop and resolve the conflict
+through the coordinator before implementation.

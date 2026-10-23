@@ -35,6 +35,7 @@ class ConfigurationPropertiesBindingTest {
         properties.leaseSeconds = 45
         properties.retryAfterSeconds = 8
         properties.maximumAttempts = 7
+        properties.confirmTimeoutMs = 6_000
 
         assertTrue(properties.enabled)
         assertEquals("auth.exchange", properties.exchange)
@@ -43,5 +44,6 @@ class ConfigurationPropertiesBindingTest {
         assertEquals(45, properties.leaseSeconds)
         assertEquals(8, properties.retryAfterSeconds)
         assertEquals(7, properties.maximumAttempts)
+        assertEquals(6_000, properties.confirmTimeoutMs)
     }
 }

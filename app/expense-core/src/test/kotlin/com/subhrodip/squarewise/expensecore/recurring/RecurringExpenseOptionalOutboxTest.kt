@@ -5,6 +5,8 @@ import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseAllocation
 import com.subhrodip.squarewise.expensecore.expenses.domain.ExpensePayer
 import com.subhrodip.squarewise.expensecore.expenses.persistence.store.ExpenseStore
 import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupRepository
+import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupMembershipRepository
+import com.subhrodip.squarewise.expensecore.validation.EntityReferenceValidator
 import com.subhrodip.squarewise.expensecore.recurring.domain.RecurrenceFrequency
 import com.subhrodip.squarewise.expensecore.recurring.domain.RecurringExpenseSchedule
 import com.subhrodip.squarewise.expensecore.recurring.persistence.RecurringExpenseOccurrenceRepository
@@ -19,9 +21,11 @@ import java.util.UUID
 import org.springframework.dao.DataIntegrityViolationException
 import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchers.anyString
+import org.mockito.ArgumentMatchers.eq
 import org.mockito.ArgumentMatchers.isNull
 import org.mockito.Mockito.doThrow
 import org.mockito.Mockito.doAnswer
+import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
@@ -41,7 +45,6 @@ class RecurringExpenseOptionalOutboxTest {
      * Confirms a failed generated expense pauses the schedule without requiring
      * an optional outbox adapter or advancing the due occurrence.
      */
-    @Suppress("UNCHECKED_CAST")
     @Test
     fun `pauses failed generation without throwing when no outbox is configured`() {
         val scheduleRepository = mock(RecurringExpenseScheduleRepository::class.java)
@@ -49,7 +52,7 @@ class RecurringExpenseOptionalOutboxTest {
         val expenseStore = mock(ExpenseStore::class.java)
         val groupRepository = mock(GroupRepository::class.java)
         val entityManager = mock(EntityManager::class.java)
-        val query = mock(TypedQuery::class.java) as TypedQuery<Array<Any>>
+        val query: TypedQuery<*> = mock(TypedQuery::class.java)
         val groupId = UUID.randomUUID()
         val scheduleId = UUID.randomUUID()
         val occurrenceDate = LocalDate.of(2026, 10, 1)
@@ -75,15 +78,10 @@ class RecurringExpenseOptionalOutboxTest {
             )
         )
             .thenReturn(false)
-        `when`(
-            entityManager.createQuery(
-                anyString(),
-                any(Class::class.java) ?: Array<Any>::class.java
-            )
-        ).thenReturn(query)
+        doReturn(query).`when`(entityManager).createQuery(anyString(), any<Class<*>>() ?: Array<Any>::class.java)
         `when`(query.setParameter("groupId", groupId)).thenReturn(query)
         `when`(query.setMaxResults(101)).thenReturn(query)
-        `when`(query.resultList).thenReturn(listOf(arrayOf("alice", UUID.randomUUID())))
+        doReturn(listOf(arrayOf<Any>("alice", UUID.randomUUID()))).`when`(query).resultList
         doThrow(IllegalStateException("expense store unavailable"))
             .`when`(expenseStore)
             .create(
@@ -102,7 +100,8 @@ class RecurringExpenseOptionalOutboxTest {
                     emptyList()
                 ),
                 anyString(),
-                isNull()
+                isNull(),
+                eq(true)
             )
 
         val service = RecurringExpenseService(
@@ -111,7 +110,8 @@ class RecurringExpenseOptionalOutboxTest {
             expenseStore = expenseStore,
             groupRepository = groupRepository,
             entityManager = entityManager,
-            outboxStore = null
+            outboxStore = null,
+            referenceValidator = EntityReferenceValidator(groupRepository, mock(GroupMembershipRepository::class.java))
         )
 
         inActiveTransaction { assertEquals(0, service.processDueOccurrences(occurrenceDate)) }
@@ -120,7 +120,6 @@ class RecurringExpenseOptionalOutboxTest {
     }
 
     /** Verifies the direct-construction fallback mapper preserves Kotlin data classes. */
-    @Suppress("UNCHECKED_CAST")
     @Test
     fun `default mapper round trips custom recurring split`() {
         val scheduleRepository = mock(RecurringExpenseScheduleRepository::class.java)
@@ -128,7 +127,7 @@ class RecurringExpenseOptionalOutboxTest {
         val expenseStore = mock(ExpenseStore::class.java)
         val groupRepository = mock(GroupRepository::class.java)
         val entityManager = mock(EntityManager::class.java)
-        val query = mock(TypedQuery::class.java) as TypedQuery<UUID>
+        val query: TypedQuery<*> = mock(TypedQuery::class.java)
         val groupId = UUID.randomUUID()
         val payerId = UUID.randomUUID()
         val otherId = UUID.randomUUID()
@@ -156,13 +155,13 @@ class RecurringExpenseOptionalOutboxTest {
                 any(LocalDate::class.java) ?: occurrenceDate
             )
         ).thenReturn(false)
-        `when`(entityManager.createQuery(anyString(), any(Class::class.java) ?: UUID::class.java)).thenReturn(query)
+        doReturn(query).`when`(entityManager).createQuery(anyString(), any<Class<*>>() ?: UUID::class.java)
         `when`(query.setParameter("groupId", groupId)).thenReturn(query)
         `when`(query.setMaxResults(101)).thenReturn(query)
         `when`(query.resultList).thenReturn(listOf(payerId, otherId))
         var created: ExpenseRecord? = null
         doAnswer {
-            created = it.arguments[1] as ExpenseRecord
+            created = it.getArgument<ExpenseRecord>(1)
             created
         }.`when`(expenseStore).create(
             any(UUID::class.java) ?: UUID(0, 0),
@@ -170,10 +169,18 @@ class RecurringExpenseOptionalOutboxTest {
                 UUID(0, 0), UUID(0, 0), "", "", "EUR", 0, 1, "EQUAL", Instant.EPOCH, emptyList(), emptyList()
             ),
             anyString(),
-            isNull()
+            isNull(),
+            eq(true)
         )
 
-        val service = RecurringExpenseService(scheduleRepository, occurrenceRepository, expenseStore, groupRepository, entityManager)
+        val service = RecurringExpenseService(
+            scheduleRepository = scheduleRepository,
+            occurrenceRepository = occurrenceRepository,
+            expenseStore = expenseStore,
+            groupRepository = groupRepository,
+            entityManager = entityManager,
+            referenceValidator = EntityReferenceValidator(groupRepository, mock(GroupMembershipRepository::class.java))
+        )
 
         inActiveTransaction { assertEquals(1, service.processDueOccurrences(occurrenceDate)) }
         assertEquals(listOf(ExpensePayer(payerId, 1200)), created?.payers)
@@ -184,7 +191,6 @@ class RecurringExpenseOptionalOutboxTest {
     }
 
     /** Verifies the bounded member query still accepts an explicit custom participant on page 101. */
-    @Suppress("UNCHECKED_CAST")
     @Test
     fun `accepts custom recurring participants when the bounded member query overflows`() {
         val scheduleRepository = mock(RecurringExpenseScheduleRepository::class.java)
@@ -192,7 +198,7 @@ class RecurringExpenseOptionalOutboxTest {
         val expenseStore = mock(ExpenseStore::class.java)
         val groupRepository = mock(GroupRepository::class.java)
         val entityManager = mock(EntityManager::class.java)
-        val query = mock(TypedQuery::class.java) as TypedQuery<UUID>
+        val query: TypedQuery<*> = mock(TypedQuery::class.java)
         val groupId = UUID.randomUUID()
         val participantIds = (1..101).map { UUID.randomUUID() }
         val occurrenceDate = LocalDate.of(2026, 11, 1)
@@ -219,13 +225,13 @@ class RecurringExpenseOptionalOutboxTest {
                 any(LocalDate::class.java) ?: occurrenceDate
             )
         ).thenReturn(false)
-        `when`(entityManager.createQuery(anyString(), any(Class::class.java) ?: UUID::class.java)).thenReturn(query)
+        doReturn(query).`when`(entityManager).createQuery(anyString(), any<Class<*>>() ?: UUID::class.java)
         `when`(query.setParameter("groupId", groupId)).thenReturn(query)
         `when`(query.setMaxResults(101)).thenReturn(query)
         `when`(query.resultList).thenReturn(participantIds)
         var created: ExpenseRecord? = null
         doAnswer {
-            created = it.arguments[1] as ExpenseRecord
+            created = it.getArgument<ExpenseRecord>(1)
             created
         }.`when`(expenseStore).create(
             any(UUID::class.java) ?: UUID(0, 0),
@@ -233,10 +239,18 @@ class RecurringExpenseOptionalOutboxTest {
                 UUID(0, 0), UUID(0, 0), "", "", "EUR", 0, 1, "EQUAL", Instant.EPOCH, emptyList(), emptyList()
             ),
             anyString(),
-            isNull()
+            isNull(),
+            eq(true)
         )
 
-        val service = RecurringExpenseService(scheduleRepository, occurrenceRepository, expenseStore, groupRepository, entityManager)
+        val service = RecurringExpenseService(
+            scheduleRepository = scheduleRepository,
+            occurrenceRepository = occurrenceRepository,
+            expenseStore = expenseStore,
+            groupRepository = groupRepository,
+            entityManager = entityManager,
+            referenceValidator = EntityReferenceValidator(groupRepository, mock(GroupMembershipRepository::class.java))
+        )
 
         inActiveTransaction { assertEquals(1, service.processDueOccurrences(occurrenceDate)) }
         assertEquals(listOf(ExpensePayer(participantIds.first(), 1200)), created?.payers)
@@ -252,7 +266,8 @@ class RecurringExpenseOptionalOutboxTest {
             expenseStore = mock(ExpenseStore::class.java),
             groupRepository = mock(GroupRepository::class.java),
             entityManager = mock(EntityManager::class.java),
-            outboxStore = null
+            outboxStore = null,
+            referenceValidator = EntityReferenceValidator(mock(GroupRepository::class.java), mock(GroupMembershipRepository::class.java))
         )
         val asOfDate = LocalDate.of(2026, 12, 1)
         `when`(scheduleRepository.findDueSchedules(asOfDate)).thenReturn(emptyList())
@@ -269,7 +284,7 @@ class RecurringExpenseOptionalOutboxTest {
         val expenseStore = mock(ExpenseStore::class.java)
         val groupRepository = mock(GroupRepository::class.java)
         val entityManager = mock(EntityManager::class.java)
-        val query = mock(TypedQuery::class.java) as TypedQuery<UUID>
+        val query: TypedQuery<*> = mock(TypedQuery::class.java)
         val groupId = UUID.randomUUID()
         val memberId = UUID.randomUUID()
         val asOfDate = LocalDate.of(2026, 12, 1)
@@ -286,7 +301,7 @@ class RecurringExpenseOptionalOutboxTest {
 
         `when`(scheduleRepository.findDueSchedules(asOfDate)).thenReturn(schedules)
         doAnswer {
-            when (it.arguments[0] as UUID) {
+            when (it.getArgument<UUID>(0)) {
                 missingId -> null
                 pausedId -> schedules[1]
                 staleId -> schedules[2]
@@ -294,9 +309,7 @@ class RecurringExpenseOptionalOutboxTest {
                 else -> error("unexpected schedule claim")
             }
         }.`when`(scheduleRepository).findForUpdate(any(UUID::class.java) ?: UUID(0, 0))
-        `when`(
-            entityManager.createQuery(anyString(), any(Class::class.java) ?: UUID::class.java)
-        ).thenReturn(query)
+        doReturn(query).`when`(entityManager).createQuery(anyString(), any<Class<*>>() ?: UUID::class.java)
         `when`(query.setParameter("groupId", groupId)).thenReturn(query)
         `when`(query.setMaxResults(101)).thenReturn(query)
         `when`(query.resultList).thenReturn(listOf(memberId))
@@ -308,7 +321,8 @@ class RecurringExpenseOptionalOutboxTest {
             groupRepository = groupRepository,
             entityManager = entityManager,
             outboxStore = null,
-            transactionManager = TestTransactionManager()
+            transactionManager = TestTransactionManager(),
+            referenceValidator = EntityReferenceValidator(groupRepository, mock(GroupMembershipRepository::class.java))
         )
 
         assertEquals(0, service.processDueOccurrences(asOfDate))
@@ -319,7 +333,6 @@ class RecurringExpenseOptionalOutboxTest {
         verify(scheduleRepository).findForUpdate(failingId)
     }
 
-    @Suppress("UNCHECKED_CAST")
     @Test
     fun `skips invalid timezone in active transaction and continues later schedules`() {
         val scheduleRepository = mock(RecurringExpenseScheduleRepository::class.java)
@@ -327,7 +340,7 @@ class RecurringExpenseOptionalOutboxTest {
         val expenseStore = mock(ExpenseStore::class.java)
         val groupRepository = mock(GroupRepository::class.java)
         val entityManager = mock(EntityManager::class.java)
-        val query = mock(TypedQuery::class.java) as TypedQuery<UUID>
+        val query: TypedQuery<*> = mock(TypedQuery::class.java)
         val groupId = UUID.randomUUID()
         val memberId = UUID.randomUUID()
         val asOfDate = LocalDate.now(ZoneOffset.UTC).plusDays(1)
@@ -344,12 +357,19 @@ class RecurringExpenseOptionalOutboxTest {
                 any(LocalDate::class.java) ?: asOfDate
             )
         ).thenReturn(false)
-        `when`(entityManager.createQuery(anyString(), any(Class::class.java) ?: UUID::class.java)).thenReturn(query)
+        doReturn(query).`when`(entityManager).createQuery(anyString(), any<Class<*>>() ?: UUID::class.java)
         `when`(query.setParameter("groupId", groupId)).thenReturn(query)
         `when`(query.setMaxResults(101)).thenReturn(query)
         `when`(query.resultList).thenReturn(listOf(memberId))
 
-        val service = RecurringExpenseService(scheduleRepository, occurrenceRepository, expenseStore, groupRepository, entityManager)
+        val service = RecurringExpenseService(
+            scheduleRepository = scheduleRepository,
+            occurrenceRepository = occurrenceRepository,
+            expenseStore = expenseStore,
+            groupRepository = groupRepository,
+            entityManager = entityManager,
+            referenceValidator = EntityReferenceValidator(groupRepository, mock(GroupMembershipRepository::class.java))
+        )
 
         inActiveTransaction { assertEquals(1, service.processDueOccurrences(12)) }
 
@@ -357,7 +377,6 @@ class RecurringExpenseOptionalOutboxTest {
         assertEquals(occurrenceDate.plusWeeks(1), later.nextOccurrenceDate)
     }
 
-    @Suppress("UNCHECKED_CAST")
     @Test
     fun `skips invalid timezone in independent transaction and continues later schedules`() {
         val scheduleRepository = mock(RecurringExpenseScheduleRepository::class.java)
@@ -365,7 +384,7 @@ class RecurringExpenseOptionalOutboxTest {
         val expenseStore = mock(ExpenseStore::class.java)
         val groupRepository = mock(GroupRepository::class.java)
         val entityManager = mock(EntityManager::class.java)
-        val query = mock(TypedQuery::class.java) as TypedQuery<UUID>
+        val query: TypedQuery<*> = mock(TypedQuery::class.java)
         val groupId = UUID.randomUUID()
         val memberId = UUID.randomUUID()
         val asOfDate = LocalDate.now(ZoneOffset.UTC).plusDays(1)
@@ -384,18 +403,19 @@ class RecurringExpenseOptionalOutboxTest {
                 any(LocalDate::class.java) ?: asOfDate
             )
         ).thenReturn(false)
-        `when`(entityManager.createQuery(anyString(), any(Class::class.java) ?: UUID::class.java)).thenReturn(query)
+        doReturn(query).`when`(entityManager).createQuery(anyString(), any<Class<*>>() ?: UUID::class.java)
         `when`(query.setParameter("groupId", groupId)).thenReturn(query)
         `when`(query.setMaxResults(101)).thenReturn(query)
         `when`(query.resultList).thenReturn(listOf(memberId))
 
         val service = RecurringExpenseService(
-            scheduleRepository,
-            occurrenceRepository,
-            expenseStore,
-            groupRepository,
-            entityManager,
-            transactionManager = TestTransactionManager()
+            scheduleRepository = scheduleRepository,
+            occurrenceRepository = occurrenceRepository,
+            expenseStore = expenseStore,
+            groupRepository = groupRepository,
+            entityManager = entityManager,
+            transactionManager = TestTransactionManager(),
+            referenceValidator = EntityReferenceValidator(groupRepository, mock(GroupMembershipRepository::class.java))
         )
 
         assertEquals(1, service.processDueOccurrences(12))

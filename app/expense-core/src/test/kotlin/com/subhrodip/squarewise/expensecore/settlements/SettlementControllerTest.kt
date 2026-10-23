@@ -9,6 +9,8 @@ import com.subhrodip.squarewise.expensecore.expenses.domain.ExpensePayer
 import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseRecord
 import com.subhrodip.squarewise.expensecore.expenses.persistence.store.InMemoryExpenseStore
 import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupMembershipRepository
+import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupRepository
+import com.subhrodip.squarewise.expensecore.validation.EntityReferenceValidator
 
 import org.junit.jupiter.api.Test
 import org.springframework.http.MediaType
@@ -18,11 +20,13 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPat
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.test.web.servlet.setup.MockMvcBuilders
 import java.util.UUID
-import com.subhrodip.squarewise.errors.http.GlobalErrorHandler
+import java.nio.charset.StandardCharsets
+import com.subhrodip.squarewise.errors.web.GlobalErrorAdvice
 import java.time.Instant
 import java.security.Principal
 import java.lang.reflect.Proxy
 import org.springframework.test.web.servlet.request.RequestPostProcessor
+import org.mockito.Mockito.mock
 import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
 
 class SettlementControllerTest {
@@ -35,10 +39,13 @@ class SettlementControllerTest {
     ) { _, method, args ->
         if (method.name.startsWith("existsByGroupIdAndSubject")) args?.getOrNull(1) == "test-user" else null
     } as GroupMembershipRepository
-    private val controller = SettlementController(service, memberships)
+    private val groups = mock(GroupRepository::class.java)
+    private val controller = SettlementController(service, EntityReferenceValidator(groups, memberships))
     private val mvc = MockMvcBuilders.standaloneSetup(controller)
-        .setControllerAdvice(GlobalErrorHandler()).build()
+        .setControllerAdvice(GlobalErrorAdvice()).build()
     private val user = RequestPostProcessor { request -> request.userPrincipal = Principal { "test-user" }; request }
+
+    private val spacedUser = RequestPostProcessor { request -> request.userPrincipal = Principal { " test-user " }; request }
 
     @Test
     fun `rejects non numeric amount`() {
@@ -56,6 +63,24 @@ class SettlementControllerTest {
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"fromParticipantId\":\"${UUID.randomUUID()}\",\"toParticipantId\":\"${UUID.randomUUID()}\",\"amountMinor\":\"${"9".repeat(20)}\",\"currency\":\"EUR\"}"))
             .andExpect(status().isUnprocessableContent)
+    }
+
+    @Test
+    fun `records settlement with the canonical membership subject`() {
+        val groupId = UUID.randomUUID()
+        val from = UUID.randomUUID()
+        val to = UUID.randomUUID()
+        val key = "settlement-key-0002"
+        val expectedId = UUID.nameUUIDFromBytes("settlement|$groupId|test-user|$key".toByteArray(StandardCharsets.UTF_8))
+
+        mvc.perform(
+            post(ApiEndpoints.ExpenseCore.V1.groupSettlements(groupId)).with(spacedUser)
+                .header(ApiEndpoints.Headers.IDEMPOTENCY_KEY, key)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"fromParticipantId\":\"$from\",\"toParticipantId\":\"$to\",\"amountMinor\":\"1250\",\"currency\":\"EUR\"}")
+        )
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.id").value(expectedId.toString()))
     }
 
     @Test
@@ -205,5 +230,37 @@ class SettlementControllerTest {
             .contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"unknown\"}"))
             .andExpect(status().isNotFound)
             .andExpect(jsonPath("$.code").value("NOT_FOUND"))
+    }
+
+    @Test
+    fun `controller validates active membership`() {
+        val controller = SettlementController(service, EntityReferenceValidator(groups, memberships))
+        val mvc = MockMvcBuilders.standaloneSetup(controller)
+            .setControllerAdvice(GlobalErrorAdvice()).build()
+
+        val groupId = UUID.randomUUID()
+        // Suggestions call checks membership.
+        mvc.perform(get(ApiEndpoints.ExpenseCore.V1.groupSettlementSuggestions(groupId)).with(user))
+            .andExpect(status().isOk)
+
+        // Subsequent call remains valid for the same group.
+        mvc.perform(get(ApiEndpoints.ExpenseCore.V1.groupSettlementSuggestions(groupId)).with(user))
+            .andExpect(status().isOk)
+
+        // Non-member request
+        val nonMember = RequestPostProcessor { request -> request.userPrincipal = Principal { "other-user" }; request }
+        mvc.perform(get(ApiEndpoints.ExpenseCore.V1.groupSettlementSuggestions(groupId)).with(nonMember))
+            .andExpect(status().isNotFound)
+    }
+
+    @Test
+    fun `rejects requests when principal is missing or blank`() {
+        val groupId = UUID.randomUUID()
+        mvc.perform(get(ApiEndpoints.ExpenseCore.V1.groupSettlementSuggestions(groupId)))
+            .andExpect(status().isUnauthorized)
+
+        val blankUser = RequestPostProcessor { request -> request.userPrincipal = Principal { "   " }; request }
+        mvc.perform(get(ApiEndpoints.ExpenseCore.V1.groupSettlementSuggestions(groupId)).with(blankUser))
+            .andExpect(status().isUnauthorized)
     }
 }

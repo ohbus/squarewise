@@ -48,9 +48,11 @@ class LoginStartService(
             throw AccountsDomainException(AccountsErrors.LOGIN_RATE_LIMITED)
         }
 
-        val credential = runCatching {
+        val credential = try {
             credentialService.issue(email, kind, now)
-        }.getOrNull() ?: return LoginStartResult.ACCEPTED
+        } catch (_: IllegalArgumentException) {
+            return LoginStartResult.ACCEPTED
+        }
 
         runCatching {
             emailSender.send(

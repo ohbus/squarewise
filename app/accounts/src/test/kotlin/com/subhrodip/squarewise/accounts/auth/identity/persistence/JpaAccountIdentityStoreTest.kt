@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
+import org.springframework.dao.DataIntegrityViolationException
 
 /**
  * Integration test verifying JPA-backed durable identity persistence,
@@ -233,5 +234,21 @@ class JpaAccountIdentityStoreTest @Autowired constructor(
         assertEquals("new@example.com", updated.email)
         assertEquals(accountId, identityStore.findByEmail("new@example.com")?.accountId)
         assertNull(identityStore.findByEmail("old@example.com"))
+    }
+
+    /** Database uniqueness prevents two active identities from owning one email address. */
+    @Test
+    fun `rejects duplicate identity email`() {
+        val firstAccountId = UUID.randomUUID()
+        val secondAccountId = UUID.randomUUID()
+        profileRepository.save(ProfileEntity(firstAccountId, "sqw:$firstAccountId", "First", "UTC", "EUR"))
+        profileRepository.save(ProfileEntity(secondAccountId, "sqw:$secondAccountId", "Second", "UTC", "EUR"))
+
+        identityStore.enrollIdentity(firstAccountId, "https://accounts.squarewise.test", "sqw:$firstAccountId", "same@example.com", true)
+
+        assertThrows(DataIntegrityViolationException::class.java) {
+            identityStore.enrollIdentity(secondAccountId, "https://accounts.squarewise.test", "sqw:$secondAccountId", "SAME@example.com", true)
+            identityRepository.flush()
+        }
     }
 }

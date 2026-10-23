@@ -187,4 +187,43 @@ class LoginVerificationServiceTest @Autowired constructor(
 
         assertEquals(CategoryCode.RATE_LIMIT_EXCEEDED, exception.definition.category)
     }
+
+    @Test
+    fun `provisions default displayName User when email prefix is blank`() {
+        val mockCredentialService = org.mockito.Mockito.mock(LoginCredentialService::class.java)
+        val now = Instant.now()
+        org.mockito.Mockito.`when`(mockCredentialService.redeem("test-cred", now)).thenReturn(
+            com.subhrodip.squarewise.accounts.auth.credential.LoginCredentialEntity(
+                credentialId = UUID.randomUUID(),
+                canonicalEmail = "   @example.com",
+                credentialDigest = ByteArray(32),
+                credentialKind = "LINK",
+                issuedAt = now,
+                expiresAt = now.plusSeconds(300),
+                remainingAttempts = 3
+            )
+        )
+        val testProfileStore = InMemoryProfileStore()
+        val customTokenSessionService = TokenSessionService(
+            sessionRepository = sessionRepository,
+            identityProviderPort = tokenProvider,
+            credentialDigest = digest,
+            accountIdentityStore = testProfileStore
+        )
+        val customService = LoginVerificationService(
+            credentialService = mockCredentialService,
+            profileStore = testProfileStore,
+            tokenSessionService = customTokenSessionService,
+            accountIdentityStore = testProfileStore,
+            loginVerificationRateLimitService = verificationRateLimitService
+        )
+
+        val tokens = customService.verify("test-cred", "BROWSER", "device", now)
+        assertNotNull(tokens.accessToken)
+        val identity = testProfileStore.findByEmail("   @example.com")
+        assertNotNull(identity)
+        val profile = testProfileStore.get(identity!!.subject)
+        assertNotNull(profile)
+        assertEquals("User", profile!!.displayName)
+    }
 }

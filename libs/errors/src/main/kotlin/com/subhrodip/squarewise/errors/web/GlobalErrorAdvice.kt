@@ -66,27 +66,27 @@ class GlobalErrorAdvice(
 
     /** Map malformed JSON to static safe detail text. */
     @ExceptionHandler(HttpMessageNotReadableException::class)
-    fun malformed(@Suppress("UNUSED_PARAMETER") exception: HttpMessageNotReadableException? = null): ResponseEntity<ProblemDetailsDto> =
+    fun malformed(): ResponseEntity<ProblemDetailsDto> =
         response(PlatformErrors.REQUEST_BODY_MALFORMED)
 
     /** Map missing or malformed request bindings without copying framework text. */
     @ExceptionHandler(ServletRequestBindingException::class)
-    fun requestBinding(@Suppress("UNUSED_PARAMETER") exception: ServletRequestBindingException): ResponseEntity<ProblemDetailsDto> =
+    fun requestBinding(): ResponseEntity<ProblemDetailsDto> =
         response(PlatformErrors.REQUEST_VALUE_INVALID)
 
     /** Map path and query conversion failures to one stable validation identity. */
     @ExceptionHandler(MethodArgumentTypeMismatchException::class)
-    fun argumentTypeMismatch(@Suppress("UNUSED_PARAMETER") exception: MethodArgumentTypeMismatchException): ResponseEntity<ProblemDetailsDto> =
+    fun argumentTypeMismatch(): ResponseEntity<ProblemDetailsDto> =
         response(PlatformErrors.REQUEST_VALUE_INVALID)
 
     /** Map optimistic locking failures to a static conflict response. */
     @ExceptionHandler(OptimisticLockingFailureException::class)
-    fun optimisticLock(@Suppress("UNUSED_PARAMETER") exception: OptimisticLockingFailureException): ResponseEntity<ProblemDetailsDto> =
+    fun optimisticLock(): ResponseEntity<ProblemDetailsDto> =
         response(PlatformErrors.RESOURCE_CONFLICT)
 
     /** Map direct input exceptions that escaped a lower application boundary. */
     @ExceptionHandler(IllegalArgumentException::class)
-    fun illegalArgument(@Suppress("UNUSED_PARAMETER") exception: IllegalArgumentException): ResponseEntity<ProblemDetailsDto> =
+    fun illegalArgument(): ResponseEntity<ProblemDetailsDto> =
         response(PlatformErrors.REQUEST_VALUE_INVALID)
 
     /** Map unsupported response negotiation to the catalog identity. */
@@ -122,12 +122,6 @@ class GlobalErrorAdvice(
         }
         return ResponseEntity.status(status).headers(responseHeaders).body(body)
     }
-
-    /** Compatibility name retained for standalone MVC tests during the handler migration. */
-    fun governedException(exception: SquarewiseException): ResponseEntity<ProblemDetailsDto> = governed(exception)
-
-    /** Compatibility name retained for standalone MVC tests during the handler migration. */
-    fun messageNotReadable(exception: HttpMessageNotReadableException): ResponseEntity<ProblemDetailsDto> = malformed(exception)
 
     private fun sanitizeRejectedValue(field: String, value: Any?): Any? {
         if (value == null) return null

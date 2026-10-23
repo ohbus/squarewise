@@ -14,6 +14,9 @@ class NotificationInboxQueryStoreTest {
         val oldest = item(1, Instant.parse("2026-10-01T00:00:00Z"))
         val store = object : NotificationInboxQueryStore {
             override fun list(subject: String) = listOf(newest, oldest)
+            override fun page(subject: String, afterOccurredAt: Instant?, afterNotificationId: UUID?, limit: Int): List<InboxItem> {
+                return super.page(subject, afterOccurredAt, afterNotificationId, limit)
+            }
         }
 
         assertEquals(listOf(newest), store.page("alice", null, null, 1))

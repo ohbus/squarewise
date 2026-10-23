@@ -11,6 +11,7 @@ permissions:
 env:
   JAVA_VERSION: '25'
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+  GRADLE_OPTS: '-Dscan.termsOfUse.url=https://gradle.com/help/legal-terms-of-use -Dscan.termsOfUse.accept=yes'
   # Cryptographic keys and backing service credentials. Can be overridden
   # in GitHub Actions Repository Secrets (or inherited secrets), falling back
   # to safe deterministic local fixtures when not set.
@@ -150,7 +151,7 @@ jobs:
           uv run --frozen --no-build python3 tools/ops/check_security_hygiene.py
           uv run --frozen --no-build python3 tools/ops/check_architecture.py
           uv run --frozen --no-build python3 tools/ops/validate_sbom_baseline.py
-          ./gradlew cyclonedxBom --no-daemon
+          ./gradlew cyclonedxBom --scan --no-daemon
           uv run --frozen --no-build python3 -m unittest discover -s tests/acceptance
           make workflow-validate
       - name: Upload CycloneDX SBOM
@@ -181,10 +182,13 @@ jobs:
     services:
       postgres:
         image: postgres:17
-        env: { POSTGRES_DB: squarewise, POSTGRES_USER: squarewise, POSTGRES_PASSWORD: squarewise }
+        env:
+          POSTGRES_DB: squarewise_expense_core
+          POSTGRES_USER: squarewise
+          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
         ports: ['5432:5432']
         options: >-
-          --health-cmd="pg_isready -U squarewise -d squarewise"
+          --health-cmd="pg_isready -U squarewise -d squarewise_expense_core"
           --health-interval=5s --health-timeout=5s --health-retries=12
       rabbitmq:
         # Verification only needs the broker protocol and diagnostics; omit the
@@ -218,10 +222,18 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
       - uses: gradle/actions/setup-gradle@b9bee63ef481cc545e4517ec730544a4d8b1dfa0 # v6.4.0
       - name: Build, test, check, and coverage
-        run: ./gradlew ${{ matrix.path }}:test ${{ matrix.path }}:check ${{ matrix.path }}:jacocoTestReport --no-daemon
+        run: ./gradlew ${{ matrix.path }}:test ${{ matrix.path }}:check ${{ matrix.path }}:jacocoTestReport --scan --no-daemon
+      - name: Run Expense Core PostgreSQL integration tests
+        if: matrix.path == ':app:expense-core'
+        env:
+          SQUAREWISE_POSTGRES_TESTS: 'true'
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/squarewise_expense_core
+          SPRING_DATASOURCE_USERNAME: squarewise
+          SPRING_DATASOURCE_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+        run: ./gradlew :app:expense-core:test --tests '*Postgres*' --rerun-tasks --scan --no-daemon
       - name: Build application artifact
         if: matrix.kind == 'app'
-        run: ./gradlew ${{ matrix.path }}:bootJar --no-daemon
+        run: ./gradlew ${{ matrix.path }}:bootJar --scan --no-daemon
       - name: Upload application jar artifact
         if: matrix.kind == 'app'
         id: upload-app-jar
@@ -270,7 +282,10 @@ jobs:
     services:
       postgres:
         image: postgres:17
-        env: { POSTGRES_DB: squarewise, POSTGRES_USER: squarewise, POSTGRES_PASSWORD: squarewise }
+        env:
+          POSTGRES_DB: squarewise
+          POSTGRES_USER: squarewise
+          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
         ports: ['5432:5432']
         options: >-
           --health-cmd="pg_isready -U squarewise -d squarewise"
@@ -313,14 +328,14 @@ jobs:
             echo "SONAR_TOKEN is not set (e.g. running from fork PR). Skipping SonarCloud analysis."
             exit 0
           fi
-          ./gradlew build jacocoTestReport sonar --info --no-daemon
+          ./gradlew build jacocoTestReport sonar --info --scan --no-daemon
 
   e2e-artifacts:
     name: Package application artifacts for selected E2E
     if: always() && inputs.run_e2e && needs.scope.outputs.has_e2e == 'true' && needs.preflight.result == 'success'
     needs: [preflight, scope]
-    runs-on: ubuntu-slim
-    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
     permissions:
       contents: read
       id-token: write
@@ -335,7 +350,7 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
       - uses: gradle/actions/setup-gradle@b9bee63ef481cc545e4517ec730544a4d8b1dfa0 # v6.4.0
       - name: Build all application boot JARs without rerunning tests
-        run: ./gradlew :app:accounts:bootJar :app:expense-core:bootJar :app:notifications:bootJar :app:bff:bootJar --no-daemon
+        run: ./gradlew :app:accounts:bootJar :app:expense-core:bootJar :app:notifications:bootJar :app:bff:bootJar --scan --no-daemon
       - name: Upload E2E application JARs
         id: upload-e2e-jars
         uses: actions/upload-artifact@v7
@@ -741,3 +756,43 @@ jobs:
           if [ "${{ needs.scope.outputs.run_product }}" = true ]; then args+=(--product-selected); fi
           if [ "${{ needs.scope.outputs.run_chaos }}" = true ]; then args+=(--chaos-selected); fi
           uv run --frozen --no-build python tools/ci/e2e_gate.py "${args[@]}"
+
+  required-ci:
+    name: Required CI
+    if: always()
+    needs:
+      - scope
+      - preflight
+      - dependency-review
+      - lint
+      - verify
+      - sonar
+      - e2e-artifacts
+      - e2e-edge-and-security
+      - e2e-product-and-offline
+      - e2e-concurrency-and-chaos
+      - e2e-gate
+    runs-on: ubuntu-slim
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Set up isolated Python tooling
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - name: Aggregate required workflow results
+        run: |
+          uv run --frozen --no-build python tools/ci/required_ci_gate.py \
+            --result "scope=${{ needs.scope.result }}" \
+            --result "preflight=${{ needs.preflight.result }}" \
+            --result "dependency-review=${{ needs.dependency-review.result }}" \
+            --result "lint=${{ needs.lint.result }}" \
+            --result "verify=${{ needs.verify.result }}" \
+            --result "sonar=${{ needs.sonar.result }}" \
+            --result "e2e-artifacts=${{ needs.e2e-artifacts.result }}" \
+            --result "e2e-edge-and-security=${{ needs.e2e-edge-and-security.result }}" \
+            --result "e2e-product-and-offline=${{ needs.e2e-product-and-offline.result }}" \
+            --result "e2e-concurrency-and-chaos=${{ needs.e2e-concurrency-and-chaos.result }}" \
+            --result "e2e-gate=${{ needs.e2e-gate.result }}"

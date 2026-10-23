@@ -7,6 +7,7 @@ import java.time.Instant
 import java.util.UUID
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.`when`
@@ -17,6 +18,9 @@ import org.mockito.Mockito.verify
 import org.springframework.amqp.AmqpException
 import org.springframework.amqp.core.Message
 import org.springframework.amqp.core.MessageProperties
+import org.springframework.amqp.core.ReturnedMessage
+import org.springframework.amqp.rabbit.connection.CorrelationData
+import org.springframework.amqp.rabbit.core.RabbitOperations
 import org.springframework.amqp.rabbit.core.RabbitTemplate
 import tools.jackson.databind.ObjectMapper
 
@@ -27,6 +31,23 @@ class AuthEmailOutboxPublisherTest {
     private val lease = Duration.ofSeconds(30)
     private val retryAfter = Duration.ofSeconds(10)
     private val eventId = UUID.fromString("00000000-0000-0000-0000-000000000123")
+
+    @Test
+    fun `publisher requires a positive confirmation timeout`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            AuthEmailOutboxPublisher(
+                outbox = mock(AuthEmailOutboxService::class.java),
+                rabbitTemplate = RecordingRabbitTemplate(),
+                objectMapper = ObjectMapper(),
+                exchange = "auth.exchange",
+                routingKey = "auth.email",
+                lease = lease,
+                retryAfter = retryAfter,
+                maximumAttempts = 3,
+                confirmTimeoutMs = 0
+            )
+        }
+    }
 
     /** An empty claim does not touch RabbitMQ or advance any outbox state. */
     @Test
@@ -84,6 +105,34 @@ class AuthEmailOutboxPublisherTest {
         verify(outbox, never()).acknowledge(eventId, now)
     }
 
+    /** A negative publisher confirmation schedules retry instead of acknowledging delivery. */
+    @Test
+    fun `publisher confirmation failure schedules retry`() {
+        val outbox = mock(AuthEmailOutboxService::class.java)
+        val rabbit = RecordingRabbitTemplate(failWithConfirmException = true)
+        `when`(outbox.claim(now, lease)).thenReturn(record())
+
+        val outcome = publisher(outbox, rabbit, ObjectMapper()).publishOne()
+
+        assertEquals(AuthEmailPublishOutcome.RETRY_SCHEDULED, outcome)
+        verify(outbox).reject(eventId, now, retryAfter, 3)
+        verify(outbox, never()).acknowledge(eventId, now)
+    }
+
+    /** A positively confirmed but unroutable message schedules retry instead of acknowledging. */
+    @Test
+    fun `returned message schedules retry`() {
+        val outbox = mock(AuthEmailOutboxService::class.java)
+        val rabbit = RecordingRabbitTemplate(returnMessage = true)
+        `when`(outbox.claim(now, lease)).thenReturn(record())
+
+        val outcome = publisher(outbox, rabbit, ObjectMapper()).publishOne()
+
+        assertEquals(AuthEmailPublishOutcome.RETRY_SCHEDULED, outcome)
+        verify(outbox).reject(eventId, now, retryAfter, 3)
+        verify(outbox, never()).acknowledge(eventId, now)
+    }
+
     /** Serialization failure follows the same retry path and does not send a partial message. */
     @Test
     fun `serialization failure schedules retry without sending`() {
@@ -113,6 +162,7 @@ class AuthEmailOutboxPublisherTest {
         lease = lease,
         retryAfter = retryAfter,
         maximumAttempts = 3,
+        confirmTimeoutMs = 5_000,
         clock = { now }
     )
 
@@ -130,7 +180,9 @@ class AuthEmailOutboxPublisherTest {
     )
 
     private class RecordingRabbitTemplate(
-        private val failWithAmqpException: Boolean = false
+        private val failWithAmqpException: Boolean = false,
+        private val failWithConfirmException: Boolean = false,
+        private val returnMessage: Boolean = false
     ) : RabbitTemplate() {
         var sentMessage: Message? = null
         var sentExchange: String? = null
@@ -143,6 +195,29 @@ class AuthEmailOutboxPublisherTest {
             sentMessage = message
             sentExchange = exchange
             sentRoutingKey = routingKey
+        }
+
+        override fun send(
+            exchange: String?,
+            routingKey: String?,
+            message: Message,
+            correlationData: CorrelationData?
+        ) {
+            send(requireNotNull(exchange), requireNotNull(routingKey), message)
+            if (returnMessage && correlationData != null) {
+                correlationData.setReturned(
+                    ReturnedMessage(message, 312, "NO_ROUTE", requireNotNull(exchange), requireNotNull(routingKey))
+                )
+            }
+        }
+
+        override fun <T> invoke(action: RabbitOperations.OperationsCallback<T>): T =
+            action.doInRabbit(this)
+
+        override fun waitForConfirmsOrDie(timeout: Long) {
+            if (failWithConfirmException) {
+                throw AmqpException("publisher confirmation rejected")
+            }
         }
     }
 

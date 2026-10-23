@@ -42,9 +42,21 @@ tests prohibit cycles, domain dependencies on web/persistence adapters, and
 cross-service entities/repositories. Do not create empty packages just to match a
 pattern. Application services own transaction boundaries; controllers do not.
 
-Each stateful service owns a PostgreSQL database, credentials and Flyway migrations.
-Initially these databases may share a cluster to limit operating cost. Cross-service
-SQL, database foreign keys and shared persistent domain models are prohibited.
+Each stateful service owns a PostgreSQL database, credentials, and one
+fresh-install Flyway baseline. Databases created by the retired multi-version
+chains require an explicitly approved rebuild or baseline process before this
+revision is deployed. Cross-service SQL, cross-service database foreign keys,
+and shared persistent domain models are prohibited. Same-service foreign keys
+remain the durable referential-integrity guard; application-layer validation
+(`EntityReferenceValidator` and `AccountReferenceValidator`) provides early
+authorization and input errors before persistence. Hot read paths are accelerated
+with bounded in-memory caching (`GroupAccessCache`, `ProfileCache`, `PreferenceCache`)
+with local `afterCommit` invalidations, and approved high-volume query endpoints route to
+load-balanced reader replicas via `@DbReader` and `@DbRouteContext`. Authorization
+and financial state remain writer-bound. Approved non-strong reader queries use
+bounded writer fallback when replica health or causal-watermark checks reject
+every reader; local caches can remain stale across instances until invalidation
+propagation or TTL expiry.
 The BFF accesses only REST and event infrastructure. Shared libraries contain
 technical configuration rather than business rules or service-to-service DTOs.
 Fallback, retry, defaulting, and degradation behavior is catalogued in the

@@ -11,7 +11,6 @@ spotless = "8.1.0"
 cyclonedx = "3.4.1"
 kotlinxCoroutines = "1.7.3"
 sonarqube = "7.5.0.8588"
-jmh = "0.7.3"
 jackson = "2.20.1"
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
@@ -22,7 +21,6 @@ spring-dependency-management = { id = "io.spring.dependency-management", version
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 cyclonedx = { id = "org.cyclonedx.bom", version.ref = "cyclonedx" }
 sonarqube = { id = "org.sonarqube", version.ref = "sonarqube" }
-jmh = { id = "me.champeau.jmh", version.ref = "jmh" }
 
 [libraries]
 boot-actuator = { module = "org.springframework.boot:spring-boot-starter-actuator", version.ref = "springBoot" }

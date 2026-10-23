@@ -13,6 +13,8 @@ import org.springframework.context.annotation.Primary
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import com.subhrodip.squarewise.db.routing.DbReader
+import com.subhrodip.squarewise.db.routing.DbWriter
 
 /**
  * Spring Data JPA implementation of [SynchronizationStore].
@@ -31,6 +33,7 @@ class JpaSynchronizationStore(
     /**
      * Records a change for an entity under the given group and returns the newly assigned revision.
      */
+    @DbWriter("expense.sync.append")
     @Transactional
     override fun append(groupId: String, entityId: String, payload: String?): Long {
         require(groupId.isNotBlank()) { "groupId must not be blank" }
@@ -53,6 +56,7 @@ class JpaSynchronizationStore(
     /**
      * Records a tombstone deletion for an entity under the given group.
      */
+    @DbWriter("expense.sync.delete")
     @Transactional
     override fun delete(groupId: String, entityId: String): Long {
         require(groupId.isNotBlank()) { "groupId must not be blank" }
@@ -75,17 +79,18 @@ class JpaSynchronizationStore(
     /**
      * Retrieves a page of sync changes after a given cursor for the specified group.
      */
+    @DbReader("expense.sync.page")
     @Transactional(readOnly = true)
     override fun snapshot(groupId: String, after: String?, limit: Int): SyncPage {
         require(groupId.isNotBlank()) { "groupId must not be blank" }
         require(limit in 1..100) { "limit must be between 1 and 100" }
 
         val start = validate(groupId, after)
-        val entities = repository.findChangesAfter(groupId, start, PageRequest.of(0, limit))
-        val totalRemaining = repository.countChangesAfter(groupId, start)
-        val hasMore = totalRemaining > entities.size
+        val entities = repository.findChangesAfter(groupId, start, PageRequest.of(0, limit + 1))
+        val hasMore = entities.size > limit
+        val pageEntities = if (hasMore) entities.take(limit) else entities
 
-        val domainChanges = entities.map {
+        val domainChanges = pageEntities.map {
             SyncChange(
                 revision = it.revision,
                 entityId = it.entityId,

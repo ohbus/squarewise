@@ -1,5 +1,6 @@
 package com.subhrodip.squarewise.db.config
 
+import com.subhrodip.squarewise.db.aop.DbRouteAspect
 import com.subhrodip.squarewise.db.errors.DbPlatformException
 import com.subhrodip.squarewise.db.health.DbReaderHealth
 import com.subhrodip.squarewise.observability.db.DbTelemetry
@@ -25,6 +26,7 @@ class DbAutoConfigurationTest {
 
         assertEquals(DbTelemetry::class, configuration.squarewiseDbTelemetry(registryProvider)::class)
         assertEquals(DbReaderHealth::class, configuration.squarewiseReaderHealth()::class)
+        assertEquals(DbRouteAspect::class, configuration.squarewiseDbRouteAspect()::class)
     }
 
     @Test
@@ -134,6 +136,28 @@ class DbAutoConfigurationTest {
             assertEquals("app", reader.username)
         } finally {
             reader.close()
+        }
+    }
+
+    @Test
+    fun `normal mode builds configured writer datasources`() {
+        val writer = mock(HikariDataSource::class.java)
+        val writerPool = PoolProperties(url = "jdbc:postgresql://writer/db", username = "app")
+        val shardPool = PoolProperties(url = "jdbc:postgresql://shard-1/db", username = "app")
+        val routing = configuration.squarewiseDataSource(
+            DbProperties(writer = writerPool, writers = mapOf("shard-1" to shardPool)),
+            writer,
+            DbReaderHealth(),
+            DbTelemetry(),
+        ) as DbRoutingDataSource
+
+        val shard = routing.writerDataSources()["shard-1"] as HikariDataSource
+        try {
+            assertNotSame(writer, shard)
+            assertEquals("jdbc:postgresql://shard-1/db", shard.jdbcUrl)
+            assertEquals("app", shard.username)
+        } finally {
+            shard.close()
         }
     }
 

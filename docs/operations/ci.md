@@ -44,12 +44,24 @@ Workflows declare `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'` in their top-leve
 `env` blocks, ensuring all runner steps and composite JavaScript actions run on
 Node 24 ahead of runner deprecation deadlines.
 
+The root Gradle settings apply Develocity Gradle plugin `4.5.0`. Every hosted
+Gradle invocation passes `--scan`, publishes a Build Scan to `scans.gradle.com`,
+and tags it `CI`; CI also disables background upload so the scan is complete
+before the step exits. The workflow accepts Gradle's published terms of use
+non-interactively through `GRADLE_OPTS`. Ordinary local builds keep the plugin
+instrumentation for IntelliJ's live timeline but do not publish scans; an
+explicit local `--scan` is an opt-in request to publish one. Build
+Scans can include build metadata, environment details, task output, dependency
+information, and compiler/test failure messages, so scan links and logs must be
+handled as public diagnostic artifacts.
+
 Each verification-matrix job receives isolated PostgreSQL 17 and RabbitMQ 4.3
 service containers. The CI-only RabbitMQ service uses the protocol image rather
 than the management variant because verification and Sonar do not use the
 management UI; the local Compose topology retains management for operator
 inspection. Docker health checks (`pg_isready` and
-`rabbitmq-diagnostics ping`) must pass before job steps begin. RabbitMQ receives
+`rabbitmq-diagnostics ping`) must pass before job steps begin. Compose runs the
+RabbitMQ diagnostic as the `rabbitmq` user to preserve Erlang-cookie ownership. RabbitMQ receives
 a 60-second health-check start period, 10-second health-check timeout, and 24
 five-second retries to accommodate slow hosted-runner startup without weakening
 the readiness command. No service
@@ -59,9 +71,12 @@ Mailpit; declaring duplicate job services on the host would contend for host por
 and `5672`.
 
 To achieve fast feedback and conserve runner CPU, the E2E stages eliminate redundant
-Gradle test runs and compilation. Instead, the parallel E2E jobs depend directly on
-`verify` and consume the pre-built application `bootJar` artifacts (`app-jar-*`),
-allowing `Dockerfile.fast` to package lightweight runtime containers in seconds.
+Gradle test runs. One dedicated `ubuntu-latest` preparation job compiles all four
+application `bootJar` files without running tests and publishes one shared
+`e2e-app-jars` artifact. Its 60-minute ceiling accommodates a cold hosted Gradle
+build without letting a stalled preparation block CI indefinitely. The three
+parallel E2E jobs consume that artifact, allowing `Dockerfile.fast` to package
+lightweight runtime containers in seconds.
 The Docker context explicitly re-includes only these downloaded application JARs
 from the otherwise ignored Gradle `build/` directories. Each E2E job verifies all
 four artifact paths before Compose starts, so a missing artifact fails at the
@@ -83,6 +98,15 @@ unselected streams are reported as not evaluated and do not fail the gate. If no
 stream is selected, the gate is skipped rather than falsely reporting a full E2E pass.
 Master always selects all three streams.
 
+The final `required-ci` job runs with `if: always()` and reduces every reusable
+workflow result to one stable `Required CI` check. `success` and an intentional
+`skipped` are neutral; failures, cancellation, timeouts, or missing outcomes fail
+the aggregate. Default-branch protection should require
+`Pull request verification (reusable) / Required CI` after that check has run at
+least once on GitHub. The typed evaluator is
+`tools/ci/required_ci_gate.py`, with behavior tests in
+`tests/tools/test_required_ci_gate.py`.
+
 The matrix tests every application and library in parallel after a single
 preflight, validates contracts, REST path structure, GraphQL schema/resolver
 parity, and Compose files, runs Gradle `test`, `check`, and JaCoCo, and builds
@@ -91,8 +115,14 @@ workflow YAML parsing, strict Python typing via `uv run --frozen --no-build mypy
 `git diff --check`. The nine matrix entries are capped at four concurrent jobs
 because each entry owns PostgreSQL and RabbitMQ service containers; this avoids
 hosted-runner broker startup contention without removing or changing any shard.
+The Expense Core matrix shard also runs the opt-in PostgreSQL tests against the
+`squarewise_expense_core` service database with `SQUAREWISE_POSTGRES_TESTS=true`;
+other shards retain their normal test configuration.
 Jobs use Microsoft Build of OpenJDK. Python dependencies
 and tooling are deterministically managed via `pyproject.toml` and `uv.lock`.
+Dependabot checks Gradle, GitHub Actions, uv, and repository Docker manifests on
+one bounded weekly schedule from `.github/dependabot.yml`; minor and patch
+updates are grouped per ecosystem to avoid unnecessary pull-request churn.
 CI workflows install dependencies via the immutable commit
 `astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7` (the `v10.2.0` tag)
 with `uv sync --frozen --no-build`, running tools and scripts via

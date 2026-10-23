@@ -9,6 +9,8 @@ data class DbProperties(
     var enabled: Boolean = false,
     /** Authoritative writer JDBC settings. */
     var writer: PoolProperties = PoolProperties(),
+    /** Named writer pool settings for multi-writer instances or shards. */
+    var writers: Map<String, PoolProperties> = emptyMap(),
     /** Named read-only pool settings. */
     var readers: Map<String, PoolProperties> = emptyMap(),
     /** Explicit local-only mode that aliases configured reader names to the writer pool. */

@@ -4,12 +4,17 @@ import com.subhrodip.squarewise.accounts.errors.AccountsInputException
 
 import com.subhrodip.squarewise.accounts.auth.identity.AccountIdentity
 import com.subhrodip.squarewise.accounts.auth.identity.AccountIdentityStore
+import com.subhrodip.squarewise.accounts.auth.identity.EmailAddress
 import com.subhrodip.squarewise.accounts.profile.persistence.ProfileRepository
 import java.time.Instant
 import java.util.UUID
+import com.subhrodip.squarewise.db.routing.DbReader
+import com.subhrodip.squarewise.db.routing.DbWriter
 import org.springframework.context.annotation.Primary
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+
+import com.subhrodip.squarewise.accounts.validation.AccountReferenceValidator
 
 /**
  * JPA-backed implementation of [AccountIdentityStore] managing durable account identity records.
@@ -21,7 +26,8 @@ import org.springframework.transaction.annotation.Transactional
 @Service
 class JpaAccountIdentityStore(
     private val identityRepository: AccountIdentityRepository,
-    private val profileRepository: ProfileRepository
+    private val profileRepository: ProfileRepository,
+    private val referenceValidator: AccountReferenceValidator
 ) : AccountIdentityStore {
 
     /**
@@ -30,6 +36,7 @@ class JpaAccountIdentityStore(
      * @param accountId Local account identifier stored in session or profile.
      * @return [AccountIdentity] or null if the account has no identity or profile.
      */
+    @DbReader("accounts.identity.findByAccountId", target = "identity")
     @Transactional(readOnly = true)
     override fun findByAccountId(accountId: UUID): AccountIdentity? {
         val profile = profileRepository.findById(accountId).orElse(null) ?: return null
@@ -51,6 +58,7 @@ class JpaAccountIdentityStore(
      * @param providerSubject Provider-specific unique subject string.
      * @return [AccountIdentity] or null.
      */
+    @DbReader("accounts.identity.findByIssuerAndSubject", target = "identity")
     @Transactional(readOnly = true)
     override fun findByIssuerAndSubject(issuer: String, providerSubject: String): AccountIdentity? {
         val identity = identityRepository.findByIssuerAndProviderSubject(issuer, providerSubject) ?: return null
@@ -71,6 +79,7 @@ class JpaAccountIdentityStore(
      * @param email Normalized user email address.
      * @return [AccountIdentity] or null if no active identity exists for this email.
      */
+    @DbReader("accounts.identity.findByEmail", target = "identity")
     @Transactional(readOnly = true)
     override fun findByEmail(email: String): AccountIdentity? {
         val identity = identityRepository.findFirstByEmailIgnoreCaseAndStatus(email, "ACTIVE") ?: return null
@@ -95,6 +104,7 @@ class JpaAccountIdentityStore(
      * @param verified Whether the email is verified.
      * @return Enrolled [AccountIdentity].
      */
+    @DbWriter("accounts.identity.enroll")
     @Transactional
     override fun enrollIdentity(
         accountId: UUID,
@@ -103,11 +113,12 @@ class JpaAccountIdentityStore(
         email: String,
         verified: Boolean
     ): AccountIdentity {
+        val canonicalEmail = EmailAddress.parse(email).value
         val existing = identityRepository.findByIssuerAndProviderSubject(issuer, providerSubject)
-        val profile = profileRepository.findById(accountId).orElse(null)
+        val profile = referenceValidator.validateActiveAccount(accountId)
 
         val entity = if (existing != null) {
-            existing.email = email
+            existing.email = canonicalEmail
             existing.emailVerified = verified
             existing.updatedAt = Instant.now()
             identityRepository.save(existing)
@@ -117,7 +128,7 @@ class JpaAccountIdentityStore(
                 accountId = accountId,
                 issuer = issuer,
                 providerSubject = providerSubject,
-                email = email,
+                email = canonicalEmail,
                 emailVerified = verified,
                 status = "ACTIVE",
                 createdAt = Instant.now(),
@@ -129,8 +140,8 @@ class JpaAccountIdentityStore(
         return AccountIdentity(
             accountId = entity.accountId,
             subject = entity.providerSubject,
-            email = entity.email ?: email,
-            deletionRequested = profile?.deletionRequested ?: false,
+            email = entity.email ?: canonicalEmail,
+            deletionRequested = profile.deletionRequested,
             issuer = entity.issuer
         )
     }
@@ -142,22 +153,25 @@ class JpaAccountIdentityStore(
      * @param email New normalized email.
      * @param verified Verification status of the new email.
      */
+    @DbWriter("accounts.identity.updateEmail")
     @Transactional
     override fun updateEmail(accountId: UUID, email: String, verified: Boolean): AccountIdentity {
+        val canonicalEmail = EmailAddress.parse(email).value
         val identity = identityRepository.findFirstByAccountIdOrderByIdentityIdAsc(accountId)
             ?: throw AccountsInputException("No identity found for account $accountId")
 
-        identity.email = email
+        val profile = referenceValidator.validateActiveAccount(accountId)
+
+        identity.email = canonicalEmail
         identity.emailVerified = verified
         identity.updatedAt = Instant.now()
         identityRepository.save(identity)
 
-        val profile = profileRepository.findById(accountId).orElse(null)
         return AccountIdentity(
             accountId = accountId,
             subject = identity.providerSubject,
-            email = email,
-            deletionRequested = profile?.deletionRequested ?: false,
+            email = canonicalEmail,
+            deletionRequested = profile.deletionRequested,
             issuer = identity.issuer
         )
     }

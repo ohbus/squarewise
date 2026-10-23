@@ -10,6 +10,12 @@ versus ordinary exception creation:
 ./gradlew.bat :tools:benchmarks:jmh:run --no-daemon
 ```
 
+The module uses the repository's direct Gradle JMH runner rather than the
+unmaintained `me.champeau.jmh` plugin. This avoids that plugin's deprecated
+`Configuration.setVisible(boolean)` call while preserving the command above.
+JMH 1.37 may still report its own JDK 25 `sun.misc.Unsafe` runtime warning; it
+is not a Gradle build warning and is intentionally left visible.
+
 Run the k6 scenarios through the repository Docker wrapper:
 
 ```powershell
@@ -82,6 +88,13 @@ storm telemetry sample reported 45 JVM collections and 0.663 seconds cumulative
 pause at the scrape point. The run required the documented internal-issuer
 Keycloak connection and local profile enrollment. This is wiring and low-rate
 local smoke evidence only, not production-like capacity or soak evidence.
+
+The current direct JMH runner also passed on JDK 25 with catalog lookup at
+2.246 +/- 0.214 ns/op, decomposition at 1.813 +/- 0.155 ns/op, governed
+exception creation at 492.989 +/- 16.279 ns/op, standard exception creation at
+479.920 +/- 6.680 ns/op, and serialization at 0.449 +/- 0.048 us/op. The
+repository-owned Kotlin and Java test warnings were removed without compiler
+suppression; production-like load evidence remains open.
 
 ## Evidence boundary
 

@@ -19,6 +19,11 @@ spring:
     hibernate:
       ddl-auto: validate
     open-in-view: false
+  rabbitmq:
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    template:
+      mandatory: true
 
 management:
   endpoints:
@@ -63,3 +68,5 @@ squarewise:
       refresh-idle-lifetime: ${SQUAREWISE_SECURITY_SESSION_REFRESH_IDLE_LIFETIME:30d}
       absolute-session-lifetime: ${SQUAREWISE_SECURITY_SESSION_ABSOLUTE_LIFETIME:90d}
       clock-skew: ${SQUAREWISE_SECURITY_SESSION_CLOCK_SKEW:30s}
+  auth-email-outbox:
+    confirm-timeout-ms: ${SQUAREWISE_AUTH_EMAIL_OUTBOX_CONFIRM_TIMEOUT_MS:5000}

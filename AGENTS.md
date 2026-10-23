@@ -6,10 +6,12 @@ Before changing files, every new agent session must load the repository context 
 this order:
 
 1. Read this file and `README.md`.
-2. Read [`docs/tasks/registry.yaml`](docs/tasks/registry.yaml), the authoritative
-   task state, then [`docs/tasks/board.md`](docs/tasks/board.md) for the current
-   work queue and [`docs/tasks/progress.md`](docs/tasks/progress.md) for verified
-   implementation history.
+2. Read [`docs/tasks/registry.yaml`](docs/tasks/registry.yaml) and
+   [`docs/tasks/README.md`](docs/tasks/README.md). If
+   `execution_tracking.cutover_status` is `complete`, follow the mapped GitHub
+   issue and Project for live state; otherwise use
+   [`docs/tasks/board.md`](docs/tasks/board.md) as the fallback queue. Read
+   [`docs/tasks/progress.md`](docs/tasks/progress.md) for verified history.
 3. Read [`docs/implementation/plan.md`](docs/implementation/plan.md) and the
    relevant task detail under [`docs/tasks/details/`](docs/tasks/details/).
 4. Read the applicable product, architecture, contract, quality, and operations
@@ -35,7 +37,8 @@ this order:
 5. Inspect `git status --short`, recent commits, and the relevant owned paths.
    Confirm that the task is registered, its dependencies are complete, and its
    owned paths do not overlap another active task without a handoff.
-6. State the task ID, objective, dependencies, owned paths, planned files,
+6. State the GitHub issue number (or legacy task ID before cutover), objective,
+   dependencies, owned paths, planned files,
    validation commands, and expected evidence in the progress update before
    editing.
 
@@ -43,15 +46,15 @@ The complete documentation navigation is maintained in [`docs/README.md`](docs/R
 Use it to discover documents that are not part of every fresh-session read, including
 security, reviews, extended operations, quality, implementation, contract, and visual
 documentation. The task-detail directory is intentionally navigated through the
-authoritative [`docs/tasks/registry.yaml`](docs/tasks/registry.yaml), which identifies
-the relevant detail file for the active task.
+[`docs/tasks/registry.yaml`](docs/tasks/registry.yaml), which identifies the
+relevant detail file and mapped GitHub issue for active work.
 
 Do not begin implementation from memory or from an isolated prompt. Every delegated
 subagent must explicitly read and strictly adhere to all relevant documentation
 listed above before beginning any implementation. If these documents disagree,
-stop and resolve the conflict through the coordinator; the registry and accepted
-user decisions control execution status, while contracts control externally
-visible behavior.
+stop and resolve the conflict through the coordinator. Accepted user decisions
+control scope, the authority selected by the registry cutover controls execution
+state, and contracts control externally visible behavior.
 
 ## Source-of-truth map
 
@@ -61,14 +64,15 @@ visible behavior.
 | Architecture and boundaries | `docs/architecture/` | Update the relevant decision before changing service boundaries |
 | Technology and versions | `docs/implementation/technology-decisions.md`, `gradle/libs.versions.toml`, `infra/versions.env.example` | Record evidence for version changes; never duplicate versions in build files |
 | REST, GraphQL, events, errors | `contracts/` | Change and validate the contract before changing an API |
-| Work status and ownership | `docs/tasks/registry.yaml`, `docs/tasks/board.md` | Coordinator updates these before work starts and when scope/status changes |
+| Work status, assignment, priority, schedule | Mapped GitHub issue and `Squarewise Delivery` after cutover; registry/board before cutover | Update the active authority before work starts and when execution state changes |
+| Task specification and identifier | GitHub issue after cutover; `docs/tasks/details/` and `docs/tasks/registry.yaml` for migrated history | Keep objective, owned paths, acceptance, validation, and migration mapping synchronized |
 | Verification history | `docs/tasks/progress.md` | Record commands, evidence, limitations, and commit hashes for every completed increment |
 | Test policy | `docs/quality/` and `tests/` | Add meaningful tests for public behavior and update acceptance evidence |
 | Operations and local development | `infra/`, `Makefile`, `docs/operations/` | Keep clone-and-run workflows and version references synchronized |
 
-The registry is the state machine; the progress ledger is the evidence log; task
-detail files are the implementation specifications. None of them may be treated
-as optional notes.
+After cutover, GitHub is the execution state machine; before cutover, the
+registry and board remain the fallback. The progress ledger is the evidence log,
+and task detail files are the implementation specifications. None are optional.
 
 ## End-of-task protocol
 
@@ -82,8 +86,8 @@ Before reporting completion:
 - Ensure all new and touched public classes, interfaces, functions, endpoints,
   and non-trivial domain logic have structured Javadoc/KDoc doc comments (`/** ... */`)
   specifying intent, parameters, return types, invariants, and edge cases.
-- Ask the coordinator to update the registry and board if you are not the
-  coordinator; never edit those shared tracking files directly.
+- Ask the coordinator to update the active GitHub issue/Project and durable task
+  records if you are not the coordinator; never edit shared tracking directly.
 - Run the task's declared validation commands and record exact results.
 - Review the diff for unrelated files, generated artifacts, credentials, and
   duplicated dependency versions.
@@ -102,8 +106,10 @@ contracts and a verified scaffold with a reserved UI workspace.
 
 ## Task tracking and parallel work
 
-- Every delegated subagent must have a registered task ID before starting work.
-- Only the coordinator edits `docs/tasks/registry.yaml` and `docs/tasks/board.md`.
+- Every delegated subagent must have a GitHub issue before starting work after
+  cutover; legacy work keeps its registered task ID until it closes.
+- Only the coordinator edits `docs/tasks/registry.yaml` and the fallback
+  `docs/tasks/board.md`, or changes shared GitHub Project fields and workflows.
 - Each task has one owner, dependencies, owned paths, acceptance criteria, and
   verification evidence. Report blockers and scope changes promptly.
 - Register child tasks before further delegation. Do not create untracked work.

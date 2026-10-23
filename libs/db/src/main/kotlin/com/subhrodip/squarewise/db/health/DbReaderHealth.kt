@@ -89,7 +89,8 @@ class DbReaderHealth(
     fun state(readerName: String): DbReaderState {
         val entry = readers[readerName] ?: return DbReaderState.DISCONNECTED
         synchronized(entry) {
-            if (entry.state == DbReaderState.OPEN && entry.openedAt?.plus(openDuration)?.isBefore(Instant.now(clock)) == true) {
+            val openedAt = entry.openedAt
+            if (entry.state == DbReaderState.OPEN && openedAt != null && openedAt.plus(openDuration).isBefore(Instant.now(clock))) {
                 entry.state = DbReaderState.DISCONNECTED
             }
             return entry.state

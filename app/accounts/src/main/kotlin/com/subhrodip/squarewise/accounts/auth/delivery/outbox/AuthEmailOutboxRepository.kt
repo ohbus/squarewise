@@ -35,4 +35,21 @@ interface AuthEmailOutboxRepository : JpaRepository<AuthEmailOutboxEntity, UUID>
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("update AuthEmailOutboxEntity e set e.status = case when e.attempts >= :maximumAttempts then 'PARKED' else 'PENDING' end, e.availableAt = :availableAt where e.eventId = :eventId and e.status = 'CLAIMED'")
     fun reject(@Param("eventId") eventId: UUID, @Param("maximumAttempts") maximumAttempts: Int, @Param("availableAt") availableAt: Instant): Int
+
+    /**
+     * Purges published auth-email outbox events older than [cutoff] in bounded batches.
+     */
+    @Modifying
+    @Query(
+        value = """
+            DELETE FROM auth_email_outbox
+            WHERE event_id IN (
+                SELECT event_id FROM auth_email_outbox
+                WHERE status = 'PUBLISHED' AND created_at < :cutoff
+                LIMIT :limit
+            )
+        """,
+        nativeQuery = true
+    )
+    fun purgePublishedOlderThan(@Param("cutoff") cutoff: Instant, @Param("limit") limit: Int): Int
 }

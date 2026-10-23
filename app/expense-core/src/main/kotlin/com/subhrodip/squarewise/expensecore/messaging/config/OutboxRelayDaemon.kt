@@ -2,6 +2,7 @@
 
 package com.subhrodip.squarewise.expensecore.messaging.config
 
+import com.subhrodip.squarewise.db.routing.DbWriter
 import com.subhrodip.squarewise.expensecore.messaging.outbox.service.OutboxPublisher
 import com.subhrodip.squarewise.expensecore.messaging.outbox.model.PublishBatchResult
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
@@ -18,6 +19,7 @@ class OutboxRelayDaemon(
     private val publisher: OutboxPublisher
 ) {
     @Scheduled(fixedDelayString = "\${squarewise.outbox.poll-delay-ms:1000}")
+    @DbWriter("outbox.relay")
     fun pollAndPublish(): PublishBatchResult {
         return publisher.publishAvailable()
     }

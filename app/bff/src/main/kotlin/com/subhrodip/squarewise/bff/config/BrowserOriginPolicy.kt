@@ -11,13 +11,13 @@ import com.subhrodip.squarewise.bff.errors.BffInputException
  * origins, paths, credentials, and malformed values are never accepted.
  */
 class BrowserOriginPolicy(allowedOrigins: List<String>) {
-    private val allowed: Set<String> = allowedOrigins.map(::canonicalOrigin).toSet()
-
     init {
         require(allowedOrigins.none { it.trim() == "*" }) {
             "Browser origins must be explicit; wildcard origins are forbidden"
         }
     }
+
+    private val allowed: Set<String> = allowedOrigins.map(::canonicalOrigin).toSet()
 
     /** Returns whether the request origin is absent or exactly allow-listed. */
     fun allows(origin: String?): Boolean = origin == null || canonicalOriginOrNull(origin)?.let(allowed::contains) == true

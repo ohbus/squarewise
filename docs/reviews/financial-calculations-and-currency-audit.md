@@ -45,7 +45,7 @@ Conversely, **the core proportional splitting algorithms ([`AllocationCalculator
 - **Files**:
   - [`JpaSettlementStore.kt:61, 69, 74`](file:///Users/smohanta/scm/subho/pennywise/app/expense-core/src/main/kotlin/com/subhrodip/squarewise/expensecore/settlements/persistence/JpaSettlementStore.kt#L61)
   - [`SettlementEntity.kt:26-43`](file:///Users/smohanta/scm/subho/pennywise/app/expense-core/src/main/kotlin/com/subhrodip/squarewise/expensecore/settlements/persistence/SettlementEntity.kt#L26-L43)
-  - [`V1__create_settlements.sql:1-12`](file:///Users/smohanta/scm/subho/pennywise/app/expense-core/src/main/resources/db/migration/V1__create_settlements.sql#L1-L12)
+  - [`V1__initial_schema.sql:56-69`](file:///Users/smohanta/scm/subho/pennywise/app/expense-core/src/main/resources/db/migration/V1__initial_schema.sql#L56-L69)
   - [`SettlementController.kt:36-39`](file:///Users/smohanta/scm/subho/pennywise/app/expense-core/src/main/kotlin/com/subhrodip/squarewise/expensecore/settlements/api/SettlementController.kt#L36-L39)
 
 The REST API contract ([`contracts/rest/expense-core.openapi.json`](file:///Users/smohanta/scm/subho/pennywise/contracts/rest/expense-core.openapi.json)) and request DTO ([`RecordSettlementRequest`](file:///Users/smohanta/scm/subho/pennywise/app/expense-core/src/main/kotlin/com/subhrodip/squarewise/expensecore/settlements/api/RecordSettlementRequest.kt)) mandate an explicit ISO 4217 3-letter currency code (e.g. `"USD"`, `"EUR"`).
@@ -455,8 +455,8 @@ Per repository architectural standards ([`docs/product/mvp.md:23`](file:///Users
 All identified audit findings (**`AUD-01` through `AUD-10`**) have been fully resolved, verified, and merged into the active release milestone:
 
 1. **Step 1: Multi-Currency Settlement Persistence (`AUD-01`, `AUD-02`, `AUD-10`)**:
-   - Implemented via [`CORE-29`](file:///Users/smohanta/scm/subho/pennywise/docs/tasks/details/CORE-29.md) in commit `9491c96d`.
-   - Flyway migration `V12__add_settlement_currency.sql` adds `currency VARCHAR(3) NOT NULL` to table `settlements`.
+   - Implemented via [`CORE-29`](file:///Users/smohanta/scm/subho/pennywise/docs/tasks/details/CORE-29.md) in commit `9491c96d` (and consolidated in `V1__initial_schema.sql`).
+   - Flyway migration `V1__initial_schema.sql` defines `currency VARCHAR(3) NOT NULL` on table `settlements`.
    - `SettlementEntity` and `JpaSettlementStore` persist transaction currency and record postings against transaction currency instead of group default currency.
    - Idempotency replays reject conflicting currency mutations with `STATE_CONFLICT`.
 

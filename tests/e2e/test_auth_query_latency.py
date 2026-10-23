@@ -80,7 +80,7 @@ def main() -> int:
         return 0
 
     accounts_before = statement_count(ACCOUNTS_URL, "groups.list")
-    expense_before = statement_count(EXPENSE_CORE_URL, "groups.list")
+    expense_before = statement_count(EXPENSE_CORE_URL, "groups.authorization")
     expense_latencies: list[float] = []
     bff_latencies: list[float] = []
     for _ in range(SAMPLE_COUNT):
@@ -114,18 +114,18 @@ def main() -> int:
     require_success(archive_status, archive_payload, "Expense Core groups.archive")
 
     accounts_after = statement_count(ACCOUNTS_URL, "groups.list")
-    expense_after = statement_count(EXPENSE_CORE_URL, "groups.list")
+    expense_after = statement_count(EXPENSE_CORE_URL, "groups.authorization")
     if accounts_after != accounts_before:
         raise AssertionError(
             f"authenticated reads/writes changed Accounts groups.list: {accounts_before}->{accounts_after}"
         )
     if expense_after <= expense_before:
         raise AssertionError(
-            f"authenticated reads produced no Expense Core groups.list statements: {expense_before}->{expense_after}"
+            f"authenticated reads produced no Expense Core groups.authorization statements: {expense_before}->{expense_after}"
         )
     print(
         "  SQL isolation: Accounts groups.list "
-        f"{accounts_before}->{accounts_after}; Expense Core groups.list {expense_before}->{expense_after}"
+        f"{accounts_before}->{accounts_after}; Expense Core groups.authorization {expense_before}->{expense_after}"
     )
     print(
         "  latency p95 ms: "

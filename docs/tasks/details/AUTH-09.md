@@ -478,6 +478,12 @@ create/archive write. The rebuilt local run recorded Accounts `groups.list`
 21.43 ms for group creation. These are local representative measurements, not
 production SLO or capacity evidence.
 
+After writer-authoritative membership checks relabeled the Expense Core query as
+`groups.authorization`, both query probes now read that counter while retaining
+the Accounts `groups.list` zero-lookup assertion. The local RabbitMQ health probe
+also runs as the image's `rabbitmq` user so a concurrent startup probe cannot
+create a root-owned Erlang cookie and prevent broker startup.
+
 Notifications delivery policy values are now bounded configuration properties,
 and both general notification dispatch and protected auth-email dispatch invoke
 the shared limiter immediately before provider dispatch. Unit/component tests
@@ -689,6 +695,11 @@ authenticated `tests/acceptance/run.sh --require-services` path passed all
 live acceptance scenarios. Production Compose requirements remain mandatory;
 the placeholders are scoped only to config validation.
 
+The local OIDC fixture provisioner now restores `deletion_requested = FALSE`
+when refreshing its deterministic CI profiles. This keeps the destructive Bruno
+deletion check isolated from the later product journey while leaving production
+deletion and writer-backed export authorization unchanged.
+
 With fresh local Keycloak bearer tokens, `mingw32-make e2e-all` passed the
 complete local aggregate: cache resilience, authenticated admission surfaces,
 Accounts lookup isolation, passwordless auth-email, product lifecycle, offline
@@ -737,8 +748,9 @@ failures, and artifact-preparation failures remain gate failures.
   by Flyway migration `V7__remove_postgresql_rate_limit_buckets.sql`.
 - Notifications use `RedisDeliveryRateLimiter`; the process-local implementation is
   test-only and is not a Spring production bean.
-- Reader connection failures and reader replay lag fail closed; no reader-to-writer
-  fallback decision or telemetry remains.
+- Approved Accounts reader queries use the shared bounded writer fallback when
+  replica connection or replay-lag checks reject every reader; Redis rate-limit
+  failures still fail closed and do not fall back to PostgreSQL or memory.
 - OIDC/Keycloak profiles validate issuer/JWK-based authentication; the internal JWT
   signer is test-profile-only and is not used by deployed profiles.
 - Production messaging and security configurations require their dependencies and

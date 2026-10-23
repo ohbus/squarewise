@@ -2,9 +2,6 @@ package com.subhrodip.squarewise.bff.realtime
 
 import com.subhrodip.squarewise.bff.errors.BffDomainException
 import com.subhrodip.squarewise.errors.catalog.BffErrors
-import com.subhrodip.squarewise.bff.realtime.GroupInvalidation
-import com.subhrodip.squarewise.bff.realtime.LiveSubscription
-import com.subhrodip.squarewise.bff.realtime.LiveUpdate
 
 import com.subhrodip.squarewise.ids.generation.UuidGenerator
 import reactor.core.publisher.Flux
@@ -15,7 +12,9 @@ import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.PriorityBlockingQueue
 import java.util.concurrent.atomic.AtomicInteger
+import org.springframework.scheduling.annotation.Scheduled
 
 /**
  * In-process fanout hub for group real-time invalidations.
@@ -35,13 +34,16 @@ class LiveUpdateFanout(
     private val subscriptionTtl: Duration = DEFAULT_SUBSCRIPTION_TTL,
     private val maxSubscriptionsPerUser: Int = DEFAULT_MAX_SUBSCRIPTIONS_PER_USER
 ) {
-    private val subscriptions = ConcurrentHashMap<String, Subscriber>()
+    private val subscriptions = ConcurrentHashMap<String, LiveSubscription>()
+    private val expirationQueue = PriorityBlockingQueue<ExpirationEntry>(11, compareBy { it.expiresAt })
+    private val expirationQueueLock = Any()
+    private val groupSubscriptions = ConcurrentHashMap<String, MutableSet<String>>()
+    private val userSubscriptions = ConcurrentHashMap<String, MutableSet<String>>()
 
     /** Per-subscription revocation signals: completing the sink terminates the consumer Flux. */
     private val revocationSignals = ConcurrentHashMap<String, Sinks.One<Unit>>()
     private val subscriptionInvalidations = ConcurrentHashMap<String, SubscriptionInvalidationChannel>()
 
-    private val admissionLock = Any()
     /** Delivers only new invalidations to subscribers of this shared stream. */
     val invalidationSink: Sinks.Many<GroupInvalidation> =
         Sinks.many().multicast().directAllOrNothing()
@@ -50,20 +52,19 @@ class LiveUpdateFanout(
         emitInvalidation(groupId, revision, UuidGenerator.next().toString())
 
     fun emitInvalidation(groupId: String, revision: Long, changeId: String): GroupInvalidation {
-        removeExpired()
         val invalidation = GroupInvalidation(groupId, revision, changeId)
         invalidationSink.tryEmitNext(invalidation)
         val now = Instant.now(clock)
-        subscriptions.forEach { (subscriptionId, subscriber) ->
-            if (subscriber.subscription.groupId == groupId) {
-                if (!now.isBefore(subscriber.subscription.expiresAt)) {
+        val targetSubIds = groupSubscriptions[groupId]?.toList().orEmpty()
+        for (subscriptionId in targetSubIds) {
+            val subscription = subscriptions[subscriptionId] ?: continue
+            if (!now.isBefore(subscription.expiresAt)) {
+                unsubscribe(subscriptionId)
+            } else {
+                val admitted = subscriptionInvalidations[subscriptionId]?.emit(invalidation) == true
+                if (!admitted) {
+                    // The snapshot is no longer a safe baseline; force a fresh subscription snapshot.
                     unsubscribe(subscriptionId)
-                } else {
-                    val admitted = subscriptionInvalidations[subscriptionId]?.emit(invalidation) == true
-                    if (!admitted) {
-                        // The snapshot is no longer a safe baseline; force a fresh subscription snapshot.
-                        unsubscribe(subscriptionId)
-                    }
                 }
             }
         }
@@ -92,50 +93,98 @@ class LiveUpdateFanout(
     fun revocationSignal(subscriptionId: String): Mono<Unit> =
         revocationSignals[subscriptionId]?.asMono() ?: Mono.empty()
 
+    /**
+     * Emits once at the subscription expiry deadline and removes its indexes.
+     *
+     * @param subscriptionId subscription identifier returned by [subscribe].
+     * @return a timer signal for the reactive stream boundary, or an empty signal
+     * when the subscription no longer exists.
+     */
+    fun expirySignal(subscriptionId: String): Mono<Unit> {
+        val subscription = subscriptions[subscriptionId] ?: return Mono.empty()
+        val remaining = Duration.between(Instant.now(clock), subscription.expiresAt)
+        val timer = if (remaining.isNegative || remaining.isZero) {
+            Mono.just(Unit)
+        } else {
+            Mono.delay(remaining).thenReturn(Unit)
+        }
+        return timer.doOnNext { unsubscribe(subscriptionId) }
+    }
+
     init {
         require(queueCapacity > 0) { "queueCapacity must be positive" }
         require(!subscriptionTtl.isZero && !subscriptionTtl.isNegative) { "subscriptionTtl must be positive" }
         require(maxSubscriptionsPerUser > 0) { "maxSubscriptionsPerUser must be positive" }
     }
 
+    private val userLocks = Array(64) { Any() }
+    private fun userLock(userId: String): Any = userLocks[Math.floorMod(userId.hashCode(), userLocks.size)]
+
     fun subscribe(userId: String, groupId: String): LiveSubscription {
         require(userId.isNotBlank()) { "userId must not be blank" }
         require(groupId.isNotBlank()) { "groupId must not be blank" }
-        return synchronized(admissionLock) {
-            removeExpired()
-            if (subscriptions.values.count { it.subscription.userId == userId } >= maxSubscriptionsPerUser) {
+        val now = Instant.now(clock)
+        return synchronized(userLock(userId)) {
+            for (subId in userSubscriptions[userId]?.toList().orEmpty()) {
+                val sub = subscriptions[subId]
+                if (sub != null && !now.isBefore(sub.expiresAt)) {
+                    unsubscribe(subId)
+                }
+            }
+            val currentSubs = userSubscriptions[userId]
+            if ((currentSubs?.size ?: 0) >= maxSubscriptionsPerUser) {
                 throw BffDomainException(BffErrors.SUBSCRIPTION_LIMIT_EXCEEDED, "subscription limit exceeded")
             }
             val subscription = LiveSubscription(
-                UuidGenerator.next().toString(), userId, groupId, Instant.now(clock).plus(subscriptionTtl)
+                UuidGenerator.next().toString(), userId, groupId, now.plus(subscriptionTtl)
             )
             subscriptionInvalidations[subscription.id] =
                 SubscriptionInvalidationChannel(queueCapacity)
-            subscriptions[subscription.id] = Subscriber(subscription, ArrayDeque())
-            revocationSignals[subscription.id] = Sinks.one()
+            synchronized(expirationQueueLock) {
+                subscriptions[subscription.id] = subscription
+                expirationQueue.offer(ExpirationEntry(subscription.id, subscription.expiresAt))
+                revocationSignals[subscription.id] = Sinks.one()
+                userSubscriptions.compute(userId) { _, set ->
+                    (set ?: ConcurrentHashMap.newKeySet()).apply { add(subscription.id) }
+                }
+                groupSubscriptions.compute(groupId) { _, set ->
+                    (set ?: ConcurrentHashMap.newKeySet()).apply { add(subscription.id) }
+                }
+            }
             subscription
         }
     }
 
     fun unsubscribe(subscriptionId: String) {
-        subscriptions.remove(subscriptionId)
+        val subscription = subscriptions.remove(subscriptionId)
         revocationSignals.remove(subscriptionId)?.tryEmitEmpty()
         subscriptionInvalidations.remove(subscriptionId)?.complete()
+        if (subscription != null) {
+            userSubscriptions.computeIfPresent(subscription.userId) { _, set ->
+                set.remove(subscriptionId)
+                if (set.isEmpty()) null else set
+            }
+            groupSubscriptions.computeIfPresent(subscription.groupId) { _, set ->
+                set.remove(subscriptionId)
+                if (set.isEmpty()) null else set
+            }
+            compactExpirationQueueIfNeeded()
+        }
     }
 
     fun revokeUser(userId: String): Int {
         require(userId.isNotBlank()) { "userId must not be blank" }
-        var revoked = 0
-        subscriptions.entries.removeIf {
-            val matches = it.value.subscription.userId == userId
-            if (matches) {
-                revoked++
-                revocationSignals.remove(it.key)?.tryEmitEmpty()
-                subscriptionInvalidations.remove(it.key)?.complete()
+        return synchronized(userLock(userId)) {
+            val targetIds = userSubscriptions[userId]?.toList().orEmpty()
+            var revoked = 0
+            for (id in targetIds) {
+                if (subscriptions.containsKey(id)) {
+                    unsubscribe(id)
+                    revoked++
+                }
             }
-            matches
+            revoked
         }
-        return revoked
     }
 
     /**
@@ -151,69 +200,57 @@ class LiveUpdateFanout(
     fun revokeUserFromGroup(userId: String, groupId: String): Int {
         require(userId.isNotBlank()) { "userId must not be blank" }
         require(groupId.isNotBlank()) { "groupId must not be blank" }
-        var revoked = 0
-        subscriptions.entries.removeIf {
-            val subscription = it.value.subscription
-            val matches = subscription.userId == userId && subscription.groupId == groupId
-            if (matches) {
-                revoked++
-                revocationSignals.remove(it.key)?.tryEmitEmpty()
-                subscriptionInvalidations.remove(it.key)?.complete()
+        return synchronized(userLock(userId)) {
+            val targetIds = userSubscriptions[userId]?.toList().orEmpty()
+            var revoked = 0
+            for (id in targetIds) {
+                val subscriber = subscriptions[id]
+                if (subscriber != null && subscriber.groupId == groupId) {
+                    unsubscribe(id)
+                    revoked++
+                }
             }
-            matches
+            revoked
         }
-        return revoked
     }
 
-    fun publish(update: LiveUpdate): Int {
-        require(update.groupId.isNotBlank()) { "groupId must not be blank" }
-        require(update.revision >= 0) { "revision must not be negative" }
-        removeExpired()
-        var delivered = 0
-        subscriptions.values.forEach { subscriber ->
-            if (subscriber.subscription.groupId == update.groupId && subscriber.offer(update, queueCapacity)) {
-                delivered++
-            }
-        }
-        return delivered
-    }
+    /** Sweeps all expired subscriptions from the global index. */
+    fun removeExpired() = removeExpired(Int.MAX_VALUE)
 
-    fun poll(subscriptionId: String): LiveUpdate? {
-        removeExpired()
-        return subscriptions[subscriptionId]?.poll()
-    }
+    /** Periodically reclaims idle subscriptions that never reach a reactive stream boundary. */
+    @Scheduled(fixedDelayString = "\${squarewise.bff.subscription-sweep-ms:60000}")
+    fun sweepExpired() = removeExpired(MAX_EXPIRATION_SWEEP)
 
-    fun pendingCount(subscriptionId: String): Int {
-        removeExpired()
-        return subscriptions[subscriptionId]?.size() ?: 0
-    }
-
-    private fun removeExpired() {
+    private fun removeExpired(maxEntries: Int) {
         val now = Instant.now(clock)
-        subscriptions.entries.removeIf {
-            val expired = !now.isBefore(it.value.subscription.expiresAt)
-            if (expired) {
-                revocationSignals.remove(it.key)?.tryEmitEmpty()
-                subscriptionInvalidations.remove(it.key)?.complete()
+        var inspected = 0
+        while (inspected < maxEntries) {
+            val candidate = synchronized(expirationQueueLock) {
+                val next = expirationQueue.peek() ?: return@synchronized null
+                if (next.expiresAt.isAfter(now)) return@synchronized null
+                expirationQueue.poll()
+            } ?: break
+            inspected++
+            val subscription = subscriptions[candidate.subscriptionId]
+            if (subscription != null && !now.isBefore(subscription.expiresAt)) {
+                unsubscribe(candidate.subscriptionId)
             }
-            expired
         }
     }
 
-    private class Subscriber(val subscription: LiveSubscription, private val queue: ArrayDeque<LiveUpdate>) {
-        @Synchronized
-        fun offer(update: LiveUpdate, capacity: Int): Boolean {
-            if (queue.size >= capacity) return false
-            queue.addLast(update)
-            return true
+    private fun compactExpirationQueueIfNeeded() {
+        synchronized(expirationQueueLock) {
+            val activeCount = subscriptions.size
+            if (expirationQueue.size <= activeCount * 2 + EXPIRATION_QUEUE_SLACK) return
+            // shortcut: retain at most a small stale-entry slack; use an indexed expiry store if churn exceeds this bound.
+            expirationQueue.clear()
+            subscriptions.values.forEach { subscription ->
+                expirationQueue.offer(ExpirationEntry(subscription.id, subscription.expiresAt))
+            }
         }
-
-        @Synchronized
-        fun poll(): LiveUpdate? = if (queue.isEmpty()) null else queue.removeFirst()
-
-        @Synchronized
-        fun size(): Int = queue.size
     }
+
+    private data class ExpirationEntry(val subscriptionId: String, val expiresAt: Instant)
 
     /** Bounded per-subscription channel that exposes overflow before a subscriber attaches. */
     private class SubscriptionInvalidationChannel(private val capacity: Int) {
@@ -250,6 +287,8 @@ class LiveUpdateFanout(
     companion object {
         const val DEFAULT_QUEUE_CAPACITY = 64
         const val DEFAULT_MAX_SUBSCRIPTIONS_PER_USER = 20
+        private const val MAX_EXPIRATION_SWEEP = 1_000
+        private const val EXPIRATION_QUEUE_SLACK = 1_024
         val DEFAULT_SUBSCRIPTION_TTL: Duration = Duration.ofMinutes(30)
     }
 }

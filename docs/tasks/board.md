@@ -1,8 +1,11 @@
 # Task board
 
-The coordinator owns this board and `registry.yaml`. The registry is the source
-of truth. Its JSON formatting is valid YAML 1.2 and permits dependency-free
-validation with Python's standard library.
+The coordinator owns this migration snapshot and `registry.yaml`. Live execution
+will move to the mapped GitHub issues and `Squarewise Delivery` project when
+`registry.yaml.execution_tracking.cutover_status` becomes `complete`. Until then,
+this board remains the fallback work queue. The registry's JSON formatting is
+valid YAML 1.2 and permits dependency-free validation with Python's standard
+library. See [`README.md`](README.md) for the authority boundary.
 
 ## CQRS data-access and PostgreSQL reader-scaling milestone
 
@@ -38,6 +41,7 @@ query classification, and evidence gates are complete.
 | ID | Owner | Status | Deliverable |
 | --- | --- | --- | --- |
 | DOC-27 | coordinator | done | GitHub community standards, security reporting, issue/PR templates, MIT license, and accessibility statement |
+| DOC-28 | coordinator | in_progress | GitHub-native issues, project workflow, labels, milestones, and repository governance |
 
 ## Exhaustive public-interface coverage
 
@@ -68,6 +72,7 @@ query classification, and evidence gates are complete.
 | PR-47 | coordinator | done | Add PostgreSQL populated-settlement reconciliation evidence |
 | PR-48 | coordinator | done | Add CI dependency vulnerability review gate |
 | PR-49 | coordinator | done | Bound GraphQL transport request sizes |
+| PR-50 | coordinator | done | Remediate six independent PR #19 correctness and resource findings |
 | AUTH-01 | coordinator | done | Provider-neutral OIDC authentication hardening baseline and implementation tracker |
 | AUTH-02 | coordinator | done | Remove implicit authentication identities with full boundary evidence |
 | AUTH-03 | coordinator | done | Fail-closed provider-neutral OIDC resource-server validation |

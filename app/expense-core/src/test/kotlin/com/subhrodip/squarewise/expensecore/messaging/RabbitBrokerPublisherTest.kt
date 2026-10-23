@@ -31,14 +31,9 @@ class RabbitBrokerPublisherTest {
 
     init {
         `when`(
-            rabbitTemplate.invoke<Any?>(
-                @Suppress("UNCHECKED_CAST")
-                (any(RabbitOperations.OperationsCallback::class.java)
-                    ?: RabbitOperations.OperationsCallback<Any?> { null }) as RabbitOperations.OperationsCallback<Any?>
-            )
+            rabbitTemplate.invoke<Any?>(any())
         ).thenAnswer { invocation ->
-            @Suppress("UNCHECKED_CAST")
-            (invocation.getArgument<Any>(0) as RabbitOperations.OperationsCallback<Any?>)
+            invocation.getArgument<RabbitOperations.OperationsCallback<Any?>>(0)
                 .doInRabbit(rabbitTemplate)
         }
     }

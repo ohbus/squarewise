@@ -11,5 +11,6 @@ data class AuthEmailOutboxProperties(
     var pollDelayMs: Long = 1000,
     var leaseSeconds: Long = 30,
     var retryAfterSeconds: Long = 5,
-    var maximumAttempts: Int = 5
+    var maximumAttempts: Int = 5,
+    var confirmTimeoutMs: Long = 5000
 )

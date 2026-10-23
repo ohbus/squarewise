@@ -35,7 +35,7 @@ class ExpenseJavaBeanCompatibilityTest {
         UUID expenseId = UUID.randomUUID();
         UUID participantId = UUID.randomUUID();
 
-        ExpenseEntity expense = new ExpenseEntity();
+        ExpenseEntity expense = newEntity(ExpenseEntity.class);
         expense.setExpenseId(expenseId);
         expense.setGroupId(groupId);
         expense.setDescription("Dinner");
@@ -61,7 +61,7 @@ class ExpenseJavaBeanCompatibilityTest {
         assertEquals(false, expense.getDeleted());
         assertEquals(NOW, expense.getUpdatedAt());
 
-        ExpensePayerEntity payer = new ExpensePayerEntity();
+        ExpensePayerEntity payer = newEntity(ExpensePayerEntity.class);
         payer.setPayerId(UUID.randomUUID());
         payer.setExpense(expense);
         payer.setParticipantId(participantId);
@@ -70,7 +70,7 @@ class ExpenseJavaBeanCompatibilityTest {
         assertEquals(participantId, payer.getParticipantId());
         assertEquals(1200, payer.getAmountMinor());
 
-        ExpenseAllocationEntity allocation = new ExpenseAllocationEntity();
+        ExpenseAllocationEntity allocation = newEntity(ExpenseAllocationEntity.class);
         allocation.setAllocationId(UUID.randomUUID());
         allocation.setExpense(expense);
         allocation.setParticipantId(participantId);
@@ -85,7 +85,7 @@ class ExpenseJavaBeanCompatibilityTest {
         UUID groupId = UUID.randomUUID();
         UUID participantId = UUID.randomUUID();
 
-        GroupEntity group = new GroupEntity();
+        GroupEntity group = newEntity(GroupEntity.class);
         group.setGroupId(groupId);
         group.setName("Trip");
         group.setKind("TRIP");
@@ -99,7 +99,7 @@ class ExpenseJavaBeanCompatibilityTest {
         assertEquals("ACTIVE", group.getStatus());
         assertEquals(3, group.getRevision());
 
-        GroupMembershipEntity membership = new GroupMembershipEntity();
+        GroupMembershipEntity membership = newEntity(GroupMembershipEntity.class);
         membership.setMembershipId(UUID.randomUUID());
         membership.setGroupId(groupId);
         membership.setSubject("alice");
@@ -111,7 +111,7 @@ class ExpenseJavaBeanCompatibilityTest {
         assertEquals(false, membership.isPlaceholder());
         assertEquals("ACTIVE", membership.getStatus());
 
-        GroupInvitationEntity invitation = new GroupInvitationEntity();
+        GroupInvitationEntity invitation = newEntity(GroupInvitationEntity.class);
         invitation.setToken("token");
         invitation.setGroupId(groupId);
         invitation.setExpiresAt(NOW);
@@ -125,7 +125,7 @@ class ExpenseJavaBeanCompatibilityTest {
         assertEquals("alice", invitation.getClaimedBy());
         assertEquals(membership.getMembershipId(), invitation.getPlaceholderId());
 
-        GroupAuditEntity audit = new GroupAuditEntity();
+        GroupAuditEntity audit = newEntity(GroupAuditEntity.class);
         audit.setAuditId(UUID.randomUUID());
         audit.setGroupId(groupId);
         audit.setSubject("alice");
@@ -139,7 +139,7 @@ class ExpenseJavaBeanCompatibilityTest {
         assertEquals(3, audit.getRevision());
         assertEquals("{}", audit.getPayload());
 
-        SettlementEntity settlement = new SettlementEntity();
+        SettlementEntity settlement = newEntity(SettlementEntity.class);
         settlement.setSettlementId(UUID.randomUUID());
         settlement.setGroupId(groupId);
         settlement.setFromParticipantId(participantId);
@@ -160,7 +160,7 @@ class ExpenseJavaBeanCompatibilityTest {
         UUID participantId = UUID.randomUUID();
 
         UUID changeId = UUID.randomUUID();
-        SyncChangeEntity change = new SyncChangeEntity();
+        SyncChangeEntity change = newEntity(SyncChangeEntity.class);
         change.setChangeId(changeId);
         change.setGroupId(groupId.toString());
         change.setRevision(3);
@@ -175,7 +175,7 @@ class ExpenseJavaBeanCompatibilityTest {
         assertEquals("{}", change.getPayload());
 
         UUID postingId = UUID.randomUUID();
-        BalancePostingEntity posting = new BalancePostingEntity();
+        BalancePostingEntity posting = newEntity(BalancePostingEntity.class);
         posting.setPostingId(postingId);
         posting.setGroupId(groupId);
         posting.setExpenseId(expenseId);
@@ -196,7 +196,7 @@ class ExpenseJavaBeanCompatibilityTest {
         UUID groupId = UUID.randomUUID();
         UUID expenseId = UUID.randomUUID();
 
-        OutboxEntity outbox = new OutboxEntity();
+        OutboxEntity outbox = newEntity(OutboxEntity.class);
         outbox.setEventId(UUID.randomUUID());
         outbox.setEventType("group.updated");
         outbox.setAggregateId(groupId);
@@ -249,7 +249,7 @@ class ExpenseJavaBeanCompatibilityTest {
 
     @Test
     void idempotency_entity_exposes_its_claim_state() {
-        ExpenseIdempotencyEntity entity = new ExpenseIdempotencyEntity();
+        ExpenseIdempotencyEntity entity = newEntity(ExpenseIdempotencyEntity.class);
         UUID groupId = UUID.randomUUID();
         UUID expenseId = UUID.randomUUID();
         entity.setIdempotencyId(UUID.randomUUID());
@@ -267,5 +267,13 @@ class ExpenseJavaBeanCompatibilityTest {
         assertEquals("hash", entity.getPayloadHash());
         assertEquals(expenseId, entity.getExpenseId());
         assertEquals(NOW, entity.getCreatedAt());
+    }
+
+    private static <T> T newEntity(Class<T> type) {
+        try {
+            return type.getDeclaredConstructor().newInstance();
+        } catch (ReflectiveOperationException exception) {
+            throw new AssertionError("JPA no-arg constructor is unavailable for " + type.getName(), exception);
+        }
     }
 }

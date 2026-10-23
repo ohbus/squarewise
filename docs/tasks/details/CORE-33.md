@@ -54,6 +54,7 @@ done
 
 - Implemented `PostgresMultiCurrencyLedgerTest` verifying the multi-currency lifecycle (`EUR`, `USD`, `GBP`), mixed split modes (`EQUAL`, `EXACT`, `PERCENT_BASIS_POINTS`, `WEIGHTED_SHARES`), isolated currency balance streams, suggestion calculation, and settlement recording and reversal conforming to all queries in `docs/operations/ledger-reconciliation.md`.
 - Implemented `MultiCurrencyZeroSumPropertyTest` exercising randomized multi-currency mutations across multiple participants, currencies, split modes, settlements, reversals, and deletions, asserting universal $\sum \text{postings} == 0$ per `(group_id, currency)`.
+- Kept the three settlement idempotency keys at the contract minimum length so the PostgreSQL lifecycle test reaches recording, reversal, and multi-currency assertions.
 
 ## Verification evidence
 

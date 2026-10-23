@@ -14,7 +14,7 @@ import com.subhrodip.squarewise.expensecore.groups.domain.GroupEntity
 import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupMembershipRepository
 import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupRepository
 
-import com.subhrodip.squarewise.errors.http.GlobalErrorHandler
+import com.subhrodip.squarewise.errors.web.GlobalErrorAdvice
 import java.util.UUID
 import java.security.Principal
 import java.util.Optional
@@ -37,6 +37,7 @@ import jakarta.servlet.Filter
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletRequestWrapper
 import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
+import com.subhrodip.squarewise.expensecore.validation.EntityReferenceValidator
 
 class ExpenseControllerTest {
     private val store = InMemoryExpenseStore()
@@ -56,7 +57,7 @@ class ExpenseControllerTest {
             Optional.of(GroupEntity(groupId, "Test", "TRIP", "EUR", if (groupId in archivedGroups) "ARCHIVED" else "ACTIVE"))
         } else null
     } as GroupRepository
-    private val controller = ExpenseController(store, memberships, groups)
+    private val controller = ExpenseController(store, EntityReferenceValidator(groups, memberships))
     private val authenticatedPrincipalFilter = Filter { request, response, chain ->
         val authenticatedRequest = object : HttpServletRequestWrapper(request as HttpServletRequest) {
             override fun getUserPrincipal(): Principal =
@@ -65,7 +66,7 @@ class ExpenseControllerTest {
         chain.doFilter(authenticatedRequest, response)
     }
     private val mvcBuilder: StandaloneMockMvcBuilder = MockMvcBuilders.standaloneSetup(controller)
-        .setControllerAdvice(GlobalErrorHandler())
+        .setControllerAdvice(GlobalErrorAdvice())
     private val mvc: MockMvc =
         (mvcBuilder.addFilters(authenticatedPrincipalFilter) as StandaloneMockMvcBuilder).build()
 

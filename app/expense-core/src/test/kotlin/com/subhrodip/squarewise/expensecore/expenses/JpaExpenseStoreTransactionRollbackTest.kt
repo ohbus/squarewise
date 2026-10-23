@@ -68,7 +68,7 @@ class JpaExpenseStoreTransactionRollbackTest @Autowired constructor(
         val revisionBefore = groupRepository.findById(group.groupId).orElseThrow().revision
 
         assertThrows(IllegalStateException::class.java) {
-            expenseStore.create(group.groupId, record, "rollback-key")
+            expenseStore.create(group.groupId, record, "rollback-key", validateParticipants = false)
         }
 
         assertNull(expenseRepository.findById(expenseId).orElse(null))

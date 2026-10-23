@@ -16,6 +16,7 @@ import com.rabbitmq.client.Channel
 import java.util.UUID
 import java.util.concurrent.CancellationException
 import org.springframework.amqp.core.Message
+import com.subhrodip.squarewise.db.routing.DbWriter
 import org.springframework.amqp.rabbit.annotation.RabbitListener
 import org.springframework.amqp.rabbit.listener.api.ChannelAwareMessageListener
 import org.springframework.stereotype.Component
@@ -39,12 +40,23 @@ fun BrokerEnvelope.toNotificationEvent(): NotificationEvent {
     return NotificationEvent(
         eventId = eventId,
         notificationId = notificationId,
-        subject = subject.take(200),
-        eventType = eventType.take(200),
-        message = message.take(2000),
+        subject = subject.requireLength("subject", MAX_SUBJECT_LENGTH),
+        eventType = eventType.requireLength("eventType", MAX_EVENT_TYPE_LENGTH),
+        message = message.requireLength("message", MAX_MESSAGE_LENGTH),
         occurredAt = occurredAt
     )
 }
+
+private fun String.requireLength(field: String, maximum: Int): String {
+    if (length !in 1..maximum) {
+        throw InvalidEnvelopeException("Notification $field must contain between 1 and $maximum characters")
+    }
+    return this
+}
+
+private const val MAX_SUBJECT_LENGTH = 200
+private const val MAX_EVENT_TYPE_LENGTH = 200
+private const val MAX_MESSAGE_LENGTH = 2000
 
 /** RabbitMQ adapter that acknowledges, rejects, or requeues notification events. */
 @Component
@@ -58,6 +70,7 @@ class RabbitNotificationListener(
         queues = ["\${squarewise.notifications.queue:squarewise.notifications.v2}"],
         ackMode = "MANUAL"
     )
+    @DbWriter("notifications.rabbit.consumer")
     override fun onMessage(message: Message, channel: Channel?) {
         val deliveryTag = message.messageProperties.deliveryTag
         try {

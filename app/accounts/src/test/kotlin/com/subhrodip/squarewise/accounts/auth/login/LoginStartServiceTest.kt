@@ -134,6 +134,24 @@ class LoginStartServiceTest {
         )
     }
 
+    /** Persistence failures must remain visible so an accepted response never hides an outage. */
+    @Test
+    fun `credential persistence failure is not acknowledged`() {
+        `when`(rateLimitService.tryAcquire("person@example.test", "network", now)).thenReturn(true)
+        `when`(
+            credentialService.issue(
+                "person@example.test",
+                LoginCredentialService.CredentialKind.LINK,
+                now
+            )
+        ).thenThrow(IllegalStateException("database unavailable"))
+
+        assertThrows(IllegalStateException::class.java) {
+            service.start("person@example.test", "network", LoginCredentialService.CredentialKind.LINK, now)
+        }
+        verify(emailSender, never()).send(any(AuthEmailMessage::class.java) ?: AuthEmailMessage("ignored@example.com", AuthEmailTemplate.LOGIN_LINK, "", now))
+    }
+
     @Test
     fun `rate-limit denial fails with the stable error code`() {
         `when`(rateLimitService.tryAcquire("user@example.com", "network", now)).thenReturn(false)

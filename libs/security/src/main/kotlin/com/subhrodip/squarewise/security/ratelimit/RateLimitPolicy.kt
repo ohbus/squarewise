@@ -24,30 +24,40 @@ data class RateLimitPolicy(
     val cooldown: Duration = Duration.ZERO
 ) {
     init {
-        if (id.length !in 1..64 || id.any { !it.isAsciiIdentifierCharacter() }) {
-            invalid("Rate-limit policy id must be 1-64 ASCII identifier characters")
+        require(id.length in 1..64 && id.all { it.isAsciiIdentifierCharacter() }) {
+            throw PlatformDomainException(
+                PlatformErrors.PLATFORM_CONFIGURATION_INVALID,
+                "Rate-limit policy id must be 1-64 ASCII identifier characters"
+            )
         }
-        if (maximumPermits !in 1..1_000_000) {
-            invalid("Rate-limit maximum permits must be between 1 and 1000000")
+        require(maximumPermits in 1..1_000_000) {
+            throw PlatformDomainException(
+                PlatformErrors.PLATFORM_CONFIGURATION_INVALID,
+                "Rate-limit maximum permits must be between 1 and 1000000"
+            )
         }
-        if (window.nano != 0 || cooldown.nano != 0) {
-            invalid("Rate-limit window and cooldown must use whole seconds")
+        require(window.nano == 0 && cooldown.nano == 0) {
+            throw PlatformDomainException(
+                PlatformErrors.PLATFORM_CONFIGURATION_INVALID,
+                "Rate-limit window and cooldown must use whole seconds"
+            )
         }
-        if (window.seconds < 1 || window > MAXIMUM_WINDOW) {
-            invalid("Rate-limit window must be positive and no longer than 24 hours")
+        require(window.seconds >= 1 && window <= MAXIMUM_WINDOW) {
+            throw PlatformDomainException(
+                PlatformErrors.PLATFORM_CONFIGURATION_INVALID,
+                "Rate-limit window must be positive and no longer than 24 hours"
+            )
         }
-        if (cooldown.isNegative || cooldown > window) {
-            invalid("Rate-limit cooldown must be non-negative and no longer than the window")
+        require(!cooldown.isNegative && cooldown <= window) {
+            throw PlatformDomainException(
+                PlatformErrors.PLATFORM_CONFIGURATION_INVALID,
+                "Rate-limit cooldown must be non-negative and no longer than the window"
+            )
         }
     }
 
-    private fun invalid(detail: String): Nothing = throw PlatformDomainException(
-        PlatformErrors.PLATFORM_CONFIGURATION_INVALID,
-        detail
-    )
-
     private companion object {
-        val MAXIMUM_WINDOW: Duration = Duration.ofHours(24)
+        private val MAXIMUM_WINDOW: Duration = Duration.ofHours(24)
     }
 }
 

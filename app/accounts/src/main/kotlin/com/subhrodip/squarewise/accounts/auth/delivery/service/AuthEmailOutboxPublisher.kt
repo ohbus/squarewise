@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.amqp.AmqpException
 import org.springframework.amqp.core.Message
 import org.springframework.amqp.core.MessageProperties
+import org.springframework.amqp.rabbit.connection.CorrelationData
 import org.springframework.amqp.rabbit.core.RabbitTemplate
 import tools.jackson.databind.ObjectMapper
 
@@ -22,8 +23,13 @@ class AuthEmailOutboxPublisher(
     private val lease: Duration,
     private val retryAfter: Duration,
     private val maximumAttempts: Int,
+    private val confirmTimeoutMs: Long = 5_000,
     private val clock: () -> Instant = Instant::now
 ) {
+    init {
+        require(confirmTimeoutMs > 0) { "confirmTimeoutMs must be positive" }
+    }
+
     private val log = LoggerFactory.getLogger(AuthEmailOutboxPublisher::class.java)
 
     /** Claims and publishes at most one event, returning its lifecycle outcome. */
@@ -53,7 +59,15 @@ class AuthEmailOutboxPublisher(
                 messageId = record.eventId.toString()
                 timestamp = Date.from(record.createdAt)
             }
-            rabbitTemplate.send(exchange, routingKey, Message(body, properties))
+            rabbitTemplate.invoke { operations ->
+                val correlation = CorrelationData(record.eventId.toString())
+                operations.send(exchange, routingKey, Message(body, properties), correlation)
+                operations.waitForConfirmsOrDie(confirmTimeoutMs)
+                correlation.returned?.let { returned ->
+                    throw AmqpException("Auth email message was returned: ${returned.replyText}")
+                }
+                null
+            }
             outbox.acknowledge(record.eventId, clock())
             AuthEmailPublishOutcome.PUBLISHED
         } catch (error: AmqpException) {

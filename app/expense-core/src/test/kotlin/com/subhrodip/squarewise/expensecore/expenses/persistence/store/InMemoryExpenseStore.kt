@@ -1,11 +1,13 @@
 package com.subhrodip.squarewise.expensecore.expenses.persistence.store
 
+import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
 import com.subhrodip.squarewise.errors.catalog.PlatformErrors
 import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
 import com.subhrodip.squarewise.expensecore.expenses.persistence.entity.BalancePostingEntity
 import com.subhrodip.squarewise.expensecore.expenses.api.response.GroupBalanceItem
 import com.subhrodip.squarewise.expensecore.expenses.api.request.MoneyDto
 import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseRecord
+import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseRequestLimits
 
 import java.time.Instant
 import java.util.UUID
@@ -26,7 +28,8 @@ class InMemoryExpenseStore : ExpenseStore {
         groupId: UUID,
         expense: ExpenseRecord,
         idempotencyKey: String,
-        actorSubject: String?
+        actorSubject: String?,
+        validateParticipants: Boolean
     ): ExpenseRecord {
         val existing = expenses[expense.expenseId]
         if (existing != null) {
@@ -207,7 +210,7 @@ class InMemoryExpenseStore : ExpenseStore {
 
     override fun balances(groupId: UUID): List<GroupBalanceItem> {
         val groupPostings = postings[groupId].orEmpty()
-        return groupPostings
+        val balances = groupPostings
             .groupBy { it.participantId to it.currency }
             .map { (key, list) ->
                 val (participantId, currency) = key
@@ -218,5 +221,12 @@ class InMemoryExpenseStore : ExpenseStore {
                 )
             }
             .sortedBy { it.participantId }
+        if (balances.size > ExpenseRequestLimits.MAX_BALANCE_ROWS) {
+            throw ExpenseDomainException(
+                ExpenseErrors.EXPENSE_REQUEST_INVALID,
+                "Group balance result exceeds ${ExpenseRequestLimits.MAX_BALANCE_ROWS} rows",
+            )
+        }
+        return balances
     }
 }

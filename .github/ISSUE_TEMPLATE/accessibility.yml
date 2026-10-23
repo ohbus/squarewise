@@ -1,6 +1,9 @@
 name: Accessibility barrier
 description: Report an accessibility problem in documentation, tooling, or a user-facing workflow
 title: "[Accessibility]: "
+labels:
+  - "type:accessibility"
+  - "needs-triage"
 body:
   - type: markdown
     attributes:

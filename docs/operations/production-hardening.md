@@ -59,7 +59,41 @@ ports through Docker's `host.docker.internal` gateway. The production/staging
 configuration remains `infra/observability/prometheus.yml`, which targets the
 Compose service names.
 
+## Notification deduplication retention
+
+Notifications retain processed event identifiers for the configured
+`SQUAREWISE_NOTIFICATIONS_PROCESSED_EVENT_RETENTION` period and remove old
+markers in bounded batches. Set this period no shorter than the approved
+broker replay guarantee; the default `30d` is an application safety baseline,
+not production capacity or retention approval.
+Email dispatch also claims a durable five-minute lease before provider
+dispatch. This prevents concurrent replica sends and recovers crashed
+consumers, but cannot provide provider-level exactly-once delivery after a
+provider accepts mail and the consumer crashes before recording `DELIVERED`.
+
+## Aggregate balance result bounds
+
+Expense Core fetches at most 1,001 aggregate participant/currency rows for
+balances and settlement suggestions. Results above the 1,000-row correctness
+bound are rejected with the existing invalid-request error rather than
+truncated, so clients cannot receive incomplete financial state. Pagination for
+larger groups remains a future API contract decision. This bound protects the
+database result window and JVM settlement calculation; it is not a substitute
+for production capacity testing.
+
 ## Release gates still required
+
+### Staging service credentials
+
+The staging overlay provisions separate PostgreSQL roles and RabbitMQ users for
+Accounts, Expense Core, and Notifications. Supply the per-service credential
+variables documented by `infra/deploy/docker-compose.staging.yml`; do not reuse
+the bootstrap PostgreSQL or RabbitMQ credentials in application containers.
+Initialization scripts run only on a fresh volume. Before rotating credentials
+on an existing volume, back up PostgreSQL and run
+`/opt/squarewise/upgrade-service-access.sh` through `docker compose exec` so
+roles, database ownership, schema ownership, and existing-object privileges are
+reconciled idempotently.
 
 Before public production launch, configure Prometheus retention and alert
 ownership, Grafana dashboards, paging routes, SLO thresholds, backup/restore

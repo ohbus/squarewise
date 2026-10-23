@@ -7,9 +7,11 @@ import com.subhrodip.squarewise.expensecore.groups.api.GroupMemberResponse
 import com.subhrodip.squarewise.expensecore.groups.api.GroupResponse
 import com.subhrodip.squarewise.expensecore.groups.api.InviteResponse
 import com.subhrodip.squarewise.expensecore.groups.api.UpdateGroupRequest
+import com.subhrodip.squarewise.db.routing.DbWriter
 import java.util.UUID
 
 /** Writer-side persistence port for groups, memberships, and invitations. */
+@DbWriter("groups.command")
 interface GroupCommandStore {
     /** Creates a new group owned by the creator. */
     fun create(subject: String, request: CreateGroupRequest): GroupResponse

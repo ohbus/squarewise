@@ -1,6 +1,7 @@
 package com.subhrodip.squarewise.expensecore.search
 
 import com.subhrodip.squarewise.expensecore.categories.ExpenseCategory
+import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
 import com.subhrodip.squarewise.expensecore.search.api.SearchQuery
 import com.subhrodip.squarewise.expensecore.search.model.SearchExpense
 import com.subhrodip.squarewise.expensecore.search.model.ExpenseSearch
@@ -131,6 +132,82 @@ class JpaSearchStoreTest @Autowired constructor(
             emptyList<SearchExpense>(),
             searchStore.findSearchExpenses(SearchQuery(groupId, afterExpenseId = cursor))
         )
+    }
+
+    @Test
+    fun `treats SQL wildcard characters as literal search text`() {
+        val groupId = UUID.randomUUID()
+        groupRepository.save(GroupEntity(groupId, "Wildcard", "HOUSEHOLD", "EUR"))
+        expenseRepository.saveAll(
+            listOf(
+                ExpenseEntity(
+                    expenseId = UuidGenerator.next(),
+                    groupId = groupId,
+                    description = "Plain expense",
+                    category = "other",
+                    currency = "EUR",
+                    amountMinor = 1250,
+                    version = 1,
+                    allocationMode = "EQUAL",
+                    createdAt = Instant.now(),
+                    deleted = false
+                ),
+                ExpenseEntity(
+                    expenseId = UuidGenerator.next(),
+                    groupId = groupId,
+                    description = "100% meal",
+                    category = "other",
+                    currency = "EUR",
+                    amountMinor = 1250,
+                    version = 1,
+                    allocationMode = "EQUAL",
+                    createdAt = Instant.now(),
+                    deleted = false
+                )
+            )
+        )
+
+        val results = searchStore.findSearchExpenses(SearchQuery(groupId, text = "%"))
+
+        assertEquals(1, results.size)
+        assertEquals("100% meal", results.single().description)
+    }
+
+    @Test
+    fun `escapes underscore and backslash wildcards in search query text`() {
+        val groupId = UUID.randomUUID()
+        groupRepository.save(GroupEntity(groupId, "Escapes", "HOUSEHOLD", "EUR"))
+        expenseRepository.save(
+            ExpenseEntity(
+                expenseId = UuidGenerator.next(),
+                groupId = groupId,
+                description = "item_with_underscore",
+                category = "other",
+                currency = "EUR",
+                amountMinor = 100,
+                version = 1,
+                allocationMode = "EQUAL",
+                createdAt = Instant.now(),
+                deleted = false
+            )
+        )
+
+        val resultsUnderscore = searchStore.findSearchExpenses(SearchQuery(groupId, text = "_"))
+        assertEquals(1, resultsUnderscore.size)
+
+        val resultsBackslash = searchStore.findSearchExpenses(SearchQuery(groupId, text = "\\"))
+        assertEquals(0, resultsBackslash.size)
+    }
+
+    @Test
+    fun `rejects invalid cursor format`() {
+        val groupId = UUID.randomUUID()
+        val invalidCursor = Base64.getUrlEncoder().withoutPadding()
+            .encodeToString("not-a-valid-uuid".toByteArray(StandardCharsets.UTF_8))
+
+        assertThrows(ExpenseDomainException::class.java) {
+            searchStore.findSearchExpenses(SearchQuery(groupId, afterExpenseId = invalidCursor))
+        }
     }
 
     /** Verifies the persistent adapter enforces both sides of its bounded query contract. */

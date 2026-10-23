@@ -173,7 +173,7 @@ class PostgresMultiCurrencyLedgerTest @Autowired constructor(
         // 5. Record settlement in USD: Alice pays Bob 500 USD
         val usdSettlement = settlementController.record(
             groupId = group.groupId,
-            idempotencyKey = "settle-usd-1",
+            idempotencyKey = "settle-usd-lifecycle",
             request = RecordSettlementRequest(
                 fromParticipantId = alice,
                 toParticipantId = bob,
@@ -188,7 +188,7 @@ class PostgresMultiCurrencyLedgerTest @Autowired constructor(
         // 6. Record settlement in EUR: Bob pays Alice 1000 EUR
         val eurSettlement = settlementController.record(
             groupId = group.groupId,
-            idempotencyKey = "settle-eur-1",
+            idempotencyKey = "settle-eur-lifecycle",
             request = RecordSettlementRequest(
                 fromParticipantId = bob,
                 toParticipantId = alice,
@@ -203,7 +203,7 @@ class PostgresMultiCurrencyLedgerTest @Autowired constructor(
         // 7. Record settlement in GBP: Bob pays Charlie 1000 GBP, then reverse it
         val gbpSettlement = settlementController.record(
             groupId = group.groupId,
-            idempotencyKey = "settle-gbp-1",
+            idempotencyKey = "settle-gbp-lifecycle",
             request = RecordSettlementRequest(
                 fromParticipantId = bob,
                 toParticipantId = charlie,

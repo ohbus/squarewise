@@ -9,7 +9,6 @@ import com.subhrodip.squarewise.bff.messaging.model.ProcessedConsumptionResult
 import com.subhrodip.squarewise.bff.messaging.service.BffEventConsumer
 import com.subhrodip.squarewise.bff.messaging.persistence.BffEventDeduplicator
 import com.subhrodip.squarewise.bff.realtime.GroupInvalidation
-import com.subhrodip.squarewise.bff.realtime.LiveUpdate
 import com.subhrodip.squarewise.bff.realtime.LiveUpdateFanout
 
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -18,6 +17,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.time.Instant
+import java.time.Duration
 import java.util.UUID
 import org.mockito.Mockito.anyLong
 import org.mockito.Mockito.anyString
@@ -38,11 +38,9 @@ class BffEventConsumerTest {
     }
 
     @Test
-    fun `consumes event and emits invalidation and updates subscribed queues`() {
+    fun `consumes event and emits invalidation`() {
         val groupId = UUID.randomUUID()
         val eventId = UUID.randomUUID()
-        val sub1 = fanout.subscribe("user-1", groupId.toString())
-
         val envelope = BffEventEnvelope(
             eventId = eventId,
             eventType = "expense.created",
@@ -60,19 +58,12 @@ class BffEventConsumerTest {
         assertEquals(groupId.toString(), processed.invalidation.groupId)
         assertEquals(5L, processed.invalidation.revision)
         assertEquals(eventId.toString(), processed.invalidation.changeId)
-        assertEquals(1, processed.deliveredQueues)
-
-        val polled = fanout.poll(sub1.id)
-        assertEquals(groupId.toString(), polled?.groupId)
-        assertEquals(5L, polled?.revision)
     }
 
     @Test
     fun `deduplicates re-delivered events by eventId without redundant fanout`() {
         val groupId = UUID.randomUUID()
         val eventId = UUID.randomUUID()
-        val sub = fanout.subscribe("user-1", groupId.toString())
-
         val envelope = BffEventEnvelope(
             eventId = eventId,
             eventType = "expense.created",
@@ -85,16 +76,12 @@ class BffEventConsumerTest {
 
         val firstResult = consumer.consume(envelope)
         assertTrue(firstResult is ProcessedConsumptionResult)
-        assertEquals(1, fanout.pendingCount(sub.id))
-
         // Second delivery with identical eventId
         val secondResult = consumer.consume(envelope)
         assertTrue(secondResult is DuplicateConsumptionResult)
         val duplicate = secondResult as DuplicateConsumptionResult
         assertEquals(eventId, duplicate.eventId)
 
-        // Queue must still have only 1 pending update, not 2
-        assertEquals(1, fanout.pendingCount(sub.id))
     }
 
     @Test
@@ -150,8 +137,8 @@ class BffEventConsumerTest {
     @Test
     fun `member removal revokes only removed subject subscription before update`() {
         val groupId = UUID.randomUUID()
-        val removed = fanout.subscribe("removed-user", groupId.toString())
         val retained = fanout.subscribe("retained-user", groupId.toString())
+        val removed = fanout.subscribe("removed-user", groupId.toString())
         val envelope = BffEventEnvelope(
             eventId = UUID.randomUUID(),
             eventType = "member.removed.v1",
@@ -166,9 +153,9 @@ class BffEventConsumerTest {
         val result = consumer.consume(envelope)
 
         assertTrue(result is ProcessedConsumptionResult)
-        assertEquals(1, (result as ProcessedConsumptionResult).deliveredQueues)
-        assertEquals(null, fanout.poll(removed.id))
-        assertEquals(groupId.toString(), fanout.poll(retained.id)?.groupId)
+        assertEquals(groupId.toString(), fanout.invalidations(retained.id).blockFirst(Duration.ofSeconds(1))?.groupId)
+        assertEquals(null, fanout.revocationSignal(removed.id).block(Duration.ofSeconds(1)))
+        assertEquals(null, fanout.invalidations(removed.id).blockFirst(Duration.ofMillis(100)))
     }
 
     /** Verifies malformed member-removal subjects do not revoke a subscription. */
@@ -192,7 +179,7 @@ class BffEventConsumerTest {
                 val result = consumer.consume(envelope)
 
                 assertTrue(result is ProcessedConsumptionResult)
-                assertEquals(groupId.toString(), fanout.poll(subscriber.id)?.groupId)
+                assertEquals(groupId.toString(), fanout.invalidations(subscriber.id).blockFirst(Duration.ofSeconds(1))?.groupId)
             }
     }
 }

@@ -71,18 +71,33 @@ PY
     psql -v ON_ERROR_STOP=1 -U "${POSTGRES_USER:-squarewise}" -d squarewise_accounts \
     -v account_id="$account_id" -v identity_id="$identity_id" -v subject="$subject" -v issuer="$issuer" \
     -v display_name="$display_name" -v email="$email" <<'SQL'
+BEGIN;
+
 INSERT INTO account_profiles (account_id, subject, display_name, timezone, default_currency)
 VALUES (:'account_id'::uuid, :'subject', :'display_name', 'UTC', 'EUR')
 ON CONFLICT (subject) DO UPDATE
 SET display_name = EXCLUDED.display_name,
     timezone = EXCLUDED.timezone,
-    default_currency = EXCLUDED.default_currency;
+    default_currency = EXCLUDED.default_currency,
+    deletion_requested = FALSE;
+
+-- Email is the stable fixture key when Keycloak recreates provider subjects.
+UPDATE account_identities
+SET account_id = :'account_id'::uuid,
+    issuer = :'issuer',
+    provider_subject = :'subject',
+    email_verified = TRUE,
+    status = 'ACTIVE',
+    updated_at = CURRENT_TIMESTAMP
+WHERE lower(email) = lower(:'email');
 
 INSERT INTO account_identities (
     identity_id, account_id, issuer, provider_subject, email, email_verified, status
 )
-VALUES (
+SELECT
     :'identity_id'::uuid, :'account_id'::uuid, :'issuer', :'subject', :'email', TRUE, 'ACTIVE'
+WHERE NOT EXISTS (
+    SELECT 1 FROM account_identities WHERE lower(email) = lower(:'email')
 )
 ON CONFLICT (issuer, provider_subject) DO UPDATE
 SET account_id = EXCLUDED.account_id,
@@ -90,6 +105,8 @@ SET account_id = EXCLUDED.account_id,
     email_verified = TRUE,
     status = 'ACTIVE',
     updated_at = CURRENT_TIMESTAMP;
+
+COMMIT;
 SQL
 }
 

@@ -47,12 +47,6 @@ value class EmailAddress private constructor(val value: String) {
 
             val domain = runCatching { IDN.toASCII(domainInput, IDN.USE_STD3_ASCII_RULES) }
                 .getOrElse { throw AccountsInputException("Email domain is invalid", it) }
-            require(domain.isNotEmpty() && domain.none { it == '@' || it.isWhitespace() }) {
-                "Email domain is invalid"
-            }
-            require(domain.split('.').all { label -> label.isNotEmpty() && label.length <= 63 }) {
-                "Email domain labels are invalid"
-            }
 
             return EmailAddress("$local@$domain")
         }

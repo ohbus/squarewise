@@ -31,18 +31,16 @@ class BrokerEnvelopeConversionTest {
 
     /** Verifies explicit values are bounded to the public notification field limits. */
     @Test
-    fun `truncates oversized converted notification fields`() {
-        val event = envelope(
-            eventType = "t".repeat(240),
-            payload = mapOf(
-                "subject" to "s".repeat(240),
-                "message" to "m".repeat(2200)
-            )
-        ).toNotificationEvent()
-
-        assertEquals(200, event.subject.length)
-        assertEquals(200, event.eventType.length)
-        assertEquals(2000, event.message.length)
+    fun `rejects oversized converted notification fields`() {
+        assertThrows(InvalidEnvelopeException::class.java) {
+            envelope(
+                eventType = "t".repeat(240),
+                payload = mapOf(
+                    "subject" to "s".repeat(240),
+                    "message" to "m".repeat(2200)
+                )
+            ).toNotificationEvent()
+        }
     }
 
     /** Verifies each supported subject fallback preserves a usable notification event. */

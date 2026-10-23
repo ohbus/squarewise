@@ -39,4 +39,22 @@ interface AuthSessionRepository : JpaRepository<AuthSessionEntity, UUID> {
 
     /** Finds an auth session by its refresh token HMAC digest. */
     fun findByRefreshTokenDigest(refreshTokenDigest: ByteArray): AuthSessionEntity?
+
+    /**
+     * Purges expired or revoked auth sessions older than [cutoff] in bounded batches.
+     */
+    @Modifying
+    @Query(
+        value = """
+            DELETE FROM auth_sessions
+            WHERE session_id IN (
+                SELECT session_id FROM auth_sessions
+                WHERE (expires_at < :cutoff)
+                   OR (revoked_at IS NOT NULL AND revoked_at < :cutoff)
+                LIMIT :limit
+            )
+        """,
+        nativeQuery = true
+    )
+    fun purgeExpiredOrRevokedOlderThan(@Param("cutoff") cutoff: Instant, @Param("limit") limit: Int): Int
 }

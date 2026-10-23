@@ -1,5 +1,24 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
+  "execution_tracking": {
+    "cutover_status": "pending_project_setup",
+    "target_authority": "github",
+    "repository": "ohbus/squarewise",
+    "project_url": "https://github.com/users/ohbus/projects/4",
+    "legacy_issue_map": {
+      "OPS-20": "https://github.com/ohbus/squarewise/issues/23",
+      "OPS-22": "https://github.com/ohbus/squarewise/issues/24",
+      "QA-08": "https://github.com/ohbus/squarewise/issues/25",
+      "AUTH-09": "https://github.com/ohbus/squarewise/issues/26",
+      "OPS-32": "https://github.com/ohbus/squarewise/issues/27",
+      "ERRC-26": "https://github.com/ohbus/squarewise/issues/28",
+      "ERRC-28": "https://github.com/ohbus/squarewise/issues/29",
+      "ERRC-29": "https://github.com/ohbus/squarewise/issues/30",
+      "ERRC-30": "https://github.com/ohbus/squarewise/issues/31",
+      "ERRC-31": "https://github.com/ohbus/squarewise/issues/32",
+      "DOC-28": "https://github.com/ohbus/squarewise/issues/33"
+    }
+  },
   "documentation_gate": {
     "status": "passed",
     "passed_at": "2026-09-17",
@@ -5393,7 +5412,9 @@
         "With fresh local Keycloak bearer tokens, mingw32-make e2e-all passed cache resilience, auth surfaces, Accounts lookup isolation, auth-email, product lifecycle, offline replay, concurrent subscription revocation, and chaos/broker recovery. This is complete local aggregate evidence; hosted selected/skipped evidence and managed-production Redis selection, failover, rotation, capacity, alert routing, broader query/latency, and production fanout/reconnect gates remain open.",
         "With a fresh local Keycloak bearer token, mingw32-make acceptance-live passed live contract/registry, health, group-expense-settlement, offline replay, WebSocket resync, rollback, concurrency, authorization, BFF fanout, and recovery scenarios. This adds local acceptance evidence only and does not close hosted or managed-production gates.",
         "Hosted API inspection confirmed historical master run 37355348264 at SHA 948e12c4e10849fd8c7e355ec8946b8a86862554 and PR run 37348315292 at SHA 95c6513f34d5f8ce4f1c64e79704601b6361ea89 passed preflight, all three selected E2E streams, the aggregate gate, and retained E2E artifacts. Both SHAs predate the current branch HEAD, so current-revision hosted rerun and managed-production evidence remain required.",
-        "After the current limiter timing and query/latency increments, mingw32-make check passed: contracts/public surfaces, 58 JVM test tasks, strict mypy for 54 files, JaCoCo reports, and all four application boot JARs. This is current repository-local evidence only."
+        "After the current limiter timing and query/latency increments, mingw32-make check passed: contracts/public surfaces, 58 JVM test tasks, strict mypy for 54 files, JaCoCo reports, and all four application boot JARs. This is current repository-local evidence only.",
+        "Commit 4cd0ffb918fa68ac8036f4b1fc82687b5467a5de aligns the lookup-isolation and latency probes with Expense Core groups.authorization while retaining the Accounts groups.list zero-change assertion, and runs the local RabbitMQ health command as the rabbitmq user to prevent a root-owned Erlang-cookie startup race. Strict Python typing, all Compose renders, contracts, and an exact RabbitMQ 4.3.6 cold-start probe passed locally; hosted CI rerun remains required.",
+        "Commit d4854b31 restores deletion_requested = FALSE when deterministic local OIDC profiles are re-provisioned, preventing the Bruno deletion fixture from contaminating the later export journey without weakening writer-backed export authorization. Shell syntax, Accounts tests, and diff hygiene passed; the exact live Bruno-to-export sequence remains for hosted CI because no Squarewise stack was running locally."
       ],
       "reviewer": "/root",
       "blocker": null
@@ -6860,7 +6881,7 @@
         "git diff --check"
       ],
       "evidence": [
-        "Completed ProfileQueryStore/ProfileCommandStore ports, explicit bounded profile read policies, writer-bound /me/auth/session/rate-limit/mutation paths, query telemetry, route assertions, replica disconnect/recovery, and authenticated multi-persona product E2E."
+        "Completed ProfileQueryStore/ProfileCommandStore ports, explicit bounded profile read policies, reader-bound /me/profile lookup paths with bounded writer fallback, writer-bound auth/session/rate-limit/mutation paths, query telemetry, route assertions, replica disconnect/recovery, and authenticated multi-persona product E2E."
       ],
       "reviewer": "/root",
       "blocker": null
@@ -8149,6 +8170,63 @@
       "blocker": null
     },
     {
+      "id": "DOC-28",
+      "parent_id": "MILESTONE-DOCUMENTATION",
+      "title": "Establish GitHub-native delivery management",
+      "phase": "documentation",
+      "status": "in_progress",
+      "owner_role": "coordinator",
+      "owner_agent": "/root",
+      "depends_on": [
+        "DOC-08",
+        "DOC-27"
+      ],
+      "owned_paths": [
+        ".github/",
+        "tools/ci/required_ci_gate.py",
+        "tests/tools/test_required_ci_gate.py",
+        "AGENTS.md",
+        "CONTRIBUTING.md",
+        "docs/working-agreement.md",
+        "docs/operations/ci.md",
+        "docs/tasks/README.md",
+        "docs/tasks/github-project-setup.md",
+        "docs/tasks/registry.yaml",
+        "docs/tasks/board.md",
+        "docs/tasks/progress.md",
+        "docs/tasks/details/DOC-28.md"
+      ],
+      "specification": "docs/tasks/details/DOC-28.md",
+      "acceptance_criteria": [
+        "GitHub Issues and Squarewise Delivery own mutable execution state while repository documents retain durable specifications and evidence.",
+        "Three epics, the ten tasks incomplete at migration start, and DOC-28 are represented without importing completed registry history.",
+        "Issue forms, project fields and views, workflow automation, and default-branch governance implement the reviewed delivery workflow.",
+        "Contract, workflow, YAML, link, and whitespace validation pass with hosted evidence and limitations recorded."
+      ],
+      "validation_commands": [
+        "uv run --frozen --no-build python tools/contracts/validate.py",
+        "uv run --frozen --no-build python tools/contracts/validate_public_surface.py",
+        "uv run --frozen --no-build yamllint -d '{extends: relaxed, rules: {truthy: disable, line-length: disable}}' .github",
+        "make workflow-validate",
+        "make python-typecheck",
+        "python3 -m unittest tests.tools.test_required_ci_gate",
+        "git diff --check"
+      ],
+      "evidence": [
+        "Created public GitHub Project 4, epics #20-#22, and task issues #23-#33; native parent/sub-issue relationships report 4, 5, and 2 children for epics #20, #21, and #22.",
+        "Verified live five-state Status, Priority, multi-select Workstream, Size, two-week Iteration, and Target Date fields and all 14 migrated issues in Project 4.",
+        "Verified the Delivery board groups by Workstream and the Current iteration table groups by assignee without enforced WIP limits.",
+        "Verified the lean repository label taxonomy and applied type:epic to #20-#22 and type:task to #23-#33.",
+        "Verified repository milestone #1 (Production readiness) and assigned it to epics #20/#21 and release-gated children #23-#26/#28-#31.",
+        "The owner confirmed all configured Project workflows are active; workflow configuration is not exposed by the public project response.",
+        "Verified native dependencies through GitHub's public API: #24/#25/#26 are blocked by #23 and #29/#30/#31/#32 are blocked by #28/#29/#30/#31 respectively.",
+        "Added issue forms, CODEOWNERS, weekly grouped Dependabot updates, and the stable Required CI aggregate with typed unit coverage.",
+        "Contract and public-surface validation, GitHub YAML lint, workflow validation, Python type checking, three Required CI unit tests, and git diff checks passed locally."
+      ],
+      "reviewer": "/root",
+      "blocker": "Repository settings and ruleset changes require owner action in GitHub; cutover also waits for the new Required CI check to complete on a hosted pull request."
+    },
+    {
       "id": "OPS-32",
       "parent_id": "MILESTONE-QUALITY",
       "title": "Select changed-scope PR and branch CI while keeping master full",
@@ -8171,6 +8249,10 @@
         "tools/ci/changed_scope.py",
         "tests/tools/test_changed_scope.py",
         "docs/operations/ci.md",
+        "docs/operations/intellij.md",
+        "docs/implementation/technology-decisions.md",
+        "settings.gradle.kts",
+        "gradle.properties",
         "docs/tasks/details/OPS-32.md",
         "docs/tasks/registry.yaml",
         "docs/tasks/board.md",
@@ -8182,6 +8264,7 @@
         "Master and manual master runs select the complete verification matrix and all E2E streams.",
         "The E2E gate evaluates selected streams only, does not fail on intentional skips, and fails on selected, preflight, or artifact failures.",
         "Global repository-wide checks remain explicitly documented as global checks.",
+        "The Gradle build applies Develocity plugin 4.5.0; CI Gradle invocations publish tagged Build Scans without affecting local publication behavior.",
         "Local scope tests, typed tooling checks, workflow parsing, contract validation, and hosted scenario evidence are recorded."
       ],
       "validation_commands": [
@@ -8196,6 +8279,7 @@
         "Changed-scope resolver and focused tests implemented; current local revalidation passes all 5 scope tests, mypy for tools/ci and its tests, and workflow YAML parsing. Contract/public-surface checks pass separately; hosted PR, branch, and master scenario evidence remains required.",
         "The reusable E2E gate now delegates its selected-result decision to typed tools/ci/e2e_gate.py. Three focused tests prove unselected skipped streams are neutral and not reported as passed, while selected-stream, shared preflight, and artifact-preparation failures remain fatal; mypy and all workflow YAML parsing pass.",
         "Fixed the first-push fallback by keeping its diagnostic on the step log instead of appending prose to GITHUB_OUTPUT; only machine-readable output records are emitted to the GitHub Actions output file. Native path filters remain insufficient for reverse Gradle-dependent and E2E-stream selection.",
+        "Applied Develocity Gradle plugin 4.5.0 at the settings level; CI Gradle invocations pass --scan with synchronous upload and CI tagging, while local builds do not publish scans. Local Gradle help/test, workflow YAML validation, contract/public-surface validation, and git diff --check pass; hosted Build Scan links require a post-commit GitHub Actions run.",
         "Hosted PR, branch, and master scenario evidence remains required before status can become done."
       ],
       "reviewer": "/root",
@@ -9231,7 +9315,8 @@
         "The k6 harness now supports separate baseline/storm modes, requires a positive baseline for storm degradation gating, samples JVM heap, process CPU, aggregate GC pause seconds, and collection count through the Prometheus actuator endpoint, and optionally retains JSON summaries through K6_SUMMARY_EXPORT; production-like 10-minute p99, degradation, heap, and GC evidence remains unavailable.",
         "A fresh authenticated one-second local baseline at 1 error/s plus 1 valid-operation/s passed all three checks with zero dropped iterations and zero unexpected HTTP failures. The follow-on one-second storm passed all five checks with zero dropped iterations, error p99 2.23 ms, valid-operation p99 13.52 ms, and 45 JVM collections with 0.663 seconds cumulative pause at the telemetry scrape point, using a 14.3 ms baseline p99. This is low-rate local wiring evidence only; the hostname-preserving internal-issuer token path and local profile enrollment were required.",
         "A one-second authenticated baseline export smoke passed with p95/p99 summary fields and zero setup_data keys; the bearer token is now kept in process-scoped environment state rather than returned from setup, preventing --summary-export artifacts from persisting credentials. The generated local artifact was inspected and removed; no capacity claim is made.",
-        "The benchmark wrapper now creates missing K6_SUMMARY_EXPORT parent directories and rejects Unix/Windows absolute paths and parent-directory traversal before Docker; invalid parent and absolute path probes both exited 2, while repository-relative command expansion passed."
+        "The benchmark wrapper now creates missing K6_SUMMARY_EXPORT parent directories and rejects Unix/Windows absolute paths and parent-directory traversal before Docker; invalid parent and absolute path probes both exited 2, while repository-relative command expansion passed.",
+        "Removed the deprecated me.champeau.jmh Gradle plugin wiring, regenerated the affected dependency lockfiles including direct JMH generator/runtime configurations, and passed the direct JMH run on JDK 25 with catalog lookup 2.246 +/- 0.214 ns/op, decomposition 1.813 +/- 0.155 ns/op, governed exception creation 492.989 +/- 16.279 ns/op, standard exception creation 479.920 +/- 6.680 ns/op, and serialization 0.449 +/- 0.048 us/op. Project-owned Kotlin and Java compiler warnings were removed without suppressions; JMH's own JDK 25 Unsafe warning remains visible."
       ],
       "reviewer": "/root",
       "blocker": "Performance acceptance is not proven: the local k6 burst crossed thresholds; production-like 10-minute p99, valid-operation degradation, and GC/heap evidence remain required."
@@ -9451,6 +9536,73 @@
       ],
       "reviewer": "/root",
       "blocker": "Requires ERRC-30 completion plus an explicit future API-major charter and product approval before any breaking v2 design is authorized."
+    },
+    {
+      "id": "PR-50",
+      "parent_id": "MILESTONE-PRODUCTION-HARDENING",
+      "title": "Remediate six independent PR #19 correctness and resource findings",
+      "phase": "production_hardening",
+      "status": "done",
+      "owner_role": "coordinator",
+      "owner_agent": "/root",
+      "depends_on": ["PR-45", "DB-15", "CORE-31", "PR-30", "PR-49"],
+      "owned_paths": [
+        "app/accounts/src/main/kotlin/com/subhrodip/squarewise/accounts/validation/AccountReferenceValidator.kt",
+        "app/accounts/src/main/kotlin/com/subhrodip/squarewise/accounts/requests/export/persistence/JpaExportRequestStore.kt",
+        "app/accounts/src/test/kotlin/com/subhrodip/squarewise/accounts/validation/AccountReferenceValidatorTest.kt",
+        "app/accounts/src/test/kotlin/com/subhrodip/squarewise/accounts/requests/export/persistence/JpaExportRequestStoreTest.kt",
+        "app/expense-core/src/main/kotlin/com/subhrodip/squarewise/expensecore/recurring/",
+        "app/expense-core/src/main/kotlin/com/subhrodip/squarewise/expensecore/validation/",
+        "app/expense-core/src/main/kotlin/com/subhrodip/squarewise/expensecore/groups/persistence/store/",
+        "app/expense-core/src/main/kotlin/com/subhrodip/squarewise/expensecore/expenses/persistence/store/",
+        "app/bff/src/main/kotlin/com/subhrodip/squarewise/bff/realtime/",
+        "app/bff/src/main/kotlin/com/subhrodip/squarewise/bff/graphql/",
+        "app/bff/src/main/kotlin/com/subhrodip/squarewise/bff/messaging/",
+        "libs/db/src/main/kotlin/com/subhrodip/squarewise/db/config/",
+        "app/expense-core/src/test/",
+        "app/bff/src/test/",
+        "app/notifications/src/main/kotlin/com/subhrodip/squarewise/notifications/preferences/cache/",
+        "app/notifications/src/test/kotlin/com/subhrodip/squarewise/notifications/consumer/",
+        "libs/db/src/test/",
+        "infra/deploy/docker-compose.staging.yml",
+        "infra/deploy/postgres/upgrade-service-access.sh",
+        "docs/architecture/overview.md",
+        "docs/architecture/cqrs-data-access.md",
+        "docs/architecture/database-and-cache-access-patterns.md",
+        "docs/implementation/production-readiness-roadmap.md",
+        "docs/implementation/technology-decisions.md",
+        "docs/operations/quickstart.md",
+        "docs/operations/runbooks/errors/flyway-migration-failed.md",
+        "docs/tasks/details/PR-50.md",
+        "docs/tasks/progress.md",
+        "docs/tasks/board.md"
+      ],
+      "specification": "docs/tasks/details/PR-50.md",
+      "acceptance_criteria": [
+        "Export-request admission always checks the writer-backed profile and cannot be bypassed by a local profile-cache hit or missing validator bean.",
+        "Recurring worker reads active memberships after schedule locking, uses a bounded per-group query, and validates internally generated participants on the writer.",
+        "Expense creation validates participants by default, including actor-less calls; recurring writes do not infer validation from an idempotency-key prefix.",
+        "Explicitly unknown writer targets fail with a governed configuration error instead of falling back to the primary writer.",
+        "Membership authorization remains writer-authoritative when nested inside eventual-reader query contexts.",
+        "Subscription streams terminate at their TTL and release all indexes/signals without relying on a later event.",
+        "Scheduled expiry cleanup is bounded by due entries and does not scan the full live-subscription map per pass.",
+        "The unused in-process LiveUpdate queue and its result accounting are removed; reactive invalidation remains the only production fanout path.",
+        "Focused regressions and the repository test gate pass, with exact evidence recorded."
+      ],
+      "validation_commands": [
+        "./gradlew :libs:db:test :app:bff:test :app:expense-core:test --rerun-tasks --no-daemon --console=plain",
+        "./gradlew :app:notifications:test --rerun-tasks --no-daemon --console=plain",
+        "./gradlew test --rerun-tasks --no-daemon --console=plain",
+        "sh -n infra/deploy/postgres/upgrade-service-access.sh",
+        "git diff --check"
+      ],
+      "evidence": [
+        "Recurring generation now queries at most 101 active memberships after each schedule lock, validates recurring participants on the writer, and no longer uses a cross-schedule snapshot or membership cache.",
+        "Unknown writer targets raise PLATFORM_CONFIGURATION_INVALID; authorization membership/group checks force writer contexts; balances and settlement suggestions are writer-bound; BFF subscription expiry has both reactive boundary enforcement and a bounded scheduled sweep; the imperative LiveUpdate queue was deleted.",
+        "Focused Accounts and BFF tests cover writer-backed export admission, deterministic expiry/index cleanup, concurrent admission, and stale-queue compaction; ./gradlew test --rerun-tasks --no-daemon --console=plain passed all 59 actionable tasks; git diff --check passed. Implementation commits: 997beb79, a7f62525, 3db58ebf, and a1d17b42."
+      ],
+      "reviewer": "/root",
+      "blocker": null
     }
   ]
 }

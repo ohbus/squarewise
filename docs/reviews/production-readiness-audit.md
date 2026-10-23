@@ -11,12 +11,12 @@ alone as proof that every original defect still exists.
 | CRIT-01, CRIT-02 | **Implemented; scale evidence open** | Settlement postings, reversals, durable idempotency, conflict handling, locking, reconciliation, and replay tests exist. Sustained multi-replica and unknown-outcome evidence is open. |
 | CRIT-03, CRIT-04, CRIT-05 | **Implemented in deployed wiring** | Production/staging fail closed to OIDC, durable outbox publishing, and durable JPA adapters. Provider rotation, broker HA, restore, and failover evidence remain open. |
 | HIGH-01, HIGH-02, HIGH-03, HIGH-04, HIGH-05, HIGH-06, HIGH-09, HIGH-10, HIGH-11, HIGH-12, HIGH-13, HIGH-14, HIGH-15, HIGH-18, HIGH-19, HIGH-21, HIGH-23 | **Implemented with local/integration evidence** | Authorization, bounds, locking, privacy, redaction, error, transport, and fail-closed configuration checks pass at their documented evidence levels. They do not substitute for target-environment verification. |
-| HIGH-07 | **Open** | Staging Compose still shares database and RabbitMQ credentials across services; per-service roles and broker permissions are not implemented. |
+| HIGH-07 | **Implemented in staging wiring; target evidence open** | Staging Compose now provisions per-service PostgreSQL roles and RabbitMQ users with scoped permissions; existing-volume rotation and target-environment verification remain open. |
 | HIGH-08 | **Partial** | Architecture, security, SBOM, dependency, and workflow checks exist; container/image scanning, license policy, signing/provenance, and enforced coverage gates remain incomplete. |
 | HIGH-16 | **Partial** | GraphQL depth, complexity, request-size, subscription, queue, and TTL controls exist; durable distributed per-user quotas are not proven. |
 | HIGH-17 | **Open** | Deletion requests and profile flags exist, but cross-service deletion, pseudonymization, retention, and verification are incomplete. |
 | HIGH-20 | **Open design contract** | Locking exists, but `GroupEntity.revision` is manually managed rather than a JPA `@Version` contract. |
-| HIGH-22 | **Open** | Notification rate limiting is process-local and not durable/distributed for multi-replica deployment. |
+| HIGH-22 | **Partial** | Notifications wiring uses the Redis-backed distributed limiter; managed Redis failover, alerting, and target-environment recovery evidence remain open. |
 | HIGH-24 | **Partial** | Production Compose declares replicas and resource limits; rollout, placement, autoscaling/PDB equivalents, and measured multi-replica evidence remain open. |
 
 **Release decision: NO-GO.** Local tests, Compose E2E, CI checks, and

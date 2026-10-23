@@ -13,7 +13,11 @@ data class DbExecutionContext(
     /** Whether the named operation has been approved for replica execution. */
     val readerEligible: Boolean = false,
     /** Optional writer watermark required before a replica may answer. */
-    val requiredWatermark: String? = null
+    val requiredWatermark: String? = null,
+    /** Optional explicit reader instance name to route queries to. */
+    val targetReader: String? = null,
+    /** Optional explicit writer instance name to route commands and strong queries to. */
+    val targetWriter: String? = null
 ) {
     init {
         if (!operationName.matches(OPERATION_NAME)) {
@@ -31,6 +35,6 @@ data class DbExecutionContext(
     fun requiredDbWatermark(): DbWatermark? = requiredWatermark?.let(DbWatermark::parse)
 
     private companion object {
-        val OPERATION_NAME = Regex("[a-z0-9]+(?:[._-][a-z0-9]+)*")
+        private val OPERATION_NAME = Regex("[a-z0-9]+(?:[._-][a-z0-9]+)*")
     }
 }

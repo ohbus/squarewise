@@ -4,6 +4,14 @@
 
 This runbook covers startup or deployment failure caused by an unapplied or failed Flyway migration. The requested code is retained as the operational name; verify the active catalog code before paging.
 
+The current branch uses one fresh-install `V1__initial_schema.sql` per service.
+An existing database with the retired multi-version history is not an upgrade
+target for this revision; stop the rollout and follow the approved rebuild or
+baseline process. Never edit migration history by hand. For staging credential
+changes, run `/opt/squarewise/upgrade-service-access.sh` before rollout; that
+command creates or updates service roles, database/schema ownership, existing object
+privileges, and future default privileges. It does not change Flyway schema history.
+
 ## Severity
 
 Critical; do not allow a partially migrated writer into service.
@@ -25,7 +33,9 @@ docker compose exec postgres psql -U squarewise -d squarewise -c 'select install
 
 ## Remediation Steps
 
-Stop rollout, restore the last known compatible artifact, and repair only through the approved migration procedure. Never edit migration history by hand without an incident record.
+Stop rollout, restore the last known compatible artifact, and repair only through
+the approved rebuild/baseline procedure. Never edit migration history by hand; use
+only the approved rebuild/baseline procedure.
 
 ## Rollback Procedures
 

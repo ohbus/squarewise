@@ -13,6 +13,8 @@ This index is the navigation entry point for repository documentation. [`AGENTS.
 - [Implementation plan](implementation/plan.md)
 - [Task registry](tasks/registry.yaml)
 - [Task board](tasks/board.md)
+- [Task tracking authority](tasks/README.md)
+- [GitHub project setup](tasks/github-project-setup.md)
 - [Progress ledger](tasks/progress.md)
 - [Task details](tasks/details/)
 - [API implementation status](api/implementation-status.md)

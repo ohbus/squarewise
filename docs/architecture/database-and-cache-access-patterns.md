@@ -16,6 +16,12 @@ This document details the database (PostgreSQL) and cache (Redis) access pattern
    - Neither Accounts PostgreSQL nor Redis is queried solely to validate an active bearer access token.
 4. **BFF is Completely Database-Free**:
    - The BFF microservice has zero database or cache connections, acting strictly as a GraphQL-to-REST facade.
+5. **In-Memory Bounded Domain Caches with Coordinated Transactional Eviction**:
+   - Hot read queries (`GroupAccessCache` in Expense Core, `ProfileCache` in Accounts, `PreferenceCache` in Notifications) hit local in-memory caches, yielding 0 DB queries on cache hits.
+   - Cache invalidations are synchronized to local transaction completion (`afterCommit`), preventing dirty reads on that instance. Cross-instance caches remain eventually consistent until invalidation propagation or TTL expiry.
+6. **CQRS Reader Replica Routing & Database Referential Integrity**:
+   - Approved high-throughput query endpoints (`/sync/page`, `/search`, `/export`, `/inbox`, `/preferences`, `/me`, `/profiles/{accountId}`, `/profiles/batch`) route to healthy read replicas via `@DbReader` and `@DbRouteContext` using round-robin load-balancing with automatic failover to the primary writer. Authorization and financial balances remain writer-bound.
+   - Same-service foreign keys remain the durable referential-integrity guard. Application validators (`EntityReferenceValidator`, `AccountReferenceValidator`) provide early authorization and input errors; they do not replace database constraints or permit cross-service foreign keys.
 
 ---
 
@@ -82,7 +88,7 @@ flowchart TD
 | **Expense Core** *(Queries)* | `GET /groups` | **0** | **1 read** | Join on `group_memberships` for caller subject. |
 | | `GET /groups/{id}` | **0** | **2 reads** | Verify caller membership + fetch group details. |
 | | `GET /groups/{id}/expenses` | **0** | **2 reads** | Verify membership + keyset/offset page query from `expenses`. |
-| | `GET /groups/{id}/balances` | **0** | **2 reads** | Verify membership + aggregate ledger balance query (`balance_postings` sum). |
+| | `GET /groups/{id}/balances` | **0** | **2 reads** | Writer-bound verification plus aggregate ledger balance query (`balance_postings` sum); never served from a replica or balance cache. |
 | | `GET /groups/{id}/search` | **0** | **2 reads** | Verify membership + indexed filtered query on expenses. |
 | | `GET /groups/{id}/sync/changes` | **0** | **2 reads** | Verify membership + fetch sync change feed by revision cursor. |
 | **Notifications** | `GET /inbox` | **0** | **1 read** | Cursor-paginated read from `notifications_inbox` by recipient subject. |

@@ -6,7 +6,9 @@ Use Kotlin on the JVM, Spring Boot, Gradle Kotlin DSL, Spring MVC for stateful
 REST services, and WebFlux/Spring GraphQL for the database-free BFF. Version
 selection is verified through dependency resolution and centralized in
 `gradle/libs.versions.toml`. The current baseline is Java 25, Kotlin 2.4.20,
-Spring Boot 4.1.1, and Gradle 9.7.1. The earlier Java 26 proposal was superseded;
+Spring Boot 4.1.1, Gradle 9.8.0, and Develocity Gradle plugin 4.5.0. The
+Develocity version is kept in `gradle.properties` because settings plugins are
+resolved before the project version catalog is available. The earlier Java 26 proposal was superseded;
 future baseline changes require a separately verified technology decision.
 
 ## Persistence
@@ -14,14 +16,25 @@ future baseline changes require a separately verified technology decision.
 Use Spring Data JPA with Hibernate for ordinary aggregate persistence. This
 reduces mapping code while retaining transactions, optimistic `@Version`
 checks, and fetch planning. Use native SQL only for group-revision locking,
-outbox/job claiming and measured specialized queries. Flyway owns migrations;
-Hibernate validates. Disable Open Session in View, keep entities private, and
-return DTOs. The BFF has no database. Read/write separation is CQRS-oriented,
-not event-sourced: commands and consistency-critical reads use the writer;
-explicit query ports may use named read pools only under a documented
-consistency policy. `libs/db` owns routing, pool budgets, route guards, health,
-and database telemetry; it does not own business entities, repositories, or
-migrations. See `docs/implementation/cqrs-data-access-plan.md`.
+outbox/job claiming and measured specialized queries. Flyway owns one
+fresh-install baseline migration per service. This repository intentionally
+does not upgrade databases created by the retired multi-version migration
+chains; deployments using this baseline must provision empty service
+databases or complete an explicitly managed database rebuild/baseline outside
+the application rollout. Existing staging volumes still use the checked-in
+role/ownership reconciliation command before application credentials rotate.
+Disable
+Open Session in View, keep entities private, and return DTOs. The BFF has no database.
+Read/write separation is CQRS-oriented, not event-sourced: commands and consistency-critical
+reads use the writer; explicit query ports may use named read pools under a documented
+consistency policy. `libs/db` owns multi-reader instance routing, atomic round-robin
+replica load-balancing, writer transaction affinity, route guards, replica health, and
+database telemetry via declarative `@DbReader`, `@DbWriter`, and `@DbRouteContext`
+annotations and `DbRouteAspect`. See `docs/implementation/cqrs-data-access-plan.md`
+and `docs/architecture/cqrs-data-access.md`. Explicitly approved non-strong
+reader queries may use bounded writer fallback when replica health or causal
+watermark checks reject every reader; commands and strong reads remain
+writer-bound. Accounts `GET /me` is an approved reader-bound query.
 
 PostgreSQL is authoritative for money, audit, balances, synchronization and
 outbox records. Each service has separate credentials and tables. Databases may
@@ -29,15 +42,18 @@ share a cluster initially, but cross-service SQL, foreign keys and entities are
 forbidden. Store monetary values as integer minor units internally and strings
 on JSON/GraphQL boundaries.
 
-Same-service foreign keys remain mandatory for durable relationships such as
-Expense Core groups, expenses, postings, and settlement records. Application
-services perform authorization and domain validation in the writer transaction,
-but those checks supplement rather than replace database referential integrity.
-Before changing a constraint for performance, capture normalized query timing,
-lock waits, child-index usage, and controlled `EXPLAIN (ANALYZE, BUFFERS, WAL)`
-evidence. The existing Expense Core foreign-key columns are indexed for the
-dependent-row checks. `libs/db` may provide routing and telemetry for this work,
-but it must not contain business relationship checks or service entities.
+Same-service foreign keys remain the durable referential-integrity guard,
+including the writer-intensive tables listed above. Application validators
+(`EntityReferenceValidator` in Expense Core and `AccountReferenceValidator` in
+Accounts) provide friendly authorization and input errors before persistence;
+they do not replace database constraints. The fresh-install baseline retains
+same-service constraints and contains no cross-service foreign keys. Any future
+constraint change requires a separately reviewed additive migration and
+compatibility plan. Hot read paths utilize bounded in-memory
+caches (`GroupAccessCache`, `ProfileCache`, `PreferenceCache`) with local cache
+evictions synchronized to transaction `afterCommit` to prevent dirty reads on the
+same instance. Cross-instance caches remain eventually consistent until invalidation
+propagation or TTL expiry; balances and authorization are writer-bound.
 
 ## Messaging and API
 

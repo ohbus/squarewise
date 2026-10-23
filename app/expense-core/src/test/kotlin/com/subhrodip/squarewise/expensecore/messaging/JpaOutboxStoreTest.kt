@@ -4,6 +4,8 @@ import com.subhrodip.squarewise.expensecore.messaging.outbox.persistence.JpaOutb
 import com.subhrodip.squarewise.expensecore.messaging.outbox.model.OutboxMessage
 import com.subhrodip.squarewise.expensecore.messaging.outbox.persistence.OutboxRepository
 import com.subhrodip.squarewise.expensecore.messaging.outbox.model.OutboxStatus
+import com.subhrodip.squarewise.expensecore.groups.domain.GroupEntity
+import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupRepository
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
@@ -17,6 +19,8 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
+import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
 
 /**
  * Integration tests for [JpaOutboxStore] verifying transactional claim, retry,
@@ -28,8 +32,10 @@ import org.springframework.boot.test.context.SpringBootTest
 @SpringBootTest
 class JpaOutboxStoreTest @Autowired constructor(
     private val store: JpaOutboxStore,
-    private val repository: OutboxRepository
+    private val repository: OutboxRepository,
+    private val groupRepository: GroupRepository
 ) {
+    private lateinit var testGroupId: UUID
     /**
      * Purges all existing outbox messages prior to each test invocation, guaranteeing
      * an isolated baseline independent of test execution order.
@@ -37,6 +43,8 @@ class JpaOutboxStoreTest @Autowired constructor(
     @BeforeEach
     fun setUp() {
         repository.deleteAll()
+        testGroupId = UUID.randomUUID()
+        groupRepository.save(GroupEntity(testGroupId, "Outbox test", "HOUSEHOLD", "EUR"))
     }
 
     /**
@@ -69,6 +77,17 @@ class JpaOutboxStoreTest @Autowired constructor(
         assertEquals(OutboxStatus.PUBLISHED, snapshot.getValue(publishedId).status)
         assertEquals(mapOf("amount" to 1250, "currency" to "EUR"), snapshot.getValue(retryId).payload)
         assertTrue(store.claim(10, Duration.ofMinutes(1)).isEmpty())
+    }
+
+    /** Rejects an outbox event whose group parent does not exist before persistence. */
+    @Test
+    fun `rejects event for missing group before persistence`() {
+        val error = assertThrows(ExpenseDomainException::class.java) {
+            store.append(message(UUID.randomUUID(), Instant.now(), groupId = UUID.randomUUID()))
+        }
+
+        assertEquals(ExpenseErrors.GROUP_NOT_FOUND, error.definition)
+        assertTrue(repository.findAll().isEmpty())
     }
 
     /**
@@ -197,12 +216,13 @@ class JpaOutboxStoreTest @Autowired constructor(
     private fun message(
         eventId: UUID,
         occurredAt: Instant,
-        payload: Map<String, Any?> = emptyMap()
+        payload: Map<String, Any?> = emptyMap(),
+        groupId: UUID = testGroupId
     ) = OutboxMessage(
         eventId = eventId,
         eventType = "expense.created",
         aggregateId = UUID.randomUUID(),
-        groupId = UUID.randomUUID(),
+        groupId = groupId,
         groupRevision = 1,
         occurredAt = occurredAt,
         payload = payload

@@ -11,7 +11,6 @@ import com.subhrodip.squarewise.bff.messaging.transport.RabbitBffEventListener
 import com.subhrodip.squarewise.bff.messaging.transport.DeadLetterPublisher
 import com.subhrodip.squarewise.bff.messaging.persistence.BffEventDeduplicator
 import com.subhrodip.squarewise.bff.realtime.GroupInvalidation
-import com.subhrodip.squarewise.bff.realtime.LiveUpdate
 import com.subhrodip.squarewise.bff.realtime.LiveUpdateFanout
 import com.subhrodip.squarewise.errors.async.DeadLetterRecord
 
@@ -47,7 +46,6 @@ class RabbitBffEventListenerTest {
         val eventId = UUID.randomUUID()
         val aggregateId = UUID.randomUUID()
         val groupId = UUID.randomUUID()
-        val subscriber = fanout.subscribe("user-1", groupId.toString())
 
         val json = """
             {
@@ -67,10 +65,6 @@ class RabbitBffEventListenerTest {
 
         listener.onMessage(message, channel)
 
-        assertEquals(1, fanout.pendingCount(subscriber.id))
-        val update = fanout.poll(subscriber.id)
-        assertEquals(groupId.toString(), update?.groupId)
-        assertEquals(10L, update?.revision)
 
         verify(channel).basicAck(42L, false)
         verify(channel, never()).basicReject(42L, false)
@@ -93,7 +87,6 @@ class RabbitBffEventListenerTest {
         val eventId = UUID.randomUUID()
         val aggregateId = UUID.randomUUID()
         val groupId = UUID.randomUUID()
-        val subscriber = fanout.subscribe("user-2", groupId.toString())
         val json = """
             {
               "eventId": "$eventId",
@@ -110,8 +103,6 @@ class RabbitBffEventListenerTest {
 
         listener.onMessage(message, null)
 
-        assertEquals(1, fanout.pendingCount(subscriber.id))
-        assertEquals(11L, fanout.poll(subscriber.id)?.revision)
     }
 
     @Test

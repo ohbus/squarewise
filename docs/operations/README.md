@@ -78,8 +78,25 @@ current classification is:
 Production begins as stateless pinned containers behind a load balancer, with
 managed PostgreSQL and RabbitMQ where possible. The deployment must provide TLS,
 private service networking, scoped secrets, health/readiness endpoints, graceful
-shutdown, and expand/contract migrations. A migration runs before an application
-rollout and rollback uses a previously tested image digest.
+shutdown, and additive Flyway migrations. A migration runs before an application
+rollout and rollback uses a previously tested image digest. The current branch
+uses one fresh-install `V1__initial_schema.sql` per service; databases created
+by the retired multi-version histories are not upgrade targets until an
+approved rebuild/baseline process is completed.
+
+For an existing staging volume, take the database backup first and run the
+idempotent role/ownership reconciliation before switching application
+credentials:
+
+```sh
+docker compose -f docker-compose.prod.yml -f docker-compose.staging.yml \
+  exec -T postgres /opt/squarewise/upgrade-service-access.sh
+```
+
+The checked-in command creates or updates the three service roles, assigns
+database and schema ownership, and grants existing and future objects. It does
+not rewrite Flyway history or create an upgrade path for retired migration
+chains; stop the rollout if Flyway validation reports an incompatible history.
 
 Observe request success/latency, database pool saturation, outbox age, queue
 lag/retries, dead letters, sync resets, subscription counts, recurring backlog,
@@ -98,6 +115,7 @@ termination signals, and allows graceful shutdown. Inject separate,
 least-privilege credentials per service through the deployment platform; never
 commit certificates, tokens, passwords, or broker credentials.
 
-Run expand migrations before image rollout and keep the old immutable digest
-available for rollback. Compose documents the topology but does not provision
-cloud resources or managed PostgreSQL, RabbitMQ, TLS, or OTLP infrastructure.
+For future multi-step schema changes, run expand migrations before image rollout
+and keep the old immutable digest available for rollback. Compose documents the
+topology but does not provision cloud resources or managed PostgreSQL, RabbitMQ,
+TLS, or OTLP infrastructure.

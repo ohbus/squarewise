@@ -9,10 +9,12 @@ import com.subhrodip.squarewise.accounts.auth.identity.AccountIdentityStore
 import com.subhrodip.squarewise.accounts.auth.provider.IdentityProviderPort
 import com.subhrodip.squarewise.accounts.errors.AccountsDomainException
 import com.subhrodip.squarewise.errors.catalog.AccountsErrors
+import com.subhrodip.squarewise.accounts.validation.AccountReferenceValidator
 import java.security.SecureRandom
 import java.time.Instant
 import java.util.Base64
 import java.util.UUID
+import com.subhrodip.squarewise.db.routing.DbWriter
 import org.slf4j.LoggerFactory
 import org.springframework.transaction.annotation.Transactional
 
@@ -31,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional
  * @param random Cryptographically secure random source for opaque refresh tokens.
  * @param sessionPolicy Validated access-token and refresh-session timing policy.
  * @param accountIdentityStore Writer-authoritative account identity lookup.
+ * @param referenceValidator Referential integrity validator for account profile existence.
  */
 open class TokenSessionService(
     private val sessionRepository: AuthSessionRepository,
@@ -44,7 +47,8 @@ open class TokenSessionService(
         clockSkew = Duration.ZERO
     ),
     private val accountIdentityStore: AccountIdentityStore,
-    private val auditLogger: SecurityAuditLogger = SecurityAuditLogger()
+    private val auditLogger: SecurityAuditLogger = SecurityAuditLogger(),
+    private val referenceValidator: AccountReferenceValidator? = null
 ) {
     private val log = LoggerFactory.getLogger(TokenSessionService::class.java)
 
@@ -54,10 +58,12 @@ open class TokenSessionService(
      * @param accountId Stable account identifier UUID.
      * @param subject Canonical identity subject string.
      * @param email Canonical normalized user email.
+     * @param clientKind Client kind string.
      * @param deviceLabel Optional user-agent or client label.
      * @param now Current timestamp.
      * @return [TokenResponse] containing signed access token and new opaque refresh token.
      */
+    @DbWriter("accounts.session.create")
     @Transactional
     open fun createSession(
         accountId: UUID,
@@ -67,6 +73,7 @@ open class TokenSessionService(
         deviceLabel: String?,
         now: Instant
     ): TokenResponse {
+        referenceValidator?.validateActiveAccount(accountId)
         val familyId = UUID.randomUUID()
         val sessionId = UUID.randomUUID()
         val rawRefreshToken = generateOpaqueToken()
@@ -109,6 +116,7 @@ open class TokenSessionService(
      * @return [TokenResponse] with fresh access token and child refresh token.
      * @throws AccountsDomainException when the refresh token is invalid, expired, revoked, or reused.
      */
+    @DbWriter("accounts.session.rotate")
     @Transactional(noRollbackFor = [AccountsDomainException::class])
     open fun rotateSession(
         rawRefreshToken: String,
@@ -202,6 +210,7 @@ open class TokenSessionService(
      *        provider-independent internal revocation flows.
      * @param now Revocation timestamp.
      */
+    @DbWriter("accounts.session.revoke")
     @Transactional
     open fun revokeSessionByRefreshToken(
         rawRefreshToken: String,
@@ -226,6 +235,7 @@ open class TokenSessionService(
      * @param familyId Unique family UUID.
      * @param now Revocation timestamp.
      */
+    @DbWriter("accounts.session.revoke.family")
     @Transactional
     open fun revokeFamily(familyId: UUID, now: Instant) {
         sessionRepository.revokeFamily(familyId, now)

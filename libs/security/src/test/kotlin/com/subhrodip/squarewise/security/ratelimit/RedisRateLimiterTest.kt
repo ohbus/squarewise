@@ -6,6 +6,7 @@ import java.util.Base64
 import java.util.concurrent.TimeoutException
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
+import com.subhrodip.squarewise.errors.catalog.PlatformErrors
 import com.subhrodip.squarewise.security.errors.PlatformDomainException
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers.any
@@ -110,6 +111,20 @@ class RedisRateLimiterTest {
 
         assertThrows(PlatformDomainException::class.java) { limiter.consume("", policy) }
         assertThrows(PlatformDomainException::class.java) { limiter.consume("x".repeat(257), policy) }
+    }
+
+    @Test
+    fun `rethrows SquarewiseException directly and stops timer`() {
+        val registry = SimpleMeterRegistry()
+        val redis = mock(StringRedisTemplate::class.java)
+        val domainEx = PlatformDomainException(PlatformErrors.PLATFORM_CONFIGURATION_INVALID, "boom")
+        `when`(redis.execute<String>(any<DefaultRedisScript<String>>(), anyList(), any(), any(), any()))
+            .thenThrow(domainEx)
+
+        val thrown = assertThrows(PlatformDomainException::class.java) {
+            RedisRateLimiter(redis, deriver, registry).consume("alice", policy)
+        }
+        assertEquals(domainEx, thrown)
     }
 
     private fun redisReturning(result: String?): StringRedisTemplate {

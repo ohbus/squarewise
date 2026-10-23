@@ -1,5 +1,6 @@
 package com.subhrodip.squarewise.expensecore.search.persistence
 
+import com.subhrodip.squarewise.db.routing.DbReader
 import com.subhrodip.squarewise.expensecore.search.api.SearchQuery
 import com.subhrodip.squarewise.expensecore.search.model.SearchExpense
 import java.nio.charset.StandardCharsets
@@ -10,6 +11,7 @@ import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
 /**
  * Domain port for durable search and retrieval of expenses within an authorized group.
  */
+@DbReader("search.query", target = "search")
 fun interface SearchStore {
     /**
      * Finds all active (non-deleted) expenses belonging to the specified group.

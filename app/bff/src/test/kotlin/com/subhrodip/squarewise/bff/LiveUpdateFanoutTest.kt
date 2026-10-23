@@ -1,396 +1,336 @@
 package com.subhrodip.squarewise.bff
 
-import com.subhrodip.squarewise.errors.code.CategoryCode
-
-import com.subhrodip.squarewise.bff.transport.ExpenseCoreGateway
-import com.subhrodip.squarewise.bff.transport.AccountsGateway
-import com.subhrodip.squarewise.bff.messaging.model.BffEventEnvelope
-import com.subhrodip.squarewise.bff.messaging.model.ConsumptionResult
-import com.subhrodip.squarewise.bff.messaging.model.DuplicateConsumptionResult
-import com.subhrodip.squarewise.bff.messaging.model.ProcessedConsumptionResult
-import com.subhrodip.squarewise.bff.messaging.service.BffEventConsumer
-import com.subhrodip.squarewise.bff.messaging.persistence.BffEventDeduplicator
-import com.subhrodip.squarewise.bff.realtime.GroupInvalidation
-import com.subhrodip.squarewise.bff.realtime.LiveUpdate
 import com.subhrodip.squarewise.bff.realtime.LiveUpdateFanout
-import com.subhrodip.squarewise.errors.exceptions.SquarewiseException
-import java.time.ZoneId
-
-
+import com.subhrodip.squarewise.bff.realtime.GroupInvalidation
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
+import java.time.ZoneId
 import java.time.ZoneOffset
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 class LiveUpdateFanoutTest {
     @Test
-    fun `exposes the invalidation stream and documented defaults`() {
-        val fanout = LiveUpdateFanout()
-
-        assertThat(fanout.invalidationSink).isNotNull
-        assertThat(LiveUpdateFanout.DEFAULT_QUEUE_CAPACITY).isEqualTo(64)
-        assertThat(LiveUpdateFanout.DEFAULT_MAX_SUBSCRIPTIONS_PER_USER).isEqualTo(20)
-        assertThat(LiveUpdateFanout.DEFAULT_SUBSCRIPTION_TTL).isEqualTo(Duration.ofMinutes(30))
-    }
-
-    @Test
-    fun `bounds subscriptions per user`() {
-        val fanout = LiveUpdateFanout(maxSubscriptionsPerUser = 1)
-        fanout.subscribe("user-1", "group-1")
-
-        val error = assertThrows<SquarewiseException> { fanout.subscribe("user-1", "group-2") }
-        assertThat(error.definition.category).isEqualTo(CategoryCode.RATE_LIMIT_EXCEEDED)
-    }
-
-    @Test
-    fun `concurrent subscription admission cannot exceed user limit`() {
-        val fanout = LiveUpdateFanout(maxSubscriptionsPerUser = 1)
-        val pool = Executors.newFixedThreadPool(8)
-        val start = CountDownLatch(1)
-        try {
-            val attempts = (1..8).map {
-                pool.submit<Boolean> {
-                    start.await()
-                    runCatching { fanout.subscribe("user-1", "group-$it") }.isSuccess
-                }
-            }
-            start.countDown()
-
-            assertThat(attempts.count { it.get() }).isEqualTo(1)
-        } finally {
-            pool.shutdownNow()
-        }
-    }
-    private val update = LiveUpdate("group-1", 7)
-
-    @Test
-    fun `delivers update only to subscriptions for the group`() {
+    fun `emits invalidations only to the subscribed group`() {
         val fanout = LiveUpdateFanout()
         val matching = fanout.subscribe("user-1", "group-1")
-        val other = fanout.subscribe("user-2", "group-2")
+        fanout.subscribe("user-2", "group-2")
+        fanout.emitInvalidation("group-2", 1)
+        fanout.emitInvalidation("group-1", 2)
 
-        assertThat(fanout.publish(update)).isEqualTo(1)
-        assertThat(fanout.poll(matching.id)).isEqualTo(update)
-        assertThat(fanout.poll(other.id)).isNull()
+        val result = fanout.invalidations(matching.id).take(1).blockFirst(Duration.ofSeconds(1))!!
+        assertThat(result.groupId).isEqualTo("group-1")
+        assertThat(result.revision).isEqualTo(2)
     }
 
     @Test
-    fun `bounds slow subscriber queue and preserves queued order`() {
-        val fanout = LiveUpdateFanout(queueCapacity = 2)
+    fun `expiry signal removes an idle subscription`() {
+        val fanout = LiveUpdateFanout(maxSubscriptionsPerUser = 1, subscriptionTtl = Duration.ofMillis(10))
         val subscription = fanout.subscribe("user-1", "group-1")
 
-        assertThat(fanout.publish(update)).isEqualTo(1)
-        assertThat(fanout.publish(update.copy(revision = 8))).isEqualTo(1)
-        assertThat(fanout.publish(update.copy(revision = 9))).isZero()
-        assertThat(fanout.pendingCount(subscription.id)).isEqualTo(2)
-        assertThat(fanout.poll(subscription.id)?.revision).isEqualTo(7)
-        assertThat(fanout.poll(subscription.id)?.revision).isEqualTo(8)
+        fanout.expirySignal(subscription.id).block(Duration.ofSeconds(1))
+
+        fanout.subscribe("user-1", "group-2")
     }
 
     @Test
-    fun `unsubscribe drops future delivery`() {
-        val fanout = LiveUpdateFanout()
+    fun `expiry signal completes at the exact deadline`() {
+        val clock = MutableClock()
+        val fanout = LiveUpdateFanout(clock = clock, subscriptionTtl = Duration.ofSeconds(1))
         val subscription = fanout.subscribe("user-1", "group-1")
-        fanout.unsubscribe(subscription.id)
+        clock.advance(Duration.ofSeconds(1))
 
-        assertThat(fanout.publish(update)).isZero()
-        assertThat(fanout.poll(subscription.id)).isNull()
+        fanout.expirySignal(subscription.id).block(Duration.ofSeconds(1))
+
+        assertThat(fanout.revokeUser("user-1")).isZero()
     }
 
     @Test
-    fun `unknown subscriptions expose empty streams and unsubscribe is idempotent`() {
+    fun `subscribe removes expired entries before enforcing the user limit`() {
+        val clock = MutableClock()
+        val fanout = LiveUpdateFanout(
+            clock = clock,
+            subscriptionTtl = Duration.ofSeconds(1),
+            maxSubscriptionsPerUser = 1
+        )
+        val expired = fanout.subscribe("user-1", "group-1")
+        clock.advance(Duration.ofSeconds(2))
+
+        val replacement = fanout.subscribe("user-1", "group-2")
+
+        assertThat(replacement.groupId).isEqualTo("group-2")
+        assertThat(fanout.revocationSignal(expired.id).block(Duration.ofSeconds(1))).isNull()
+    }
+
+    @Test
+    fun `shared invalidation stream publishes emitted changes`() {
         val fanout = LiveUpdateFanout()
+        val received = mutableListOf<GroupInvalidation>()
+        val subscription = fanout.invalidations().subscribe(received::add)
 
-        assertThat(fanout.invalidations("unknown-subscription").collectList().block()).isEmpty()
-        fanout.unsubscribe("unknown-subscription")
-        fanout.unsubscribe("unknown-subscription")
+        try {
+            val emitted = fanout.emitInvalidation("group-1", 1, "change-1")
+            assertThat(received).containsExactly(emitted)
+        } finally {
+            subscription.dispose()
+        }
     }
 
     @Test
-    fun `rejects invalid inputs`() {
+    fun `expired subscriptions are revoked when their group emits an invalidation`() {
+        val clock = MutableClock()
+        val fanout = LiveUpdateFanout(clock = clock, subscriptionTtl = Duration.ofSeconds(1))
+        val subscription = fanout.subscribe("user-1", "group-1")
+
+        clock.advance(Duration.ofSeconds(2))
+        fanout.emitInvalidation("group-1", 1, "change-1")
+
+        assertThat(fanout.revocationSignal(subscription.id).block(Duration.ofSeconds(1))).isNull()
+    }
+
+    @Test
+    fun `revocation removes the subscription and completes its signal`() {
+        val fanout = LiveUpdateFanout(maxSubscriptionsPerUser = 1)
+        val subscription = fanout.subscribe("user-1", "group-1")
+
+        assertThat(fanout.revokeUserFromGroup("user-1", "group-1")).isEqualTo(1)
+        assertThat(fanout.revocationSignal(subscription.id).block(Duration.ofSeconds(1))).isNull()
+        fanout.subscribe("user-1", "group-2")
+    }
+
+    @Test
+    fun `group revocation leaves subscriptions for other groups active`() {
+        val fanout = LiveUpdateFanout()
+        val revoked = fanout.subscribe("user-1", "group-1")
+        val retained = fanout.subscribe("user-1", "group-2")
+
+        assertThat(fanout.revokeUserFromGroup("user-1", "group-1")).isEqualTo(1)
+        assertThat(fanout.revocationSignal(revoked.id).block(Duration.ofSeconds(1))).isNull()
+
+        fanout.emitInvalidation("group-2", 1)
+        assertThat(fanout.invalidations(retained.id).take(1).blockFirst(Duration.ofSeconds(1))?.groupId)
+            .isEqualTo("group-2")
+    }
+
+    @Test
+    fun `revokeUser removes every active subscription for the user`() {
+        val fanout = LiveUpdateFanout()
+        val first = fanout.subscribe("user-1", "group-1")
+        val second = fanout.subscribe("user-1", "group-2")
+
+        assertThat(fanout.revokeUser("user-1")).isEqualTo(2)
+        assertThat(fanout.revocationSignal(first.id).block(Duration.ofSeconds(1))).isNull()
+        assertThat(fanout.revocationSignal(second.id).block(Duration.ofSeconds(1))).isNull()
+    }
+
+    @Test
+    fun `rejects invalid configuration`() {
         assertThrows<IllegalArgumentException> { LiveUpdateFanout(0) }
         assertThrows<IllegalArgumentException> { LiveUpdateFanout(subscriptionTtl = Duration.ZERO) }
         assertThrows<IllegalArgumentException> { LiveUpdateFanout(subscriptionTtl = Duration.ofSeconds(-1)) }
         assertThrows<IllegalArgumentException> { LiveUpdateFanout(maxSubscriptionsPerUser = 0) }
+    }
+
+    @Test
+    fun `rejects blank subscription and revocation identifiers`() {
         val fanout = LiveUpdateFanout()
+
         assertThrows<IllegalArgumentException> { fanout.subscribe("", "group-1") }
         assertThrows<IllegalArgumentException> { fanout.subscribe("user-1", "") }
-        assertThrows<IllegalArgumentException> { fanout.publish(LiveUpdate("group-1", -1)) }
-        assertThrows<IllegalArgumentException> { fanout.publish(LiveUpdate("", 1)) }
+        assertThrows<IllegalArgumentException> { fanout.revokeUser("") }
         assertThrows<IllegalArgumentException> { fanout.revokeUserFromGroup("", "group-1") }
         assertThrows<IllegalArgumentException> { fanout.revokeUserFromGroup("user-1", "") }
+        assertThat(fanout.expirySignal("missing").block(Duration.ofSeconds(1))).isNull()
+
+        val clock = MutableClock()
+        val expiring = LiveUpdateFanout(clock = clock, subscriptionTtl = Duration.ofSeconds(1))
+        val subscription = expiring.subscribe("user-1", "group-1")
+        clock.advance(Duration.ofSeconds(2))
+        expiring.expirySignal(subscription.id).block(Duration.ofSeconds(1))
     }
 
     @Test
-    fun `expires subscriptions before delivery`() {
-        val clock = MutableClock(Instant.parse("2026-01-01T00:00:00Z"))
-        val fanout = LiveUpdateFanout(clock = clock, subscriptionTtl = Duration.ofSeconds(1))
-        val subscription = fanout.subscribe("user-1", "group-1")
-
-        assertThat(subscription.expiresAt).isEqualTo(Instant.parse("2026-01-01T00:00:01Z"))
-        assertThat(fanout.publish(update)).isEqualTo(1)
-
-        var terminated = false
-        fanout.revocationSignal(subscription.id).doOnTerminate { terminated = true }.subscribe()
-        clock.now = subscription.expiresAt
-
-        assertThat(fanout.publish(update)).isZero()
-        assertThat(fanout.pendingCount(subscription.id)).isZero()
-        assertThat(terminated).isTrue()
-    }
-
-    @Test
-    fun `expires reactive subscriptions before invalidation delivery`() {
-        val clock = MutableClock(Instant.parse("2026-01-01T00:00:00Z"))
-        val fanout = LiveUpdateFanout(clock = clock, subscriptionTtl = Duration.ofSeconds(1))
-        val subscription = fanout.subscribe("user-1", "group-1")
-        val events = mutableListOf<GroupInvalidation>()
-        var terminated = false
-
-        fanout.invalidations(subscription.id).subscribe { events.add(it) }
-        fanout.revocationSignal(subscription.id)
-            .doOnTerminate { terminated = true }
-            .subscribe()
-        clock.now = subscription.expiresAt
-
-        fanout.emitInvalidation("group-1", 8L, "expired")
-
-        assertThat(events).isEmpty()
-        assertThat(terminated).isTrue()
-    }
-
-    @Test
-    fun `expires a subscription if it reaches its deadline during invalidation delivery`() {
-        val start = Instant.parse("2026-01-01T00:00:00Z")
-        val expiry = start.plusSeconds(1)
-        val clock = SequenceClock(start, start, start, expiry)
-        val fanout = LiveUpdateFanout(clock = clock, subscriptionTtl = Duration.ofSeconds(1))
-        val subscription = fanout.subscribe("user-1", "group-1")
-        var terminated = false
-
-        fanout.revocationSignal(subscription.id)
-            .doOnTerminate { terminated = true }
-            .subscribe()
-
-        fanout.emitInvalidation("group-1", 8L, "expired-during-delivery")
-
-        assertThat(terminated).isTrue()
-        assertThat(fanout.invalidations(subscription.id).collectList().block()).isEmpty()
-    }
-
-    @Test
-    fun `terminates a subscription when its snapshot buffer overflows`() {
-        val fanout = LiveUpdateFanout(queueCapacity = 1)
-        val subscription = fanout.subscribe("user-1", "group-1")
-        var terminated = false
-
-        fanout.revocationSignal(subscription.id)
-            .doOnTerminate { terminated = true }
-            .subscribe()
-
-        fanout.emitInvalidation("group-1", 1L, "first")
-        fanout.emitInvalidation("group-1", 2L, "overflow")
-
-        assertThat(terminated).isTrue()
-        assertThat(fanout.invalidations(subscription.id).collectList().block()).isEmpty()
-    }
-
-    @Test
-    fun `terminates a subscription when its snapshot stream is cancelled`() {
-        val fanout = LiveUpdateFanout()
-        val subscription = fanout.subscribe("user-1", "group-1")
-        val snapshotStream = fanout.invalidations(subscription.id).subscribe()
-        var terminated = false
-
-        fanout.revocationSignal(subscription.id)
-            .doOnTerminate { terminated = true }
-            .subscribe()
-        snapshotStream.dispose()
-
-        fanout.emitInvalidation("group-1", 1L, "cancelled")
-
-        assertThat(terminated).isTrue()
-        assertThat(fanout.invalidations(subscription.id).collectList().block()).isEmpty()
-    }
-
-    @Test
-    fun `revokes every subscription for a user`() {
-        val fanout = LiveUpdateFanout()
-        fanout.subscribe("user-1", "group-1")
+    fun `expired subscriptions are reclaimed by bounded sweeps`() {
+        val clock = MutableClock()
+        val fanout = LiveUpdateFanout(
+            clock = clock,
+            subscriptionTtl = Duration.ofSeconds(1),
+            maxSubscriptionsPerUser = 2
+        )
+        val first = fanout.subscribe("user-1", "group-1")
         fanout.subscribe("user-1", "group-2")
-        fanout.subscribe("user-2", "group-1")
 
-        assertThat(fanout.revokeUser("user-1")).isEqualTo(2)
-        assertThat(fanout.publish(update)).isEqualTo(1)
-        assertThrows<IllegalArgumentException> { fanout.revokeUser(" ") }
+        clock.advance(Duration.ofSeconds(2))
+        fanout.sweepExpired()
+
+        assertThat(fanout.revocationSignal(first.id).block(Duration.ofSeconds(1))).isNull()
+        fanout.subscribe("user-1", "group-3")
     }
 
     @Test
-    fun `unknown subscription has no pending updates`() {
-        assertThat(LiveUpdateFanout().pendingCount("unknown-subscription")).isZero()
+    fun `sweep leaves a live subscription and ignores stale queue entries`() {
+        val clock = MutableClock()
+        val fanout = LiveUpdateFanout(clock = clock, subscriptionTtl = Duration.ofSeconds(1))
+        val removed = fanout.subscribe("removed", "removed-group")
+        fanout.unsubscribe(removed.id)
+
+        clock.advance(Duration.ofSeconds(2))
+        val active = fanout.subscribe("active", "active-group")
+        fanout.sweepExpired()
+
+        assertThat(fanout.revokeUser("active")).isEqualTo(1)
+        assertThat(fanout.revocationSignal(active.id).block(Duration.ofSeconds(1))).isNull()
     }
 
     @Test
-    fun `emitInvalidation publishes to reactive invalidations flux`() {
-        val fanout = LiveUpdateFanout()
-        val events = mutableListOf<GroupInvalidation>()
-        val disposable = fanout.invalidations().subscribe { events.add(it) }
-        try {
-            val invalidation = fanout.emitInvalidation("group-1", 10L, "change-abc")
-            assertThat(invalidation.groupId).isEqualTo("group-1")
-            assertThat(invalidation.revision).isEqualTo(10L)
-            assertThat(invalidation.changeId).isEqualTo("change-abc")
-            assertThat(events).hasSize(1)
-            assertThat(events[0]).isEqualTo(invalidation)
-        } finally {
-            disposable.dispose()
-        }
-    }
-
-    @Test
-    fun `does not replay an invalidation emitted before a shared subscriber attaches`() {
-        val fanout = LiveUpdateFanout()
-        fanout.emitInvalidation("group-1", 11L, "change-before-subscribe")
-        val events = mutableListOf<GroupInvalidation>()
-        val disposable = fanout.invalidations().subscribe { events.add(it) }
-        try {
-            assertThat(events).isEmpty()
-
-            val invalidation = fanout.emitInvalidation("group-1", 12L, "change-after-subscribe")
-            assertThat(events).containsExactly(invalidation)
-        } finally {
-            disposable.dispose()
-        }
-    }
-
-    @Test
-    fun `subscription stream replays only events admitted after subscription`() {
-        val fanout = LiveUpdateFanout()
-        fanout.emitInvalidation("group-1", 11L, "change-before-subscribe")
+    fun `empty lookups and future sweep are harmless`() {
+        val clock = MutableClock()
+        val fanout = LiveUpdateFanout(clock = clock)
         val subscription = fanout.subscribe("user-1", "group-1")
-        fanout.emitInvalidation("group-1", 12L, "change-during-snapshot")
 
-        assertThat(fanout.invalidations(subscription.id).blockFirst()).isEqualTo(
-            GroupInvalidation("group-1", 12L, "change-during-snapshot")
-        )
-        fanout.unsubscribe(subscription.id)
+        assertThat(fanout.invalidations("missing").blockFirst(Duration.ofMillis(20))).isNull()
+        assertThat(fanout.revocationSignal("missing").block(Duration.ofMillis(20))).isNull()
+        fanout.emitInvalidation("missing", 1)
+        fanout.sweepExpired()
+        assertThat(fanout.revokeUserFromGroup("user-1", "group-1")).isEqualTo(1)
+        assertThat(fanout.revocationSignal(subscription.id).block(Duration.ofSeconds(1))).isNull()
+        fanout.unsubscribe("missing")
     }
 
     @Test
-    fun `subscription buffer ignores invalidations for other groups`() {
+    fun `expiry sweep releases user and group indexes`() {
+        val clock = MutableClock()
+        val fanout = LiveUpdateFanout(clock = clock, subscriptionTtl = Duration.ofSeconds(1))
+        val expired = fanout.subscribe("user-1", "group-1")
+
+        clock.advance(Duration.ofSeconds(2))
+        fanout.sweepExpired()
+
+        assertThat(fanout.revokeUser("user-1")).isZero()
+        assertThat(fanout.revokeUserFromGroup("user-1", "group-1")).isZero()
+
+        val active = fanout.subscribe("user-2", "group-1")
+        fanout.emitInvalidation("group-1", 1)
+        assertThat(fanout.invalidations(active.id).take(1).blockFirst(Duration.ofSeconds(1))?.groupId)
+            .isEqualTo("group-1")
+        assertThat(fanout.revocationSignal(expired.id).block(Duration.ofSeconds(1))).isNull()
+    }
+
+    @Test
+    fun `subscription limit admits only one concurrent subscription`() {
+        val fanout = LiveUpdateFanout(maxSubscriptionsPerUser = 1)
+        val start = CountDownLatch(1)
+        val executor = Executors.newFixedThreadPool(8)
+        try {
+            val attempts = (1..8).map { index ->
+                executor.submit<Boolean> {
+                    start.await()
+                    runCatching { fanout.subscribe("user-1", "group-$index") }.isSuccess
+                }
+            }
+            start.countDown()
+            val admitted = attempts.count { it.get(1, TimeUnit.SECONDS) }
+            assertThat(admitted).isEqualTo(1)
+        } finally {
+            executor.shutdownNow()
+        }
+    }
+
+    @Test
+    fun `expiry queue compacts stale churn before bounded sweep`() {
+        val clock = MutableClock()
+        val fanout = LiveUpdateFanout(clock = clock, subscriptionTtl = Duration.ofSeconds(1))
+        val active = fanout.subscribe("active", "active-group")
+
+        repeat(1_026) { index ->
+            val subscription = fanout.subscribe("stale-$index", "group-$index")
+            fanout.unsubscribe(subscription.id)
+        }
+
+        clock.advance(Duration.ofSeconds(2))
+        clock.advance(Duration.ofSeconds(10))
+        fanout.sweepExpired()
+
+        assertThat(fanout.revokeUser("active")).isZero()
+        assertThat(fanout.revocationSignal(active.id).block(Duration.ofSeconds(1))).isNull()
+    }
+
+    @Test
+    fun `bounded sweep stops at its maximum inspection count`() {
+        val clock = MutableClock()
+        val fanout = LiveUpdateFanout(clock = clock, subscriptionTtl = Duration.ofSeconds(1))
+        repeat(1_001) { index ->
+            fanout.subscribe("sweep-user-$index", "sweep-group-$index")
+        }
+        clock.advance(Duration.ofSeconds(2))
+
+        fanout.sweepExpired()
+
+        val remaining = (0..1_000).count { index ->
+            fanout.revokeUser("sweep-user-$index") == 1
+        }
+        assertThat(remaining).isEqualTo(1)
+    }
+
+    @Test
+    fun `queue overflow revokes the subscription`() {
         val fanout = LiveUpdateFanout(queueCapacity = 1)
         val subscription = fanout.subscribe("user-1", "group-1")
-        fanout.emitInvalidation("group-2", 11L, "other-group")
-        fanout.emitInvalidation("group-1", 12L, "target-group")
 
-        assertThat(fanout.invalidations(subscription.id).blockFirst()).isEqualTo(
-            GroupInvalidation("group-1", 12L, "target-group")
-        )
-        fanout.unsubscribe(subscription.id)
+        fanout.emitInvalidation("group-1", 1)
+        fanout.emitInvalidation("group-1", 2)
+
+        assertThat(fanout.revocationSignal(subscription.id).block(Duration.ofSeconds(1))).isNull()
     }
 
-    // ---------------------------------------------------------------------------
-    // Revocation signal tests (SEC-003)
-    // ---------------------------------------------------------------------------
-
     @Test
-    fun `revokeUserFromGroup completes per-subscription revocation signal`() {
+    fun `cancelled per-subscription stream is revoked on the next invalidation`() {
         val fanout = LiveUpdateFanout()
         val subscription = fanout.subscribe("user-1", "group-1")
+        val stream = fanout.invalidations(subscription.id).subscribe()
+        stream.dispose()
 
-        var terminated = false
-        fanout.revocationSignal(subscription.id)
-            .doOnTerminate { terminated = true }
-            .subscribe()
+        fanout.emitInvalidation("group-1", 1)
 
-        assertThat(terminated).isFalse()
-        fanout.revokeUserFromGroup("user-1", "group-1")
-        assertThat(terminated).isTrue()
+        assertThat(fanout.revocationSignal(subscription.id).block(Duration.ofSeconds(1))).isNull()
     }
 
     @Test
-    fun `revokeUser completes revocation signals for all revoked subscriptions`() {
-        val fanout = LiveUpdateFanout()
-        val s1 = fanout.subscribe("user-1", "group-1")
-        val s2 = fanout.subscribe("user-1", "group-2")
-        val s3 = fanout.subscribe("user-2", "group-1")
+    fun `concurrent invalidations reserve bounded pending capacity safely`() {
+        val fanout = LiveUpdateFanout(queueCapacity = 1_024)
+        fanout.subscribe("user-1", "group-1")
+        val start = CountDownLatch(1)
+        val executor = Executors.newFixedThreadPool(16)
+        try {
+            val attempts = (1..16).map {
+                executor.submit {
+                    start.await()
+                    repeat(64) { fanout.emitInvalidation("group-1", it.toLong()) }
+                }
+            }
+            start.countDown()
+            attempts.forEach { it.get(2, TimeUnit.SECONDS) }
+        } finally {
+            executor.shutdownNow()
+        }
 
-        var t1 = false; var t2 = false; var t3 = false
-        fanout.revocationSignal(s1.id).doOnTerminate { t1 = true }.subscribe()
-        fanout.revocationSignal(s2.id).doOnTerminate { t2 = true }.subscribe()
-        fanout.revocationSignal(s3.id).doOnTerminate { t3 = true }.subscribe()
-
-        fanout.revokeUser("user-1")
-
-        assertThat(t1).isTrue()
-        assertThat(t2).isTrue()
-        assertThat(t3).isFalse()
+        assertThat(fanout.revokeUser("user-1")).isBetween(0, 1)
     }
 
-    @Test
-    fun `unsubscribe completes revocation signal`() {
-        val fanout = LiveUpdateFanout()
-        val subscription = fanout.subscribe("user-1", "group-1")
-
-        var terminated = false
-        fanout.revocationSignal(subscription.id)
-            .doOnTerminate { terminated = true }
-            .subscribe()
-
-        fanout.unsubscribe(subscription.id)
-        assertThat(terminated).isTrue()
-    }
-
-    @Test
-    fun `revocationSignal returns empty mono for unknown subscription id`() {
-        val fanout = LiveUpdateFanout()
-        var completed = false
-        fanout.revocationSignal("nonexistent-id")
-            .doOnTerminate { completed = true }
-            .subscribe()
-        // Mono.empty() completes immediately
-        assertThat(completed).isTrue()
-    }
-
-    @Test
-    fun `revokeUserFromGroup only signals subscriptions matching user and group`() {
-        val fanout = LiveUpdateFanout()
-        val target = fanout.subscribe("user-1", "group-1")
-        val otherGroup = fanout.subscribe("user-1", "group-2")
-        val otherUser = fanout.subscribe("user-2", "group-1")
-
-        var tTarget = false; var tOtherGroup = false; var tOtherUser = false
-        fanout.revocationSignal(target.id).doOnTerminate { tTarget = true }.subscribe()
-        fanout.revocationSignal(otherGroup.id).doOnTerminate { tOtherGroup = true }.subscribe()
-        fanout.revocationSignal(otherUser.id).doOnTerminate { tOtherUser = true }.subscribe()
-
-        assertThat(fanout.revokeUserFromGroup("user-1", "group-1")).isEqualTo(1)
-
-        assertThat(tTarget).isTrue()
-        assertThat(tOtherGroup).isFalse()
-        assertThat(tOtherUser).isFalse()
-    }
-
-    private class MutableClock(var now: Instant) : Clock() {
-        override fun getZone(): ZoneOffset = ZoneOffset.UTC
+    private class MutableClock(private var current: Instant = Instant.EPOCH) : Clock() {
+        override fun getZone(): ZoneId = ZoneOffset.UTC
 
         override fun withZone(zone: ZoneId): Clock = this
 
-        override fun instant(): Instant = now
-    }
+        override fun instant(): Instant = current
 
-    private class SequenceClock(private vararg val instants: Instant) : Clock() {
-        private var index = 0
-
-        override fun getZone(): ZoneOffset = ZoneOffset.UTC
-
-        override fun withZone(zone: ZoneId): Clock = this
-
-        override fun instant(): Instant = instants[index++]
+        fun advance(duration: Duration) {
+            current = current.plus(duration)
+        }
     }
 }

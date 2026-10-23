@@ -121,9 +121,19 @@ python3 tests/acceptance/runner.py --require-services
 ```
 The `--require-services` flag enforces that all live endpoints (Accounts, Expense Core, Notifications, BFF) are reachable and healthy; if any service is offline or a scenario fails, the command exits with code 1. For non-blocking runs when services are offline, `make acceptance` records unavailable services as `blocked` without failing.
 
-For production, build and scan each immutable image with `infra/docker/Dockerfile.jvm`,
-run owner migrations, set the four `SQUAREWISE_*_IMAGE` variables, inject secrets
-through the deployment platform, and use
+For production, build and scan each immutable image with `infra/docker/Dockerfile.jvm`.
+The current branch uses one fresh-install `V1__initial_schema.sql` per service.
+Existing databases with the retired multi-version history require an approved
+rebuild/baseline before deployment. For an existing staging volume, back it up and run
+
+```sh
+docker compose -f infra/deploy/docker-compose.prod.yml \
+  -f infra/deploy/docker-compose.staging.yml \
+  exec -T postgres /opt/squarewise/upgrade-service-access.sh
+```
+
+Then set the four
+`SQUAREWISE_*_IMAGE` variables, inject secrets through the deployment platform, and use
 `infra/deploy/docker-compose.prod.yml`. Do not commit `.env` files or credentials.
 
 ### Production Keycloak Baseline (L-2)

@@ -2,23 +2,19 @@ package com.subhrodip.squarewise.errors.web
 
 import com.subhrodip.squarewise.errors.catalog.PlatformErrors
 import com.subhrodip.squarewise.errors.code.CategoryCode
-import com.subhrodip.squarewise.errors.code.DisclosurePolicy
-import com.subhrodip.squarewise.errors.code.ErrorCode
-import com.subhrodip.squarewise.errors.code.ErrorDefinition
-import com.subhrodip.squarewise.errors.code.ErrorSeverity
-import com.subhrodip.squarewise.errors.code.RetryPolicy
 import com.subhrodip.squarewise.errors.exceptions.ConcurrencyConflictException
 import com.subhrodip.squarewise.errors.exceptions.DomainValidationException
 import com.subhrodip.squarewise.errors.exceptions.PlatformDomainException
-import com.subhrodip.squarewise.errors.http.FieldViolation
 import com.subhrodip.squarewise.errors.request.RequestIdContext
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.springframework.core.MethodParameter
+import org.springframework.http.HttpStatus
 import org.springframework.validation.BeanPropertyBindingResult
 import org.springframework.validation.FieldError
+import org.springframework.web.HttpMediaTypeNotAcceptableException
 import org.springframework.web.HttpRequestMethodNotSupportedException
 import org.springframework.web.bind.MethodArgumentNotValidException
 
@@ -59,10 +55,20 @@ class GlobalErrorAdviceTest {
     }
 
     @Test
+    fun `governed rate limit maps to 429 with bounded retry header`() {
+        val advice = GlobalErrorAdvice("accounts")
+        val response = advice.governed(PlatformDomainException(PlatformErrors.SECURITY_RATE_LIMITED))
+
+        assertEquals(HttpStatus.TOO_MANY_REQUESTS, response.statusCode)
+        assertEquals(CategoryCode.RATE_LIMIT_EXCEEDED.name, response.body?.code)
+        assertEquals("60", response.headers.getFirst("Retry-After"))
+    }
+
+    @Test
     fun `unexpected failure returns static safe internal problem`() {
         val advice = GlobalErrorAdvice("expense-core")
 
-        val body = advice.unexpected(IllegalStateException("jdbc password=secret" )).body!!
+        val body = advice.unexpected(IllegalStateException("jdbc password=secret")).body!!
 
         assertEquals(500, body.status)
         assertEquals(CategoryCode.INTERNAL_ERROR.name, body.code)
@@ -105,13 +111,13 @@ class GlobalErrorAdviceTest {
         val advice = GlobalErrorAdvice("accounts")
         val longText = "a".repeat(300)
         val violations = listOf(
-            FieldViolation("user.password", "Too short", "validation.min", "secret123"),
-            FieldViolation("user.email", "Invalid email", "validation.email", "bad-email"),
-            FieldViolation("user.apiKey", "Invalid key", "validation.key", "my-secret-key"),
-            FieldViolation("user.token", "Invalid token", "validation.token", "my-token"),
-            FieldViolation("user.secret_stuff", "Invalid secret", "validation.secret", "my-secret"),
-            FieldViolation("user.age", "Negative", "validation.min", null),
-            FieldViolation("user.bio", "Too long", "validation.max", longText),
+            ViolationDto("user.password", "Too short", "validation.min", "secret123"),
+            ViolationDto("user.email", "Invalid email", "validation.email", "bad-email"),
+            ViolationDto("user.apiKey", "Invalid key", "validation.key", "my-secret-key"),
+            ViolationDto("user.token", "Invalid token", "validation.token", "my-token"),
+            ViolationDto("user.secret_stuff", "Invalid secret", "validation.secret", "my-secret"),
+            ViolationDto("user.age", "Negative", "validation.min", null),
+            ViolationDto("user.bio", "Too long", "validation.max", longText),
         )
         val ex = DomainValidationException(violations)
         val response = advice.governed(ex)
@@ -149,6 +155,42 @@ class GlobalErrorAdviceTest {
         assertEquals("validation.size", body.violations[0].messageKey)
         assertEquals("100", body.violations[1].rejectedValue)
         assertEquals("The value is invalid", body.violations[1].message)
+    }
+
+    @Test
+    fun `illegalArgument maps to 422 and VALIDATION_ERROR`() {
+        val advice = GlobalErrorAdvice("expense-core")
+        val response = advice.illegalArgument()
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, response.statusCode)
+        assertEquals(CategoryCode.VALIDATION_ERROR.name, response.body?.code)
+        assertEquals(PlatformErrors.REQUEST_VALUE_INVALID.safeDetail, response.body?.detail)
+    }
+
+    @Test
+    fun `optimisticLock maps to CONFLICT`() {
+        val advice = GlobalErrorAdvice("expense-core")
+        val response = advice.optimisticLock()
+        assertEquals(HttpStatus.CONFLICT, response.statusCode)
+        assertEquals(CategoryCode.STATE_CONFLICT.name, response.body?.code)
+    }
+
+    @Test
+    fun `not acceptable response contains its problem detail`() {
+        val advice = GlobalErrorAdvice("expense-core")
+        val response = advice.notAcceptable()
+        assertEquals(HttpStatus.NOT_ACCEPTABLE, response.statusCode)
+        assertEquals(PlatformErrors.REPRESENTATION_NOT_ACCEPTABLE.safeDetail, response.body?.detail)
+    }
+
+    @Test
+    fun `binding and type mismatch use stable fallback responses`() {
+        val advice = GlobalErrorAdvice("accounts")
+        val binding = advice.requestBinding()
+        val mismatch = advice.argumentTypeMismatch()
+
+        assertEquals(PlatformErrors.REQUEST_VALUE_INVALID.safeDetail, binding.body?.detail)
+        assertEquals(PlatformErrors.REQUEST_VALUE_INVALID.title, mismatch.body?.title)
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, mismatch.statusCode)
     }
 
     @Suppress("UNUSED_PARAMETER")

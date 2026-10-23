@@ -12,7 +12,6 @@ import com.subhrodip.squarewise.bff.messaging.model.ProcessedConsumptionResult
 import com.subhrodip.squarewise.bff.messaging.service.BffEventConsumer
 import com.subhrodip.squarewise.bff.messaging.persistence.BffEventDeduplicator
 import com.subhrodip.squarewise.bff.realtime.GroupInvalidation
-import com.subhrodip.squarewise.bff.realtime.LiveUpdate
 import com.subhrodip.squarewise.bff.realtime.LiveUpdateFanout
 import com.subhrodip.squarewise.bff.transport.model.input.AllocationInput
 import com.subhrodip.squarewise.bff.transport.model.input.AllocationItemInput

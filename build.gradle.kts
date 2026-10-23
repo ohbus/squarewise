@@ -43,6 +43,10 @@ subprojects {
             html.required.set(true)
         }
     }
+
+    tasks.withType<Test>().configureEach {
+        jvmArgs("--enable-native-access=ALL-UNNAMED")
+    }
 }
 
 dependencyLocking {

@@ -2,10 +2,16 @@ package com.subhrodip.squarewise.expensecore.messaging.outbox.persistence
 
 import com.subhrodip.squarewise.expensecore.messaging.outbox.model.OutboxMessage
 import com.subhrodip.squarewise.expensecore.messaging.outbox.model.OutboxStatus
+import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupRepository
+import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
+import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
 import jakarta.persistence.EntityManager
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
+import com.subhrodip.squarewise.db.routing.DbReader
+import com.subhrodip.squarewise.db.routing.DbWriter
+import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import tools.jackson.core.type.TypeReference
@@ -20,6 +26,7 @@ import tools.jackson.databind.ObjectMapper
 @Service
 class JpaOutboxStore(
     private val repository: OutboxRepository,
+    private val groupRepository: GroupRepository,
     private val entityManager: EntityManager,
     private val objectMapper: ObjectMapper
 ) : OutboxStore {
@@ -27,8 +34,12 @@ class JpaOutboxStore(
     /**
      * Durably stores an outbox event in the database within the calling local transaction.
      */
+    @DbWriter("outbox.append")
     @Transactional
     override fun append(message: OutboxMessage) {
+        if (!groupRepository.existsById(message.groupId)) {
+            throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group ${message.groupId} not found")
+        }
         require(!repository.existsById(message.eventId)) { "eventId already exists" }
         repository.save(message.toEntity(objectMapper))
     }
@@ -36,6 +47,7 @@ class JpaOutboxStore(
     /**
      * Claims up to [limit] pending or expired-lease messages using `FOR UPDATE SKIP LOCKED`.
      */
+    @DbWriter("outbox.claim")
     @Transactional
     override fun claim(limit: Int, lease: Duration): List<OutboxMessage> {
         require(limit > 0) { "limit must be positive" }
@@ -58,6 +70,7 @@ class JpaOutboxStore(
     /**
      * Marks an outbox event as published upon successful dispatch to the message broker.
      */
+    @DbWriter("outbox.acknowledge")
     @Transactional
     override fun acknowledge(eventId: UUID) {
         repository.findForUpdate(eventId)?.apply {
@@ -69,6 +82,7 @@ class JpaOutboxStore(
     /**
      * Rejects an outbox event after a failed publish attempt, either rescheduling or marking as PARKED.
      */
+    @DbWriter("outbox.reject")
     @Transactional
     override fun reject(eventId: UUID, maxAttempts: Int, retryAfter: Duration) {
         require(maxAttempts > 0) { "maxAttempts must be positive" }
@@ -85,11 +99,13 @@ class JpaOutboxStore(
     }
 
     /**
-     * Returns a snapshot of all messages ordered chronologically.
+     * Returns a bounded snapshot of messages ordered chronologically.
      */
+    @DbReader("outbox.snapshot")
     @Transactional(readOnly = true)
     override fun snapshot(): List<OutboxMessage> =
-        repository.findAllByOrderByOccurredAtAscEventIdAsc().map { it.toDomain(objectMapper) }
+        repository.findAllByOrderByOccurredAtAscEventIdAsc(PageRequest.of(0, 100))
+            .map { it.toDomain(objectMapper) }
 
     private companion object {
         const val CLAIM_QUERY = """

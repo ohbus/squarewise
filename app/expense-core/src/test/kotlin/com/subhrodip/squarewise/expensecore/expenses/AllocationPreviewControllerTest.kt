@@ -15,13 +15,13 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.test.web.servlet.setup.MockMvcBuilders
-import com.subhrodip.squarewise.errors.http.GlobalErrorHandler
+import com.subhrodip.squarewise.errors.web.GlobalErrorAdvice
 
 import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
 
 class AllocationPreviewControllerTest {
     private val mvc: MockMvc = MockMvcBuilders.standaloneSetup(AllocationPreviewController())
-        .setControllerAdvice(GlobalErrorHandler()).build()
+        .setControllerAdvice(GlobalErrorAdvice()).build()
 
     @Test
     fun `preview returns exact deterministic allocation as strings`() {

@@ -20,6 +20,7 @@ class DbTelemetryTest {
 
         telemetry.route("groups", "writer")
         telemetry.failure("reader")
+        telemetry.fallback("groups")
         telemetry.acquisition("groups", "writer", -5)
         telemetry.lockWait("groups")
         telemetry.deadlock("expenses")
@@ -34,6 +35,7 @@ class DbTelemetryTest {
 
         val snapshot = telemetry.snapshot()
         assertEquals(1, snapshot.failures)
+        assertEquals(1, snapshot.fallbacks)
         assertEquals(1, snapshot.acquisitions)
         assertEquals(0, snapshot.acquisitionTotalMs)
         assertEquals(1, snapshot.lockWaits)
@@ -54,6 +56,7 @@ class DbTelemetryTest {
 
         telemetry.route("groups", "writer")
         telemetry.failure("reader")
+        telemetry.fallback("groups")
         telemetry.acquisition("groups", "writer", 7)
         telemetry.queryDuration("groups", "writer", -1)
         telemetry.queryDuration("groups", "reader", 10)
@@ -68,6 +71,10 @@ class DbTelemetryTest {
         assertEquals(
             1.0,
             registry.counter("squarewise.db.reader.failure", "reader", "reader").count()
+        )
+        assertEquals(
+            1.0,
+            registry.counter("squarewise.db.fallback", "operation", "groups").count()
         )
         assertEquals(
             1L,
@@ -137,6 +144,7 @@ class DbTelemetryTest {
         val snapshot = DbTelemetrySnapshot(failures = 2)
 
         assertEquals(2, snapshot.failures)
+        assertEquals(0, snapshot.fallbacks)
         assertEquals(0, snapshot.acquisitions)
         assertEquals(0, snapshot.acquisitionTotalMs)
         assertEquals(0, snapshot.lockWaits)

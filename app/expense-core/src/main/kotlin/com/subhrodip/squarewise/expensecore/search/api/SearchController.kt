@@ -19,9 +19,7 @@ import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
 import java.security.Principal
 import java.util.UUID
 import com.subhrodip.squarewise.db.routing.DbContextHolder
-import com.subhrodip.squarewise.db.routing.DbExecutionContext
-import com.subhrodip.squarewise.db.routing.DbOperationKind
-import com.subhrodip.squarewise.db.routing.ReadConsistency
+import com.subhrodip.squarewise.db.routing.DbReader
 import com.subhrodip.squarewise.observability.db.DbTelemetry
 
 /**
@@ -53,6 +51,7 @@ class SearchController(
      * @throws ResponseStatusException if group not found or user not a member
      */
     @GetMapping(ApiEndpoints.ExpenseCore.V1.SEARCH_SUBPATH)
+    @DbReader(operation = "expense.search", target = "search")
     fun search(
         @PathVariable groupId: UUID,
         @RequestParam(required = false) query: String?,
@@ -64,14 +63,7 @@ class SearchController(
     ): ExpenseSearchPage {
         ensureMembership(groupId, principal.name)
         val expenses = dbTelemetry.measureQuery("expense.search", "approved-query") {
-            DbContextHolder.withContext(
-                DbExecutionContext(
-                    operationName = "expense.search",
-                    kind = DbOperationKind.QUERY,
-                    consistency = ReadConsistency.EVENTUAL,
-                    readerEligible = true
-                )
-            ) {
+            DbContextHolder.withReader(target = "search", operation = "expense.search") {
                 searchStore.findSearchExpenses(
                     SearchQuery(groupId, query?.trim().orEmpty(), currency?.trim()?.uppercase(), category, cursor, limit)
                 )
@@ -104,6 +96,7 @@ class SearchController(
      * @throws ResponseStatusException if group not found, user not a member, or export exceeds limit
      */
     @GetMapping(ApiEndpoints.ExpenseCore.V1.EXPORT_SUBPATH, produces = [ApiEndpoints.Headers.TEXT_CSV_UTF8])
+    @DbReader(operation = "expense.search.export", target = "search")
     fun export(
         @PathVariable groupId: UUID,
         @RequestParam(required = false) query: String?,
@@ -112,18 +105,17 @@ class SearchController(
         @RequestParam(defaultValue = "10000") maxRows: Int,
         principal: Principal
     ): ResponseEntity<String> {
+        if (maxRows < 1 || maxRows > ExpenseSearch.MAX_EXPORT_ROWS) {
+            throw ExpenseDomainException(
+                ExpenseErrors.EXPENSE_REQUEST_INVALID,
+                "maxRows must be between 1 and ${ExpenseSearch.MAX_EXPORT_ROWS}"
+            )
+        }
         ensureMembership(groupId, principal.name)
         val expenses = dbTelemetry.measureQuery("expense.search.export", "approved-query") {
-            DbContextHolder.withContext(
-                DbExecutionContext(
-                    operationName = "expense.search.export",
-                    kind = DbOperationKind.QUERY,
-                    consistency = ReadConsistency.EVENTUAL,
-                    readerEligible = true
-                )
-            ) {
+            DbContextHolder.withReader(target = "search", operation = "expense.search.export") {
                 searchStore.findSearchExpenses(
-                    SearchQuery(groupId, query?.trim().orEmpty(), currency?.trim()?.uppercase(), category, null, ExpenseSearch.MAX_EXPORT_ROWS)
+                    SearchQuery(groupId, query?.trim().orEmpty(), currency?.trim()?.uppercase(), category, null, maxRows)
                 )
             }
         }

@@ -4,11 +4,11 @@ import com.subhrodip.squarewise.errors.catalog.PlatformErrors
 import com.subhrodip.squarewise.errors.code.ErrorDefinition
 import com.subhrodip.squarewise.errors.diagnostics.ErrorDiagnostics
 import com.subhrodip.squarewise.errors.diagnostics.MapDiagnostics
-import com.subhrodip.squarewise.errors.http.FieldViolation
+import com.subhrodip.squarewise.errors.web.ViolationDto
 
 /** Governed validation failure with bounded field diagnostics. */
 open class DomainValidationException(
-    val violations: List<FieldViolation>,
+    val violations: List<ViolationDto>,
     definition: ErrorDefinition = PlatformErrors.REQUEST_VALIDATION_FAILED,
     diagnostics: ErrorDiagnostics = MapDiagnostics.of(
         violations.mapIndexed { index, violation ->

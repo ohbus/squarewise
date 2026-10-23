@@ -27,7 +27,7 @@ import com.subhrodip.squarewise.accounts.profile.persistence.InMemoryProfileStor
 import com.subhrodip.squarewise.security.ratelimit.RateLimitDecision
 import com.subhrodip.squarewise.security.ratelimit.RateLimitPolicy
 import com.subhrodip.squarewise.security.ratelimit.RateLimiter
-import com.subhrodip.squarewise.errors.http.GlobalErrorHandler
+import com.subhrodip.squarewise.errors.web.GlobalErrorAdvice
 import com.subhrodip.squarewise.ids.contracts.ApiEndpoints
 import java.security.Principal
 import java.time.Instant
@@ -107,7 +107,7 @@ class AuthControllerTest @Autowired constructor(
     )
 
     private val mvc: MockMvc = MockMvcBuilders.standaloneSetup(controller)
-        .setControllerAdvice(GlobalErrorHandler())
+        .setControllerAdvice(GlobalErrorAdvice())
         .build()
 
     private val alice = RequestPostProcessor { request ->

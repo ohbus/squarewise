@@ -21,6 +21,7 @@ class DbTelemetry(
         }
     }
     private val failureCount = AtomicLong()
+    private val fallbackCount = AtomicLong()
     private val acquisitionCount = AtomicLong()
     private val acquisitionTotalMs = AtomicLong()
     private val lockWaitCount = AtomicLong()
@@ -39,6 +40,12 @@ class DbTelemetry(
     fun failure(reader: String) {
         failureCount.incrementAndGet()
         registry?.counter("squarewise.db.reader.failure", "reader", reader)?.increment()
+    }
+
+    /** Records one approved reader-to-writer fallback for a stable query operation. */
+    fun fallback(operation: String) {
+        fallbackCount.incrementAndGet()
+        registry?.counter("squarewise.db.fallback", "operation", operation)?.increment()
     }
 
     /** Records bounded pool-acquisition timing without SQL text or parameters. */
@@ -69,7 +76,7 @@ class DbTelemetry(
     }
 
     /** Measures one bounded query block without capturing SQL, parameters, or payloads. */
-    inline fun <T> measureQuery(operation: String, route: String, block: () -> T): T {
+    fun <T> measureQuery(operation: String, route: String, block: () -> T): T {
         val started = System.nanoTime()
         return try {
             block()
@@ -98,6 +105,7 @@ class DbTelemetry(
     /** Snapshot counters useful to tests and diagnostic endpoints. */
     fun snapshot(): DbTelemetrySnapshot = DbTelemetrySnapshot(
         failures = failureCount.get(),
+        fallbacks = fallbackCount.get(),
         acquisitions = acquisitionCount.get(),
         acquisitionTotalMs = acquisitionTotalMs.get(),
         lockWaits = lockWaitCount.get(),

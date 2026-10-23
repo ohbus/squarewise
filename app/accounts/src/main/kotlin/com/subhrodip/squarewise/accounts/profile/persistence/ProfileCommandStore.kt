@@ -2,9 +2,11 @@ package com.subhrodip.squarewise.accounts.profile.persistence
 
 import com.subhrodip.squarewise.accounts.profile.api.ProfilePatchRequest
 import com.subhrodip.squarewise.accounts.profile.api.ProfileResponse
+import com.subhrodip.squarewise.db.routing.DbWriter
 import java.util.UUID
 
 /** Writer-side profile persistence port. */
+@DbWriter("accounts.profile.command")
 interface ProfileCommandStore {
     /**
      * Explicitly provisions a new profile for an enrolled account.

@@ -70,7 +70,9 @@ class GroupMembershipRepositoryContractTest {
             override fun deleteAllInBatch(entities: Iterable<GroupMembershipEntity>) {}
             override fun deleteAllByIdInBatch(ids: Iterable<UUID>) {}
             override fun deleteAllInBatch() {}
+            @Deprecated("Legacy JpaRepository lookup is unused by this contract test.")
             override fun getOne(id: UUID): GroupMembershipEntity = throw UnsupportedOperationException()
+            @Deprecated("Legacy JpaRepository lookup is unused by this contract test.")
             override fun getById(id: UUID): GroupMembershipEntity = throw UnsupportedOperationException()
             override fun getReferenceById(id: UUID): GroupMembershipEntity = throw UnsupportedOperationException()
             override fun <S : GroupMembershipEntity> findAll(example: Example<S>): List<S> = emptyList()
@@ -91,5 +93,15 @@ class GroupMembershipRepositoryContractTest {
         assertEquals(Triple(groupId, subject, "ACTIVE"), existsCalledWith)
         assertEquals(Pair(subject, "ACTIVE"), findAllCalledWith)
         assertEquals(Pair(groupId, "ACTIVE"), findByGroupCalledWith)
+
+        val defaultImplsClass = Class.forName("com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupMembershipRepository\$DefaultImpls")
+        val existsMethod = defaultImplsClass.getMethod("existsByGroupIdAndSubject", GroupMembershipRepository::class.java, UUID::class.java, String::class.java)
+        assertEquals(true, existsMethod.invoke(null, stub, groupId, subject))
+
+        val findAllMethod = defaultImplsClass.getMethod("findAllBySubjectOrderByMembershipId", GroupMembershipRepository::class.java, String::class.java)
+        assertEquals(emptyList<GroupMembershipEntity>(), findAllMethod.invoke(null, stub, subject))
+
+        val findByGroupMethod = defaultImplsClass.getMethod("findByGroupId", GroupMembershipRepository::class.java, UUID::class.java)
+        assertEquals(emptyList<GroupMembershipEntity>(), findByGroupMethod.invoke(null, stub, groupId))
     }
 }

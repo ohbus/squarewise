@@ -172,7 +172,8 @@ To ensure multi-developer collaboration without configuration divergence, Square
 PostgreSQL is healthy only after `pg_isready` confirms the application
 `squarewise_accounts` database is accepting connections; this prevents dependent
 services from racing the local init script that creates the service databases.
-RabbitMQ uses `rabbitmq-diagnostics -q ping`; Mailpit checks its HTTP UI. Compose waits for
+RabbitMQ runs `rabbitmq-diagnostics -q ping` as the `rabbitmq` user so its health
+probe cannot create a root-owned Erlang cookie; Mailpit checks its HTTP UI. Compose waits for
 these checks before starting dependent applications. In the full topology,
 Accounts waits for PostgreSQL, Expense Core waits for PostgreSQL and RabbitMQ,
 Notifications waits for PostgreSQL, RabbitMQ, and Mailpit, and BFF starts after

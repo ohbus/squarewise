@@ -6,6 +6,7 @@ import com.subhrodip.squarewise.expensecore.expenses.api.request.MoneyDto
 import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseRecord
 import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseAllocation
 import com.subhrodip.squarewise.expensecore.expenses.domain.ExpensePayer
+import com.subhrodip.squarewise.expensecore.expenses.domain.ExpenseRequestLimits
 import com.subhrodip.squarewise.expensecore.expenses.service.toRecord
 import com.subhrodip.squarewise.expensecore.expenses.service.ExpenseValidator
 import com.subhrodip.squarewise.expensecore.expenses.persistence.entity.ExpenseEntity
@@ -16,12 +17,16 @@ import com.subhrodip.squarewise.expensecore.expenses.persistence.entity.BalanceP
 import com.subhrodip.squarewise.expensecore.expenses.persistence.repository.ExpenseRepository
 import com.subhrodip.squarewise.expensecore.expenses.persistence.repository.ExpenseIdempotencyRepository
 import com.subhrodip.squarewise.expensecore.expenses.persistence.repository.BalancePostingRepository
-import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupMembershipRepository
 import com.subhrodip.squarewise.expensecore.groups.persistence.repository.GroupRepository
 import com.subhrodip.squarewise.expensecore.messaging.outbox.model.OutboxMessage
 import com.subhrodip.squarewise.expensecore.messaging.outbox.persistence.OutboxStore
 
+import com.subhrodip.squarewise.expensecore.validation.EntityReferenceValidator
 import com.subhrodip.squarewise.expensecore.sync.persistence.SynchronizationStore
+import com.subhrodip.squarewise.expensecore.groups.cache.GroupAccessCache
+import com.subhrodip.squarewise.db.routing.DbReader
+import com.subhrodip.squarewise.db.routing.DbWriter
+import org.springframework.beans.factory.annotation.Autowired
 import com.subhrodip.squarewise.ids.generation.UuidGenerator
 import java.time.Instant
 import java.util.UUID
@@ -46,21 +51,25 @@ class JpaExpenseStore(
     private val idempotencyRepository: ExpenseIdempotencyRepository,
     private val balancePostingRepository: BalancePostingRepository,
     private val groupRepository: GroupRepository,
-    private val membershipRepository: GroupMembershipRepository,
     private val outboxStore: OutboxStore,
-    private val syncStore: SynchronizationStore
+    private val syncStore: SynchronizationStore,
+    private val referenceValidator: EntityReferenceValidator,
+    @Autowired(required = false)
+    private val groupAccessCache: GroupAccessCache? = null
 ) : ExpenseStore {
 
     /**
      * Persists a new expense, updates group revision, creates ledger postings,
      * emits an outbox event, and creates a sync record.
      */
+    @DbWriter("expense.create")
     @Transactional
     override fun create(
         groupId: UUID,
         expense: ExpenseRecord,
         idempotencyKey: String,
-        actorSubject: String?
+        actorSubject: String?,
+        validateParticipants: Boolean
     ): ExpenseRecord {
         val actor = actorSubject ?: "<unknown>"
         val payloadHash = expensePayloadHash(expense)
@@ -70,7 +79,9 @@ class JpaExpenseStore(
         val group = groupRepository.findForMembershipUpdate(groupId)
             ?: throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group $groupId not found")
         requireActiveMembership(groupId, actorSubject)
-        validateFinancialParticipants(groupId, expense, actorSubject)
+        if (validateParticipants) {
+            validateFinancialParticipants(groupId, expense)
+        }
         if (group.status == "ARCHIVED") {
             throw ExpenseDomainException(ExpenseErrors.GROUP_ARCHIVED, "Group is archived")
         }
@@ -170,6 +181,7 @@ class JpaExpenseStore(
 
         val syncPayload = """{"expenseId":"${saved.expenseId}","groupId":"$groupId","amountMinor":${saved.amountMinor},"currency":"${saved.currency}","version":${saved.version}}"""
         syncStore.append(groupId.toString(), saved.expenseId.toString(), syncPayload)
+        groupAccessCache?.invalidateBalancesAfterCommit(groupId)
 
         return saved.toRecord()
     }
@@ -190,28 +202,22 @@ class JpaExpenseStore(
             .joinToString("") { byte -> "%02x".format(byte) }
     }
 
+    private companion object {
+    }
+
     private fun requireActiveMembership(groupId: UUID, actorSubject: String?) {
-        if (actorSubject != null && membershipRepository.findByGroupIdAndSubjectAndStatus(groupId, actorSubject, "ACTIVE") == null) {
+        if (actorSubject != null && !referenceValidator.isActiveMember(groupId, actorSubject)) {
             throw ExpenseDomainException(ExpenseErrors.GROUP_ACCESS_HIDDEN, "Group $groupId not found")
         }
     }
 
-    /** Compatibility overload for internal callers that do not carry an actor. */
-    /** Rejects public postings for arbitrary or duplicate participant identifiers. */
-    private fun validateFinancialParticipants(groupId: UUID, expense: ExpenseRecord, actorSubject: String?) {
-        if (actorSubject == null) return
-        val payerIds = expense.payers.map { it.participantId }
-        val allocationIds = expense.allocations.map { it.participantId }
-        if (payerIds.size != payerIds.toSet().size || allocationIds.size != allocationIds.toSet().size) {
-            throw ExpenseDomainException(ExpenseErrors.EXPENSE_REQUEST_INVALID, "Participant IDs must be unique within payers and allocations")
-        }
-        val participantIds = payerIds + allocationIds
-        val activeIds = membershipRepository.findByGroupIdAndMembershipIdInAndStatus(groupId, participantIds.toSet(), "ACTIVE")
-            .map { it.membershipId }
-            .toSet()
-        if (!activeIds.containsAll(participantIds)) {
-            throw ExpenseDomainException(ExpenseErrors.PARTICIPANT_SET_INVALID, "Every financial participant must be an active group member")
-        }
+    /** Rejects arbitrary or duplicate participant identifiers for both public and internal postings. */
+    private fun validateFinancialParticipants(groupId: UUID, expense: ExpenseRecord) {
+        referenceValidator.validateFinancialParticipants(
+            groupId,
+            expense.payers.map { it.participantId },
+            expense.allocations.map { it.participantId }
+        )
     }
 
     fun update(groupId: UUID, expenseId: UUID, update: ExpenseRecord): ExpenseRecord =
@@ -225,12 +231,15 @@ class JpaExpenseStore(
      * Updates an existing expense in place, generates double-entry reversal postings,
      * writes new balance postings, updates group revision, emits outbox and sync events.
      */
+    @DbWriter("expense.update")
     @Transactional
     override fun update(groupId: UUID, expenseId: UUID, update: ExpenseRecord, actorSubject: String?): ExpenseRecord {
         val group = groupRepository.findForMembershipUpdate(groupId)
             ?: throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group $groupId not found")
         requireActiveMembership(groupId, actorSubject)
-        validateFinancialParticipants(groupId, update, actorSubject)
+        if (actorSubject != null) {
+            validateFinancialParticipants(groupId, update)
+        }
         if (group.status == "ARCHIVED") {
             throw ExpenseDomainException(ExpenseErrors.GROUP_ARCHIVED, "Group is archived")
         }
@@ -325,6 +334,7 @@ class JpaExpenseStore(
 
         val syncPayload = """{"expenseId":"${saved.expenseId}","groupId":"$groupId","amountMinor":${saved.amountMinor},"currency":"${saved.currency}","version":${saved.version}}"""
         syncStore.append(groupId.toString(), saved.expenseId.toString(), syncPayload)
+        groupAccessCache?.invalidateBalancesAfterCommit(groupId)
 
         return saved.toRecord()
     }
@@ -332,6 +342,7 @@ class JpaExpenseStore(
     /**
      * Performs a soft delete on an expense, posting reversal balance entries and recording outbox and sync changes.
      */
+    @DbWriter("expense.delete")
     @Transactional
     override fun delete(groupId: UUID, expenseId: UUID, version: Long?, actorSubject: String?) {
         val group = groupRepository.findForMembershipUpdate(groupId)
@@ -385,11 +396,13 @@ class JpaExpenseStore(
 
         // Sync change tombstone
         syncStore.delete(groupId.toString(), entity.expenseId.toString())
+        groupAccessCache?.invalidateBalancesAfterCommit(groupId)
     }
 
     /**
      * Looks up an active (non-deleted) expense by its ID.
      */
+    @DbReader("expense.get")
     @Transactional(readOnly = true)
     override fun findById(expenseId: UUID): ExpenseRecord? {
         val entity = expenseRepository.findById(expenseId).orElse(null) ?: return null
@@ -399,6 +412,7 @@ class JpaExpenseStore(
     /**
      * Lists active expenses for a group, optionally filtered by category.
      */
+    @DbReader("expense.list")
     @Transactional(readOnly = true)
     override fun list(groupId: UUID, category: String?, cursor: String?, limit: Int): List<ExpenseRecord> {
         val boundedLimit = limit.coerceIn(1, 100)
@@ -422,9 +436,25 @@ class JpaExpenseStore(
 
     /**
      * Calculates net balances per participant and currency across all postings in a group.
+     * Oversized result sets are rejected rather than truncated to preserve financial correctness.
      */
+    @DbWriter("expense.balances")
+    @Transactional(readOnly = true)
     override fun balances(groupId: UUID): List<GroupBalanceItem> {
-        val rows = balancePostingRepository.sumBalancesByGroup(groupId)
+        return calculateBalances(groupId)
+    }
+
+    private fun calculateBalances(groupId: UUID): List<GroupBalanceItem> {
+        val rows = balancePostingRepository.sumBalancesByGroup(
+            groupId,
+            PageRequest.of(0, ExpenseRequestLimits.MAX_BALANCE_ROWS + 1),
+        )
+        if (rows.size > ExpenseRequestLimits.MAX_BALANCE_ROWS) {
+            throw ExpenseDomainException(
+                ExpenseErrors.EXPENSE_REQUEST_INVALID,
+                "Group balance result exceeds ${ExpenseRequestLimits.MAX_BALANCE_ROWS} rows",
+            )
+        }
         return rows.map { row ->
             val participantId = row[0].toString()
             val currency = row[1].toString()

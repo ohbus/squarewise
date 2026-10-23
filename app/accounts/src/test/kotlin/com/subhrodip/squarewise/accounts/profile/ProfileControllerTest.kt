@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.springframework.http.MediaType
-import com.subhrodip.squarewise.errors.http.GlobalErrorHandler
+import com.subhrodip.squarewise.errors.web.GlobalErrorAdvice
 import com.subhrodip.squarewise.db.routing.DbContextHolder
 import com.subhrodip.squarewise.db.routing.DbOperationKind
 import com.subhrodip.squarewise.db.routing.ReadConsistency
@@ -47,7 +47,7 @@ class ProfileControllerTest {
     private val mvc: MockMvc = MockMvcBuilders.standaloneSetup(
         controller
     )
-        .setControllerAdvice(GlobalErrorHandler())
+        .setControllerAdvice(GlobalErrorAdvice())
         .build()
     private val alice = RequestPostProcessor { request ->
         request.userPrincipal = Principal { "oidc|alice" }

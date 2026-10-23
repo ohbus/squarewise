@@ -181,9 +181,9 @@ This phase ensures every API operation has one unambiguous meaning.
 | 5 | Retry semantics | Every operation specifies: safe to retry (yes/no), retry-after hint, backoff recommendation | **Retry Pattern** with **Circuit Breaker** awareness |
 | 6 | GraphQL error policy | Upstream failures → GraphQL `errors[]` with extensions; partial-result behavior documented; never silently empty | **Error Propagation** through BFF layer |
 | 7 | Event compatibility policy | Schema versioning, backward compatibility rules, envelope format, consumer tolerance | **Schema Evolution**: see [contracts/events/](../../contracts/events/) |
-| 8 | Migration policy | Expand/contract sequencing, forward-only migrations, rollback procedure | **Expand/Contract Migration Pattern** (see below) |
+| 8 | Migration policy | Fresh-install baseline for the current branch; existing-database rollout requires an approved rebuild/baseline procedure, with role/ownership reconciliation as a pre-rollout step | **Flyway baseline plus explicit database lifecycle** |
 
-> 📖 **What is the Expand/Contract Migration Pattern?**
+> 📖 **Future expand/contract migration pattern**
 >
 > When changing a database schema in a system that can't have downtime:
 > 1. **Expand**: Add the new column/table alongside the old one (both old and
@@ -192,9 +192,9 @@ This phase ensures every API operation has one unambiguous meaning.
 > 3. **Contract**: Remove the old column/table (only after all code uses the
 >    new one)
 >
-> This is critical for zero-downtime deployments at scale. Never rename a
-> column or change a type in a single migration: old application instances
-> (still running during rolling deployment) will crash.
+> This pattern applies only after an existing-database rollout is explicitly
+> approved and its rebuild/baseline process is documented. The current branch is
+> a fresh-install baseline; do not infer an upgrade chain from this example.
 
 #### Exit criteria
 

@@ -20,27 +20,33 @@ import com.subhrodip.squarewise.expensecore.errors.ExpenseDomainException
 import com.subhrodip.squarewise.errors.catalog.ExpenseErrors
 import java.security.Principal
 import java.util.UUID
+import com.subhrodip.squarewise.db.routing.DbReader
+import com.subhrodip.squarewise.db.routing.DbWriter
 
 @RestController
 @RequestMapping(ApiEndpoints.ExpenseCore.V1.PATH_GROUPS)
 class GroupController(private val groups: GroupStore) {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @DbWriter("group.create")
     fun create(@Valid @RequestBody request: CreateGroupRequest, principal: Principal): GroupResponse =
         groups.create(principal.name, request)
 
     @GetMapping
+    @DbReader("groups.list")
     fun list(
         @RequestParam(defaultValue = "100") limit: Int = 100,
         principal: Principal
     ): List<GroupResponse> = groups.list(principal.name, limit)
 
     @GetMapping("/{groupId}")
+    @DbReader("group.get")
     fun get(@PathVariable groupId: UUID, principal: Principal): GroupResponse =
         groups.get(groupId, principal.name)
             ?: throw ExpenseDomainException(ExpenseErrors.GROUP_NOT_FOUND, "Group $groupId not found")
 
     @PatchMapping("/{groupId}")
+    @DbWriter("group.update")
     fun update(
         @PathVariable groupId: UUID,
         @Valid @RequestBody request: UpdateGroupRequest,
@@ -52,11 +58,13 @@ class GroupController(private val groups: GroupStore) {
     }
 
     @PostMapping("/{groupId}/archive")
+    @DbWriter("group.archive")
     fun archive(@PathVariable groupId: UUID, principal: Principal): GroupResponse =
         groups.archive(groupId, principal.name)
 
     @PostMapping("/{groupId}/placeholders")
     @ResponseStatus(HttpStatus.CREATED)
+    @DbWriter("group.placeholder.create")
     fun addPlaceholder(
         @PathVariable groupId: UUID,
         @Valid @RequestBody request: CreatePlaceholderRequest,
@@ -65,6 +73,7 @@ class GroupController(private val groups: GroupStore) {
 
     @DeleteMapping("/{groupId}/members/{membershipId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @DbWriter("group.member.remove")
     fun removeMember(
         @PathVariable groupId: UUID,
         @PathVariable membershipId: UUID,
@@ -75,6 +84,7 @@ class GroupController(private val groups: GroupStore) {
 
     @GetMapping("/{groupId}/members")
     /** Returns the first bounded page of members visible to the authenticated member. */
+    @DbReader("group.members.list")
     fun listMembers(
         @PathVariable groupId: UUID,
         @RequestHeader(ApiEndpoints.Headers.ACCEPTANCE_FAULT, required = false) fault: String?,
@@ -87,11 +97,13 @@ class GroupController(private val groups: GroupStore) {
 
     @PostMapping("/{groupId}/invites")
     @ResponseStatus(HttpStatus.CREATED)
+    @DbWriter("group.invite.create")
     fun invite(@PathVariable groupId: UUID, @Valid @RequestBody request: CreateInviteRequest, principal: Principal): InviteResponse =
         groups.invite(groupId, principal.name, request)
 
     @PostMapping("/{groupId}/invites/{token}/revoke")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @DbWriter("group.invite.revoke")
     fun revokeInvite(
         @PathVariable groupId: UUID,
         @PathVariable token: String,
