@@ -21,6 +21,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPat
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.test.web.servlet.setup.MockMvcBuilders
 import java.util.UUID
+import java.nio.charset.StandardCharsets
 import com.subhrodip.squarewise.errors.web.GlobalErrorAdvice
 import java.time.Instant
 import java.security.Principal
@@ -45,6 +46,8 @@ class SettlementControllerTest {
         .setControllerAdvice(GlobalErrorAdvice()).build()
     private val user = RequestPostProcessor { request -> request.userPrincipal = Principal { "test-user" }; request }
 
+    private val spacedUser = RequestPostProcessor { request -> request.userPrincipal = Principal { " test-user " }; request }
+
     @Test
     fun `rejects non numeric amount`() {
         mvc.perform(post(ApiEndpoints.ExpenseCore.V1.groupSettlements(UUID.randomUUID())).with(user)
@@ -61,6 +64,24 @@ class SettlementControllerTest {
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"fromParticipantId\":\"${UUID.randomUUID()}\",\"toParticipantId\":\"${UUID.randomUUID()}\",\"amountMinor\":\"${"9".repeat(20)}\",\"currency\":\"EUR\"}"))
             .andExpect(status().isUnprocessableContent)
+    }
+
+    @Test
+    fun `records settlement with the canonical membership subject`() {
+        val groupId = UUID.randomUUID()
+        val from = UUID.randomUUID()
+        val to = UUID.randomUUID()
+        val key = "settlement-key-0002"
+        val expectedId = UUID.nameUUIDFromBytes("settlement|$groupId|test-user|$key".toByteArray(StandardCharsets.UTF_8))
+
+        mvc.perform(
+            post(ApiEndpoints.ExpenseCore.V1.groupSettlements(groupId)).with(spacedUser)
+                .header(ApiEndpoints.Headers.IDEMPOTENCY_KEY, key)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"fromParticipantId\":\"$from\",\"toParticipantId\":\"$to\",\"amountMinor\":\"1250\",\"currency\":\"EUR\"}")
+        )
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.id").value(expectedId.toString()))
     }
 
     @Test

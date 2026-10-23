@@ -36,15 +36,15 @@ class SettlementController(
     @ResponseStatus(HttpStatus.CREATED)
     @DbWriter("settlement.record")
     fun record(@PathVariable groupId: UUID, @RequestHeader(ApiEndpoints.Headers.IDEMPOTENCY_KEY) idempotencyKey: String, @Valid @RequestBody request: RecordSettlementRequest, principal: Principal?): Settlement {
-        ensureMembership(groupId, principal)
-        return service.record(groupId, request.fromParticipantId, request.toParticipantId, parseAmount(request.amountMinor), request.currency, principal!!.name, idempotencyKey)
+        val subject = ensureMembership(groupId, principal)
+        return service.record(groupId, request.fromParticipantId, request.toParticipantId, parseAmount(request.amountMinor), request.currency, subject, idempotencyKey)
     }
 
     @PostMapping(ApiEndpoints.ExpenseCore.V1.SETTLEMENT_REVERSAL_RELATIVE_SUBPATH)
     @DbWriter("settlement.reverse")
     fun reverse(@PathVariable groupId: UUID, @PathVariable settlementId: UUID, @Valid @RequestBody request: ReverseSettlementRequest, principal: Principal?): Settlement {
-        ensureMembership(groupId, principal)
-        return service.reverse(groupId, settlementId, request.reason, principal!!.name)
+        val subject = ensureMembership(groupId, principal)
+        return service.reverse(groupId, settlementId, request.reason, subject)
     }
 
     @GetMapping(ApiEndpoints.ExpenseCore.V1.SETTLEMENT_SUGGESTIONS_RELATIVE_SUBPATH)
@@ -54,9 +54,8 @@ class SettlementController(
         return service.suggestions(groupId)
     }
 
-    private fun ensureMembership(groupId: UUID, principal: Principal?) {
+    private fun ensureMembership(groupId: UUID, principal: Principal?): String =
         validator.ensureMembership(groupId, principal)
-    }
 
     private fun parseAmount(amountMinor: String): Long =
         amountMinor.toLongOrNull()
