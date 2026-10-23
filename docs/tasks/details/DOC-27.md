@@ -92,6 +92,10 @@ documentation-first task model and collect reproduction, environment, scope,
 compatibility, security, and accessibility information without relying on
 labels that may not exist in the hosted repository.
 
+The README intentionally omits internal task identifiers and public issue-
+tracking links so the entry point remains product- and workflow-focused;
+community-health policies remain available in their dedicated documents.
+
 The accessibility statement does not claim conformance for the deferred
 `app/web/` user interface. GitHub repository settings, including private
 vulnerability reporting and label creation, are outside the local commit and

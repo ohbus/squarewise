@@ -42,7 +42,7 @@ A permanently free, privacy-centric expense-sharing platform for households, cou
 
 Squarewise provides a modern alternative to proprietary expense splitters with:
 - **Fair Financial Allocations**: Equal splits, exact minor amounts, and percentage allocations (with basis-point rounding guarantees).
-- **Passwordless Native Authentication**: The Accounts passwordless slice includes email magic-link/code contracts, a decoupled token-minting SPI (`IdentityProviderPort`), refresh-token family policy, and provider-neutral delivery boundaries. AUTH-03 through AUTH-07 are implemented and verified with live OIDC, broker/Mailpit, REST, GraphQL, WebSocket, Bruno, and CI evidence.
+- **Passwordless Native Authentication**: The Accounts passwordless slice includes email magic-link/code contracts, a decoupled token-minting SPI (`IdentityProviderPort`), refresh-token family policy, and provider-neutral delivery boundaries. It is implemented and verified with live OIDC, broker/Mailpit, REST, GraphQL, WebSocket, Bruno, and CI evidence.
 
 Squarewise is structured into four focused applications and technical libraries:
 
@@ -247,7 +247,7 @@ HTTP status or exception class.
    and the affected service tests.
 
 Never derive a code from an HTTP status, exception class, database vendor code,
-ticket, endpoint, region, or runtime counter. Retired identities and names are
+external tracking identifier, endpoint, region, or runtime counter. Retired identities and names are
 never reused.
 
 ---
@@ -263,7 +263,7 @@ make test-unit
 # Run full test suite with JaCoCo coverage reports
 make coverage
 
-# Validate contract schemas and task registry
+# Validate contract schemas
 make contracts
 
 # Run Spotless formatting check and linters
@@ -298,7 +298,7 @@ squarewise/
 │   ├── operations/             # Deployment, quickstart & compose topology
 │   ├── product/                # MVP requirements & scope specifications
 │   ├── quality/                # Programming principles & coding standards
-│   └── tasks/                  # Task registry, board & progress ledger
+│   └── tasks/                  # Execution planning and verification records
 ├── infra/                      # Infrastructure as Code & Compose topologies
 │   ├── deploy/                 # Production Compose configuration
 │   └── local/                  # Local dev Compose topologies
@@ -324,14 +324,11 @@ squarewise/
 ## Community & Support
 
 - Follow the [Code of Conduct](CODE_OF_CONDUCT.md) in all project spaces.
-- Use the [issue templates](https://github.com/ohbus/squarewise/issues/new/choose)
-  for bugs, feature requests, and accessibility barriers.
 - Read the [Accessibility Statement](ACCESSIBILITY.md) for current priorities,
   known limitations, and barrier reporting.
 - Send every security question or suspected vulnerability privately to
   [security@subhrodip.com](mailto:security+squarewise@subhrodip.com) under the [Security
-  Policy](SECURITY.md). Never disclose a suspected vulnerability in a public
-  issue, discussion, or pull request.
+  Policy](SECURITY.md). Never disclose a suspected vulnerability publicly.
 
 ---
 
@@ -339,7 +336,7 @@ squarewise/
 
 We welcome contributions! Please read our [**Contributing Guide (CONTRIBUTING.md)**](CONTRIBUTING.md) for detailed instructions on:
 - Setting up your local development environment
-- Understanding our documentation-first, task-tracked workflow
+- Understanding our documentation-first workflow
 - Code style, SOLID file separation, and KDoc standards
 - Running tests, linter, and contract validation
 - Submitting pull requests
