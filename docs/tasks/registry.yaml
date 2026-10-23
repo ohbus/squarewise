@@ -1801,10 +1801,6 @@
         "CORE-13"
       ],
       "owned_paths": [
-        "app/accounts/src/main/kotlin/com/subhrodip/squarewise/accounts/validation/AccountReferenceValidator.kt",
-        "app/accounts/src/main/kotlin/com/subhrodip/squarewise/accounts/requests/export/persistence/JpaExportRequestStore.kt",
-        "app/accounts/src/test/kotlin/com/subhrodip/squarewise/accounts/validation/AccountReferenceValidatorTest.kt",
-        "app/accounts/src/test/kotlin/com/subhrodip/squarewise/accounts/requests/export/persistence/JpaExportRequestStoreTest.kt",
         "app/expense-core/src/main/kotlin/com/subhrodip/squarewise/expensecore/recurring/",
         "app/expense-core/src/main/resources/db/migration/",
         "app/expense-core/src/test/kotlin/com/subhrodip/squarewise/expensecore/recurring/"
@@ -6866,7 +6862,7 @@
         "git diff --check"
       ],
       "evidence": [
-        "Completed ProfileQueryStore/ProfileCommandStore ports, explicit bounded profile read policies, writer-bound /me/auth/session/rate-limit/mutation paths, query telemetry, route assertions, replica disconnect/recovery, and authenticated multi-persona product E2E."
+        "Completed ProfileQueryStore/ProfileCommandStore ports, explicit bounded profile read policies, reader-bound /me/profile lookup paths with bounded writer fallback, writer-bound auth/session/rate-limit/mutation paths, query telemetry, route assertions, replica disconnect/recovery, and authenticated multi-persona product E2E."
       ],
       "reviewer": "/root",
       "blocker": null
@@ -9468,6 +9464,10 @@
       "owner_agent": "/root",
       "depends_on": ["PR-45", "DB-15", "CORE-31", "PR-30", "PR-49"],
       "owned_paths": [
+        "app/accounts/src/main/kotlin/com/subhrodip/squarewise/accounts/validation/AccountReferenceValidator.kt",
+        "app/accounts/src/main/kotlin/com/subhrodip/squarewise/accounts/requests/export/persistence/JpaExportRequestStore.kt",
+        "app/accounts/src/test/kotlin/com/subhrodip/squarewise/accounts/validation/AccountReferenceValidatorTest.kt",
+        "app/accounts/src/test/kotlin/com/subhrodip/squarewise/accounts/requests/export/persistence/JpaExportRequestStoreTest.kt",
         "app/expense-core/src/main/kotlin/com/subhrodip/squarewise/expensecore/recurring/",
         "app/expense-core/src/main/kotlin/com/subhrodip/squarewise/expensecore/validation/",
         "app/expense-core/src/main/kotlin/com/subhrodip/squarewise/expensecore/groups/persistence/store/",

@@ -32,8 +32,8 @@ approval that every fallback is appropriate.
 |---|---|---|---|
 | `libs/security/.../RedisRateLimiter.kt` | Redis failure propagates as rate-limit service unavailability | Prevents accepting requests when the limiter cannot decide | Fail-closed; required |
 | `app/notifications/.../RedisDeliveryRateLimiter` | Shared Redis failure suppresses delivery | Prevents delivery-rate bypass across replicas | Fail-closed; required |
-| `libs/db/.../DbRoutingDataSource.kt` | Reader failure is not redirected to the writer | Prevents hidden consistency/topology changes | Fail-closed; required |
-| `libs/db/.../DbReaderHealth.kt` | Lagging, disconnected, or open readers return failure | Prevents stale or unsafe reads | Fail-closed; required |
+| `libs/db/.../DbRoutingDataSource.kt` | A failed reader decision falls back to the writer for an explicitly reader-eligible, non-strong query | Preserves the approved query contract while avoiding stale reads | Bounded, policy-controlled fallback; emits `squarewise_db_fallback_total` |
+| `libs/db/.../DbReaderHealth.kt` | Lagging, disconnected, open, or below-watermark readers return `Fail` | Keeps reader health separate from route fallback policy | Fail reader selection; datasource may apply the bounded writer fallback |
 | `libs/db/.../DbContextHolder.kt` | Missing context uses an unclassified command/writer context | Conservative route for undeclared operations | Compatibility fail-safe; retain telemetry |
 | `libs/db/.../DbAutoConfiguration.kt` | Metrics registry is optional | Allows operation without Micrometer | Observability fallback; business operations still work |
 | `libs/db/.../DbCausalWatermarkFilter.kt` | Invalid causal watermark is ignored; writer-LSN read failure returns no watermark | Keeps HTTP flowing | Silent consistency degradation; should become a structured error when guarantees are required |
@@ -84,16 +84,13 @@ Docker Compose, IntelliJ, Bruno, and operational scripts use localhost endpoints
 and local-only credentials for clone-and-run development. These defaults must not
 be inherited by production.
 
-## Stale observability references
+## Reader fallback observability
 
-The reader-to-writer fallback was removed, but obsolete references remain in:
-
-- `infra/observability/rules/squarewise.yml`
-- `infra/observability/grafana/dashboards/squarewise-overview.json`
-- `docs/operations/cqrs-replica.md`
-
-Replace them with reader failure, lag, and fail-closed read metrics. Alerts must
-not imply that an unavailable fallback still operates.
+`DbRoutingDataSource` increments `squarewise_db_fallback_total` whenever an
+approved non-strong reader query uses the primary writer because no reader is
+eligible. The Prometheus alert and Grafana panel use this metric to expose
+writer-capacity pressure. Commands and strong reads remain fail-closed and do
+not increment the fallback counter.
 
 ## Review rules
 

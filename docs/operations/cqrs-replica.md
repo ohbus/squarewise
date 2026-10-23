@@ -8,7 +8,8 @@ diagnostic asynchronous PostgreSQL replica.
 
 `DbReaderLagProbe` reads PostgreSQL replay timestamp/LSN metadata from the
 reader pool. A reader above the configured `squarewise.db.reader-lag-budget-ms`
-is marked `LAGGING`, and eventual queries may use the bounded writer fallback.
+is marked `LAGGING`. Explicitly approved non-strong reader queries, including
+eventual and bounded-staleness reads, may use the bounded writer fallback.
 Strong, command, lock, claim, migration, and reconciliation operations never
 use that fallback policy.
 
@@ -22,7 +23,7 @@ the affected service. Do not delete PostgreSQL volumes as an outage response.
 
 ## Writer fallback
 
-Fallback is bounded to explicitly approved eventual queries. Sustained
+Fallback is bounded to explicitly approved non-strong reader queries. Sustained
 `squarewise_db_fallback_total` growth is an incident signal because it can
 consume writer capacity. Investigate reader lag/pool exhaustion and disable
 replica routing before increasing writer pool limits.

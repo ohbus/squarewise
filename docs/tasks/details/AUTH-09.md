@@ -748,8 +748,9 @@ failures, and artifact-preparation failures remain gate failures.
   by Flyway migration `V7__remove_postgresql_rate_limit_buckets.sql`.
 - Notifications use `RedisDeliveryRateLimiter`; the process-local implementation is
   test-only and is not a Spring production bean.
-- Reader connection failures and reader replay lag fail closed; no reader-to-writer
-  fallback decision or telemetry remains.
+- Approved Accounts reader queries use the shared bounded writer fallback when
+  replica connection or replay-lag checks reject every reader; Redis rate-limit
+  failures still fail closed and do not fall back to PostgreSQL or memory.
 - OIDC/Keycloak profiles validate issuer/JWK-based authentication; the internal JWT
   signer is test-profile-only and is not used by deployed profiles.
 - Production messaging and security configurations require their dependencies and

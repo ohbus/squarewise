@@ -52,9 +52,11 @@ remain the durable referential-integrity guard; application-layer validation
 authorization and input errors before persistence. Hot read paths are accelerated
 with bounded in-memory caching (`GroupAccessCache`, `ProfileCache`, `PreferenceCache`)
 with local `afterCommit` invalidations, and approved high-volume query endpoints route to
-load-balanced reader replicas via `@DbReader` and `@DbRouteContext`. Authorization,
-financial state, and post-mutation reads remain writer-bound; local caches can remain
-stale across instances until invalidation propagation or TTL expiry.
+load-balanced reader replicas via `@DbReader` and `@DbRouteContext`. Authorization
+and financial state remain writer-bound. Approved non-strong reader queries use
+bounded writer fallback when replica health or causal-watermark checks reject
+every reader; local caches can remain stale across instances until invalidation
+propagation or TTL expiry.
 The BFF accesses only REST and event infrastructure. Shared libraries contain
 technical configuration rather than business rules or service-to-service DTOs.
 Fallback, retry, defaulting, and degradation behavior is catalogued in the

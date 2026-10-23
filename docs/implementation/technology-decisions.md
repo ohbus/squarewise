@@ -29,7 +29,10 @@ consistency policy. `libs/db` owns multi-reader instance routing, atomic round-r
 replica load-balancing, writer transaction affinity, route guards, replica health, and
 database telemetry via declarative `@DbReader`, `@DbWriter`, and `@DbRouteContext`
 annotations and `DbRouteAspect`. See `docs/implementation/cqrs-data-access-plan.md`
-and `docs/architecture/cqrs-data-access.md`.
+and `docs/architecture/cqrs-data-access.md`. Explicitly approved non-strong
+reader queries may use bounded writer fallback when replica health or causal
+watermark checks reject every reader; commands and strong reads remain
+writer-bound. Accounts `GET /me` is an approved reader-bound query.
 
 PostgreSQL is authoritative for money, audit, balances, synchronization and
 outbox records. Each service has separate credentials and tables. Databases may
