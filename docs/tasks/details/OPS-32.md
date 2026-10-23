@@ -77,6 +77,12 @@ tests prove that unselected `skipped` streams are neutral and not reported as
 passed, while selected stream, shared preflight, and artifact-preparation
 failures remain fatal. Hosted matrix execution evidence is still required.
 
+PR #19 run `39999091342` exposed an undersized artifact-preparation job: four
+application boot JARs exceeded the 15-minute `ubuntu-slim` limit, so GitHub
+cancelled the job and the E2E and required gates correctly failed. Artifact
+preparation now uses `ubuntu-latest` with a 60-minute ceiling; gate semantics
+remain unchanged and require a successful artifact job and selected suites.
+
 Hosted API inspection also confirmed that master run `37355348264` and PR run
 `37348315292` completed successfully with all selected E2E jobs and retained
 E2E artifacts. A later feature-branch run (`37367449305`) was cancelled, so its

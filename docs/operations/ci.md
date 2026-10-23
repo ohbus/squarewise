@@ -71,9 +71,12 @@ Mailpit; declaring duplicate job services on the host would contend for host por
 and `5672`.
 
 To achieve fast feedback and conserve runner CPU, the E2E stages eliminate redundant
-Gradle test runs and compilation. Instead, the parallel E2E jobs depend directly on
-`verify` and consume the pre-built application `bootJar` artifacts (`app-jar-*`),
-allowing `Dockerfile.fast` to package lightweight runtime containers in seconds.
+Gradle test runs. One dedicated `ubuntu-latest` preparation job compiles all four
+application `bootJar` files without running tests and publishes one shared
+`e2e-app-jars` artifact. Its 60-minute ceiling accommodates a cold hosted Gradle
+build without letting a stalled preparation block CI indefinitely. The three
+parallel E2E jobs consume that artifact, allowing `Dockerfile.fast` to package
+lightweight runtime containers in seconds.
 The Docker context explicitly re-includes only these downloaded application JARs
 from the otherwise ignored Gradle `build/` directories. Each E2E job verifies all
 four artifact paths before Compose starts, so a missing artifact fails at the
