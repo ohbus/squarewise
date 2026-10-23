@@ -19,7 +19,6 @@ A permanently free, privacy-centric expense-sharing platform for households, cou
 ## Table of Contents
 
 - [Overview](#overview)
-- [Architecture & Services](#architecture--services)
 - [Tech Stack](#tech-stack)
 - [Getting Started](#getting-started)
   - [Prerequisites](#prerequisites)
@@ -30,7 +29,6 @@ A permanently free, privacy-centric expense-sharing platform for households, cou
 - [API & Schema Documentation](#api--schema-documentation)
 - [Error Codes](#error-codes)
 - [Quality & Verification](#quality--verification)
-- [Production Readiness](#production-readiness)
 - [Project Structure](#project-structure)
 - [Community & Support](#community--support)
 - [Contributing](#contributing)
@@ -87,7 +85,7 @@ flowchart LR
 Ensure you have the following installed on your workstation:
 - **Java 25** (for example, via [SDKMAN!](https://sdkman.io/): `sdk install java 25-open`)
 - **Docker & Docker Compose v2** (e.g. Docker Desktop or OrbStack)
-- **Python 3.11+** (for contract validation)
+- **Python 3.12+** (for contract validation)
 - **Make** (standard on macOS and Linux)
 
 ### Clone & Environment Doctor
@@ -113,12 +111,15 @@ Click **"Reopen in Container"** when prompted. The workspace container supplies 
 
 ### Option A: Running with Docker
 
-To start the complete environment (Postgres, RabbitMQ, Mailpit, and all 4 microservices):
+To start the complete environment (Postgres, RabbitMQ, Redis, Mailpit, Keycloak, and all 4 microservices):
 
 ```sh
-# Start all containers in the background
+# Build and start all containers in the foreground
 make full-up
+```
 
+In a second terminal, check status or follow logs:
+```sh
 # Check container status
 make full-status
 
@@ -135,7 +136,7 @@ make full-down
 
 If you prefer running and debugging microservices directly inside IntelliJ IDEA or via Gradle:
 
-1. **Start backing dependencies only (Postgres, RabbitMQ, Mailpit)**:
+1. **Start backing dependencies (Postgres, RabbitMQ, Redis, Mailpit, and Keycloak)**:
    ```sh
    make deps-up
    ```
@@ -143,6 +144,15 @@ If you prefer running and debugging microservices directly inside IntelliJ IDEA 
 2. **Run an application natively**:
    - **Via Gradle CLI**:
      ```sh
+     SPRING_PROFILES_ACTIVE=local \
+     SERVER_PORT=28082 \
+     SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:25432/squarewise_expense_core \
+     SPRING_DATASOURCE_USERNAME=squarewise \
+     SPRING_DATASOURCE_PASSWORD=squarewise-local-only \
+     SPRING_RABBITMQ_HOST=localhost \
+     SPRING_RABBITMQ_PORT=28672 \
+     SPRING_RABBITMQ_USERNAME=squarewise \
+     SPRING_RABBITMQ_PASSWORD=squarewise-local-only \
      ./gradlew :app:expense-core:bootRun
      ```
    - **Via IntelliJ IDEA**:
@@ -170,6 +180,8 @@ When the stack is running, services are accessible at:
 | **Expense Core API** | `http://localhost:28082` | REST endpoints under `/expense-core/v1/` |
 | **Notifications API** | `http://localhost:28083` | REST endpoints under `/notifications/v1/` |
 | **Mailpit Web UI** | `http://localhost:28025` | Inspect outbound confirmation and notification emails |
+| **Keycloak OIDC** | `http://localhost:28090` | Local identity provider |
+| **Redis** | `localhost:28379` | Distributed rate-limit state |
 | **RabbitMQ Management** | `http://localhost:28673` | Credentials: `squarewise` / `squarewise-local-only` |
 | **PostgreSQL Database** | `localhost:25432` | Credentials: `squarewise` / `squarewise-local-only` |
 

@@ -30,6 +30,11 @@ doctor: ## Check required local tools and versions
 	fi
 	@command -v uv >/dev/null || (echo "uv is required for isolated Python tooling"; exit 1)
 	@command -v java >/dev/null || (echo "Java 25+ is required"; exit 1)
+	@java_major="$$(java -version 2>&1 | awk -F '"' '/version/ {split($$2, v, "."); print v[1]; exit}')"; \
+	case "$$java_major" in \
+		''|*[!0-9]*) echo "Java 25+ is required"; exit 1 ;; \
+		*) [ "$$java_major" -ge 25 ] || { echo "Java 25+ is required"; exit 1; } ;; \
+	esac
 	@java -version
 	@$(GRADLE) --version
 
