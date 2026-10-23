@@ -25,6 +25,10 @@ E2E artifact-preparation failure must fail the gate.
 - `tools/ci/changed_scope.py`
 - `tests/tools/test_changed_scope.py`
 - `docs/operations/ci.md`
+- `docs/operations/intellij.md`
+- `docs/implementation/technology-decisions.md`
+- `settings.gradle.kts`
+- `gradle.properties`
 - `docs/tasks/details/OPS-32.md`
 - `docs/tasks/registry.yaml`
 - `docs/tasks/board.md`
@@ -48,6 +52,8 @@ E2E artifact-preparation failure must fail the gate.
    not misrepresented as changed-module checks.
 7. Scope behavior has typed unit tests for full, documentation-only, shared
    library, E2E-only, and build-configuration changes.
+8. The Gradle build applies Develocity plugin 4.5.0; CI Gradle invocations
+   publish tagged Build Scans without affecting local publication behavior.
 
 ## Validation commands
 
@@ -76,6 +82,16 @@ Hosted API inspection also confirmed that master run `37355348264` and PR run
 E2E artifacts. A later feature-branch run (`37367449305`) was cancelled, so its
 skipped jobs are not treated as a passing matrix result. These runs predate the
 current branch HEAD and require a current-revision rerun for closure.
+
+## Develocity build scans
+
+The build applies `com.gradle.develocity` version `4.5.0` in
+`settings.gradle.kts`, using the root `gradle.properties` value because Gradle
+resolves settings plugins before generating the project version-catalog accessors.
+CI passes `--scan` to each Gradle invocation, accepts the published Gradle terms
+of use non-interactively, tags scans as `CI`, and waits for upload completion.
+Local builds do not publish scans but retain the plugin instrumentation required
+by IntelliJ's live build timeline.
 
 ## Implementation note
 

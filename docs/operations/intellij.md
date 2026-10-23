@@ -17,6 +17,19 @@ This invokes each real `main(String[])` directly and avoids Spring Boot plugin
 start-point ambiguity. Their database, RabbitMQ, SMTP, port, and upstream URL
 values mirror the dependency-only Compose topology and host native-run ports.
 
+## Develocity live build timeline
+
+The project applies the Develocity Gradle plugin `4.5.0` from
+`settings.gradle.kts`. This enables IntelliJ's Develocity live build timeline
+when the Develocity IntelliJ plugin is installed. Local builds do not publish
+Build Scans; CI builds publish them to `scans.gradle.com` and use the `CI` tag.
+
+In IntelliJ, open **Settings/Preferences | Tools | Develocity** if the IDE
+offers to configure the live timeline. The Gradle project must use the wrapper,
+JDK 25, and the Gradle build/run delegation described in the repository
+quickstart. The timeline is diagnostic only and is not required for Gradle
+sync or application execution.
+
 | Configuration | Gradle project / main class | Purpose |
 |---|---|---|
 | Squarewise Accounts | `AccountsApplicationKt` / `squarewise.app.accounts.main` | Accounts REST service |

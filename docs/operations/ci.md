@@ -44,6 +44,16 @@ Workflows declare `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'` in their top-leve
 `env` blocks, ensuring all runner steps and composite JavaScript actions run on
 Node 24 ahead of runner deprecation deadlines.
 
+The root Gradle settings apply Develocity Gradle plugin `4.5.0`. Every hosted
+Gradle invocation passes `--scan`, publishes a Build Scan to `scans.gradle.com`,
+and tags it `CI`; CI also disables background upload so the scan is complete
+before the step exits. The workflow accepts Gradle's published terms of use
+non-interactively through `GRADLE_OPTS`. Local builds keep the plugin
+instrumentation for IntelliJ's live timeline but do not publish scans. Build
+Scans can include build metadata, environment details, task output, dependency
+information, and compiler/test failure messages, so scan links and logs must be
+handled as public diagnostic artifacts.
+
 Each verification-matrix job receives isolated PostgreSQL 17 and RabbitMQ 4.3
 service containers. The CI-only RabbitMQ service uses the protocol image rather
 than the management variant because verification and Sonar do not use the

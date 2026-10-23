@@ -6,7 +6,9 @@ Use Kotlin on the JVM, Spring Boot, Gradle Kotlin DSL, Spring MVC for stateful
 REST services, and WebFlux/Spring GraphQL for the database-free BFF. Version
 selection is verified through dependency resolution and centralized in
 `gradle/libs.versions.toml`. The current baseline is Java 25, Kotlin 2.4.20,
-Spring Boot 4.1.1, and Gradle 9.7.1. The earlier Java 26 proposal was superseded;
+Spring Boot 4.1.1, Gradle 9.8.0, and Develocity Gradle plugin 4.5.0. The
+Develocity version is kept in `gradle.properties` because settings plugins are
+resolved before the project version catalog is available. The earlier Java 26 proposal was superseded;
 future baseline changes require a separately verified technology decision.
 
 ## Persistence

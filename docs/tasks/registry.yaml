@@ -8173,6 +8173,10 @@
         "tools/ci/changed_scope.py",
         "tests/tools/test_changed_scope.py",
         "docs/operations/ci.md",
+        "docs/operations/intellij.md",
+        "docs/implementation/technology-decisions.md",
+        "settings.gradle.kts",
+        "gradle.properties",
         "docs/tasks/details/OPS-32.md",
         "docs/tasks/registry.yaml",
         "docs/tasks/board.md",
@@ -8184,6 +8188,7 @@
         "Master and manual master runs select the complete verification matrix and all E2E streams.",
         "The E2E gate evaluates selected streams only, does not fail on intentional skips, and fails on selected, preflight, or artifact failures.",
         "Global repository-wide checks remain explicitly documented as global checks.",
+        "The Gradle build applies Develocity plugin 4.5.0; CI Gradle invocations publish tagged Build Scans without affecting local publication behavior.",
         "Local scope tests, typed tooling checks, workflow parsing, contract validation, and hosted scenario evidence are recorded."
       ],
       "validation_commands": [
@@ -8198,6 +8203,7 @@
         "Changed-scope resolver and focused tests implemented; current local revalidation passes all 5 scope tests, mypy for tools/ci and its tests, and workflow YAML parsing. Contract/public-surface checks pass separately; hosted PR, branch, and master scenario evidence remains required.",
         "The reusable E2E gate now delegates its selected-result decision to typed tools/ci/e2e_gate.py. Three focused tests prove unselected skipped streams are neutral and not reported as passed, while selected-stream, shared preflight, and artifact-preparation failures remain fatal; mypy and all workflow YAML parsing pass.",
         "Fixed the first-push fallback by keeping its diagnostic on the step log instead of appending prose to GITHUB_OUTPUT; only machine-readable output records are emitted to the GitHub Actions output file. Native path filters remain insufficient for reverse Gradle-dependent and E2E-stream selection.",
+        "Applied Develocity Gradle plugin 4.5.0 at the settings level; CI Gradle invocations pass --scan with synchronous upload and CI tagging, while local builds do not publish scans. Local Gradle help/test, workflow YAML validation, contract/public-surface validation, and git diff --check pass; hosted Build Scan links require a post-commit GitHub Actions run.",
         "Hosted PR, branch, and master scenario evidence remains required before status can become done."
       ],
       "reviewer": "/root",
