@@ -39,6 +39,18 @@ class LiveUpdateFanoutTest {
     }
 
     @Test
+    fun `expiry signal completes at the exact deadline`() {
+        val clock = MutableClock()
+        val fanout = LiveUpdateFanout(clock = clock, subscriptionTtl = Duration.ofSeconds(1))
+        val subscription = fanout.subscribe("user-1", "group-1")
+        clock.advance(Duration.ofSeconds(1))
+
+        fanout.expirySignal(subscription.id).block(Duration.ofSeconds(1))
+
+        assertThat(fanout.revokeUser("user-1")).isZero()
+    }
+
+    @Test
     fun `subscribe removes expired entries before enforcing the user limit`() {
         val clock = MutableClock()
         val fanout = LiveUpdateFanout(
@@ -92,6 +104,20 @@ class LiveUpdateFanoutTest {
     }
 
     @Test
+    fun `group revocation leaves subscriptions for other groups active`() {
+        val fanout = LiveUpdateFanout()
+        val revoked = fanout.subscribe("user-1", "group-1")
+        val retained = fanout.subscribe("user-1", "group-2")
+
+        assertThat(fanout.revokeUserFromGroup("user-1", "group-1")).isEqualTo(1)
+        assertThat(fanout.revocationSignal(revoked.id).block(Duration.ofSeconds(1))).isNull()
+
+        fanout.emitInvalidation("group-2", 1)
+        assertThat(fanout.invalidations(retained.id).take(1).blockFirst(Duration.ofSeconds(1))?.groupId)
+            .isEqualTo("group-2")
+    }
+
+    @Test
     fun `revokeUser removes every active subscription for the user`() {
         val fanout = LiveUpdateFanout()
         val first = fanout.subscribe("user-1", "group-1")
@@ -106,6 +132,7 @@ class LiveUpdateFanoutTest {
     fun `rejects invalid configuration`() {
         assertThrows<IllegalArgumentException> { LiveUpdateFanout(0) }
         assertThrows<IllegalArgumentException> { LiveUpdateFanout(subscriptionTtl = Duration.ZERO) }
+        assertThrows<IllegalArgumentException> { LiveUpdateFanout(subscriptionTtl = Duration.ofSeconds(-1)) }
         assertThrows<IllegalArgumentException> { LiveUpdateFanout(maxSubscriptionsPerUser = 0) }
     }
 
@@ -143,6 +170,36 @@ class LiveUpdateFanoutTest {
 
         assertThat(fanout.revocationSignal(first.id).block(Duration.ofSeconds(1))).isNull()
         fanout.subscribe("user-1", "group-3")
+    }
+
+    @Test
+    fun `sweep leaves a live subscription and ignores stale queue entries`() {
+        val clock = MutableClock()
+        val fanout = LiveUpdateFanout(clock = clock, subscriptionTtl = Duration.ofSeconds(1))
+        val removed = fanout.subscribe("removed", "removed-group")
+        fanout.unsubscribe(removed.id)
+
+        clock.advance(Duration.ofSeconds(2))
+        val active = fanout.subscribe("active", "active-group")
+        fanout.sweepExpired()
+
+        assertThat(fanout.revokeUser("active")).isEqualTo(1)
+        assertThat(fanout.revocationSignal(active.id).block(Duration.ofSeconds(1))).isNull()
+    }
+
+    @Test
+    fun `empty lookups and future sweep are harmless`() {
+        val clock = MutableClock()
+        val fanout = LiveUpdateFanout(clock = clock)
+        val subscription = fanout.subscribe("user-1", "group-1")
+
+        assertThat(fanout.invalidations("missing").blockFirst(Duration.ofMillis(20))).isNull()
+        assertThat(fanout.revocationSignal("missing").block(Duration.ofMillis(20))).isNull()
+        fanout.emitInvalidation("missing", 1)
+        fanout.sweepExpired()
+        assertThat(fanout.revokeUserFromGroup("user-1", "group-1")).isEqualTo(1)
+        assertThat(fanout.revocationSignal(subscription.id).block(Duration.ofSeconds(1))).isNull()
+        fanout.unsubscribe("missing")
     }
 
     @Test
@@ -204,6 +261,23 @@ class LiveUpdateFanoutTest {
     }
 
     @Test
+    fun `bounded sweep stops at its maximum inspection count`() {
+        val clock = MutableClock()
+        val fanout = LiveUpdateFanout(clock = clock, subscriptionTtl = Duration.ofSeconds(1))
+        repeat(1_001) { index ->
+            fanout.subscribe("sweep-user-$index", "sweep-group-$index")
+        }
+        clock.advance(Duration.ofSeconds(2))
+
+        fanout.sweepExpired()
+
+        val remaining = (0..1_000).count { index ->
+            fanout.revokeUser("sweep-user-$index") == 1
+        }
+        assertThat(remaining).isEqualTo(1)
+    }
+
+    @Test
     fun `queue overflow revokes the subscription`() {
         val fanout = LiveUpdateFanout(queueCapacity = 1)
         val subscription = fanout.subscribe("user-1", "group-1")
@@ -212,6 +286,40 @@ class LiveUpdateFanoutTest {
         fanout.emitInvalidation("group-1", 2)
 
         assertThat(fanout.revocationSignal(subscription.id).block(Duration.ofSeconds(1))).isNull()
+    }
+
+    @Test
+    fun `cancelled per-subscription stream is revoked on the next invalidation`() {
+        val fanout = LiveUpdateFanout()
+        val subscription = fanout.subscribe("user-1", "group-1")
+        val stream = fanout.invalidations(subscription.id).subscribe()
+        stream.dispose()
+
+        fanout.emitInvalidation("group-1", 1)
+
+        assertThat(fanout.revocationSignal(subscription.id).block(Duration.ofSeconds(1))).isNull()
+    }
+
+    @Test
+    fun `concurrent invalidations reserve bounded pending capacity safely`() {
+        val fanout = LiveUpdateFanout(queueCapacity = 1_024)
+        fanout.subscribe("user-1", "group-1")
+        val start = CountDownLatch(1)
+        val executor = Executors.newFixedThreadPool(16)
+        try {
+            val attempts = (1..16).map {
+                executor.submit {
+                    start.await()
+                    repeat(64) { fanout.emitInvalidation("group-1", it.toLong()) }
+                }
+            }
+            start.countDown()
+            attempts.forEach { it.get(2, TimeUnit.SECONDS) }
+        } finally {
+            executor.shutdownNow()
+        }
+
+        assertThat(fanout.revokeUser("user-1")).isBetween(0, 1)
     }
 
     private class MutableClock(private var current: Instant = Instant.EPOCH) : Clock() {

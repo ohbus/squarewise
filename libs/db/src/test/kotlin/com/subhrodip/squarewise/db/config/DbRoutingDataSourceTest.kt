@@ -113,6 +113,39 @@ class DbRoutingDataSourceTest {
         }
     }
 
+    @Test
+    fun `named writer target uses the configured writer pool`() {
+        val primary = mock(DataSource::class.java)
+        val shard = mock(DataSource::class.java)
+        val connection = mock(Connection::class.java)
+        `when`(shard.connection).thenReturn(connection)
+        val routing = DbRoutingDataSource(primary, emptyMap(), writers = mapOf("shard-1" to shard))
+
+        DbContextHolder.withContext(
+            DbExecutionContext("expense.create", DbOperationKind.COMMAND, targetWriter = "shard-1")
+        ) {
+            assertSame(connection, routing.getConnection())
+        }
+    }
+
+    @Test
+    fun `blank writer target keeps the primary writer pool`() {
+        val primary = mock(DataSource::class.java)
+        val connection = mock(Connection::class.java)
+        `when`(primary.connection).thenReturn(connection)
+        val routing = DbRoutingDataSource(
+            primary,
+            emptyMap(),
+            writers = mapOf("shard-1" to mock(DataSource::class.java))
+        )
+
+        DbContextHolder.withContext(
+            DbExecutionContext("expense.create", DbOperationKind.COMMAND, targetWriter = " ")
+        ) {
+            assertSame(connection, routing.getConnection())
+        }
+    }
+
     /** Missing reader names and reader JDBC failures fail closed with observable diagnostics. */
     @Test
     fun `reader acquisition rejects unknown and failed pools`() {

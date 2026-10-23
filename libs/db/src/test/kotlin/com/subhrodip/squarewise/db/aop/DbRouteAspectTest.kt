@@ -260,13 +260,15 @@ class DbRouteAspectTest {
             // Invariant: must remain on writer despite readBlank being @DbReader
             assertFalse(ctx.readerEligible)
             assertEquals(DbOperationKind.COMMAND, ctx.kind)
+            assertEquals("outer-writer", ctx.targetWriter)
             "pinned-to-writer"
         }
 
         val writerContext = DbExecutionContext(
             operationName = "outer.command",
             kind = DbOperationKind.COMMAND,
-            readerEligible = false
+            readerEligible = false,
+            targetWriter = "outer-writer"
         )
         val result = DbContextHolder.withContext(writerContext) {
             aspect.aroundRoutedMethod(joinPoint)
@@ -301,6 +303,35 @@ class DbRouteAspectTest {
             aspect.aroundRoutedMethod(joinPoint)
         }
         assertEquals("inherited-target", result)
+    }
+
+    @Test
+    fun `inherits parent targetWriter for an eligible inner query`() {
+        val target = BlankTargetReaderService()
+        val method = BlankTargetReaderService::class.java.getMethod("readBlank")
+        val joinPoint = mock(ProceedingJoinPoint::class.java)
+        val signature = mock(MethodSignature::class.java)
+
+        `when`(joinPoint.signature).thenReturn(signature)
+        `when`(signature.method).thenReturn(method)
+        `when`(joinPoint.target).thenReturn(target)
+        `when`(joinPoint.proceed()).thenAnswer {
+            assertEquals("writer-shard", DbContextHolder.current().targetWriter)
+            "inherited-writer-target"
+        }
+
+        val result = DbContextHolder.withContext(
+            DbExecutionContext(
+                "outer.read",
+                DbOperationKind.QUERY,
+                readerEligible = true,
+                targetWriter = "writer-shard"
+            )
+        ) {
+            aspect.aroundRoutedMethod(joinPoint)
+        }
+
+        assertEquals("inherited-writer-target", result)
     }
 
     @Test
@@ -405,6 +436,11 @@ class DbRouteAspectTest {
         }
     }
 
+    @DbWriter(target = "class-writer")
+    open class ClassAnnotatedTargetWriter {
+        open fun command(): String = "from-target-writer"
+    }
+
     @DbRouteContext(operation = "custom.op", kind = DbOperationKind.QUERY, readerEligible = true, targetReader = "")
     open class ClassAnnotatedRoute {
         open fun routed(): String {
@@ -414,6 +450,17 @@ class DbRouteAspectTest {
             assertEquals(null, ctx.targetReader)
             return "from-class-route"
         }
+    }
+
+    @DbRouteContext(
+        operation = "custom.targeted",
+        kind = DbOperationKind.QUERY,
+        readerEligible = true,
+        targetReader = "class-reader",
+        targetWriter = "class-writer"
+    )
+    open class ClassAnnotatedTargetRoute {
+        open fun routed(): String = "from-targeted-route"
     }
 
     @Transactional(readOnly = false)
@@ -436,6 +483,21 @@ class DbRouteAspectTest {
         }
     }
 
+    @Transactional(readOnly = true)
+    open class ClassReadOnlyService {
+        open fun query(): String = "class-read-only"
+    }
+
+    interface UnrelatedServiceInterface {
+        fun unrelated(): String
+    }
+
+    class UnrelatedService : UnrelatedServiceInterface {
+        override fun unrelated(): String = "unrelated"
+
+        fun unannotated(): String = "unannotated"
+    }
+
     @Test
     fun `inherits DbWriter from class level`() {
         val target = ClassAnnotatedWriter()
@@ -450,6 +512,24 @@ class DbRouteAspectTest {
 
         val result = aspect.aroundRoutedMethod(joinPoint)
         assertEquals("from-class-writer", result)
+    }
+
+    @Test
+    fun `inherits targeted DbWriter from class level`() {
+        val target = ClassAnnotatedTargetWriter()
+        val method = ClassAnnotatedTargetWriter::class.java.getMethod("command")
+        val joinPoint = mock(ProceedingJoinPoint::class.java)
+        val signature = mock(MethodSignature::class.java)
+
+        `when`(joinPoint.signature).thenReturn(signature)
+        `when`(signature.method).thenReturn(method)
+        `when`(joinPoint.target).thenReturn(target)
+        `when`(joinPoint.proceed()).thenAnswer {
+            assertEquals("class-writer", DbContextHolder.current().targetWriter)
+            target.command()
+        }
+
+        assertEquals("from-target-writer", aspect.aroundRoutedMethod(joinPoint))
     }
 
     @Test
@@ -469,6 +549,26 @@ class DbRouteAspectTest {
     }
 
     @Test
+    fun `inherits targeted DbRouteContext from class level`() {
+        val target = ClassAnnotatedTargetRoute()
+        val method = ClassAnnotatedTargetRoute::class.java.getMethod("routed")
+        val joinPoint = mock(ProceedingJoinPoint::class.java)
+        val signature = mock(MethodSignature::class.java)
+
+        `when`(joinPoint.signature).thenReturn(signature)
+        `when`(signature.method).thenReturn(method)
+        `when`(joinPoint.target).thenReturn(target)
+        `when`(joinPoint.proceed()).thenAnswer {
+            val context = DbContextHolder.current()
+            assertEquals("class-reader", context.targetReader)
+            assertEquals("class-writer", context.targetWriter)
+            target.routed()
+        }
+
+        assertEquals("from-targeted-route", aspect.aroundRoutedMethod(joinPoint))
+    }
+
+    @Test
     fun `inherits Transactional read-write from class level`() {
         val target = SampleTransactionalService()
         val method = SampleTransactionalService::class.java.getMethod("execute")
@@ -482,6 +582,24 @@ class DbRouteAspectTest {
 
         val result = aspect.aroundRoutedMethod(joinPoint)
         assertEquals("from-tx", result)
+    }
+
+    @Test
+    fun `class-level read-only transaction preserves the default writer context`() {
+        val target = ClassReadOnlyService()
+        val method = ClassReadOnlyService::class.java.getMethod("query")
+        val joinPoint = mock(ProceedingJoinPoint::class.java)
+        val signature = mock(MethodSignature::class.java)
+
+        `when`(joinPoint.signature).thenReturn(signature)
+        `when`(signature.method).thenReturn(method)
+        `when`(joinPoint.target).thenReturn(target)
+        `when`(joinPoint.proceed()).thenAnswer {
+            assertFalse(DbContextHolder.current().readerEligible)
+            target.query()
+        }
+
+        assertEquals("class-read-only", aspect.aroundRoutedMethod(joinPoint))
     }
 
     @Test
@@ -618,6 +736,35 @@ class DbRouteAspectTest {
 
         val result = aspect.aroundRoutedMethod(joinPoint)
         assertEquals("direct-proceed", result)
+    }
+
+    @Test
+    fun `handles a method signature without a reflected method`() {
+        val target = UnrelatedService()
+        val joinPoint = mock(ProceedingJoinPoint::class.java)
+        val signature = mock(MethodSignature::class.java)
+
+        `when`(joinPoint.signature).thenReturn(signature)
+        `when`(signature.method).thenReturn(null)
+        `when`(joinPoint.target).thenReturn(target)
+        `when`(joinPoint.proceed()).thenAnswer { target.unannotated() }
+
+        assertEquals("unannotated", aspect.aroundRoutedMethod(joinPoint))
+    }
+
+    @Test
+    fun `unrelated interfaces are ignored during annotation hierarchy search`() {
+        val target = UnrelatedService()
+        val method = UnrelatedService::class.java.getMethod("unannotated")
+        val joinPoint = mock(ProceedingJoinPoint::class.java)
+        val signature = mock(MethodSignature::class.java)
+
+        `when`(joinPoint.signature).thenReturn(signature)
+        `when`(signature.method).thenReturn(method)
+        `when`(joinPoint.target).thenReturn(target)
+        `when`(joinPoint.proceed()).thenAnswer { target.unannotated() }
+
+        assertEquals("unannotated", aspect.aroundRoutedMethod(joinPoint))
     }
 
     @DbWriter("superclass.writer")

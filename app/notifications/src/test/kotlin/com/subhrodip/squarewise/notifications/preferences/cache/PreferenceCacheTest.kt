@@ -6,7 +6,11 @@ import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import java.time.Clock
 import java.time.Duration
+import java.time.Instant
+import java.time.ZoneId
+import java.time.ZoneOffset
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -109,6 +113,37 @@ class PreferenceCacheTest {
     }
 
     @Test
+    fun `cleanup retains markers for active loads and removes stale markers`() {
+        val clock = MutableClock()
+        var nanos = 0L
+        val deterministicCache = PreferenceCache(
+            ttl = Duration.ofSeconds(10),
+            maxEntries = 100,
+            clock = clock,
+            nanoTime = { nanos }
+        )
+        val calls = AtomicInteger(0)
+        val prefs = NotificationPreferences(emailEnabled = true)
+
+        deterministicCache.get("in-flight") {
+            calls.incrementAndGet()
+            clock.advance(Duration.ofSeconds(1))
+            nanos = 2_000_000_000L
+            deterministicCache.invalidate("in-flight")
+            prefs
+        }
+        deterministicCache.get("in-flight") { calls.incrementAndGet(); prefs }
+        assertEquals(2, calls.get())
+
+        clock.advance(Duration.ofSeconds(11))
+        nanos = 4_000_000_000L
+        deterministicCache.get("cleanup-trigger") { prefs }
+        deterministicCache.get("in-flight") { calls.incrementAndGet(); prefs }
+        deterministicCache.get("in-flight") { calls.incrementAndGet(); prefs }
+        assertEquals(3, calls.get())
+    }
+
+    @Test
     fun `reloads preferences when cached entry has expired`() {
         val shortCache = PreferenceCache(ttl = Duration.ofMillis(5), maxEntries = 100)
         val prefs = NotificationPreferences(emailEnabled = true)
@@ -138,5 +173,17 @@ class PreferenceCacheTest {
         expiringCache.get("exp-3") { calls.incrementAndGet(); prefs }
         expiringCache.get("exp-4") { calls.incrementAndGet(); prefs }
         assertEquals(2, calls.get())
+    }
+
+    private class MutableClock(private var current: Instant = Instant.EPOCH) : Clock() {
+        override fun getZone(): ZoneId = ZoneOffset.UTC
+
+        override fun withZone(zone: ZoneId): Clock = this
+
+        override fun instant(): Instant = current
+
+        fun advance(duration: Duration) {
+            current = current.plus(duration)
+        }
     }
 }

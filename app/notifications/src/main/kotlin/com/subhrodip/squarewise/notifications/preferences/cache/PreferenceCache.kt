@@ -3,6 +3,7 @@ package com.subhrodip.squarewise.notifications.preferences.cache
 import com.subhrodip.squarewise.notifications.preferences.model.NotificationPreferences
 import org.springframework.stereotype.Component
 import java.time.Duration
+import java.time.Clock
 import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
@@ -15,7 +16,9 @@ import java.util.concurrent.atomic.AtomicLong
 @Component
 class PreferenceCache(
     private val ttl: Duration = Duration.ofSeconds(60),
-    private val maxEntries: Int = 10_000
+    private val maxEntries: Int = 10_000,
+    private val clock: Clock = Clock.systemUTC(),
+    private val nanoTime: () -> Long = System::nanoTime
 ) {
     private data class Entry(val preferences: NotificationPreferences, val expiresAt: Instant) {
         fun isExpired(now: Instant): Boolean = now.isAfter(expiresAt)
@@ -34,13 +37,13 @@ class PreferenceCache(
      * @return resolved [NotificationPreferences].
      */
     fun get(subject: String, loader: () -> NotificationPreferences): NotificationPreferences {
-        val now = Instant.now()
+        val now = Instant.now(clock)
         cleanupInvalidationTimestamps(now)
         val cached = cache[subject]
         if (cached != null && !cached.isExpired(now)) {
             return cached.preferences
         }
-        val loadStart = Instant.now()
+        val loadStart = Instant.now(clock)
         inFlightLoads.add(subject)
         try {
             val computed = loader()
@@ -48,7 +51,7 @@ class PreferenceCache(
             cache.compute(subject) { _, existing ->
                 val invalidatedAt = invalidationTimestamps[subject]
                 if (invalidatedAt == null || !invalidatedAt.isAfter(loadStart)) {
-                    Entry(computed, Instant.now().plus(ttl))
+                    Entry(computed, Instant.now(clock).plus(ttl))
                 } else {
                     existing
                 }
@@ -65,7 +68,7 @@ class PreferenceCache(
      * @param subject user subject identifier.
      */
     fun invalidate(subject: String) {
-        val now = Instant.now()
+        val now = Instant.now(clock)
         invalidationTimestamps[subject] = now
         cache.remove(subject)
         cleanupInvalidationTimestamps(now)
@@ -79,7 +82,7 @@ class PreferenceCache(
     }
 
     private fun evictIfOversized() {
-        val now = Instant.now()
+        val now = Instant.now(clock)
         cleanupInvalidationTimestamps(now)
         if (cache.size > maxEntries) {
             cache.entries.removeIf { it.value.isExpired(now) }
@@ -91,7 +94,7 @@ class PreferenceCache(
     }
 
     private fun cleanupInvalidationTimestamps(now: Instant) {
-        val nowNanos = System.nanoTime()
+        val nowNanos = nanoTime()
         val lastCleanup = lastCleanupNanos.get()
         if (lastCleanup != 0L &&
             nowNanos - lastCleanup < CLEANUP_INTERVAL_NANOS
