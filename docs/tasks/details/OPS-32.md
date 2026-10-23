@@ -90,8 +90,9 @@ The build applies `com.gradle.develocity` version `4.5.0` in
 resolves settings plugins before generating the project version-catalog accessors.
 CI passes `--scan` to each Gradle invocation, accepts the published Gradle terms
 of use non-interactively, tags scans as `CI`, and waits for upload completion.
-Local builds do not publish scans but retain the plugin instrumentation required
-by IntelliJ's live build timeline.
+Ordinary local builds do not publish scans but retain the plugin instrumentation
+required by IntelliJ's live build timeline; an explicit local `--scan` is an
+opt-in request to publish one.
 
 ## Implementation note
 

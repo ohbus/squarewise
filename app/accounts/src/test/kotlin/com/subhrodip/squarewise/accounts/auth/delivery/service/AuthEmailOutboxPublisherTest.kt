@@ -7,6 +7,7 @@ import java.time.Instant
 import java.util.UUID
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.`when`
@@ -30,6 +31,23 @@ class AuthEmailOutboxPublisherTest {
     private val lease = Duration.ofSeconds(30)
     private val retryAfter = Duration.ofSeconds(10)
     private val eventId = UUID.fromString("00000000-0000-0000-0000-000000000123")
+
+    @Test
+    fun `publisher requires a positive confirmation timeout`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            AuthEmailOutboxPublisher(
+                outbox = mock(AuthEmailOutboxService::class.java),
+                rabbitTemplate = RecordingRabbitTemplate(),
+                objectMapper = ObjectMapper(),
+                exchange = "auth.exchange",
+                routingKey = "auth.email",
+                lease = lease,
+                retryAfter = retryAfter,
+                maximumAttempts = 3,
+                confirmTimeoutMs = 0
+            )
+        }
+    }
 
     /** An empty claim does not touch RabbitMQ or advance any outbox state. */
     @Test

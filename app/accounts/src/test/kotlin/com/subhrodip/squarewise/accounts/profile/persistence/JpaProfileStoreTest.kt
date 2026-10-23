@@ -60,6 +60,20 @@ class JpaProfileStoreTest {
     }
 
     @Test
+    fun `create populates the cache when configured and still works without one`() {
+        val accountId = UUID.randomUUID()
+        val entity = ProfileEntity(accountId, "created", "Created", "UTC", "EUR")
+        `when`(repository.save(any(ProfileEntity::class.java))).thenReturn(entity)
+
+        assertEquals(
+            ProfileResponse(accountId, "Created", "UTC", "EUR"),
+            cachedStore.create(accountId, "created", "Created", "UTC", "EUR")
+        )
+        uncachedStore.create(UUID.randomUUID(), "created-2", "Created 2", "UTC", "USD")
+        verify(cache).put(ProfileResponse(accountId, "Created", "UTC", "EUR"))
+    }
+
+    @Test
     fun `findByIds resolves batch when all entries are cached`() {
         val id1 = UUID.randomUUID()
         val id2 = UUID.randomUUID()
@@ -71,6 +85,28 @@ class JpaProfileStoreTest {
 
         val result = cachedStore.findByIds(listOf(id1, id2))
         assertEquals(listOf(resp1, resp2), result)
+        verify(repository, never()).findAllById(anyList())
+    }
+
+    @Test
+    fun `findByIds loads cache misses and preserves requested order`() {
+        val cachedId = UUID.randomUUID()
+        val missingId = UUID.randomUUID()
+        val cached = ProfileResponse(cachedId, "Alice", "UTC", "USD")
+        val entity = ProfileEntity(missingId, "bob", "Bob", "UTC", "EUR")
+        `when`(cache.peekByAccountId(cachedId)).thenReturn(cached)
+        `when`(cache.peekByAccountId(missingId)).thenReturn(null)
+        `when`(repository.findAllById(eq(listOf(missingId)))).thenReturn(listOf(entity))
+
+        val result = cachedStore.findByIds(listOf(cachedId, missingId))
+
+        assertEquals(listOf(cached, ProfileResponse(missingId, "Bob", "UTC", "EUR")), result)
+        verify(cache).put(ProfileResponse(missingId, "Bob", "UTC", "EUR"))
+    }
+
+    @Test
+    fun `findByIds returns empty without querying the repository for an empty request`() {
+        assertEquals(emptyList<ProfileResponse>(), cachedStore.findByIds(emptyList()))
         verify(repository, never()).findAllById(anyList())
     }
 

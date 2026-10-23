@@ -15,7 +15,7 @@ plugins {
     id("com.gradle.develocity")
 }
 
-val isCi = !System.getenv("CI").isNullOrEmpty()
+val isCi = System.getenv("CI")?.equals("true", ignoreCase = true) == true
 
 develocity {
     buildScan {

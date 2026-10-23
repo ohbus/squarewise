@@ -48,8 +48,9 @@ The root Gradle settings apply Develocity Gradle plugin `4.5.0`. Every hosted
 Gradle invocation passes `--scan`, publishes a Build Scan to `scans.gradle.com`,
 and tags it `CI`; CI also disables background upload so the scan is complete
 before the step exits. The workflow accepts Gradle's published terms of use
-non-interactively through `GRADLE_OPTS`. Local builds keep the plugin
-instrumentation for IntelliJ's live timeline but do not publish scans. Build
+non-interactively through `GRADLE_OPTS`. Ordinary local builds keep the plugin
+instrumentation for IntelliJ's live timeline but do not publish scans; an
+explicit local `--scan` is an opt-in request to publish one. Build
 Scans can include build metadata, environment details, task output, dependency
 information, and compiler/test failure messages, so scan links and logs must be
 handled as public diagnostic artifacts.
@@ -102,6 +103,9 @@ workflow YAML parsing, strict Python typing via `uv run --frozen --no-build mypy
 `git diff --check`. The nine matrix entries are capped at four concurrent jobs
 because each entry owns PostgreSQL and RabbitMQ service containers; this avoids
 hosted-runner broker startup contention without removing or changing any shard.
+The Expense Core matrix shard also runs the opt-in PostgreSQL tests against the
+`squarewise_expense_core` service database with `SQUAREWISE_POSTGRES_TESTS=true`;
+other shards retain their normal test configuration.
 Jobs use Microsoft Build of OpenJDK. Python dependencies
 and tooling are deterministically managed via `pyproject.toml` and `uv.lock`.
 CI workflows install dependencies via the immutable commit

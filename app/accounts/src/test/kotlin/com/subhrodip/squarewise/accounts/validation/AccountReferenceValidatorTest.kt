@@ -18,7 +18,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
-import org.mockito.Mockito.verifyNoInteractions
 import org.mockito.Mockito.`when`
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -345,6 +344,33 @@ class AccountReferenceValidatorTest {
     }
 
     @Test
+    fun `validateActiveAccount ignores stale cache when deletion is requested`() {
+        val cache = ProfileCache()
+        val cachedValidator = AccountReferenceValidator(profileRepository, sessionRepository, cache)
+        val accountId = UUID.randomUUID()
+        cache.put(
+            ProfileResponse(accountId, "Cached", "UTC", "EUR"),
+            "alice@example.com"
+        )
+        val deletedProfile = ProfileEntity(
+            accountId = accountId,
+            subject = "alice@example.com",
+            displayName = "Alice",
+            timezone = "UTC",
+            defaultCurrency = "EUR",
+            deletionRequested = true
+        )
+        `when`(profileRepository.findById(accountId)).thenReturn(Optional.of(deletedProfile))
+
+        val ex = assertThrows(AccountsDomainException::class.java) {
+            cachedValidator.validateActiveAccount(accountId)
+        }
+
+        assertSame(AccountsErrors.PROFILE_REQUEST_INVALID, ex.definition)
+        verify(profileRepository).findById(accountId)
+    }
+
+    @Test
     fun `validateActiveSubject populates ProfileCache on success`() {
         val cache = ProfileCache()
         val cachedValidator = AccountReferenceValidator(profileRepository, sessionRepository, cache)
@@ -387,17 +413,19 @@ class AccountReferenceValidatorTest {
     }
 
     @Test
-    fun `validateActiveAccount returns ProfileEntity from cache without querying profileRepository`() {
+    fun `validateActiveAccount resolves the authoritative profile when cache has a profile`() {
         val cache = ProfileCache()
         val cachedValidator = AccountReferenceValidator(profileRepository, sessionRepository, cache)
         val accountId = UUID.randomUUID()
         cache.put(ProfileResponse(accountId, "Cached User", "UTC", "EUR"), "cached-sub@example.com")
+        val profile = ProfileEntity(accountId, "cached-sub@example.com", "Authoritative User", "UTC", "EUR", false)
+        `when`(profileRepository.findById(accountId)).thenReturn(Optional.of(profile))
 
         val result = cachedValidator.validateActiveAccount(accountId)
         assertEquals(accountId, result.accountId)
         assertEquals("cached-sub@example.com", result.subject)
-        assertEquals("Cached User", result.displayName)
+        assertEquals("Authoritative User", result.displayName)
         assertFalse(result.deletionRequested)
-        verifyNoInteractions(profileRepository)
+        verify(profileRepository).findById(accountId)
     }
 }

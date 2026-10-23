@@ -79,11 +79,13 @@ class GroupAccessCacheTest {
     @Test
     fun `invalidateGroup evicts status and memberships for target group`() {
         val groupId = UUID.randomUUID()
+        val otherGroupId = UUID.randomUUID()
         val subject = "user-1"
         val memberCalls = AtomicInteger(0)
         val statusCalls = AtomicInteger(0)
 
         cache.isMember(groupId, subject) { memberCalls.incrementAndGet(); true }
+        cache.isMember(otherGroupId, subject) { true }
         cache.groupStatus(groupId) { statusCalls.incrementAndGet(); "ACTIVE" }
 
         cache.invalidateGroup(groupId)
@@ -168,6 +170,24 @@ class GroupAccessCacheTest {
         val res3 = cache.activeMemberIds(groupId) { calls.incrementAndGet(); memberIds }
         assertEquals(memberIds, res3)
         assertEquals(2, calls.get())
+    }
+
+    @Test
+    fun `peekActiveMemberIds returns only a current cached member set`() {
+        val groupId = UUID.randomUUID()
+        val memberIds = setOf(UUID.randomUUID())
+
+        assertEquals(null, cache.peekActiveMemberIds(groupId))
+        cache.putActiveMemberIds(groupId, memberIds)
+        assertEquals(memberIds, cache.peekActiveMemberIds(groupId))
+
+        cache.invalidateMembers(groupId)
+        assertEquals(null, cache.peekActiveMemberIds(groupId))
+
+        val expiringCache = GroupAccessCache(ttl = Duration.ofMillis(1), maxEntries = 10)
+        expiringCache.putActiveMemberIds(groupId, memberIds)
+        Thread.sleep(10)
+        assertEquals(null, expiringCache.peekActiveMemberIds(groupId))
     }
 
     @Test
@@ -392,6 +412,16 @@ class GroupAccessCacheTest {
         var dLoads = 0
         cache.groupDetails(groupId) { dLoads++; groupDetailsValue(groupId) }
         assertEquals(1, dLoads)
+
+        val entity = GroupEntity(groupId, "Trip", "TRIP", "EUR", "ACTIVE", 0L)
+        val e1 = cache.groupEntity(groupId) {
+            cache.invalidateGroup(groupId)
+            entity
+        }
+        assertEquals(entity, e1)
+        var eLoads = 0
+        cache.groupEntity(groupId) { eLoads++; entity }
+        assertEquals(1, eLoads)
     }
 
     @Test

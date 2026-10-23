@@ -64,10 +64,19 @@ class ExpenseCommandStoreTest {
         store.create(gId, sampleRecord, "unchecked-test-fixture", validateParticipants = false)
         assertEquals(false, createValidation)
 
+        store.create(gId, sampleRecord, "explicit-actor", actorSubject = "actor")
+        assertEquals("actor", createActor)
+
         store.update(gId, eId, sampleRecord)
         assertEquals(null, updateActor)
 
+        store.update(gId, eId, sampleRecord, actorSubject = "actor")
+        assertEquals("actor", updateActor)
+
         store.delete(gId, eId, 1L)
         assertEquals(null, deleteActor)
+
+        store.delete(gId, eId, 1L, actorSubject = "actor")
+        assertEquals("actor", deleteActor)
     }
 }

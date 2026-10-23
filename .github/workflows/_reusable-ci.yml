@@ -182,10 +182,10 @@ jobs:
     services:
       postgres:
         image: postgres:17
-        env: { POSTGRES_DB: squarewise, POSTGRES_USER: squarewise, POSTGRES_PASSWORD: squarewise }
+        env: { POSTGRES_DB: squarewise_expense_core, POSTGRES_USER: squarewise, POSTGRES_PASSWORD: squarewise }
         ports: ['5432:5432']
         options: >-
-          --health-cmd="pg_isready -U squarewise -d squarewise"
+          --health-cmd="pg_isready -U squarewise -d squarewise_expense_core"
           --health-interval=5s --health-timeout=5s --health-retries=12
       rabbitmq:
         # Verification only needs the broker protocol and diagnostics; omit the
@@ -220,6 +220,14 @@ jobs:
       - uses: gradle/actions/setup-gradle@b9bee63ef481cc545e4517ec730544a4d8b1dfa0 # v6.4.0
       - name: Build, test, check, and coverage
         run: ./gradlew ${{ matrix.path }}:test ${{ matrix.path }}:check ${{ matrix.path }}:jacocoTestReport --scan --no-daemon
+      - name: Run Expense Core PostgreSQL integration tests
+        if: matrix.path == ':app:expense-core'
+        env:
+          SQUAREWISE_POSTGRES_TESTS: 'true'
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/squarewise_expense_core
+          SPRING_DATASOURCE_USERNAME: squarewise
+          SPRING_DATASOURCE_PASSWORD: squarewise
+        run: ./gradlew :app:expense-core:test --tests '*Postgres*' --rerun-tasks --scan --no-daemon
       - name: Build application artifact
         if: matrix.kind == 'app'
         run: ./gradlew ${{ matrix.path }}:bootJar --scan --no-daemon

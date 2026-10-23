@@ -31,16 +31,30 @@ class DbRoutingDataSource(
 
     override fun getConnection(): Connection {
         val (route, readerName) = routeForCurrentContext()
-        return connection(route, readerName)
+        return connection(route, readerName, retryThroughPolicy = true)
     }
 
     override fun getConnection(username: String?, password: String?): Connection {
         val (route, readerName) = routeForCurrentContext()
-        return connection(route, readerName)
+        return connection(route, readerName, retryThroughPolicy = true)
     }
 
-    /** Returns a connection for an explicit route. */
-    fun connection(route: DbRoute, readerName: String = resolveReaderName()): Connection {
+    /**
+     * Returns a connection for an explicit route.
+     *
+     * Ordinary DataSource acquisition enables one retry through the current routing policy
+     * after a reader acquisition failure; callers selecting a route explicitly remain fail-closed.
+     *
+     * @param route route selected by the caller or current routing policy.
+     * @param readerName reader pool to use when [route] is [DbRoute.READER].
+     * @param retryThroughPolicy whether a reader acquisition failure may re-run normal routing once.
+     * @return an acquired database connection.
+     */
+    fun connection(
+        route: DbRoute,
+        readerName: String = resolveReaderName(),
+        retryThroughPolicy: Boolean = false
+    ): Connection {
         val context = DbContextHolder.current()
         routeGuard.validate(context, route)
         val operation = context.operationName
@@ -70,6 +84,10 @@ class DbRoutingDataSource(
         } catch (failure: SQLException) {
             readerHealth.markFailure(targetName)
             telemetry.failure(targetName)
+            if (retryThroughPolicy) {
+                val (retryRoute, retryReader) = routeForCurrentContext()
+                return connection(retryRoute, retryReader)
+            }
             throw DbPlatformException(PlatformErrors.DATABASE_UNAVAILABLE, cause = failure)
         }
     }
