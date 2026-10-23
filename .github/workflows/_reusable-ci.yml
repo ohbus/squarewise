@@ -42,7 +42,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: Set up isolated Python tooling
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
       - name: Install dependencies from lockfile
         run: uv sync --frozen --no-build
       - name: Calculate changed paths
@@ -96,7 +96,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Set up isolated Python tooling
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
       - name: Install dependencies from lockfile
         run: uv sync --frozen --no-build
       - run: |
@@ -132,7 +132,7 @@ jobs:
       - uses: actions/checkout@v7
         with: { persist-credentials: false }
       - name: Set up isolated Python tooling
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
       - name: Install dependencies from lockfile
         run: uv sync --frozen --no-build
       - name: Set up Java
@@ -215,7 +215,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Set up isolated Python tooling
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
       - uses: actions/setup-java@v6
         with:
           distribution: microsoft
@@ -307,7 +307,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: Set up isolated Python tooling
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
       - uses: actions/setup-java@v6
         with:
           distribution: microsoft
@@ -380,7 +380,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Set up isolated Python tooling
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
       - name: Install dependencies from lockfile
         run: uv sync --frozen --no-build
       - name: Download application JAR artifacts
@@ -529,7 +529,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Set up isolated Python tooling
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
       - name: Install dependencies from lockfile
         run: uv sync --frozen --no-build
       - name: Download application JAR artifacts
@@ -659,7 +659,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Set up isolated Python tooling
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
       - name: Install dependencies from lockfile
         run: uv sync --frozen --no-build
       - name: Download application JAR artifacts
@@ -741,7 +741,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Set up isolated Python tooling
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
       - name: Aggregate parallel E2E results
         run: |
           set -euo pipefail
@@ -781,7 +781,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Set up isolated Python tooling
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
       - name: Aggregate required workflow results
         run: |
           uv run --frozen --no-build python tools/ci/required_ci_gate.py \
