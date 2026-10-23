@@ -26,11 +26,11 @@ The Project uses six statuses: Backlog, Ready, In progress, In review, Waiting,
 and Done. Triage is a label and saved view, not a seventh status. Rejected work
 uses GitHub's `not planned` close reason.
 
-The delivery board uses Status columns. Multiple `area:*` labels classify an
-item across workstreams; filtered views provide stream-specific queues because
-GitHub Projects cannot group a board by a multi-valued custom field. In progress
-and In review each have an informational limit of three items. Waiting items
-require a blocker explanation and a next-review date.
+The delivery board uses Status columns and a multi-select Workstream field, so
+cross-cutting items can appear in every relevant stream. Repository `area:*`
+labels remain useful outside the Project but do not duplicate Project workflow
+state. In progress and In review each have an informational limit of three
+items. Waiting items require a blocker explanation and a next-review date.
 
 Large outcomes use parent epic issues, executable work uses child issues, and
 GitHub blocking relationships represent active dependencies. Pull requests link
