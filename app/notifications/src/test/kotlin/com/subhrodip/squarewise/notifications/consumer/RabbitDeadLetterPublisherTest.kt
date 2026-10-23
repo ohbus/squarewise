@@ -27,14 +27,9 @@ class RabbitDeadLetterPublisherTest {
     fun `publishes a structured dead letter with broker confirmation`() {
         val rabbitTemplate = mock(RabbitTemplate::class.java)
         `when`(
-            rabbitTemplate.invoke<Any?>(
-                @Suppress("UNCHECKED_CAST")
-                (any(RabbitOperations.OperationsCallback::class.java)
-                    ?: RabbitOperations.OperationsCallback<Any?> { null }) as RabbitOperations.OperationsCallback<Any?>
-            )
+            rabbitTemplate.invoke<Any?>(any())
         ).thenAnswer { invocation ->
-            @Suppress("UNCHECKED_CAST")
-            (invocation.getArgument<Any>(0) as RabbitOperations.OperationsCallback<Any?>)
+            invocation.getArgument<RabbitOperations.OperationsCallback<Any?>>(0)
                 .doInRabbit(rabbitTemplate)
         }
         val properties = NotificationMessagingProperties(deadLetterExchange = "squarewise.dlx")
@@ -47,14 +42,9 @@ class RabbitDeadLetterPublisherTest {
     fun `fails when the broker returns the dead letter`() {
         val rabbitTemplate = mock(RabbitTemplate::class.java)
         `when`(
-            rabbitTemplate.invoke<Any?>(
-                @Suppress("UNCHECKED_CAST")
-                (any(RabbitOperations.OperationsCallback::class.java)
-                    ?: RabbitOperations.OperationsCallback<Any?> { null }) as RabbitOperations.OperationsCallback<Any?>
-            )
+            rabbitTemplate.invoke<Any?>(any())
         ).thenAnswer { invocation ->
-            @Suppress("UNCHECKED_CAST")
-            (invocation.getArgument<Any>(0) as RabbitOperations.OperationsCallback<Any?>)
+            invocation.getArgument<RabbitOperations.OperationsCallback<Any?>>(0)
                 .doInRabbit(rabbitTemplate)
         }
         doAnswer { invocation ->

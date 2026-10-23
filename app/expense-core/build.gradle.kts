@@ -32,5 +32,8 @@ dependencies {
     testRuntimeOnly(libs.h2)
 }
 tasks.withType<Test> { useJUnitPlatform() }
+tasks.withType<org.gradle.api.tasks.compile.JavaCompile>().configureEach {
+    options.compilerArgs.add("-Xlint:deprecation")
+}
 base { archivesName.set("squarewise-expense-core") }
 springBoot { mainClass.set("com.subhrodip.squarewise.expensecore.ExpenseCoreApplicationKt") }

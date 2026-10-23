@@ -78,6 +78,9 @@ git diff --check
 ## Implementation Notes and Evidence
 
 - Added the `tools:benchmarks:jmh` module with three JMH benchmark classes and a `run` compatibility task matching the declared validation command.
+- Replaced the unmaintained `me.champeau.jmh` Gradle plugin with a small local JMH task pipeline. The plugin portal still lists `0.7.3` as the latest release, and that release calls Gradle's deprecated `Configuration.setVisible(boolean)` API. The local pipeline compiles the Kotlin JMH source set, invokes JMH's bytecode generator, compiles its generated runners, and preserves the existing `:tools:benchmarks:jmh:run` command without suppressing the Gradle warning.
+- Regenerated the affected Gradle dependency lockfiles, including `tools/benchmarks/jmh/gradle.lockfile` for the direct JMH core, annotation-processor, and bytecode-generator configurations. The benchmark runner remains on JMH 1.37; JDK 25 may still print JMH's own `sun.misc.Unsafe` runtime warning, which is external to Gradle and is not suppressed.
+- Removed project-owned compiler warnings without suppressions: deprecated Spring status enum constants, Kotlin override parameter mismatches, deprecated repository stubs, Mockito callback and typed-query casts, and deprecated Kotlin-generated JPA no-arg constructor calls in the JavaBean compatibility test. Expense Core Java test compilation now enables `-Xlint:deprecation`, and test JVMs enable native access for Netty's required native library path.
 - Added `tests/performance/k6/error_storm_test.js` with explicit baseline and
   storm modes. The storm mode supports a `BASELINE_VALID_P99_MS` input and
   enforces the valid-operation p99 at no more than 105% of that baseline, in
@@ -136,6 +139,14 @@ git diff --check
   fields and zero `setup_data` keys. The bearer token is retained only in
   process-scoped environment state, so `--summary-export` cannot persist it in
   the JSON artifact. The generated local artifact was inspected and removed.
+- The warning-cleanup increment passed the affected Kotlin/Java compilation
+  tasks and the direct JMH runner on JDK 25. The five benchmark results were:
+  catalog lookup 2.246 +/- 0.214 ns/op, decomposition 1.813 +/- 0.155 ns/op,
+  governed exception creation 492.989 +/- 16.279 ns/op, standard exception
+  creation 479.920 +/- 6.680 ns/op, and serialization 0.449 +/- 0.048 us/op.
+  The Gradle Problems report contained no Gradle deprecation from the benchmark
+  module; JMH's own JDK 25 `sun.misc.Unsafe` warning remains visible when the
+  benchmark process starts.
 - ERRC-26 remains in progress until a production-like k6/GC/heap run produces the
   required p99, valid-operation degradation, and stability evidence.
 

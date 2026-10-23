@@ -18,8 +18,8 @@ class AccountIdentityStoreTest {
             issuer = "https://issuer.example.test"
         )
         val store = object : AccountIdentityStore {
-            override fun findByAccountId(requestedAccountId: UUID): AccountIdentity? =
-                identity.takeIf { it.accountId == requestedAccountId }
+            override fun findByAccountId(accountId: UUID): AccountIdentity? =
+                identity.takeIf { it.accountId == accountId }
         }
 
         assertEquals(identity, store.updateEmail(accountId, "new@example.test", verified = true))
@@ -42,7 +42,7 @@ class AccountIdentityStoreTest {
     fun `default lookups fail closed and enrollment builds durable identity`() {
         val accountId = UUID.randomUUID()
         val store = object : AccountIdentityStore {
-            override fun findByAccountId(requestedAccountId: UUID): AccountIdentity? = null
+            override fun findByAccountId(accountId: UUID): AccountIdentity? = null
         }
 
         assertEquals(null, store.findByIssuerAndSubject("issuer", "subject"))
@@ -83,7 +83,7 @@ class AccountIdentityStoreTest {
 
         val updateEmailMethod = defaultImplsClass.getMethod("updateEmail", AccountIdentityStore::class.java, UUID::class.java, String::class.java, Boolean::class.javaPrimitiveType)
         val workingStore = object : AccountIdentityStore {
-            override fun findByAccountId(requestedAccountId: UUID): AccountIdentity = enrolled
+            override fun findByAccountId(accountId: UUID): AccountIdentity = enrolled
         }
         val updated = updateEmailMethod.invoke(null, workingStore, accountId, "new@example.test", true) as AccountIdentity
         assertEquals(accountId, updated.accountId)

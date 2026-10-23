@@ -70,7 +70,9 @@ class GroupMembershipRepositoryContractTest {
             override fun deleteAllInBatch(entities: Iterable<GroupMembershipEntity>) {}
             override fun deleteAllByIdInBatch(ids: Iterable<UUID>) {}
             override fun deleteAllInBatch() {}
+            @Deprecated("Legacy JpaRepository lookup is unused by this contract test.")
             override fun getOne(id: UUID): GroupMembershipEntity = throw UnsupportedOperationException()
+            @Deprecated("Legacy JpaRepository lookup is unused by this contract test.")
             override fun getById(id: UUID): GroupMembershipEntity = throw UnsupportedOperationException()
             override fun getReferenceById(id: UUID): GroupMembershipEntity = throw UnsupportedOperationException()
             override fun <S : GroupMembershipEntity> findAll(example: Example<S>): List<S> = emptyList()

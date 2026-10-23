@@ -195,9 +195,9 @@ class BffReactiveProblemHandlerTest {
 }
 
 private class SemanticInputException : ServerWebInputException("semantic input") {
-    override fun getStatusCode(): HttpStatusCode = HttpStatus.UNPROCESSABLE_ENTITY
+    override fun getStatusCode(): HttpStatusCode = HttpStatusCode.valueOf(422)
 }
 
 private class UnrecognizedInputException : ServerWebInputException("unrecognized input") {
-    override fun getStatusCode(): HttpStatusCode = HttpStatus.I_AM_A_TEAPOT
+    override fun getStatusCode(): HttpStatusCode = HttpStatusCode.valueOf(418)
 }
