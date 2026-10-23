@@ -4,7 +4,7 @@
     "cutover_status": "pending_project_setup",
     "target_authority": "github",
     "repository": "ohbus/squarewise",
-    "project_url": null,
+    "project_url": "https://github.com/users/ohbus/projects/4",
     "issue_map": {
       "OPS-20": "https://github.com/ohbus/squarewise/issues/23",
       "OPS-22": "https://github.com/ohbus/squarewise/issues/24",
@@ -8213,12 +8213,12 @@
         "git diff --check"
       ],
       "evidence": [
-        "Created GitHub epics #20-#22 and task issues #23-#33, including explicit body-based parent and blocking links pending native relationship conversion.",
+        "Created public GitHub Project 4, epics #20-#22, and task issues #23-#33, including explicit body-based parent and blocking links pending native relationship conversion.",
         "Added issue forms, CODEOWNERS, weekly grouped Dependabot updates, and the stable Required CI aggregate with typed unit coverage.",
         "Contract and public-surface validation, GitHub YAML lint, workflow validation, Python type checking, three Required CI unit tests, and git diff checks passed locally."
       ],
       "reviewer": "/root",
-      "blocker": "Project creation and configuration, labels, milestone, native issue relationships, repository settings, and ruleset changes require owner action in GitHub; cutover also waits for the new Required CI check to complete on a hosted pull request."
+      "blocker": "Project field/view/workflow configuration, labels, milestone, native issue relationships, repository settings, and ruleset changes require owner action in GitHub; cutover also waits for the new Required CI check to complete on a hosted pull request."
     },
     {
       "id": "OPS-32",

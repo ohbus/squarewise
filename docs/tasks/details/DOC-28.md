@@ -72,6 +72,9 @@ git diff --check
 - GitHub epics #20-#22 and task issues #23-#33 are created. Body links carry
   hierarchy and blocking semantics until the owner converts them into native
   relationships.
+- The public `Squarewise Delivery` project exists at
+  `https://github.com/users/ohbus/projects/4`; its fields, views, workflows, and
+  item migration remain part of the hosted setup.
 - Local contract and public-surface validation, GitHub YAML lint, workflow
   validation, Python type checking, three aggregate-gate unit tests, and
   whitespace validation pass. Hosted `Required CI` evidence awaits this commit.
