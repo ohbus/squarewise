@@ -75,6 +75,9 @@ git diff --check
 - The public `Squarewise Delivery` project exists at
   `https://github.com/users/ohbus/projects/4`; its fields, views, workflows, and
   item migration remain part of the hosted setup.
+- The Project does not duplicate the stable task ID already carried by issue
+  titles/bodies and the registry mapping. Workstream remains single-select for
+  clear ownership and grouping; labels and child issues cover cross-cutting work.
 - Local contract and public-surface validation, GitHub YAML lint, workflow
   validation, Python type checking, three aggregate-gate unit tests, and
   whitespace validation pass. Hosted `Required CI` evidence awaits this commit.

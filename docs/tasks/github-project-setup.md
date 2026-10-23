@@ -17,7 +17,12 @@ the repository. Add these fields:
 | Size | Single select | XS, S, M, L |
 | Iteration | Iteration | Two-week iterations created only when scheduled |
 | Target date | Date | No default |
-| Task ID | Text | Existing repository ID |
+
+Do not duplicate the stable repository task ID in a Project field. It remains in
+the issue title/body and `registry.yaml` issue map. Keep Workstream single-select
+so every item has one accountable delivery stream and board grouping remains
+unambiguous; represent cross-cutting scope with area labels or linked child
+issues.
 
 Configure views:
 
@@ -51,8 +56,8 @@ Do not create status or priority labels. Create one milestone named
 `Production readiness` without a due date.
 
 Apply `type:epic` to issues #20–#22. Apply `type:task` and the appropriate area
-label to issues #23–#33. Add #20–#33 to the Project, then set the Task ID and
-initial Status from each issue body.
+label to issues #23–#33. Add #20–#33 to the Project, then set the initial Status
+from each issue body.
 
 ## Native hierarchy and dependencies
 
