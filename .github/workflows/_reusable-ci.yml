@@ -182,7 +182,10 @@ jobs:
     services:
       postgres:
         image: postgres:17
-        env: { POSTGRES_DB: squarewise_expense_core, POSTGRES_USER: squarewise, POSTGRES_PASSWORD: squarewise }
+        env:
+          POSTGRES_DB: squarewise_expense_core
+          POSTGRES_USER: squarewise
+          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
         ports: ['5432:5432']
         options: >-
           --health-cmd="pg_isready -U squarewise -d squarewise_expense_core"
@@ -226,7 +229,7 @@ jobs:
           SQUAREWISE_POSTGRES_TESTS: 'true'
           SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/squarewise_expense_core
           SPRING_DATASOURCE_USERNAME: squarewise
-          SPRING_DATASOURCE_PASSWORD: squarewise
+          SPRING_DATASOURCE_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
         run: ./gradlew :app:expense-core:test --tests '*Postgres*' --rerun-tasks --scan --no-daemon
       - name: Build application artifact
         if: matrix.kind == 'app'
@@ -279,7 +282,10 @@ jobs:
     services:
       postgres:
         image: postgres:17
-        env: { POSTGRES_DB: squarewise, POSTGRES_USER: squarewise, POSTGRES_PASSWORD: squarewise }
+        env:
+          POSTGRES_DB: squarewise
+          POSTGRES_USER: squarewise
+          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
         ports: ['5432:5432']
         options: >-
           --health-cmd="pg_isready -U squarewise -d squarewise"
