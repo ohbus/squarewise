@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any, Dict, List
-import yaml  # type: ignore[import-untyped]  # PyYAML ships without inline type stubs
+import yaml
 
 from tools.errors.validate_catalog import (
     validate_catalog,

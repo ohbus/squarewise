@@ -4,7 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Final
 
-import yaml  # type: ignore[import-untyped]  # PyYAML ships without inline type stubs
+import yaml
 
 ROOT: Final[Path] = Path(__file__).resolve().parents[2]
 SOURCE: Final[Path] = ROOT / "contracts/errors/error-catalog.yaml"

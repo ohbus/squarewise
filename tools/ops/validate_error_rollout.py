@@ -8,7 +8,7 @@ import re
 import sys
 from typing import Any
 
-import yaml  # type: ignore[import-untyped]  # PyYAML ships without inline type stubs
+import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 MANIFEST_PATH = ROOT / "infra/deploy/canary/error-rollout-config.yaml"

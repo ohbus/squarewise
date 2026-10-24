@@ -119,7 +119,7 @@ class ValidateCatalogTest(unittest.TestCase):
 
     def test_lifecycle_history_retires_err_12(self) -> None:
         """Verify lifecycle history records ERR-12 retirement without replacement."""
-        import yaml  # type: ignore[import-untyped]
+        import yaml
         lifecycle_path = ROOT / "contracts/errors/lifecycle-history.yaml"
         self.assertTrue(lifecycle_path.exists())
         records = yaml.safe_load(lifecycle_path.read_text(encoding="utf-8"))

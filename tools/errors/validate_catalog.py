@@ -18,7 +18,7 @@ import re
 import sys
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-import yaml  # type: ignore[import-untyped]  # PyYAML ships without inline type stubs
+import yaml
 
 CODE_PATTERN = re.compile(r"^[1-9]{4}(0[1-9]|[1-9][0-9])$")
 LEGACY_CODE_PATTERN = re.compile(r"^ERR-[0-9]{2}$")

@@ -8,7 +8,7 @@ from pathlib import Path
 import subprocess
 from typing import Any, Sequence
 
-import yaml  # type: ignore[import-untyped]  # PyYAML ships without inline type stubs
+import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 CATALOG_RELATIVE = "contracts/errors/error-catalog.yaml"
