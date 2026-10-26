@@ -7,6 +7,7 @@ plugins {
 }
 kotlin { jvmToolchain(25) }
 dependencies {
+    implementation(libs.flyway)
     implementation(project(":libs:db"))
     implementation(project(":libs:security"))
     implementation(project(":libs:errors"))
