@@ -9646,6 +9646,50 @@
       ],
       "reviewer": "/root",
       "blocker": "Hosted master, internal-PR, and approved fork-PR CodeQL runs plus initial-alert triage and ruleset evaluation require the committed workflow to be available on GitHub."
+    },
+    {
+      "id": "QA-11",
+      "parent_id": "MILESTONE-PRODUCTION-HARDENING",
+      "title": "Publish JVM coverage information without merge enforcement",
+      "phase": "quality",
+      "status": "in_progress",
+      "owner_role": "coordinator",
+      "owner_agent": "/root",
+      "depends_on": ["QA-10", "OPS-15", "OPS-32"],
+      "owned_paths": [
+        ".github/workflows/coverage.yml",
+        "tools/coverage/jacoco_to_cobertura.py",
+        "tests/tools/test_jacoco_to_cobertura.py",
+        "docs/operations/ci.md",
+        "docs/quality/testing-strategy.md",
+        "docs/tasks/details/QA-11.md",
+        "docs/tasks/registry.yaml",
+        "docs/tasks/board.md",
+        "docs/tasks/progress.md"
+      ],
+      "specification": "docs/tasks/details/QA-11.md",
+      "acceptance_criteria": [
+        "A full Gradle JaCoCo run produces one deterministic aggregate Cobertura XML report for JVM modules on master and master-targeting pull requests.",
+        "Master and same-repository pull requests attempt Cobertura publication through GitHub Code Quality with code-quality: write; an unavailable optional endpoint is non-blocking and the attested artifact remains available.",
+        "Fork pull requests use pull_request only, retain a downloadable coverage artifact, and skip the unsupported Code Quality upload.",
+        "The coverage artifact is attested when the event token can write attestations.",
+        "Coverage is informational; no minimum, drop threshold, ruleset, or required status check is added.",
+        "Converter tests, Python typing, workflow validation, Gradle JaCoCo execution, and whitespace checks pass."
+      ],
+      "validation_commands": [
+        "uv run --frozen --no-build python -m unittest tests/tools/test_jacoco_to_cobertura.py",
+        "make python-typecheck",
+        "make workflow-validate",
+        "./gradlew test jacocoTestReport --no-daemon --console=plain",
+        "git diff --check"
+      ],
+      "evidence": [
+        "Commits 1074b533, 46171b5f, 725967d4, 3e26da49, 15a51086, 7793ff8d, b14ae207, and cc6d1910 register the task, add the typed JaCoCo-to-Cobertura converter and focused tests, publish the workflow, correct the action and module invocation pins, and make the optional Code Quality upload non-blocking.",
+        "uv run --frozen --no-build python -m unittest tests/tools/test_jacoco_to_cobertura.py passed 2 tests; make python-typecheck passed 73 files; make workflow-validate and git diff --check passed; ./gradlew test jacocoTestReport --no-daemon --console=plain passed 68 actionable tasks; the converter produced 434 classes with 9,013 covered of 9,032 valid lines from the generated reports.",
+        "Hosted run 40531679218 confirmed Gradle, conversion, artifact upload, and attestation succeeded; the optional Code Quality API returned HTTP 404 and is now non-blocking. Fork-PR publication evidence remains pending."
+      ],
+      "reviewer": "/root",
+      "blocker": "Hosted master, internal-PR, and fork-PR coverage runs are required to verify Code Quality publication, artifact retention, and attestation behavior."
     }
   ]
 }

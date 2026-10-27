@@ -176,6 +176,27 @@ The current local discovery baseline is 35 methods containing 61 missed
 branches. This is a backlog signal, not a target to reduce by deleting
 implementation; hosted closure requires tests or reviewed structural
 classification for every record.
+
+### Coverage publication
+
+`coverage.yml` runs the complete JVM test and JaCoCo report graph on `master`,
+master-targeting pull requests, and manual dispatch. The typed standard-library
+converter at `tools/coverage/jacoco_to_cobertura.py` combines module reports into
+one Cobertura XML document. Same-repository runs attempt to publish that
+document to GitHub Code Quality with `code-quality: write`; the upload is
+best-effort because Code Quality coverage is an optional GitHub service feature.
+An unavailable coverage API is reported in the action log but does not fail CI,
+and the attested artifact remains available for review. No minimum, drop
+threshold, ruleset, or required check is configured.
+
+Fork pull requests remain on the unprivileged `pull_request` event. Their
+coverage report is retained as a workflow artifact, but the Code Quality upload
+step is skipped because GitHub does not grant fork tokens write access to the
+base repository. The workflow never uses `pull_request_target` or secrets for
+coverage. The retained artifact is attested when the event token can write
+attestations; the artifact itself is the attested subject, while the Code
+Quality API result is not a workflow artifact.
+
 Every test run publishes a readable test summary directly to GitHub Actions job
 summaries (`test-summary/action@v2`) and uploads JUnit XML and HTML reports as
 job artifacts with `if: always()` retention.

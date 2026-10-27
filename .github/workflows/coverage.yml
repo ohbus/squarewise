@@ -1,0 +1,93 @@
+name: Squarewise JVM coverage
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  JAVA_VERSION: '25'
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+  GRADLE_OPTS: '-Dorg.gradle.jvmargs=-Xmx4g'
+
+concurrency:
+  group: squarewise-coverage-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-coverage:
+    name: Build JVM coverage report
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - name: Check out tested commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Set up Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: microsoft
+          java-version: ${{ env.JAVA_VERSION }}
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - name: Run tests and generate JaCoCo reports
+        run: ./gradlew test jacocoTestReport --scan --no-daemon --console=plain
+      - name: Convert JaCoCo reports to Cobertura
+        run: python3 -m tools.coverage.jacoco_to_cobertura --root . --output build/coverage/cobertura.xml
+      - name: Prepare coverage artifact
+        run: |
+          mkdir -p coverage
+          cp build/coverage/cobertura.xml coverage/cobertura.xml
+      - name: Upload coverage artifact
+        id: upload-coverage
+        uses: actions/upload-artifact@v7
+        with:
+          name: squarewise-coverage-${{ github.sha }}
+          path: coverage
+          if-no-files-found: error
+          retention-days: 14
+      - name: Attest coverage artifact
+        if: steps.upload-coverage.outputs.artifact-digest != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-name: squarewise-coverage-${{ github.sha }}
+          subject-digest: sha256:${{ steps.upload-coverage.outputs.artifact-digest }}
+
+  publish-coverage:
+    name: Publish Code Quality coverage
+    needs: build-coverage
+    if: needs.build-coverage.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: read
+      code-quality: write
+    steps:
+      - name: Download coverage artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: squarewise-coverage-${{ github.sha }}
+          path: coverage
+      - name: Explain fork upload limitation
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
+        run: echo 'Fork pull requests retain the coverage artifact; GitHub does not grant code-quality write permission to fork tokens.'
+      - name: Upload coverage to GitHub Code Quality
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/upload-code-coverage@v1
+        with:
+          file: coverage/cobertura.xml
+          language: Java
+          label: code-coverage/jacoco
+          fail-on-error: false

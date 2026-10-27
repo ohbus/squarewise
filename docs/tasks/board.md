@@ -51,6 +51,7 @@ query classification, and evidence gates are complete.
 | QA-08 | coordinator | in_progress | Production-scale, deployment-resilience, security, and unresolved WebSocket protocol evidence |
 | QA-09 | coordinator | done | Optimized and parallelized E2E pipeline with artifact reuse |
 | QA-10 | coordinator | done | Repository-wide unit, integration, and E2E test gap audit and closure criteria |
+| QA-11 | coordinator | in_progress | Publish JVM coverage information without merge enforcement |
 | OPS-25 | coordinator | done | Migrate Python tooling to pyproject.toml + uv sync + uv run |
 | OPS-26 | coordinator | done | Decouple dev data seeder and prepare local stack for non-docker runtimes |
 | OPS-27 | coordinator | done | Register devcontainer version baseline and security hygiene rules |
