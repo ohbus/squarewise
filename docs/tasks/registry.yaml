@@ -78,11 +78,7 @@
         "Each capability has an owner; future features are explicit; no UI implementation is implied."
       ],
       "validation_commands": [],
-      "evidence": [
-        "Commits 1074b533, 46171b5f, 725967d4, and 3e26da49 register the task, add the typed JaCoCo-to-Cobertura converter and focused tests, publish the workflow, and handle empty synthetic JaCoCo source entries.",
-        "uv run --frozen --no-build python -m unittest tests/tools/test_jacoco_to_cobertura.py passed 2 tests; make python-typecheck passed 73 files; make workflow-validate and git diff --check passed; ./gradlew test jacocoTestReport --no-daemon --console=plain passed 68 actionable tasks; the converter produced 434 classes with 9,013 covered of 9,032 valid lines from the generated reports.",
-        "Hosted default-branch, internal-PR, and fork-PR evidence remains pending because this branch is not yet available on GitHub."
-      ],
+      "evidence": [],
       "reviewer": "/root",
       "blocker": null
     },
@@ -9687,7 +9683,11 @@
         "./gradlew test jacocoTestReport --no-daemon --console=plain",
         "git diff --check"
       ],
-      "evidence": [],
+      "evidence": [
+        "Commits 1074b533, 46171b5f, 725967d4, and 3e26da49 register the task, add the typed JaCoCo-to-Cobertura converter and focused tests, publish the workflow, and handle empty synthetic JaCoCo source entries.",
+        "uv run --frozen --no-build python -m unittest tests/tools/test_jacoco_to_cobertura.py passed 2 tests; make python-typecheck passed 73 files; make workflow-validate and git diff --check passed; ./gradlew test jacocoTestReport --no-daemon --console=plain passed 68 actionable tasks; the converter produced 434 classes with 9,013 covered of 9,032 valid lines from the generated reports.",
+        "Hosted default-branch, internal-PR, and fork-PR evidence remains pending because this branch is not yet available on GitHub."
+      ],
       "reviewer": "/root",
       "blocker": "Hosted master, internal-PR, and fork-PR coverage runs are required to verify Code Quality publication, artifact retention, and attestation behavior."
     }
