@@ -8,6 +8,7 @@ ENV APP_PROJECT=${APP_PROJECT}
 WORKDIR /app
 RUN useradd --system --create-home --uid 10001 squarewise
 COPY "app/${APP_PROJECT}/build/libs/squarewise-${APP_PROJECT}-0.1.0-SNAPSHOT.jar" /app/app.jar
+COPY LICENSE /app/LICENSE
 USER squarewise
 EXPOSE 8080
 # Keep service-name resolution refreshable across Redis failover or container

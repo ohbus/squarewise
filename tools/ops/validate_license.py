@@ -17,7 +17,11 @@ PYPROJECT_PATH = ROOT / "pyproject.toml"
 README_PATH = ROOT / "README.md"
 EXPECTED_LICENSE_SHA256 = "d8a6cc31abc16b6748c7a21f21611f5a1ec33f67d22ca23d7da1c19b95496bee"
 STALE_PROJECT_LICENSE_PATTERN = re.compile(
-    r"\bMIT(?:\s+(?:License|licensed|project)|-(?:licensed|license))\b",
+    r"\b(?:Squarewise|the project|this project)(?:'s)?\s+"
+    r"(?:is\s+)?(?:MIT(?:\s+License)?|MIT-licensed|"
+    r"licensed\s+(?:under\s+)?MIT)\b"
+    r"|\b(?:Squarewise|the project|this project)(?:'s)?\s+"
+    r"license\s+is\s+MIT(?:\s+License)?\b",
     re.IGNORECASE,
 )
 

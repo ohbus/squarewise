@@ -129,9 +129,9 @@ Verified locally:
 - Built wheel metadata contains `License-Expression: AGPL-3.0-only` and
   `License-File: LICENSE`; the checked-in license matches the SPDX text.
 
-Hosted GitHub license detection, repository About metadata, and final copyright
-ownership confirmation remain post-merge checks and cannot be verified from the
-local checkout.
+Copyright ownership confirmation must be completed before merge. Hosted GitHub
+license detection and repository About metadata remain post-merge checks and
+cannot be verified from the local checkout.
 
 ### Increment 5 - broaden active-reference validation
 
@@ -150,3 +150,18 @@ Added `docs/operations/README.md` to the validator's active-reference inventory
 and changed its licensing entry to the exact `AGPL-3.0-only` identifier. A
 regression test now protects the inventory entry so future stale guidance cannot
 silently bypass `license-validate`.
+
+Commit `9224f2f` recorded this increment. The focused license-validation suite
+and `make license-validate` passed; hosted GitHub license detection and About
+metadata remain post-merge checks.
+
+### Increment 7 - close review follow-ups
+
+Scoped stale-MIT detection to first-party project statements, added regression
+coverage for `licensed under MIT`, included `LICENSE` in the fast runtime image,
+and recorded the pre-merge copyright confirmation requirement.
+
+Commit `8488540` implements this increment. The focused license-validation
+suite, `make license-validate`, `make contracts`, `make python-typecheck`,
+`make workflow-validate`, Dockerfile syntax validation, and `git diff --check`
+passed.

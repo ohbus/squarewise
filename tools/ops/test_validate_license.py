@@ -61,6 +61,14 @@ class LicenseValidationTest(unittest.TestCase):
         findings = validate_references({"README.md": "AGPL-3.0-only; Squarewise is MIT-licensed"})
         self.assertEqual(len(findings), 1)
 
+        findings = validate_references({"README.md": "AGPL-3.0-only; Squarewise is licensed under MIT."})
+        self.assertEqual(len(findings), 1)
+
+    def test_active_references_allow_third_party_mit_terms(self) -> None:
+        """Third-party MIT terms do not count as stale Squarewise licensing."""
+        text = "AGPL-3.0-only; permitted third-party packages may remain MIT-licensed."
+        self.assertEqual(validate_references({"docs/operations/licensing.md": text}), [])
+
     def test_active_references_require_current_license_marker(self) -> None:
         """Every active reference must identify the current project license."""
         findings = validate_references({"CONTRIBUTING.md": "Please read the license."})
