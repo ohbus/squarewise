@@ -182,9 +182,12 @@ classification for every record.
 `coverage.yml` runs the complete JVM test and JaCoCo report graph on `master`,
 master-targeting pull requests, and manual dispatch. The typed standard-library
 converter at `tools/coverage/jacoco_to_cobertura.py` combines module reports into
-one Cobertura XML document. Same-repository runs publish that document to
-GitHub Code Quality with `code-quality: write`; the upload is informational and
-does not configure a minimum, drop threshold, ruleset, or required check.
+one Cobertura XML document. Same-repository runs attempt to publish that
+document to GitHub Code Quality with `code-quality: write`; the upload is
+best-effort because Code Quality coverage is an optional GitHub service feature.
+An unavailable coverage API is reported in the action log but does not fail CI,
+and the attested artifact remains available for review. No minimum, drop
+threshold, ruleset, or required check is configured.
 
 Fork pull requests remain on the unprivileged `pull_request` event. Their
 coverage report is retained as a workflow artifact, but the Code Quality upload

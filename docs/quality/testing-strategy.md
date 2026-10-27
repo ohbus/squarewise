@@ -69,12 +69,13 @@ milestones must add a meaningful threshold for their changed modules; the empty
 scaffold does not impose a misleading global percentage because most behavior
 does not exist yet.
 
-The `coverage.yml` workflow publishes aggregate JVM line coverage as
+The `coverage.yml` workflow attempts to publish aggregate JVM line coverage as
 informational GitHub Code Quality data for `master` and master-targeting pull
 requests. It also retains the Cobertura artifact for review and attests it when
-the workflow token permits. This publication is a visibility aid, not a test
-or acceptance claim: line coverage does not replace the behavioral, persistence,
-messaging, E2E, security, or redaction evidence required by QA-07 and QA-10.
+the workflow token permits; an unavailable Code Quality coverage endpoint is
+non-blocking. This publication is a visibility aid, not a test or acceptance
+claim: line coverage does not replace the behavioral, persistence, messaging,
+E2E, security, or redaction evidence required by QA-07 and QA-10.
 Python coverage is intentionally outside this initial JVM report scope.
 
 Scaffold checks only need meaningful boot/context, packaging, module and contract

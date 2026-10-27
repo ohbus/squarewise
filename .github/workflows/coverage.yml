@@ -90,3 +90,4 @@ jobs:
           file: coverage/cobertura.xml
           language: Java
           label: code-coverage/jacoco
+          fail-on-error: false

@@ -9670,7 +9670,7 @@
       "specification": "docs/tasks/details/QA-11.md",
       "acceptance_criteria": [
         "A full Gradle JaCoCo run produces one deterministic aggregate Cobertura XML report for JVM modules on master and master-targeting pull requests.",
-        "Master and same-repository pull requests publish Cobertura XML through GitHub Code Quality with code-quality: write.",
+        "Master and same-repository pull requests attempt Cobertura publication through GitHub Code Quality with code-quality: write; an unavailable optional endpoint is non-blocking and the attested artifact remains available.",
         "Fork pull requests use pull_request only, retain a downloadable coverage artifact, and skip the unsupported Code Quality upload.",
         "The coverage artifact is attested when the event token can write attestations.",
         "Coverage is informational; no minimum, drop threshold, ruleset, or required status check is added.",
