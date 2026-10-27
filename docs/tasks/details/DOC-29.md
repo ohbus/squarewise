@@ -161,7 +161,7 @@ Scoped stale-MIT detection to first-party project statements, added regression
 coverage for `licensed under MIT`, included `LICENSE` in the fast runtime image,
 and recorded the pre-merge copyright confirmation requirement.
 
-Commit `58844c5` implements this increment. The focused license-validation
+Commit `33b1cfd` implements this increment. The focused license-validation
 suite, `make license-validate`, `make contracts`, `make python-typecheck`,
 `make workflow-validate`, Dockerfile syntax validation, and `git diff --check`
 passed.
