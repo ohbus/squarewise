@@ -103,18 +103,18 @@ the contributor and documentation entry points.
 
 Commit `36e76acb` replaced the MIT text with the canonical SPDX
 `AGPL-3.0-only` text, updated README/package/readiness metadata, added the typed
-license validator and four regression tests, and wired the validator into the
+license validator and five regression tests, and wired the validator into the
 reusable CI lint job and `make validate`.
 
-The separate `NOTICE` file preserves the first-party copyright holder while the
-canonical license remains verbatim; it is included in the Python package's
-license-file metadata.
+Commit `1a4a13d6` added the separate `NOTICE` file, preserving the first-party
+copyright holder while the canonical license remains verbatim; it is included
+in the Python package's license-file metadata.
 
 Verified locally:
 
 - `make license-validate` passed.
 - `uv run --frozen --no-build python -m unittest tools.ops.test_validate_license`
-  passed 4 tests.
+  passed 5 tests.
 - `make contracts` passed with 265 valid tasks, 45 REST operations, 9 GraphQL
   root operations, 50 Bruno requests, and 99 catalog records.
 - `make python-typecheck` passed for 75 files.
