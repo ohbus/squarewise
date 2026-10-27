@@ -139,3 +139,7 @@ The license validator now requires every curated active reference to identify
 `AGPL-3.0-only` and rejects common stale MIT forms such as `MIT-licensed`.
 Regression coverage includes both a missing current marker and stale wording;
 the focused suite now contains eight tests.
+
+Commit `1253e2e9` implements this increment. The focused eight-test suite,
+`make license-validate`, `make python-typecheck`, `make workflow-validate`, and
+`git diff --check` passed.

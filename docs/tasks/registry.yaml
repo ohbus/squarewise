@@ -8287,7 +8287,8 @@
         "Commit 0b792b1c pinned the canonical license SHA-256, required LICENSE and NOTICE in package metadata, restored DOC-29 registry ownership/evidence, clarified the superseded board baseline, and pinned LF line endings for cross-platform validation.",
         "make license-validate, the focused seven-test unittest module, make contracts, make python-typecheck, make workflow-validate, make sbom-validate, make security-hygiene, uv build, and git diff --check passed.",
         "Built wheel metadata contains License-Expression: AGPL-3.0-only, License-File: LICENSE, and License-File: NOTICE; the checked-in LICENSE matches the SPDX text byte-for-byte.",
-        "Hosted GitHub license detection, repository About metadata, and copyright ownership confirmation remain post-merge checks."
+        "Hosted GitHub license detection, repository About metadata, and copyright ownership confirmation remain post-merge checks.",
+        "Commit 1253e2e9 broadened active-reference validation to require AGPL-3.0-only in every curated active document and reject common stale MIT wording; the focused eight-test suite, license validator, Python type check, workflow validation, and diff check passed."
       ],
       "reviewer": "/root",
       "blocker": "Copyright ownership confirmation and post-merge GitHub license detection remain required before release."
