@@ -132,3 +132,10 @@ Verified locally:
 Hosted GitHub license detection, repository About metadata, and final copyright
 ownership confirmation remain post-merge checks and cannot be verified from the
 local checkout.
+
+### Increment 5 - broaden active-reference validation
+
+The license validator now requires every curated active reference to identify
+`AGPL-3.0-only` and rejects common stale MIT forms such as `MIT-licensed`.
+Regression coverage includes both a missing current marker and stale wording;
+the focused suite now contains eight tests.

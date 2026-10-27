@@ -56,8 +56,13 @@ class LicenseValidationTest(unittest.TestCase):
 
     def test_active_references_reject_stale_mit_policy(self) -> None:
         """Historical tracker entries are excluded; active policy text is not."""
-        findings = validate_references({"README.md": "No GPL in MIT project"})
+        findings = validate_references({"README.md": "AGPL-3.0-only; Squarewise is MIT-licensed"})
         self.assertEqual(len(findings), 1)
+
+    def test_active_references_require_current_license_marker(self) -> None:
+        """Every active reference must identify the current project license."""
+        findings = validate_references({"CONTRIBUTING.md": "Please read the license."})
+        self.assertEqual(findings, ["CONTRIBUTING.md must identify AGPL-3.0-only"])
 
 
 if __name__ == "__main__":

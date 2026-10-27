@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 from pathlib import Path
+import re
 import sys
 import tomllib
 from typing import Any, Mapping
@@ -15,6 +16,10 @@ NOTICE_PATH = ROOT / "NOTICE"
 PYPROJECT_PATH = ROOT / "pyproject.toml"
 README_PATH = ROOT / "README.md"
 EXPECTED_LICENSE_SHA256 = "d8a6cc31abc16b6748c7a21f21611f5a1ec33f67d22ca23d7da1c19b95496bee"
+STALE_PROJECT_LICENSE_PATTERN = re.compile(
+    r"\bMIT(?:\s+(?:License|licensed|project)|-(?:licensed|license))\b",
+    re.IGNORECASE,
+)
 
 REFERENCE_PATHS: tuple[Path, ...] = (
     README_PATH,
@@ -85,7 +90,9 @@ def validate_references(references: Mapping[str, str]) -> list[str]:
     """Return findings for active repository references to the project license."""
     findings: list[str] = []
     for name, text in references.items():
-        if "MIT License" in text or "No GPL in MIT project" in text:
+        if "AGPL-3.0-only" not in text:
+            findings.append(f"{name} must identify AGPL-3.0-only")
+        if STALE_PROJECT_LICENSE_PATTERN.search(text):
             findings.append(f"{name} contains a stale MIT project-license reference")
     return findings
 
@@ -114,8 +121,6 @@ def validate_repository() -> list[str]:
         else:
             references[str(path.relative_to(ROOT))] = path.read_text(encoding="utf-8")
     findings.extend(validate_references(references))
-    if "AGPL-3.0-only" not in references.get("README.md", ""):
-        findings.append("README.md must identify AGPL-3.0-only")
     return findings
 
 
