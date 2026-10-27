@@ -42,6 +42,8 @@ remain global checks where their tools need the complete repository; they are no
 pretended to be module-local checks. The scope resolver is
 `tools/ci/changed_scope.py`, with behavior tests in
 `tests/tools/test_changed_scope.py`.
+Changes under `tests/fixtures/invalid_subject_oidc/` select the edge stream so
+fixture dependency updates exercise the negative OIDC path that consumes them.
 
 The scope job keeps human diagnostics on the step log and writes only the
 resolver's machine-readable `name=value` records to `$GITHUB_OUTPUT`. A

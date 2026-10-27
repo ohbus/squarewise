@@ -51,7 +51,7 @@ E2E artifact-preparation failure must fail the gate.
 6. Global repository-wide checks remain explicitly documented as global and are
    not misrepresented as changed-module checks.
 7. Scope behavior has typed unit tests for full, documentation-only, shared
-   library, E2E-only, and build-configuration changes.
+   library, E2E-only, OIDC-fixture, and build-configuration changes.
 8. The Gradle build applies Develocity plugin 4.5.0; CI Gradle invocations
    publish tagged Build Scans without affecting local publication behavior.
 
