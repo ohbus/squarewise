@@ -9641,7 +9641,8 @@
       "evidence": [
         "Added an isolated advanced CodeQL workflow for java-kotlin, python, and actions with master, pull-request, weekly, and manual triggers.",
         "The exact manual JVM extraction command passed all 50 actionable Gradle testClasses tasks; workflow lint/parse, contract validation, security hygiene, whitespace, and the focused immutable-action policy passed.",
-        "The broader coverage audit module retains unrelated pre-existing drift failures; hosted CodeQL and ruleset evidence remain pending."
+        "The broader coverage audit module retains unrelated pre-existing drift failures; hosted CodeQL and ruleset evidence remain pending.",
+        "Local implementation commit: bdf0536ee8af9b0bcb0e8c5503d713b288ea8178."
       ],
       "reviewer": "/root",
       "blocker": "Hosted master, internal-PR, and approved fork-PR CodeQL runs plus initial-alert triage and ruleset evaluation require the committed workflow to be available on GitHub."

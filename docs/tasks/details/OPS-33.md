@@ -102,3 +102,4 @@ k6 load probes.
 - Hosted CodeQL runs, initial-alert triage, fork execution, and the evaluated
   then active merge-protection ruleset remain pending until this commit is
   available on GitHub.
+- Local implementation commit: `bdf0536ee8af9b0bcb0e8c5503d713b288ea8178`.
