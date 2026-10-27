@@ -103,3 +103,11 @@ k6 load probes.
   then active merge-protection ruleset remain pending until this commit is
   available on GitHub.
 - Local implementation commit: `bdf0536ee8af9b0bcb0e8c5503d713b288ea8178`.
+
+## Hosted PR-55 follow-up (2026-10-27)
+
+The first hosted CodeQL run (`40510007886`) passed the Python and Actions lanes
+but the Java/Kotlin lane failed while compiling `:app:accounts:compileKotlin`
+with `java.lang.OutOfMemoryError: Java heap space` (job `122209107187`). The
+workflow now gives the manual Gradle extraction build a 4 GiB heap through
+`GRADLE_OPTS`; the replacement hosted run and fork-PR evidence remain pending.
