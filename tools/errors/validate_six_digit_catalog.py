@@ -7,7 +7,7 @@ from pathlib import Path
 import sys
 from typing import Any
 
-import yaml  # type: ignore[import-untyped]  # PyYAML ships without inline type stubs
+import yaml
 
 from tools.errors.validate_catalog import (
     validate_domains_registry,

@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
 
-import yaml  # type: ignore[import-untyped]  # PyYAML ships without inline type stubs
+import yaml
 
 ROOT: Final[Path] = Path(__file__).resolve().parents[2]
 ALLOWLIST_PATH: Final[Path] = ROOT / "tools/qa/error_hygiene_allowlist.yaml"
