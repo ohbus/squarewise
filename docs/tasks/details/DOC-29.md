@@ -92,6 +92,32 @@ still be confirmed by the copyright holder before merge.
 
 ## Evidence
 
-Implementation evidence and commit hashes are appended after each committed
-increment. Hosted GitHub license detection and repository About metadata are
-post-merge checks and cannot be verified from the local checkout.
+### Increment 1 - governance and policy
+
+Commit `c6c33268` registered DOC-29, added the licensing policy, documented the
+third-party boundary and AGPL network obligations, and linked the policy from
+the contributor and documentation entry points.
+
+### Increment 2 - license and CI gate
+
+Commit `36e76acb` replaced the MIT text with the canonical SPDX
+`AGPL-3.0-only` text, updated README/package/readiness metadata, added the typed
+license validator and four regression tests, and wired the validator into the
+reusable CI lint job and `make validate`.
+
+Verified locally:
+
+- `make license-validate` passed.
+- `uv run --frozen --no-build python -m unittest tools.ops.test_validate_license`
+  passed 4 tests.
+- `make contracts` passed with 265 valid tasks, 45 REST operations, 9 GraphQL
+  root operations, 50 Bruno requests, and 99 catalog records.
+- `make python-typecheck` passed for 75 files.
+- `make workflow-validate`, `make sbom-validate`, `make security-hygiene`,
+  `uv build`, and `git diff --check` passed.
+- Built wheel metadata contains `License-Expression: AGPL-3.0-only` and
+  `License-File: LICENSE`; the checked-in license matches the SPDX text.
+
+Hosted GitHub license detection, repository About metadata, and final copyright
+ownership confirmation remain post-merge checks and cannot be verified from the
+local checkout.
