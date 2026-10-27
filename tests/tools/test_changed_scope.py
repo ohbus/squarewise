@@ -41,6 +41,14 @@ class ChangedScopeTest(unittest.TestCase):
         self.assertTrue(scope["run_product"])
         self.assertFalse(scope["run_chaos"])
 
+    def test_oidc_fixture_change_selects_edge_stream(self) -> None:
+        scope = compute_scope(("tests/fixtures/invalid_subject_oidc/requirements.txt",))
+        self.assertFalse(scope["has_verify"])
+        self.assertTrue(scope["has_e2e"])
+        self.assertTrue(scope["run_edge"])
+        self.assertFalse(scope["run_product"])
+        self.assertFalse(scope["run_chaos"])
+
     def test_branch_build_change_is_full_scope(self) -> None:
         scope = compute_scope(("gradle/libs.versions.toml",))
         self.assertTrue(scope["full_scope"])

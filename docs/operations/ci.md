@@ -9,6 +9,30 @@ and grant `pull-requests: read`, `id-token: write`, and `attestations: write` ex
 at the calling job level (`ci`) so nested reusable workflow jobs (`lint`, `verify`, and other
 artifact producers) can attest build provenance without escalating privileges across the workflow.
 
+Security analysis is intentionally isolated in `codeql.yml`. It runs CodeQL on
+pushes to `master`, pull requests targeting `master`, a weekly schedule, and
+manual dispatch. Its matrix covers Java/Kotlin, all repository Python (including
+`tests/`), and GitHub Actions. The Java/Kotlin lane uses Java 25 and a manual
+`testClasses` Gradle build with the build cache disabled, ensuring CodeQL observes
+both production and test compilation without executing tests. Python and Actions
+use buildless analysis. The default high-precision query suite is used for every
+lane; the repository's k6-only JavaScript files are intentionally outside this
+security-focused matrix.
+
+Fork pull requests use the unprivileged `pull_request` event. The workflow does
+not inherit secrets, persist checkout credentials, or use `pull_request_target`;
+its only job permissions are `contents: read` and `security-events: write`.
+GitHub downgrades the token for fork code while still permitting CodeQL results
+from a `pull_request` run to be uploaded. GitHub-configured maintainer approval
+requirements for untrusted contributors apply and are not bypassed by this workflow.
+
+CodeQL merge protection is staged separately from ordinary required status
+checks. After successful default-branch, internal-PR, and approved fork-PR runs
+and initial-alert triage, a dedicated default-branch ruleset is evaluated and
+then activated for the CodeQL tool with non-security `errors` and security
+`high_or_higher` thresholds. Lower-severity findings remain visible for planned
+remediation, including findings confined to test code.
+
 PR and non-master branch runs now calculate a changed-scope plan before the Gradle
 matrix. The plan selects changed modules plus their reverse project dependents and
 selects only the E2E streams affected by the changed paths. Master and manually
@@ -18,6 +42,8 @@ remain global checks where their tools need the complete repository; they are no
 pretended to be module-local checks. The scope resolver is
 `tools/ci/changed_scope.py`, with behavior tests in
 `tests/tools/test_changed_scope.py`.
+Changes under `tests/fixtures/invalid_subject_oidc/` select the edge stream so
+fixture dependency updates exercise the negative OIDC path that consumes them.
 
 The scope job keeps human diagnostics on the step log and writes only the
 resolver's machine-readable `name=value` records to `$GITHUB_OUTPUT`. A
@@ -120,9 +146,13 @@ The Expense Core matrix shard also runs the opt-in PostgreSQL tests against the
 other shards retain their normal test configuration.
 Jobs use Microsoft Build of OpenJDK. Python dependencies
 and tooling are deterministically managed via `pyproject.toml` and `uv.lock`.
-Dependabot checks Gradle, GitHub Actions, uv, and repository Docker manifests on
-one bounded weekly schedule from `.github/dependabot.yml`; minor and patch
-updates are grouped per ecosystem to avoid unnecessary pull-request churn.
+Dependabot checks Gradle, GitHub Actions, the root uv project, the standalone
+OIDC fixture's pip manifest, and Dockerfiles on one bounded weekly schedule from
+`.github/dependabot.yml`; minor and patch updates are grouped per ecosystem to
+avoid unnecessary pull-request churn. Docker coverage is best-effort because
+container image tags remain centralized in `infra/versions.env.example`, while
+Dockerfiles and Compose use `ARG`/environment indirection; `make sbom-validate`
+remains the authoritative container-version drift guard.
 CI workflows install dependencies via the immutable commit
 `astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7` (the `v10.2.0` tag)
 with `uv sync --frozen --no-build`, running tools and scripts via

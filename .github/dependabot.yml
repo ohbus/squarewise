@@ -5,8 +5,8 @@ updates:
     schedule:
       interval: weekly
       day: monday
+      time: "09:00"
       timezone: Europe/Vienna
-    open-pull-requests-limit: 5
     groups:
       gradle-minor-and-patch:
         update-types: [minor, patch]
@@ -16,8 +16,8 @@ updates:
     schedule:
       interval: weekly
       day: monday
+      time: "09:00"
       timezone: Europe/Vienna
-    open-pull-requests-limit: 5
     groups:
       actions-minor-and-patch:
         update-types: [minor, patch]
@@ -27,12 +27,24 @@ updates:
     schedule:
       interval: weekly
       day: monday
+      time: "09:00"
       timezone: Europe/Vienna
-    open-pull-requests-limit: 5
     groups:
       python-minor-and-patch:
         update-types: [minor, patch]
 
+  - package-ecosystem: pip
+    directory: /tests/fixtures/invalid_subject_oidc
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Europe/Vienna
+    groups:
+      fixture-python-minor-and-patch:
+        update-types: [minor, patch]
+
+  # Best-effort Docker coverage; ARG/env indirection remains guarded by sbom-validate.
   - package-ecosystem: docker
     directories:
       - /.devcontainer
@@ -42,8 +54,8 @@ updates:
     schedule:
       interval: weekly
       day: monday
+      time: "09:00"
       timezone: Europe/Vienna
-    open-pull-requests-limit: 5
     groups:
       docker-minor-and-patch:
         update-types: [minor, patch]

@@ -73,6 +73,7 @@ query classification, and evidence gates are complete.
 | PR-48 | coordinator | done | Add CI dependency vulnerability review gate |
 | PR-49 | coordinator | done | Bound GraphQL transport request sizes |
 | PR-50 | coordinator | done | Remediate six independent PR #19 correctness and resource findings |
+| OPS-33 | coordinator | in_progress | Advanced CodeQL analysis for master, PRs, and approved fork PRs |
 | AUTH-01 | coordinator | done | Provider-neutral OIDC authentication hardening baseline and implementation tracker |
 | AUTH-02 | coordinator | done | Remove implicit authentication identities with full boundary evidence |
 | AUTH-03 | coordinator | done | Fail-closed provider-neutral OIDC resource-server validation |

@@ -85,6 +85,9 @@ def _e2e_streams(paths: Sequence[str], modules: set[str], global_change: bool) -
     streams: set[str] = set()
     for raw_path in paths:
         path = raw_path.replace("\\", "/")
+        if path.startswith("tests/fixtures/invalid_subject_oidc/"):
+            streams.add("edge")
+            continue
         if not path.startswith("tests/e2e/"):
             continue
         if any(token in path for token in ("auth_cache", "oidc", "rest_edge", "contract")):

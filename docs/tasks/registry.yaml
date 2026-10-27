@@ -8220,7 +8220,7 @@
         "Verified repository milestone #1 (Production readiness) and assigned it to epics #20/#21 and release-gated children #23-#26/#28-#31.",
         "The owner confirmed all configured Project workflows are active; workflow configuration is not exposed by the public project response.",
         "Verified native dependencies through GitHub's public API: #24/#25/#26 are blocked by #23 and #29/#30/#31/#32 are blocked by #28/#29/#30/#31 respectively.",
-        "Added issue forms, CODEOWNERS, weekly grouped Dependabot updates, and the stable Required CI aggregate with typed unit coverage.",
+        "Added issue forms, CODEOWNERS, weekly grouped Dependabot updates for Gradle, Actions, uv, pip, and best-effort Dockerfile coverage, and the stable Required CI aggregate with typed unit coverage; container tags remain centrally validated because Dependabot cannot update this repository's ARG/env indirection.",
         "Contract and public-surface validation, GitHub YAML lint, workflow validation, Python type checking, three Required CI unit tests, and git diff checks passed locally."
       ],
       "reviewer": "/root",
@@ -9603,6 +9603,49 @@
       ],
       "reviewer": "/root",
       "blocker": null
+    },
+    {
+      "id": "OPS-33",
+      "parent_id": "MILESTONE-PRODUCTION-HARDENING",
+      "title": "Advanced CodeQL analysis for master, PRs, and approved fork PRs",
+      "phase": "production_hardening",
+      "status": "in_progress",
+      "owner_role": "coordinator",
+      "owner_agent": "/root",
+      "depends_on": ["OPS-04", "OPS-05", "OPS-15", "OPS-24", "PR-21"],
+      "owned_paths": [
+        ".github/workflows/codeql.yml",
+        "docs/operations/ci.md",
+        "docs/security/supply-chain-evidence.md",
+        "docs/tasks/details/OPS-33.md",
+        "docs/tasks/registry.yaml",
+        "docs/tasks/board.md",
+        "docs/tasks/progress.md"
+      ],
+      "specification": "docs/tasks/details/OPS-33.md",
+      "acceptance_criteria": [
+        "CodeQL analyzes Java/Kotlin, Python, and GitHub Actions on master, pull requests, a weekly schedule, and manual dispatch.",
+        "Fork pull requests run without secrets through the unprivileged pull_request event.",
+        "The Java/Kotlin lane compiles production and test sources with Java 25 and the repository Gradle wrapper.",
+        "Local validators pass and hosted default-branch, internal-PR, and fork-PR evidence is recorded."
+      ],
+      "validation_commands": [
+        "./gradlew testClasses --dry-run --no-daemon --console=plain",
+        "make workflow-validate",
+        "uv run --frozen --no-build python -m unittest tools.coverage.test_report_tools",
+        "uv run --frozen --no-build python tools/contracts/validate.py",
+        "uv run --frozen --no-build python tools/contracts/validate_public_surface.py",
+        "make security-hygiene",
+        "git diff --check"
+      ],
+      "evidence": [
+        "Added an isolated advanced CodeQL workflow for java-kotlin, python, and actions with master, pull-request, weekly, and manual triggers.",
+        "The exact manual JVM extraction command passed all 50 actionable Gradle testClasses tasks; workflow lint/parse, contract validation, security hygiene, whitespace, and the focused immutable-action policy passed.",
+        "The broader coverage audit module retains unrelated pre-existing drift failures; hosted CodeQL and ruleset evidence remain pending.",
+        "Local implementation commit: bdf0536ee8af9b0bcb0e8c5503d713b288ea8178."
+      ],
+      "reviewer": "/root",
+      "blocker": "Hosted master, internal-PR, and approved fork-PR CodeQL runs plus initial-alert triage and ruleset evaluation require the committed workflow to be available on GitHub."
     }
   ]
 }
