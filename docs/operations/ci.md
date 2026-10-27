@@ -144,14 +144,13 @@ The Expense Core matrix shard also runs the opt-in PostgreSQL tests against the
 other shards retain their normal test configuration.
 Jobs use Microsoft Build of OpenJDK. Python dependencies
 and tooling are deterministically managed via `pyproject.toml` and `uv.lock`.
-Dependabot checks Gradle, GitHub Actions, the root uv project, and the standalone
-OIDC fixture's pip manifest on one bounded weekly schedule from
+Dependabot checks Gradle, GitHub Actions, the root uv project, the standalone
+OIDC fixture's pip manifest, and Dockerfiles on one bounded weekly schedule from
 `.github/dependabot.yml`; minor and patch updates are grouped per ecosystem to
-avoid unnecessary pull-request churn. Container image tags remain centralized in
-`infra/versions.env.example` and are checked by `make sbom-validate`. Dependabot's
-Docker updater is intentionally not configured because the repository uses
-Dockerfile `ARG` indirection and environment-backed Compose image references,
-which Dependabot does not update.
+avoid unnecessary pull-request churn. Docker coverage is best-effort because
+container image tags remain centralized in `infra/versions.env.example`, while
+Dockerfiles and Compose use `ARG`/environment indirection; `make sbom-validate`
+remains the authoritative container-version drift guard.
 CI workflows install dependencies via the immutable commit
 `astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7` (the `v10.2.0` tag)
 with `uv sync --frozen --no-build`, running tools and scripts via

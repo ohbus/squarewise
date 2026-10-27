@@ -39,8 +39,9 @@ durable task specifications, acceptance criteria, validation, and evidence.
    completed tasks.
 4. Issue forms apply the repository label taxonomy and provide a maintainer task
    form for objective, dependencies, owned paths, acceptance, and validation.
-5. Dependabot monitors Gradle, GitHub Actions, the root uv project, and the
-   standalone OIDC fixture's pip manifest on one bounded weekly schedule.
+5. Dependabot monitors Gradle, GitHub Actions, the root uv project, the
+   standalone OIDC fixture's pip manifest, and Dockerfiles on one bounded
+   weekly schedule.
 6. One stable required CI result aggregates selected verification jobs, and the
    default-branch ruleset requires it together with reviewed, resolved PRs.
 7. Repository guidance names one authority per concern and preserves durable
@@ -86,11 +87,11 @@ git diff --check
   blocked-by relationships or a `blocked` label instead of a Waiting status.
 - A Backlog table is the Jira-style overview for Backlog and Ready work, grouped
   by Workstream and retaining native parent/sub-issue hierarchy.
-- Dependabot's Docker updater is intentionally excluded: the repository's
-  authoritative image tags are centralized in `infra/versions.env.example`,
-  Dockerfiles use `ARG`-based `FROM` references, and Compose images use
-  environment indirection that Dependabot does not update. `make sbom-validate`
-  remains the local container-version drift guard.
+- Dependabot's Docker updater is retained as best-effort coverage for direct
+  Dockerfile references. The repository's authoritative image tags remain
+  centralized in `infra/versions.env.example`; Dockerfile `ARG` references and
+  Compose environment indirection are not updated by Dependabot, so
+  `make sbom-validate` remains the local container-version drift guard.
 - Repository milestone #1 (`Production readiness`) is assigned to epics #20/#21
   and release-gated children #23-#26/#28-#31. The owner reports all configured
   Project workflows active; public project data does not expose their settings.

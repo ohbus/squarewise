@@ -43,3 +43,19 @@ updates:
     groups:
       fixture-python-minor-and-patch:
         update-types: [minor, patch]
+
+  # Best-effort Docker coverage; ARG/env indirection remains guarded by sbom-validate.
+  - package-ecosystem: docker
+    directories:
+      - /.devcontainer
+      - /infra/docker
+      - /infra/docs
+      - /tests/fixtures/invalid_subject_oidc
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Europe/Vienna
+    groups:
+      docker-minor-and-patch:
+        update-types: [minor, patch]
