@@ -19,6 +19,7 @@ dependencies {
     implementation(libs.boot.data.jpa)
     implementation(libs.boot.amqp)
     implementation(libs.boot.flyway)
+    implementation(libs.flyway)
     implementation(libs.kotlin.reflect)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.jackson.module.kotlin)
