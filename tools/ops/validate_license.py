@@ -10,6 +10,7 @@ from typing import Any, Mapping
 
 ROOT = Path(__file__).resolve().parents[2]
 LICENSE_PATH = ROOT / "LICENSE"
+NOTICE_PATH = ROOT / "NOTICE"
 PYPROJECT_PATH = ROOT / "pyproject.toml"
 README_PATH = ROOT / "README.md"
 
@@ -54,6 +55,16 @@ def validate_project_metadata(document: Mapping[str, Any]) -> list[str]:
     return findings
 
 
+def validate_notice_text(text: str) -> list[str]:
+    """Return findings for the first-party copyright and scope notice."""
+    findings: list[str] = []
+    if "Copyright (C) 2026 Subhrodip Mohanta" not in text:
+        findings.append("NOTICE must preserve the first-party copyright holder")
+    if "AGPL-3.0-only" not in text:
+        findings.append("NOTICE must identify the project license")
+    return findings
+
+
 def validate_references(references: Mapping[str, str]) -> list[str]:
     """Return findings for active repository references to the project license."""
     findings: list[str] = []
@@ -66,6 +77,10 @@ def validate_references(references: Mapping[str, str]) -> list[str]:
 def validate_repository() -> list[str]:
     """Validate checked-in license, metadata, and active documentation references."""
     findings = validate_license_text(LICENSE_PATH.read_text(encoding="utf-8"))
+    if not NOTICE_PATH.is_file():
+        findings.append("missing first-party copyright notice: NOTICE")
+    else:
+        findings.extend(validate_notice_text(NOTICE_PATH.read_text(encoding="utf-8")))
     try:
         metadata = tomllib.loads(PYPROJECT_PATH.read_text(encoding="utf-8"))
     except (FileNotFoundError, tomllib.TOMLDecodeError) as error:

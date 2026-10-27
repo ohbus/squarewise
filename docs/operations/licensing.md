@@ -3,7 +3,8 @@
 Squarewise first-party software and repository-authored implementation material
 are licensed under the [GNU Affero General Public License v3.0 only](../../LICENSE)
 (`AGPL-3.0-only`). The root `LICENSE` file is the complete, unmodified license
-text and is the authoritative project-level grant.
+text and is the authoritative project-level grant. `NOTICE` records the
+first-party copyright holder without modifying the canonical license text.
 
 ## Scope
 

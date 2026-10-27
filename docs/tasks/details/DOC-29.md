@@ -16,6 +16,7 @@ contribution model.
 ## Owned paths
 
 - `LICENSE`
+- `NOTICE`
 - `README.md`
 - `CONTRIBUTING.md`
 - `pyproject.toml`
@@ -104,6 +105,10 @@ Commit `36e76acb` replaced the MIT text with the canonical SPDX
 `AGPL-3.0-only` text, updated README/package/readiness metadata, added the typed
 license validator and four regression tests, and wired the validator into the
 reusable CI lint job and `make validate`.
+
+The separate `NOTICE` file preserves the first-party copyright holder while the
+canonical license remains verbatim; it is included in the Python package's
+license-file metadata.
 
 Verified locally:
 

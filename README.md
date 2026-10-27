@@ -326,6 +326,7 @@ squarewise/
 ├── CODE_OF_CONDUCT.md          # Community behavior & enforcement policy
 ├── CONTRIBUTING.md             # Developer workflow & contribution guide
 ├── LICENSE                     # AGPL-3.0-only license terms
+├── NOTICE                      # First-party copyright and scope notice
 ├── Makefile                    # One-command developer CLI
 ├── README.md                   # Project overview and entry point
 └── SECURITY.md                 # Private vulnerability reporting policy
