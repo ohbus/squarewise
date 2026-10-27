@@ -20,6 +20,7 @@ contribution model.
 - `README.md`
 - `CONTRIBUTING.md`
 - `pyproject.toml`
+- `.gitattributes`
 - `Makefile`
 - `.github/workflows/_reusable-ci.yml`
 - `docs/README.md`

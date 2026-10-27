@@ -169,7 +169,7 @@ setup before generating the CycloneDX SBOM; every job that invokes Gradle owns
 its toolchain setup explicitly.
 The same lint job runs `tools/ops/validate_license.py` and its focused unit
 tests, checking the canonical AGPL-3.0-only project metadata and preventing
-stale MIT project references from returning. It intentionally does not classify
+stale project-license references from returning. It intentionally does not classify
 third-party dependency licenses; the CycloneDX SBOM and dependency-review job
 remain the source of that evidence.
 QA-10 coverage is reported per module in the Gradle matrix. The repository-wide

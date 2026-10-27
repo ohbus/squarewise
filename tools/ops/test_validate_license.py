@@ -7,6 +7,7 @@ from typing import Any
 
 from tools.ops.validate_license import (
     validate_license_text,
+    validate_license_bytes,
     validate_notice_text,
     validate_project_metadata,
     validate_references,
@@ -26,6 +27,12 @@ class LicenseValidationTest(unittest.TestCase):
         findings = validate_license_text("MIT License\nPermission is hereby granted")
         self.assertIn("LICENSE still contains MIT license text", findings)
 
+    def test_truncated_license_is_rejected(self) -> None:
+        """Marker phrases alone must not authorize a modified license file."""
+        data = b"GNU AFFERO GENERAL PUBLIC LICENSE\nVersion 3\nRemote Network Interaction"
+        findings = validate_license_bytes(data)
+        self.assertIn("LICENSE does not match the canonical AGPL-3.0-only text", findings)
+
     def test_metadata_requires_exact_license_and_file(self) -> None:
         """Package metadata must identify the exact license and root text."""
         document: dict[str, Any] = {
@@ -33,6 +40,14 @@ class LicenseValidationTest(unittest.TestCase):
         }
         findings = validate_project_metadata(document)
         self.assertIn("pyproject.toml project.license must be AGPL-3.0-only", findings)
+
+    def test_metadata_requires_notice_file(self) -> None:
+        """Built distributions must retain both the license and copyright notice."""
+        document: dict[str, Any] = {
+            "project": {"license": "AGPL-3.0-only", "license-files": ["LICENSE"]}
+        }
+        findings = validate_project_metadata(document)
+        self.assertIn("pyproject.toml project.license-files must include LICENSE and NOTICE", findings)
 
     def test_notice_preserves_first_party_copyright(self) -> None:
         """The canonical license is paired with an explicit project copyright notice."""

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 import sys
 import tomllib
@@ -13,6 +14,7 @@ LICENSE_PATH = ROOT / "LICENSE"
 NOTICE_PATH = ROOT / "NOTICE"
 PYPROJECT_PATH = ROOT / "pyproject.toml"
 README_PATH = ROOT / "README.md"
+EXPECTED_LICENSE_SHA256 = "d8a6cc31abc16b6748c7a21f21611f5a1ec33f67d22ca23d7da1c19b95496bee"
 
 REFERENCE_PATHS: tuple[Path, ...] = (
     README_PATH,
@@ -24,6 +26,7 @@ REFERENCE_PATHS: tuple[Path, ...] = (
     ROOT / "docs" / "implementation" / "production-readiness-roadmap.md",
     ROOT / "docs" / "operations" / "production-readiness-plan.md",
     ROOT / "docs" / "reviews" / "production-readiness-audit.md",
+    ROOT / "docs" / "tasks" / "board.md",
 )
 
 
@@ -39,6 +42,19 @@ def validate_license_text(text: str) -> list[str]:
     return findings
 
 
+def validate_license_bytes(data: bytes) -> list[str]:
+    """Return findings for the exact checked-in canonical license bytes."""
+    try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError:
+        return ["LICENSE must be valid UTF-8"]
+
+    findings = validate_license_text(text)
+    if hashlib.sha256(data).hexdigest() != EXPECTED_LICENSE_SHA256:
+        findings.append("LICENSE does not match the canonical AGPL-3.0-only text")
+    return findings
+
+
 def validate_project_metadata(document: Mapping[str, Any]) -> list[str]:
     """Return findings for the Python project's SPDX license metadata."""
     project = document.get("project")
@@ -50,8 +66,8 @@ def validate_project_metadata(document: Mapping[str, Any]) -> list[str]:
         findings.append("pyproject.toml project.license must be AGPL-3.0-only")
 
     license_files = project.get("license-files")
-    if not isinstance(license_files, list) or "LICENSE" not in license_files:
-        findings.append("pyproject.toml project.license-files must include LICENSE")
+    if not isinstance(license_files, list) or not {"LICENSE", "NOTICE"}.issubset(license_files):
+        findings.append("pyproject.toml project.license-files must include LICENSE and NOTICE")
     return findings
 
 
@@ -76,7 +92,10 @@ def validate_references(references: Mapping[str, str]) -> list[str]:
 
 def validate_repository() -> list[str]:
     """Validate checked-in license, metadata, and active documentation references."""
-    findings = validate_license_text(LICENSE_PATH.read_text(encoding="utf-8"))
+    if not LICENSE_PATH.is_file():
+        findings = ["missing canonical license file: LICENSE"]
+    else:
+        findings = validate_license_bytes(LICENSE_PATH.read_bytes())
     if not NOTICE_PATH.is_file():
         findings.append("missing first-party copyright notice: NOTICE")
     else:
