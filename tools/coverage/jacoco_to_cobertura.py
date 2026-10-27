@@ -54,7 +54,6 @@ def _parse_report(root: Path, report: Path) -> list[SourceCoverage]:
             source_name = source_file.get("name")
             if not source_name:
                 raise ValueError(f"JaCoCo sourcefile without a name in {report}")
-            source_path = _source_path(root, report, package_name, source_name)
             parsed_lines: list[tuple[int, int]] = []
             for line in source_file.findall("./line"):
                 number = line.get("nr")
@@ -64,6 +63,7 @@ def _parse_report(root: Path, report: Path) -> list[SourceCoverage]:
                 parsed_lines.append((int(number), int(covered)))
             lines = tuple(parsed_lines)
             if lines:
+                source_path = _source_path(root, report, package_name, source_name)
                 coverage.append(
                     SourceCoverage(
                         package=package_name,
