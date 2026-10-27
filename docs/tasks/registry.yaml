@@ -9646,6 +9646,46 @@
       ],
       "reviewer": "/root",
       "blocker": "Hosted master, internal-PR, and approved fork-PR CodeQL runs plus initial-alert triage and ruleset evaluation require the committed workflow to be available on GitHub."
+    },
+    {
+      "id": "QA-11",
+      "parent_id": "MILESTONE-PRODUCTION-HARDENING",
+      "title": "Publish JVM coverage information without merge enforcement",
+      "phase": "quality",
+      "status": "in_progress",
+      "owner_role": "coordinator",
+      "owner_agent": "/root",
+      "depends_on": ["QA-10", "OPS-15", "OPS-32"],
+      "owned_paths": [
+        ".github/workflows/coverage.yml",
+        "tools/coverage/jacoco_to_cobertura.py",
+        "tests/tools/test_jacoco_to_cobertura.py",
+        "docs/operations/ci.md",
+        "docs/quality/testing-strategy.md",
+        "docs/tasks/details/QA-11.md",
+        "docs/tasks/registry.yaml",
+        "docs/tasks/board.md",
+        "docs/tasks/progress.md"
+      ],
+      "specification": "docs/tasks/details/QA-11.md",
+      "acceptance_criteria": [
+        "A full Gradle JaCoCo run produces one deterministic aggregate Cobertura XML report for JVM modules on master and master-targeting pull requests.",
+        "Master and same-repository pull requests publish Cobertura XML through GitHub Code Quality with code-quality: write.",
+        "Fork pull requests use pull_request only, retain a downloadable coverage artifact, and skip the unsupported Code Quality upload.",
+        "The coverage artifact is attested when the event token can write attestations.",
+        "Coverage is informational; no minimum, drop threshold, ruleset, or required status check is added.",
+        "Converter tests, Python typing, workflow validation, Gradle JaCoCo execution, and whitespace checks pass."
+      ],
+      "validation_commands": [
+        "uv run --frozen --no-build python -m unittest tests/tools/test_jacoco_to_cobertura.py",
+        "make python-typecheck",
+        "make workflow-validate",
+        "./gradlew test jacocoTestReport --no-daemon --console=plain",
+        "git diff --check"
+      ],
+      "evidence": [],
+      "reviewer": "/root",
+      "blocker": "Hosted master, internal-PR, and fork-PR coverage runs are required to verify Code Quality publication, artifact retention, and attestation behavior."
     }
   ]
 }
