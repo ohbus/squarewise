@@ -8283,8 +8283,9 @@
       "evidence": [
         "Commit c6c33268 registered DOC-29, added the licensing policy, documented first-party scope and third-party exceptions, and linked the policy from contributor and documentation entry points.",
         "Commit 36e76acb replaced MIT with the canonical SPDX AGPL-3.0-only text, updated README/package/readiness metadata, added the typed license validator and four initial regression tests, and wired the validator into reusable CI and make validate.",
-        "Commit 1a4a13d6 preserved the first-party copyright holder in NOTICE and included NOTICE in Python package license-file metadata; the validator now has five regression tests.",
-        "make license-validate, the focused five-test unittest module, make contracts, make python-typecheck, make workflow-validate, make sbom-validate, make security-hygiene, uv build, and git diff --check passed.",
+        "Commit 1a4a13d6 preserved the first-party copyright holder in NOTICE and included NOTICE in Python package license-file metadata; the validator then had five regression tests.",
+        "Commit 0b792b1c pinned the canonical license SHA-256, required LICENSE and NOTICE in package metadata, restored DOC-29 registry ownership/evidence, clarified the superseded board baseline, and pinned LF line endings for cross-platform validation.",
+        "make license-validate, the focused seven-test unittest module, make contracts, make python-typecheck, make workflow-validate, make sbom-validate, make security-hygiene, uv build, and git diff --check passed.",
         "Built wheel metadata contains License-Expression: AGPL-3.0-only, License-File: LICENSE, and License-File: NOTICE; the checked-in LICENSE matches the SPDX text byte-for-byte.",
         "Hosted GitHub license detection, repository About metadata, and copyright ownership confirmation remain post-merge checks."
       ],

@@ -111,11 +111,16 @@ Commit `1a4a13d6` added the separate `NOTICE` file, preserving the first-party
 copyright holder while the canonical license remains verbatim; it is included
 in the Python package's license-file metadata.
 
+Commit `0b792b1c` closed review findings by pinning the canonical license
+SHA-256, requiring both `LICENSE` and `NOTICE` in package metadata, restoring
+DOC-29 registry ownership/evidence, clarifying the superseded board baseline,
+and pinning LF line endings for cross-platform validation.
+
 Verified locally:
 
 - `make license-validate` passed.
 - `uv run --frozen --no-build python -m unittest tools.ops.test_validate_license`
-  passed 5 tests.
+  passed 7 tests.
 - `make contracts` passed with 265 valid tasks, 45 REST operations, 9 GraphQL
   root operations, 50 Bruno requests, and 99 catalog records.
 - `make python-typecheck` passed for 75 files.
