@@ -29,6 +29,12 @@ contain at least the expected number of declared dependencies.
 uv run --frozen --no-build python tools/ops/validate_sbom_baseline.py: SBOM dependency baseline validation passed
 ```
 
+The project license is `AGPL-3.0-only`. The lightweight `license-validate`
+check verifies first-party metadata and active documentation references; it does
+not relicense or automatically approve external dependencies. Dependency
+licenses remain visible in the generated CycloneDX SBOM and require review
+before release.
+
 ### Secret and hygiene scanning
 
 The `check_security_hygiene.py` script scans all tracked files for obvious credential patterns
@@ -86,7 +92,7 @@ make workflow-validate  # yamllint
 | Container vulnerability scanning (Trivy/Snyk) | Not yet enforced in CI | QA-08 / production release gate |
 | Image signing and provenance attestations (Sigstore/cosign) | Not yet implemented | OPS-20 / production release gate |
 | Dependency renovation / auto-update policy | Manual review only | Production release gate |
-| License policy enforcement | Manual review only | Production release gate |
+| License policy enforcement | Project metadata gate plus manual dependency compatibility review | Production release gate |
 | Reproducible build verification | Not yet verified | Production release gate |
 | Admission control in target environment | Not yet provisioned | Production release gate |
 

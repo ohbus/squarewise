@@ -412,7 +412,7 @@ git rev-parse HEAD
   - [ ] Dependency vulnerability scan passes (OWASP Dependency-Check)
   - [ ] Container image scan passes (Trivy)
   - [ ] SBOM generated and retained (CycloneDX)
-  - [ ] License compliance verified (no GPL in MIT project)
+  - [ ] License compliance verified against AGPL-3.0-only project metadata and reviewed dependency licenses
   - [ ] Secret scanning passes (Gitleaks/TruffleHog)
   - [ ] Static security analysis passes (Detekt security rules)
   - Exceptions have owner, mitigation, and expiry date
