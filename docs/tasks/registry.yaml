@@ -9684,9 +9684,9 @@
         "git diff --check"
       ],
       "evidence": [
-        "Commits 1074b533, 46171b5f, 725967d4, and 3e26da49 register the task, add the typed JaCoCo-to-Cobertura converter and focused tests, publish the workflow, and handle empty synthetic JaCoCo source entries.",
+        "Commits 1074b533, 46171b5f, 725967d4, 3e26da49, 15a51086, 7793ff8d, b14ae207, and cc6d1910 register the task, add the typed JaCoCo-to-Cobertura converter and focused tests, publish the workflow, correct the action and module invocation pins, and make the optional Code Quality upload non-blocking.",
         "uv run --frozen --no-build python -m unittest tests/tools/test_jacoco_to_cobertura.py passed 2 tests; make python-typecheck passed 73 files; make workflow-validate and git diff --check passed; ./gradlew test jacocoTestReport --no-daemon --console=plain passed 68 actionable tasks; the converter produced 434 classes with 9,013 covered of 9,032 valid lines from the generated reports.",
-        "Hosted default-branch, internal-PR, and fork-PR evidence remains pending because this branch is not yet available on GitHub."
+        "Hosted run 40531679218 confirmed Gradle, conversion, artifact upload, and attestation succeeded; the optional Code Quality API returned HTTP 404 and is now non-blocking. Fork-PR publication evidence remains pending."
       ],
       "reviewer": "/root",
       "blocker": "Hosted master, internal-PR, and fork-PR coverage runs are required to verify Code Quality publication, artifact retention, and attestation behavior."
