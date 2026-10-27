@@ -9,6 +9,30 @@ and grant `pull-requests: read`, `id-token: write`, and `attestations: write` ex
 at the calling job level (`ci`) so nested reusable workflow jobs (`lint`, `verify`, and other
 artifact producers) can attest build provenance without escalating privileges across the workflow.
 
+Security analysis is intentionally isolated in `codeql.yml`. It runs CodeQL on
+pushes to `master`, pull requests targeting `master`, a weekly schedule, and
+manual dispatch. Its matrix covers Java/Kotlin, all repository Python (including
+`tests/`), and GitHub Actions. The Java/Kotlin lane uses Java 25 and a manual
+`testClasses` Gradle build with the build cache disabled, ensuring CodeQL observes
+both production and test compilation without executing tests. Python and Actions
+use buildless analysis. The default high-precision query suite is used for every
+lane; the repository's k6-only JavaScript files are intentionally outside this
+security-focused matrix.
+
+Fork pull requests use the unprivileged `pull_request` event. The workflow does
+not inherit secrets, persist checkout credentials, or use `pull_request_target`;
+its only job permissions are `contents: read` and `security-events: write`.
+GitHub downgrades the token for fork code while still permitting CodeQL results
+from a `pull_request` run to be uploaded. GitHub-configured maintainer approval
+requirements for untrusted contributors apply and are not bypassed by this workflow.
+
+CodeQL merge protection is staged separately from ordinary required status
+checks. After successful default-branch, internal-PR, and approved fork-PR runs
+and initial-alert triage, a dedicated default-branch ruleset is evaluated and
+then activated for the CodeQL tool with non-security `errors` and security
+`high_or_higher` thresholds. Lower-severity findings remain visible for planned
+remediation, including findings confined to test code.
+
 PR and non-master branch runs now calculate a changed-scope plan before the Gradle
 matrix. The plan selects changed modules plus their reverse project dependents and
 selects only the E2E streams affected by the changed paths. Master and manually

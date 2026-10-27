@@ -40,6 +40,22 @@ security hygiene passed: scanned 1035 tracked files
 The script is run in CI as part of the `security-hygiene` Make target and the
 `_reusable-ci.yml` workflow.
 
+### CodeQL static analysis
+
+The advanced CodeQL workflow analyzes Java/Kotlin, repository Python, and
+GitHub Actions on `master`, pull requests targeting `master`, a weekly schedule,
+and manual dispatch. Java/Kotlin production and test sources are compiled with
+the repository Gradle wrapper under Java 25; Python analysis includes operational
+tools and tests. The workflow uses the default high-precision query suite.
+
+Fork pull requests execute only through the unprivileged `pull_request` event,
+without inherited secrets or persisted checkout credentials. No
+`pull_request_target` path executes contributor-controlled code. Merge
+protection remains staged until hosted default-branch, internal-PR, and fork-PR
+results are captured and the initial alert baseline is triaged; the target
+policy reports every finding and blocks non-security errors plus high-or-higher
+security alerts.
+
 ### Image hardening baseline
 
 All application container images use:
