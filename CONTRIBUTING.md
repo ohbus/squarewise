@@ -12,6 +12,7 @@ Squarewise is a documentation-first, tracker-driven, modular Kotlin/Spring appli
   - [Reporting Bugs & Security Issues](#reporting-bugs--security-issues)
   - [Suggesting Enhancements](#suggesting-enhancements)
   - [Working Agreement & Task Registry](#working-agreement--task-registry)
+  - [License and contribution rights](#license-and-contribution-rights)
 - [Development Setup](#development-setup)
   - [Prerequisites](#prerequisites)
   - [Setting Up Your Local Environment](#setting-up-your-local-environment)
@@ -75,6 +76,15 @@ Squarewise operates under a strict documentation-first workflow:
 - The authority boundary and migration rules are documented in
   [`docs/tasks/README.md`](docs/tasks/README.md).
 - Read [`docs/working-agreement.md`](docs/working-agreement.md) for full context on our execution protocol.
+
+### License and contribution rights
+
+Squarewise first-party work is licensed under the
+[AGPL-3.0-only license](LICENSE). Before submitting a contribution, confirm
+that you have the right to submit it under that license and preserve any
+third-party copyright and license notices. Squarewise does not currently use a
+CLA or DCO; the full scope and exception policy is documented in
+[`docs/operations/licensing.md`](docs/operations/licensing.md).
 
 ---
 

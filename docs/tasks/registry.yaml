@@ -8227,6 +8227,62 @@
       "blocker": "Repository settings and ruleset changes require owner action in GitHub; cutover also waits for the new Required CI check to complete on a hosted pull request."
     },
     {
+      "id": "DOC-29",
+      "parent_id": "MILESTONE-DOCUMENTATION",
+      "title": "Migrate first-party repository content to AGPL-3.0-only",
+      "phase": "documentation",
+      "status": "in_progress",
+      "owner_role": "coordinator",
+      "owner_agent": "/root",
+      "depends_on": [
+        "DOC-27",
+        "SEC-01F"
+      ],
+      "owned_paths": [
+        "LICENSE",
+        "README.md",
+        "CONTRIBUTING.md",
+        "pyproject.toml",
+        "Makefile",
+        ".github/workflows/_reusable-ci.yml",
+        "docs/README.md",
+        "docs/operations/README.md",
+        "docs/operations/licensing.md",
+        "docs/operations/ci.md",
+        "docs/security/supply-chain-evidence.md",
+        "docs/implementation/production-readiness-roadmap.md",
+        "docs/operations/production-readiness-plan.md",
+        "docs/reviews/production-readiness-audit.md",
+        "tools/ops/validate_license.py",
+        "tools/ops/test_validate_license.py",
+        "docs/tasks/details/DOC-29.md",
+        "docs/tasks/registry.yaml",
+        "docs/tasks/board.md",
+        "docs/tasks/progress.md"
+      ],
+      "specification": "docs/tasks/details/DOC-29.md",
+      "acceptance_criteria": [
+        "The root LICENSE is the canonical GNU AGPL v3.0-only text and old MIT releases remain historically identifiable.",
+        "README, documentation, contributor guidance, Python package metadata, and active readiness language consistently identify AGPL-3.0-only.",
+        "Third-party notices, generated dependency records, and historical evidence are explicitly excluded from relicensing.",
+        "The typed license-validate check runs locally and in reusable CI and rejects stale project-level metadata.",
+        "Task documentation records ownership, evidence, limitations, and exact commit hashes for every increment."
+      ],
+      "validation_commands": [
+        "uv run --frozen --no-build python tools/contracts/validate.py",
+        "uv run --frozen --no-build python -m unittest tools.ops.test_validate_license",
+        "make license-validate",
+        "make python-typecheck",
+        "make workflow-validate",
+        "make sbom-validate",
+        "uv build",
+        "git diff --check"
+      ],
+      "evidence": [],
+      "reviewer": "/root",
+      "blocker": "Copyright ownership confirmation and post-merge GitHub license detection remain required before release."
+    },
+    {
       "id": "OPS-32",
       "parent_id": "MILESTONE-QUALITY",
       "title": "Select changed-scope PR and branch CI while keeping master full",
