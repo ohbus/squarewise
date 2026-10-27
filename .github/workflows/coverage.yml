@@ -44,7 +44,7 @@ jobs:
       - name: Run tests and generate JaCoCo reports
         run: ./gradlew test jacocoTestReport --scan --no-daemon --console=plain
       - name: Convert JaCoCo reports to Cobertura
-        run: python3 tools/coverage/jacoco_to_cobertura.py --root . --output build/coverage/cobertura.xml
+        run: python3 -m tools.coverage.jacoco_to_cobertura --root . --output build/coverage/cobertura.xml
       - name: Prepare coverage artifact
         run: |
           mkdir -p coverage
