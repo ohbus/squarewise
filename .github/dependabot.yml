@@ -33,6 +33,17 @@ updates:
       python-minor-and-patch:
         update-types: [minor, patch]
 
+  - package-ecosystem: pip
+    directory: /tests/fixtures/invalid_subject_oidc
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: Europe/Vienna
+    open-pull-requests-limit: 5
+    groups:
+      fixture-python-minor-and-patch:
+        update-types: [minor, patch]
+
   - package-ecosystem: docker
     directories:
       - /.devcontainer
