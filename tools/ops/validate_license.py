@@ -25,6 +25,7 @@ REFERENCE_PATHS: tuple[Path, ...] = (
     README_PATH,
     ROOT / "CONTRIBUTING.md",
     ROOT / "docs" / "README.md",
+    ROOT / "docs" / "operations" / "README.md",
     ROOT / "docs" / "operations" / "licensing.md",
     ROOT / "docs" / "operations" / "ci.md",
     ROOT / "docs" / "security" / "supply-chain-evidence.md",

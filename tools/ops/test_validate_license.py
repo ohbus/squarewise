@@ -6,6 +6,8 @@ import unittest
 from typing import Any
 
 from tools.ops.validate_license import (
+    REFERENCE_PATHS,
+    ROOT,
     validate_license_text,
     validate_license_bytes,
     validate_notice_text,
@@ -63,6 +65,10 @@ class LicenseValidationTest(unittest.TestCase):
         """Every active reference must identify the current project license."""
         findings = validate_references({"CONTRIBUTING.md": "Please read the license."})
         self.assertEqual(findings, ["CONTRIBUTING.md must identify AGPL-3.0-only"])
+
+    def test_operations_index_is_an_active_reference(self) -> None:
+        """The operations index remains covered by the repository-level guard."""
+        self.assertIn(ROOT / "docs" / "operations" / "README.md", REFERENCE_PATHS)
 
 
 if __name__ == "__main__":

@@ -143,3 +143,10 @@ the focused suite now contains eight tests.
 Commit `1253e2e9` implements this increment. The focused eight-test suite,
 `make license-validate`, `make python-typecheck`, `make workflow-validate`, and
 `git diff --check` passed.
+
+### Increment 6 - cover the operations index
+
+Added `docs/operations/README.md` to the validator's active-reference inventory
+and changed its licensing entry to the exact `AGPL-3.0-only` identifier. A
+regression test now protects the inventory entry so future stale guidance cannot
+silently bypass `license-validate`.
