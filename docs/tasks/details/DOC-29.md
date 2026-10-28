@@ -165,3 +165,11 @@ Commit `33b1cfd` implements this increment. The focused license-validation
 suite, `make license-validate`, `make contracts`, `make python-typecheck`,
 `make workflow-validate`, Dockerfile syntax validation, and `git diff --check`
 passed.
+
+### Increment 8 - cover the article in stale-MIT detection
+
+Extended the first-party stale-license pattern to reject `licensed under the
+MIT License` and added a regression assertion for the exact review wording.
+Commit `20981431` implements this increment. The focused license-validation
+suite, `make license-validate`, `make python-typecheck`, and `git diff --check`
+passed.
