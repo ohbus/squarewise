@@ -28,7 +28,7 @@ class PublicSurfacePatternTest(unittest.TestCase):
         script = (
             "import sys; "
             "from tools.contracts.validate_public_surface import GRAPHQL_RESOLVER; "
-            "assert GRAPHQL_RESOLVER.findall(sys.argv[1]) == []"
+            "raise SystemExit(bool(GRAPHQL_RESOLVER.findall(sys.argv[1])))"
         )
         subprocess.run(
             [sys.executable, "-c", script, source],
