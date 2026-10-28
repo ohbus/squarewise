@@ -23,10 +23,30 @@ class BrokerEnvelopeConversionTest {
             )
         ).toNotificationEvent()
 
-        assertEquals(aggregateId, event.notificationId)
+        assertEquals(eventId, event.notificationId)
         assertEquals("alice@example.com", event.subject)
         assertEquals("Expense description", event.message)
         assertEquals(eventId, event.eventId)
+    }
+
+    @Test
+    fun `gives aggregate changes distinct fallback notification identities`() {
+        val first = envelope(eventType = "expense.created").copy(
+            eventId = UUID.randomUUID(),
+            payload = mapOf("subject" to "alice", "message" to "Created")
+        ).toNotificationEvent()
+        val second = envelope(eventType = "expense.updated").copy(
+            eventId = UUID.randomUUID(),
+            payload = mapOf("subject" to "alice", "message" to "Updated")
+        ).toNotificationEvent()
+        val replay = envelope(eventType = "expense.created").copy(
+            eventId = first.eventId,
+            payload = mapOf("subject" to "alice", "message" to "Created")
+        ).toNotificationEvent()
+
+        assertEquals(first.eventId, first.notificationId)
+        assertEquals(second.eventId, second.notificationId)
+        assertEquals(first.notificationId, replay.notificationId)
     }
 
     /** Verifies explicit values are bounded to the public notification field limits. */
