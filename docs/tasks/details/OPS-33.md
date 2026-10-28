@@ -111,3 +111,38 @@ but the Java/Kotlin lane failed while compiling `:app:accounts:compileKotlin`
 with `java.lang.OutOfMemoryError: Java heap space` (job `122209107187`). The
 workflow now gives the manual Gradle extraction build a 4 GiB heap through
 `GRADLE_OPTS`; the replacement hosted run and fork-PR evidence remain pending.
+
+### Initial alert triage increment
+
+The CodeQL ReDoS finding in `tools/contracts/validate_public_surface.py` is
+addressed by replacing ambiguous repeated whitespace with horizontal
+whitespace plus mandatory newline boundaries. Focused regression coverage
+protects multiline resolver discovery and non-matching long input.
+
+Commit `71ed1a3a` implements this increment. The focused validator tests,
+public-surface validation, `make python-typecheck`, and `git diff --check`
+passed.
+
+### BFF CSRF alert triage increment
+
+Added an end-to-end WebFlux transport regression proving a cookie-authenticated
+GraphQL mutation is rejected before any gateway or resolver interaction when
+the CSRF proof is missing. The existing custom `BrowserCsrfWebFilter` remains
+the intentional enforcement boundary while Spring's generic CSRF filter stays
+disabled for bearer-native requests.
+
+Commit `5dc30569` implements this increment. The focused BFF transport and
+CSRF tests passed.
+
+### Hosted review follow-up
+
+The PR review identified one remaining CodeQL regex path and two missing HTTP
+coverage boundaries. The resolver pattern now removes overlapping horizontal
+whitespace quantifiers, the regression suite bounds a long-space non-match in a
+subprocess, and the BFF transport suite covers both rejected and successful
+cookie-authenticated mutations. The new public test methods include structured
+KDoc.
+
+Validation for this follow-up passed with the focused Python unittest, public
+surface validator, `make python-typecheck`, focused BFF transport test, and
+`git diff --check`.

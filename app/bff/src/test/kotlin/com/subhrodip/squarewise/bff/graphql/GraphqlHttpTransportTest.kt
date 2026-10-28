@@ -232,6 +232,49 @@ class GraphqlHttpTransportTest {
             .expectStatus().isForbidden
     }
 
+    /**
+     * Verifies that a trusted browser origin with an access cookie but no CSRF proof is rejected
+     * before either downstream gateway can execute the mutation.
+     */
+    @Test
+    fun `cookie-authenticated graphql mutation requires csrf proof before resolver`() {
+        client.post().uri(ApiEndpoints.Bff.GRAPHQL)
+            .header("Origin", "https://app.example.test")
+            .cookie("squarewise_access", "access-jwt")
+            .bodyValue(mapOf("query" to "mutation { __typename }"))
+            .exchange()
+            .expectStatus().isForbidden
+
+        verifyNoInteractions(accountsGateway, expenseCoreGateway)
+    }
+
+    /**
+     * Verifies that matching CSRF proof allows a cookie-authenticated mutation to execute
+     * through the HTTP transport and return GraphQL data without errors.
+     */
+    @Test
+    fun `cookie-authenticated graphql mutation executes with matching csrf proof`() {
+        val group = BffGroup("group-csrf", "CSRF", "TRIP", revision = 1)
+        `when`(expenseCoreGateway.createGroup(BffCreateGroup("CSRF", "TRIP", "EUR"), null))
+            .thenReturn(Mono.just(group))
+
+        client.post().uri(ApiEndpoints.Bff.GRAPHQL)
+            .header("Origin", "https://app.example.test")
+            .header("X-CSRF-Token", "nonce")
+            .cookie("squarewise_access", "access-jwt")
+            .cookie("squarewise_csrf", "nonce")
+            .bodyValue(
+                mapOf(
+                    "query" to "mutation { createGroup(input: { name: \"CSRF\", kind: TRIP, currency: \"EUR\" }) { id } }"
+                )
+            )
+            .exchange()
+            .expectStatus().isOk
+            .expectBody()
+            .jsonPath("$.errors").doesNotExist()
+            .jsonPath("$.data.createGroup.id").isEqualTo("group-csrf")
+    }
+
     @Test
     fun `graphql route answers preflight only for an exact configured origin`() {
         client.options().uri(ApiEndpoints.Bff.GRAPHQL)
