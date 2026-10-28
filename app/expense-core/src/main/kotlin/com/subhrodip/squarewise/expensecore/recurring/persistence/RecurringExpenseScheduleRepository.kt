@@ -34,7 +34,9 @@ interface RecurringExpenseScheduleRepository : JpaRepository<RecurringExpenseSch
     @Query(
         value = """
             SELECT * FROM recurring_expense_schedules
-            WHERE paused = false AND next_occurrence_date <= :asOfDate
+            WHERE paused = false
+              AND next_occurrence_date <= :asOfDate
+              AND (end_date IS NULL OR next_occurrence_date <= end_date)
             ORDER BY next_occurrence_date ASC
             LIMIT 100 FOR UPDATE SKIP LOCKED
         """,

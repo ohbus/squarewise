@@ -129,6 +129,7 @@ class RecurringExpenseService(
         schedule.startDate = request.startDate
         schedule.endDate = request.endDate
         schedule.timezone = effectiveTimezone
+        schedule.nextOccurrenceDate = maxOf(schedule.nextOccurrenceDate, request.startDate)
 
         schedule.customSpecification = encodeSpecification(request.payers, request.allocations)
 

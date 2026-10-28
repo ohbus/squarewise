@@ -44,3 +44,10 @@ checked arithmetic and reject duplicate participants and oversized lists.
 
 Recurring schedule and occurrence reads now use a bounded first page of 1 through
 100 rows. Cursor pagination remains required before exposing deeper history.
+
+## 2026-10-28 schedule-boundary follow-up
+
+Due-schedule selection excludes rows whose next occurrence is past their end
+date, so completed schedules cannot fill the bounded worker page. Updating an
+unprocessed schedule start date advances its pending occurrence to the new
+start when needed; existing generated occurrences remain unchanged.

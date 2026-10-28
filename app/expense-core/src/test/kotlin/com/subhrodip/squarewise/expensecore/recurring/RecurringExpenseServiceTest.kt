@@ -196,6 +196,79 @@ class RecurringExpenseServiceTest @Autowired constructor(
     }
 
     @Test
+    fun `moving an unprocessed start date forward moves the next occurrence`() {
+        val group = groupStore.create("alice", CreateGroupRequest("Apartment 4B", "HOUSEHOLD", "EUR"))
+        val schedule = service.createSchedule(
+            group.groupId,
+            CreateRecurringScheduleRequest(
+                description = "Weekly Cleaning",
+                amountMinor = 5000,
+                currency = "EUR",
+                frequency = RecurrenceFrequency.WEEKLY,
+                startDate = LocalDate.of(2026, 9, 1)
+            )
+        )
+
+        val updated = service.updateSchedule(
+            group.groupId,
+            schedule.scheduleId,
+            UpdateRecurringScheduleRequest(
+                description = schedule.description,
+                amountMinor = schedule.amountMinor,
+                currency = schedule.currency,
+                frequency = schedule.frequency,
+                startDate = LocalDate.of(2026, 10, 1)
+            )
+        )
+
+        assertEquals(LocalDate.of(2026, 10, 1), updated.nextOccurrenceDate)
+    }
+
+    @Test
+    fun `due schedule query skips finished schedules before its bounded page`() {
+        val group = groupStore.create("alice", CreateGroupRequest("Apartment 4B", "HOUSEHOLD", "EUR"))
+        val expiredEnd = LocalDate.of(2026, 9, 10)
+        repeat(100) { index ->
+            entityManager.persist(
+                RecurringExpenseSchedule(
+                    scheduleId = UUID.randomUUID(),
+                    groupId = group.groupId,
+                    description = "Expired $index",
+                    amountMinor = 100,
+                    currency = "EUR",
+                    frequency = RecurrenceFrequency.WEEKLY,
+                    startDate = LocalDate.of(2026, 9, 1),
+                    endDate = expiredEnd,
+                    nextOccurrenceDate = LocalDate.of(2026, 9, 15),
+                    paused = false,
+                    createdAt = Instant.EPOCH,
+                    version = 1
+                )
+            )
+        }
+        val valid = RecurringExpenseSchedule(
+            scheduleId = UUID.randomUUID(),
+            groupId = group.groupId,
+            description = "Still active",
+            amountMinor = 100,
+            currency = "EUR",
+            frequency = RecurrenceFrequency.WEEKLY,
+            startDate = LocalDate.of(2026, 9, 1),
+            endDate = LocalDate.of(2026, 10, 1),
+            nextOccurrenceDate = LocalDate.of(2026, 9, 15),
+            paused = false,
+            createdAt = Instant.EPOCH,
+            version = 1
+        )
+        entityManager.persist(valid)
+        entityManager.flush()
+
+        val due = scheduleRepository.findDueSchedules(LocalDate.of(2026, 9, 30))
+
+        assertEquals(listOf(valid.scheduleId), due.map { it.scheduleId })
+    }
+
+    @Test
     fun `updates schedule with valid monthly bounds and custom participants`() {
         val group = groupStore.create("alice", CreateGroupRequest("Monthly update", "HOUSEHOLD", "EUR"))
         val schedule = service.createSchedule(
