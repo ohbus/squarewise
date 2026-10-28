@@ -12,7 +12,8 @@ PATH_ITEM_KEYS = HTTP_METHODS | {"summary", "description", "servers", "parameter
 GRAPHQL_ROOTS = {"Query": "QueryMapping", "Mutation": "MutationMapping", "Subscription": "SubscriptionMapping"}
 GRAPHQL_FIELD = re.compile(r"\b([A-Za-z_][A-Za-z0-9_]*)\s*(?:\([^)]*\))?\s*:")
 GRAPHQL_RESOLVER = re.compile(
-    r"@(Query|Mutation|Subscription)Mapping(?:\([^)]*\))?\s*(?:\r?\n\s*)*fun\s+([A-Za-z_][A-Za-z0-9_]*)"
+    r"@(Query|Mutation|Subscription)Mapping(?:\([^)]*\))?"
+    r"(?:[ \t]*\r?\n[ \t]*)*[ \t]*fun[ \t]+([A-Za-z_][A-Za-z0-9_]*)"
 )
 BRUNO_REQUEST = re.compile(r"(?m)^(get|post|put|patch|delete)\s*\{\s*\n\s*url:\s*([^\n]+)")
 MATRIX_OPERATION = re.compile(r"^\|[^|]+\|[^|]+\|[^|]+\|\s*`([^`]+)`\s*\|", re.MULTILINE)
