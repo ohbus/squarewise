@@ -111,3 +111,14 @@ but the Java/Kotlin lane failed while compiling `:app:accounts:compileKotlin`
 with `java.lang.OutOfMemoryError: Java heap space` (job `122209107187`). The
 workflow now gives the manual Gradle extraction build a 4 GiB heap through
 `GRADLE_OPTS`; the replacement hosted run and fork-PR evidence remain pending.
+
+### Initial alert triage increment
+
+The CodeQL ReDoS finding in `tools/contracts/validate_public_surface.py` is
+addressed by replacing ambiguous repeated whitespace with horizontal
+whitespace plus mandatory newline boundaries. Focused regression coverage
+protects multiline resolver discovery and non-matching long input.
+
+Commit `71ed1a3a` implements this increment. The focused validator tests,
+public-surface validation, `make python-typecheck`, and `git diff --check`
+passed.
