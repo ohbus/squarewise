@@ -1709,4 +1709,6 @@ until API and E2E journey tests exercise it through public interfaces.
 
 | 2026-10-28 | CORE-15 / NOT-07 / NOT-10 | Added independent local fix branches for recurring schedule bounds, notification event identity and email recovery, and notification subject-length alignment. | `./gradlew :app:expense-core:test --tests 'com.subhrodip.squarewise.expensecore.recurring.RecurringExpenseServiceTest' --rerun-tasks --no-daemon --console=plain`, `./gradlew :app:notifications:test --no-daemon --console=plain`, and `git diff --check` passed. Branch commits: `e5fa5f36`, `3d2a35cf`, `e43319cf`, `404916cf`, `3a3b042b`. | local branches; not pushed |
 
+| 2026-10-28 | CORE-15 / NOT-07 / NOT-10 | Made the two notification schema changes repeatable and order-independent for separate PR delivery. | Notifications test suite passed after migration rename; branches remain local and unpushed. | `f5c454e3`, `3dadf0ca` |
+
 
