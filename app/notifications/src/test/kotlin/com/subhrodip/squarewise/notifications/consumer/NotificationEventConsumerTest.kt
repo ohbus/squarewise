@@ -10,11 +10,14 @@ import com.subhrodip.squarewise.notifications.consumer.service.TransactionalNoti
 import com.subhrodip.squarewise.notifications.consumer.transport.BrokerEnvelopeParser
 import com.subhrodip.squarewise.notifications.consumer.transport.RabbitNotificationListener
 import com.subhrodip.squarewise.notifications.preferences.persistence.PreferenceStore
+import com.subhrodip.squarewise.notifications.errors.NotificationDomainException
 
 import com.subhrodip.squarewise.notifications.inbox.persistence.NotificationInboxEntity
 import com.subhrodip.squarewise.notifications.inbox.persistence.NotificationInboxRepository
+import com.subhrodip.squarewise.notifications.email.persistence.NotificationEmailDeliveryRepository
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
@@ -36,7 +39,8 @@ import java.util.concurrent.Executors
 class NotificationEventConsumerTest @Autowired constructor(
     private val consumer: NotificationEventConsumer,
     private val inboxItems: NotificationInboxRepository,
-    private val processedEvents: ProcessedNotificationEventRepository
+    private val processedEvents: ProcessedNotificationEventRepository,
+    private val emailDeliveries: NotificationEmailDeliveryRepository
 ) {
     @Test
     fun `applies one inbox effect and acknowledges duplicate delivery`() {
@@ -50,6 +54,7 @@ class NotificationEventConsumerTest @Autowired constructor(
         assertEquals(NotificationConsumptionOutcome.DUPLICATE, consumer.consume(event))
         assertEquals(1, inboxItems.count())
         assertEquals(1, processedEvents.count())
+        assertEquals(1, emailDeliveries.count())
     }
 
     @Test
@@ -94,7 +99,7 @@ class NotificationEventConsumerTest @Autowired constructor(
     }
 
     @Test
-    fun `concurrent duplicate deliveries produce one local effect`() {
+    fun `concurrent duplicate deliveries produce one local effect and one retry`() {
         clearState()
         val event = event(
             UUID.fromString("00000000-0000-7000-8000-000000000106"),
@@ -108,10 +113,18 @@ class NotificationEventConsumerTest @Autowired constructor(
                     Callable { consumer.consume(event) },
                     Callable { consumer.consume(event) }
                 )
-            ).map { it.get() }
+            ).map { future ->
+                runCatching { future.get() }.getOrElse { failure ->
+                    assertTrue(failure.cause is NotificationDomainException)
+                    null
+                }
+            }
 
             assertEquals(1, outcomes.count { it == NotificationConsumptionOutcome.APPLIED })
-            assertEquals(1, outcomes.count { it == NotificationConsumptionOutcome.DUPLICATE })
+            assertEquals(
+                1,
+                outcomes.count { it == null || it == NotificationConsumptionOutcome.DUPLICATE }
+            )
             assertEquals(1, inboxItems.count())
             assertEquals(1, processedEvents.count())
         } finally {
@@ -148,6 +161,7 @@ class NotificationEventConsumerTest @Autowired constructor(
     private fun clearState() {
         processedEvents.deleteAll()
         inboxItems.deleteAll()
+        emailDeliveries.deleteAll()
     }
 
     private fun event(eventId: UUID, notificationId: UUID) = NotificationEvent(

@@ -7,6 +7,8 @@ import com.subhrodip.squarewise.notifications.consumer.persistence.ProcessedNoti
 
 import com.subhrodip.squarewise.db.routing.DbWriter
 import com.subhrodip.squarewise.notifications.inbox.persistence.NotificationInboxEntity
+import com.subhrodip.squarewise.notifications.email.persistence.NotificationEmailDeliveryEntity
+import com.subhrodip.squarewise.notifications.email.persistence.NotificationEmailDeliveryRepository
 import jakarta.persistence.EntityManager
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -18,7 +20,8 @@ import java.time.Instant
 @Service
 class TransactionalNotificationEventProcessor(
     private val processedEvents: ProcessedNotificationEventRepository,
-    private val entityManager: EntityManager
+    private val entityManager: EntityManager,
+    private val emailDeliveries: NotificationEmailDeliveryRepository? = null
 ) {
     /**
      * Atomically checks for duplicate events and persists the notification inbox record and event receipt.
@@ -38,6 +41,12 @@ class TransactionalNotificationEventProcessor(
 
         entityManager.persist(ProcessedNotificationEventEntity(event.eventId, Instant.now()))
         entityManager.persist(inboxItem)
+        emailDeliveries?.save(
+            NotificationEmailDeliveryEntity(
+                notificationId = event.notificationId,
+                recipientEmail = event.recipientEmail
+            )
+        )
         entityManager.flush()
         return NotificationConsumptionOutcome.APPLIED
     }

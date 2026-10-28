@@ -16,6 +16,8 @@ class NotificationEmailDeliveryEntity(
     var notificationId: UUID,
     @Column(name = "status", nullable = false, length = 16)
     var status: String = PENDING,
+    @Column(name = "recipient_email", length = 254)
+    var recipientEmail: String? = null,
     @Column(name = "created_at", nullable = false)
     var createdAt: Instant = Instant.now(),
     @Column(name = "updated_at", nullable = false)

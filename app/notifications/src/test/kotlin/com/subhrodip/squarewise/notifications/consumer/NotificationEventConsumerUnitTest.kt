@@ -262,7 +262,7 @@ class NotificationEventConsumerUnitTest {
     }
 
     @Test
-    fun `returns outcome early when claimForDispatch loses claim race`() {
+    fun `fails with a retryable error when claimForDispatch loses claim race`() {
         val deliveries = mock(NotificationEmailDeliveryRepository::class.java)
         doReturn(0).`when`(deliveries).claimForDispatch(
             any(UUID::class.java) ?: UUID(0, 0),
@@ -274,10 +274,10 @@ class NotificationEventConsumerUnitTest {
         doReturn(NotificationConsumptionOutcome.DUPLICATE).`when`(processor).process(event)
         doReturn(Optional.of(pendingDelivery)).`when`(deliveries).findById(event.notificationId)
 
-        val outcome = NotificationEventConsumer(processor, processedEvents, preferenceStore, emailDispatcher, deliveryRateLimiter, deliveries)
-            .consume(event)
-
-        assertEquals(NotificationConsumptionOutcome.DUPLICATE, outcome)
+        assertThrows(NotificationDomainException::class.java) {
+            NotificationEventConsumer(processor, processedEvents, preferenceStore, emailDispatcher, deliveryRateLimiter, deliveries)
+                .consume(event)
+        }
         verify(emailDispatcher, never()).send(anyString(), anyString(), anyString())
     }
 

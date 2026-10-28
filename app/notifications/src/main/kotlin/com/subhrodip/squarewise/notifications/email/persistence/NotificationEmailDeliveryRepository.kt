@@ -3,6 +3,7 @@ package com.subhrodip.squarewise.notifications.email.persistence
 import java.time.Instant
 import java.util.UUID
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
@@ -10,6 +11,16 @@ import org.springframework.transaction.annotation.Transactional
 
 /** Repository for durable notification email delivery state. */
 interface NotificationEmailDeliveryRepository : JpaRepository<NotificationEmailDeliveryEntity, UUID> {
+    /** Finds delivery leases that have expired and are safe for recovery. */
+    @Query(
+        "SELECT delivery FROM NotificationEmailDeliveryEntity delivery " +
+            "WHERE delivery.status = 'DISPATCHING' AND delivery.updatedAt < :cutoff " +
+            "ORDER BY delivery.updatedAt ASC"
+    )
+    fun findDispatchingBefore(
+        @Param("cutoff") cutoff: Instant,
+        pageable: Pageable
+    ): List<NotificationEmailDeliveryEntity>
     /** Claims a pending or expired dispatch lease for one notification. */
     @Modifying
     @Transactional

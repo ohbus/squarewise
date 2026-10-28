@@ -70,10 +70,22 @@ class NotificationEventConsumer(
         val repository = emailDeliveries ?: return null
         return if (outcome == NotificationConsumptionOutcome.APPLIED) {
             repository.findById(event.notificationId).orElseGet {
-                repository.save(NotificationEmailDeliveryEntity(event.notificationId))
+                repository.save(
+                    NotificationEmailDeliveryEntity(
+                        notificationId = event.notificationId,
+                        recipientEmail = event.recipientEmail
+                    )
+                )
             }
         } else {
-            repository.findById(event.notificationId).orElse(null)
+            repository.findById(event.notificationId).orElseGet {
+                repository.save(
+                    NotificationEmailDeliveryEntity(
+                        notificationId = event.notificationId,
+                        recipientEmail = event.recipientEmail
+                    )
+                )
+            }
         }
     }
 
@@ -95,7 +107,10 @@ class NotificationEventConsumer(
         val claimAt = emailDeliveries?.let { repository ->
             val now = Instant.now()
             if (repository.claimForDispatch(event.notificationId, now, now.minus(DISPATCH_LEASE)) == 0) {
-                return
+                throw NotificationDomainException(
+                    NotificationErrors.EMAIL_DISPATCH_FAILED,
+                    "Email delivery is still owned by another worker"
+                )
             }
             now
         }

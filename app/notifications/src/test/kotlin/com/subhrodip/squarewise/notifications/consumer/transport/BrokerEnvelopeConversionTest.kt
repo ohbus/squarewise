@@ -12,7 +12,7 @@ class BrokerEnvelopeConversionTest {
     private val aggregateId = UUID.fromString("00000000-0000-7000-8000-000000000402")
     private val groupId = UUID.fromString("00000000-0000-7000-8000-000000000403")
 
-    /** Verifies malformed notification IDs fall back to the aggregate and recipient/description fields map. */
+    /** Verifies malformed notification IDs fall back to the event and recipient/description fields map. */
     @Test
     fun `maps fallback notification fields without losing the envelope identity`() {
         val event = envelope(
@@ -23,7 +23,7 @@ class BrokerEnvelopeConversionTest {
             )
         ).toNotificationEvent()
 
-        assertEquals(aggregateId, event.notificationId)
+        assertEquals(eventId, event.notificationId)
         assertEquals("alice@example.com", event.subject)
         assertEquals("Expense description", event.message)
         assertEquals(eventId, event.eventId)

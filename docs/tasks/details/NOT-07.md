@@ -36,6 +36,9 @@ Broker events without an explicit notification ID now use the unique event ID,
 so create and update events for one aggregate remain distinct. The adapter also
 preserves a payload `recipientEmail` for the existing dispatcher validation path.
 
+Email delivery state is created in the inbox transaction and expired dispatch
+leases are replayed from durable inbox data by a bounded recovery sweep.
+
 ## Owned paths
 
 - `app/notifications/src/main/kotlin/com/subhrodip/squarewise/notifications/`
