@@ -1711,4 +1711,6 @@ until API and E2E journey tests exercise it through public interfaces.
 
 | 2026-10-28 | CORE-15 / NOT-07 / NOT-10 | Made the two notification schema changes repeatable and order-independent for separate PR delivery. | Notifications test suite passed after migration rename; branches remain local and unpushed. | `f5c454e3`, `3dadf0ca` |
 
+| 2026-10-28 | NOT-07 | Added an aggregate-event replay regression proving distinct event IDs produce distinct fallback notification IDs while replaying one event remains idempotent. | `./gradlew :app:notifications:test --tests 'com.subhrodip.squarewise.notifications.consumer.transport.BrokerEnvelopeConversionTest' --no-daemon --console=plain` passed. | `ff1acba1`, mirrored in stacked delivery branch as `77342a6c` |
+
 
