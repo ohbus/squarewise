@@ -30,6 +30,12 @@ Connect `NotificationConsumerService` with `EmailDispatcher` so that incoming no
   - Verified email dispatch failure (exception or permanent/retryable failure outcome) does not fail inbox consumption or throw unhandled exceptions.
   - Verified duplicate events do not trigger email dispatch.
 
+## 2026-10-28 event identity follow-up
+
+Broker events without an explicit notification ID now use the unique event ID,
+so create and update events for one aggregate remain distinct. The adapter also
+preserves a payload `recipientEmail` for the existing dispatcher validation path.
+
 ## Owned paths
 
 - `app/notifications/src/main/kotlin/com/subhrodip/squarewise/notifications/`

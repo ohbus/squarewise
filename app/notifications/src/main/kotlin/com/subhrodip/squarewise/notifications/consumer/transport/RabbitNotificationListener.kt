@@ -25,7 +25,7 @@ import org.springframework.stereotype.Component
 fun BrokerEnvelope.toNotificationEvent(): NotificationEvent {
     val notificationId = (payload["notificationId"] as? String)?.let {
         runCatching { UUID.fromString(it) }.getOrNull()
-    } ?: aggregateId
+    } ?: eventId
     val subject = listOfNotNull(
         payload["subject"] as? String,
         payload["changedBy"] as? String,
@@ -43,7 +43,10 @@ fun BrokerEnvelope.toNotificationEvent(): NotificationEvent {
         subject = subject.requireLength("subject", MAX_SUBJECT_LENGTH),
         eventType = eventType.requireLength("eventType", MAX_EVENT_TYPE_LENGTH),
         message = message.requireLength("message", MAX_MESSAGE_LENGTH),
-        occurredAt = occurredAt
+        occurredAt = occurredAt,
+        recipientEmail = (payload["recipientEmail"] as? String)
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
     )
 }
 

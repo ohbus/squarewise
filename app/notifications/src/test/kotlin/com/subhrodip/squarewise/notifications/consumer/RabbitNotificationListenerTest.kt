@@ -132,9 +132,28 @@ class RabbitNotificationListenerTest {
 
         val event = envelope.toNotificationEvent()
 
-        assertEquals(aggregateId, event.notificationId)
+        assertEquals(envelope.eventId, event.notificationId)
         assertEquals(" changed-user ", event.subject)
         assertEquals("expense.created for group ${envelope.groupId}", event.message)
+    }
+
+    @Test
+    fun `preserves event email and uses event id when notification id is absent`() {
+        val envelope = BrokerEnvelope(
+            eventId = UUID.randomUUID(),
+            eventType = "expense.updated",
+            schemaVersion = 1,
+            aggregateId = UUID.randomUUID(),
+            groupId = UUID.randomUUID(),
+            groupRevision = 2,
+            occurredAt = Instant.EPOCH,
+            payload = mapOf("subject" to "sqw:account", "recipientEmail" to " alice@example.com ", "message" to "Updated")
+        )
+
+        val event = envelope.toNotificationEvent()
+
+        assertEquals(envelope.eventId, event.notificationId)
+        assertEquals("alice@example.com", event.recipientEmail)
     }
 
     @Test
