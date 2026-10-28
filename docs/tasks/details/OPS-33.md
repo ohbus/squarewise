@@ -133,3 +133,16 @@ disabled for bearer-native requests.
 
 Commit `5dc30569` implements this increment. The focused BFF transport and
 CSRF tests passed.
+
+### Hosted review follow-up
+
+The PR review identified one remaining CodeQL regex path and two missing HTTP
+coverage boundaries. The resolver pattern now removes overlapping horizontal
+whitespace quantifiers, the regression suite bounds a long-space non-match in a
+subprocess, and the BFF transport suite covers both rejected and successful
+cookie-authenticated mutations. The new public test methods include structured
+KDoc.
+
+Validation for this follow-up passed with the focused Python unittest, public
+surface validator, `make python-typecheck`, focused BFF transport test, and
+`git diff --check`.

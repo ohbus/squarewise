@@ -13,7 +13,7 @@ GRAPHQL_ROOTS = {"Query": "QueryMapping", "Mutation": "MutationMapping", "Subscr
 GRAPHQL_FIELD = re.compile(r"\b([A-Za-z_][A-Za-z0-9_]*)\s*(?:\([^)]*\))?\s*:")
 GRAPHQL_RESOLVER = re.compile(
     r"@(Query|Mutation|Subscription)Mapping(?:\([^)]*\))?"
-    r"(?:[ \t]*\r?\n[ \t]*)*[ \t]*fun[ \t]+([A-Za-z_][A-Za-z0-9_]*)"
+    r"(?:[ \t]*\r?\n)*[ \t]*fun[ \t]+([A-Za-z_][A-Za-z0-9_]*)"
 )
 BRUNO_REQUEST = re.compile(r"(?m)^(get|post|put|patch|delete)\s*\{\s*\n\s*url:\s*([^\n]+)")
 MATRIX_OPERATION = re.compile(r"^\|[^|]+\|[^|]+\|[^|]+\|\s*`([^`]+)`\s*\|", re.MULTILINE)
