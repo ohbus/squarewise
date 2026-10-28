@@ -122,3 +122,14 @@ protects multiline resolver discovery and non-matching long input.
 Commit `71ed1a3a` implements this increment. The focused validator tests,
 public-surface validation, `make python-typecheck`, and `git diff --check`
 passed.
+
+### BFF CSRF alert triage increment
+
+Added an end-to-end WebFlux transport regression proving a cookie-authenticated
+GraphQL mutation is rejected before any gateway or resolver interaction when
+the CSRF proof is missing. The existing custom `BrowserCsrfWebFilter` remains
+the intentional enforcement boundary while Spring's generic CSRF filter stays
+disabled for bearer-native requests.
+
+Commit `5dc30569` implements this increment. The focused BFF transport and
+CSRF tests passed.
