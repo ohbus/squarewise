@@ -233,6 +233,18 @@ class GraphqlHttpTransportTest {
     }
 
     @Test
+    fun `cookie-authenticated graphql mutation requires csrf proof before resolver`() {
+        client.post().uri(ApiEndpoints.Bff.GRAPHQL)
+            .header("Origin", "https://app.example.test")
+            .cookie("squarewise_access", "access-jwt")
+            .bodyValue(mapOf("query" to "mutation { __typename }"))
+            .exchange()
+            .expectStatus().isForbidden
+
+        verifyNoInteractions(accountsGateway, expenseCoreGateway)
+    }
+
+    @Test
     fun `graphql route answers preflight only for an exact configured origin`() {
         client.options().uri(ApiEndpoints.Bff.GRAPHQL)
             .header("Origin", "https://app.example.test")
