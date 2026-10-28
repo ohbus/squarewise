@@ -75,8 +75,8 @@ class JpaNotificationInboxStore(
 }
 
 private fun requireSubject(subject: String): String {
-    require(subject.isNotBlank() && subject.length <= 200) {
-        "authenticated subject must contain between 1 and 200 characters"
+    require(subject.isNotBlank() && subject.length <= 256) {
+        "authenticated subject must contain between 1 and 256 characters"
     }
     return subject
 }

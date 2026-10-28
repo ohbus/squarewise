@@ -44,3 +44,9 @@ Refactor multi-responsibility persistence files in the Notifications service int
   * `JpaPreferenceStore.kt`: Retained exclusively for preference store adapter logic and mapping with KDoc.
 - `./gradlew :app:notifications:test --rerun-tasks --no-daemon`: Passed (9 executed, 0 failed, 100% clean).
 - `git diff --check`: Passed cleanly with no trailing whitespace or conflicts.
+
+## 2026-10-28 identity-bound follow-up
+
+Notification subject validation and persistence now use the shared 256-character
+OIDC subject bound across inbox, preferences, and broker conversion. A Flyway
+migration widens the two subject columns without changing existing data.

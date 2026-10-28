@@ -452,7 +452,7 @@ class RabbitNotificationListenerTest {
             base.copy(eventType = "", payload = mapOf("subject" to "user")).toNotificationEvent()
         }
         assertThrows(InvalidEnvelopeException::class.java) {
-            base.copy(payload = mapOf("subject" to "s".repeat(201))).toNotificationEvent()
+            base.copy(payload = mapOf("subject" to "s".repeat(257))).toNotificationEvent()
         }
         assertThrows(InvalidEnvelopeException::class.java) {
             base.copy(eventType = "e".repeat(201), payload = mapOf("subject" to "user")).toNotificationEvent()

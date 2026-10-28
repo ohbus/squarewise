@@ -54,7 +54,7 @@ private fun String.requireLength(field: String, maximum: Int): String {
     return this
 }
 
-private const val MAX_SUBJECT_LENGTH = 200
+private const val MAX_SUBJECT_LENGTH = 256
 private const val MAX_EVENT_TYPE_LENGTH = 200
 private const val MAX_MESSAGE_LENGTH = 2000
 

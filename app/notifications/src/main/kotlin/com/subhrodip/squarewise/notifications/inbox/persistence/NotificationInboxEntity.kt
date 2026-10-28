@@ -14,7 +14,7 @@ import java.util.UUID
  * ordered by [occurredAt] descending and [notificationId] descending.
  *
  * @property notificationId Unique identifier of the notification.
- * @property subject Authenticated subject or recipient identifier (1..200 characters).
+ * @property subject Authenticated subject or recipient identifier (1..256 characters).
  * @property eventType Event category or type (1..200 characters).
  * @property message User-facing notification message text (1..2000 characters).
  * @property occurredAt Instant at which the source event occurred.
@@ -26,7 +26,7 @@ class NotificationInboxEntity(
     @Id
     @Column(name = "notification_id", nullable = false)
     var notificationId: UUID,
-    @Column(name = "subject", nullable = false, length = 200)
+    @Column(name = "subject", nullable = false, length = 256)
     var subject: String,
     @Column(name = "event_type", nullable = false, length = 200)
     var eventType: String,

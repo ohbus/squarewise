@@ -44,8 +44,8 @@ class TransactionalNotificationEventProcessor(
 }
 
 private fun NotificationEvent.toInboxEntity(): NotificationInboxEntity {
-    require(subject.isNotBlank() && subject.length <= 200) {
-        "notification subject must contain between 1 and 200 characters"
+    require(subject.isNotBlank() && subject.length <= 256) {
+        "notification subject must contain between 1 and 256 characters"
     }
     require(eventType.isNotBlank() && eventType.length <= 200) {
         "event type must contain between 1 and 200 characters"

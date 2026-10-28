@@ -150,10 +150,11 @@ class JpaNotificationInboxStoreTest @Autowired constructor(
         assertThrows(IllegalArgumentException::class.java) {
             store.append("alice", InboxItem(UUID.randomUUID(), "event", " ", Instant.now()))
         }
+        store.append("a".repeat(256), InboxItem(UUID.randomUUID(), "event", "Message", Instant.now()))
         assertThrows(IllegalArgumentException::class.java) {
-            store.append("a".repeat(201), InboxItem(UUID.randomUUID(), "event", "Message", Instant.now()))
+            store.append("a".repeat(257), InboxItem(UUID.randomUUID(), "event", "Message", Instant.now()))
         }
-        assertEquals(0, inboxRepository.count())
+        assertEquals(1, inboxRepository.count())
     }
 
     @Test

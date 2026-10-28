@@ -128,7 +128,7 @@ class NotificationEventConsumerTest @Autowired constructor(
         )
         val invalidEvents = listOf(
             valid.copy(subject = ""),
-            valid.copy(subject = "s".repeat(201)),
+            valid.copy(subject = "s".repeat(257)),
             valid.copy(eventType = ""),
             valid.copy(eventType = "t".repeat(201)),
             valid.copy(message = ""),

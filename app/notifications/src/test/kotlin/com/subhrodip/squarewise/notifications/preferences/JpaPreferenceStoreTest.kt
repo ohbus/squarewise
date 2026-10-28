@@ -55,9 +55,15 @@ class JpaPreferenceStoreTest @Autowired constructor(
     }
 
     @Test
+    fun `accepts the shared maximum subject length`() {
+        store.put("a".repeat(256), NotificationPreferences())
+        assertEquals(1, repository.count())
+    }
+
+    @Test
     fun `rejects subject longer than the durable column contract`() {
         assertThrows(IllegalArgumentException::class.java) {
-            store.put("a".repeat(201), NotificationPreferences())
+            store.put("a".repeat(257), NotificationPreferences())
         }
         assertEquals(0, repository.count())
     }

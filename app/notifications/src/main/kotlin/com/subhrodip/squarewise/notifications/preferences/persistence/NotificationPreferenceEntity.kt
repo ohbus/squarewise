@@ -11,7 +11,7 @@ import jakarta.persistence.Version
  *
  * Maps to table `notification_preferences`.
  *
- * @property subject Authenticated subject or recipient identifier (1..200 characters).
+ * @property subject Authenticated subject or recipient identifier (1..256 characters).
  * @property emailEnabled Whether email delivery is enabled for the subject.
  * @property pushEnabled Whether push notifications are enabled for the subject.
  * @property version Optimistic locking version counter.
@@ -20,7 +20,7 @@ import jakarta.persistence.Version
 @Table(name = "notification_preferences")
 class NotificationPreferenceEntity(
     @Id
-    @Column(name = "subject", nullable = false, length = 200)
+    @Column(name = "subject", nullable = false, length = 256)
     var subject: String,
     @Column(name = "email_enabled", nullable = false)
     var emailEnabled: Boolean,
