@@ -19,7 +19,7 @@ EXPECTED_LICENSE_SHA256 = "d8a6cc31abc16b6748c7a21f21611f5a1ec33f67d22ca23d7da1c
 STALE_PROJECT_LICENSE_PATTERN = re.compile(
     r"\b(?:Squarewise|the project|this project)(?:'s)?\s+"
     r"(?:is\s+)?(?:MIT(?:\s+License)?|MIT-licensed|"
-    r"licensed\s+(?:under\s+)?MIT)\b"
+    r"licensed\s+(?:under\s+(?:the\s+)?)?MIT)\b"
     r"|\b(?:Squarewise|the project|this project)(?:'s)?\s+"
     r"license\s+is\s+MIT(?:\s+License)?\b",
     re.IGNORECASE,
