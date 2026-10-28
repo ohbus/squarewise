@@ -449,7 +449,7 @@ flowchart LR
 | **Integration Gate** | E2E acceptance | Multi-service live test | ✅ | `make acceptance-live` |
 | **Integration Gate** | Coverage threshold | JaCoCo minimum 80% | ✅ | JaCoCo verification task |
 | **Integration Gate** | Dependency scan | CVE/vulnerability check | ✅ | OWASP Dependency-Check |
-| **Integration Gate** | License compliance | No GPL in MIT project | ✅ | License Gradle plugin |
+| **Integration Gate** | License compliance | AGPL-3.0-only metadata and dependency compatibility review | ✅ | `make license-validate` plus SBOM/dependency review |
 | **Release Gate** | Container scan | Image vulnerability scan | ✅ | Trivy |
 | **Release Gate** | SBOM generation | CycloneDX bill of materials | ✅ | CycloneDX Gradle plugin |
 | **Release Gate** | Image signing | Cosign signature on images | ✅ | Cosign |

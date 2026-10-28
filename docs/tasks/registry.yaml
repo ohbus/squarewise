@@ -8227,6 +8227,77 @@
       "blocker": "Repository settings and ruleset changes require owner action in GitHub; cutover also waits for the new Required CI check to complete on a hosted pull request."
     },
     {
+      "id": "DOC-29",
+      "parent_id": "MILESTONE-DOCUMENTATION",
+      "title": "Migrate first-party repository content to AGPL-3.0-only",
+      "phase": "documentation",
+      "status": "in_progress",
+      "owner_role": "coordinator",
+      "owner_agent": "/root",
+      "depends_on": [
+        "DOC-27",
+        "SEC-01F"
+      ],
+      "owned_paths": [
+        "LICENSE",
+        "NOTICE",
+        "README.md",
+        "CONTRIBUTING.md",
+        "pyproject.toml",
+        ".gitattributes",
+        "Makefile",
+        ".github/workflows/_reusable-ci.yml",
+        "docs/README.md",
+        "docs/operations/README.md",
+        "docs/operations/licensing.md",
+        "docs/operations/ci.md",
+        "docs/security/supply-chain-evidence.md",
+        "docs/implementation/production-readiness-roadmap.md",
+        "docs/operations/production-readiness-plan.md",
+        "docs/reviews/production-readiness-audit.md",
+        "tools/ops/validate_license.py",
+        "tools/ops/test_validate_license.py",
+        "infra/docker/Dockerfile.fast",
+        "docs/tasks/details/DOC-29.md",
+        "docs/tasks/registry.yaml",
+        "docs/tasks/board.md",
+        "docs/tasks/progress.md"
+      ],
+      "specification": "docs/tasks/details/DOC-29.md",
+      "acceptance_criteria": [
+        "The root LICENSE is the canonical GNU AGPL v3.0-only text and old MIT releases remain historically identifiable.",
+        "README, documentation, contributor guidance, Python package metadata, and active readiness language consistently identify AGPL-3.0-only.",
+        "Third-party notices, generated dependency records, and historical evidence are explicitly excluded from relicensing.",
+        "The typed license-validate check runs locally and in reusable CI and rejects stale project-level metadata.",
+        "Task documentation records ownership, evidence, limitations, and exact commit hashes for every increment.",
+        "Published fast runtime images include the project LICENSE alongside the service JAR."
+      ],
+      "validation_commands": [
+        "uv run --frozen --no-build python tools/contracts/validate.py",
+        "uv run --frozen --no-build python -m unittest tools.ops.test_validate_license",
+        "make license-validate",
+        "make python-typecheck",
+        "make workflow-validate",
+        "make sbom-validate",
+        "uv build",
+        "git diff --check"
+      ],
+      "evidence": [
+        "Commit c6c33268 registered DOC-29, added the licensing policy, documented first-party scope and third-party exceptions, and linked the policy from contributor and documentation entry points.",
+        "Commit 36e76acb replaced MIT with the canonical SPDX AGPL-3.0-only text, updated README/package/readiness metadata, added the typed license validator and four initial regression tests, and wired the validator into reusable CI and make validate.",
+        "Commit 1a4a13d6 preserved the first-party copyright holder in NOTICE and included NOTICE in Python package license-file metadata; the validator then had five regression tests.",
+        "Commit 0b792b1c pinned the canonical license SHA-256, required LICENSE and NOTICE in package metadata, restored DOC-29 registry ownership/evidence, clarified the superseded board baseline, and pinned LF line endings for cross-platform validation.",
+        "make license-validate, the focused seven-test unittest module, make contracts, make python-typecheck, make workflow-validate, make sbom-validate, make security-hygiene, uv build, and git diff --check passed.",
+        "Built wheel metadata contains License-Expression: AGPL-3.0-only, License-File: LICENSE, and License-File: NOTICE; the checked-in LICENSE matches the SPDX text byte-for-byte.",
+        "Copyright ownership confirmation is required before merge; hosted GitHub license detection and repository About metadata remain post-merge checks.",
+        "Commit 1253e2e9 broadened active-reference validation to require AGPL-3.0-only in every curated active document and reject common stale MIT wording; the focused eight-test suite, license validator, Python type check, workflow validation, and diff check passed.",
+        "Commit 9224f2f recorded Increment 6 evidence for the operations index; the focused license-validation suite and make license-validate passed.",
+        "Commit 33b1cfd closed review follow-ups: scoped stale-MIT detection to first-party statements, added regression coverage for licensed-under-MIT wording, included LICENSE in the fast runtime image, and recorded the pre-merge ownership requirement; the focused suite, license validator, contracts, Python type check, workflow validation, Dockerfile syntax check, and diff check passed."
+      ],
+      "reviewer": "/root",
+      "blocker": "Copyright ownership confirmation is required before merge; post-merge GitHub license detection and repository About metadata remain required before release."
+    },
+    {
       "id": "OPS-32",
       "parent_id": "MILESTONE-QUALITY",
       "title": "Select changed-scope PR and branch CI while keeping master full",

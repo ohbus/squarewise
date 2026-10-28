@@ -167,6 +167,11 @@ requirement to third-party actions.
 The lightweight lint job also installs the same Microsoft JDK 25 and Gradle
 setup before generating the CycloneDX SBOM; every job that invokes Gradle owns
 its toolchain setup explicitly.
+The same lint job runs `tools/ops/validate_license.py` and its focused unit
+tests, checking the canonical AGPL-3.0-only project metadata and preventing
+stale project-license references from returning. It intentionally does not classify
+third-party dependency licenses; the CycloneDX SBOM and dependency-review job
+remain the source of that evidence.
 QA-10 coverage is reported per module in the Gradle matrix. The repository-wide
 inventory remains a local QA-10 audit command because no matrix shard can prove
 aggregate coverage, and the former artifact-only follow-up job was removed from

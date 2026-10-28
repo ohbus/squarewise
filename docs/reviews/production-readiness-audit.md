@@ -780,7 +780,7 @@ as possible in the development lifecycle.
    }
    ```
 7. **ArchUnit** tests for architecture boundaries (already partially present)
-8. License policy enforcement (reject GPL in MIT project)
+8. License policy enforcement (validate AGPL-3.0-only project metadata and review dependency compatibility)
 
 ---
 

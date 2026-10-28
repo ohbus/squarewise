@@ -36,7 +36,6 @@
 # Documentation and design assets
 docs/
 *.md
-LICENSE
 
 # Test results and temporary reports
 **/test-results/

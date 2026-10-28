@@ -25,7 +25,7 @@ This index is the navigation entry point for repository documentation. [`AGENTS.
 - [Code of Conduct](../CODE_OF_CONDUCT.md)
 - [Security Policy](../SECURITY.md)
 - [Accessibility Statement](../ACCESSIBILITY.md)
-- [MIT License](../LICENSE)
+- [AGPL-3.0-only License](../LICENSE)
 - [Issue forms](../.github/ISSUE_TEMPLATE/)
 - [Pull-request template](../.github/pull_request_template.md)
 
@@ -82,6 +82,7 @@ This index is the navigation entry point for repository documentation. [`AGENTS.
 - [Operations index](operations/README.md)
 - [Quickstart](operations/quickstart.md)
 - [CI](operations/ci.md)
+- [Licensing and compliance](operations/licensing.md)
 - [Compose topology](operations/compose-topology.md)
 - [Authentication runbook](operations/authentication-runbook.md)
 - [Capacity baseline](operations/capacity-baseline-1m.md)

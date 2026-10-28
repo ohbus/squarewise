@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL--3.0--only-blue.svg" alt="License: AGPL-3.0-only"></a>
   <a href="https://kotlinlang.org"><img src="https://img.shields.io/badge/Kotlin-2.4.20-purple.svg" alt="Kotlin"></a>
   <a href="https://spring.io/projects/spring-boot"><img src="https://img.shields.io/badge/Spring%20Boot-4.1.1-brightgreen.svg" alt="Spring Boot"></a>
   <a href="https://adoptium.net"><img src="https://img.shields.io/badge/Java-25-orange.svg" alt="Java"></a>
@@ -325,7 +325,8 @@ squarewise/
 ├── ACCESSIBILITY.md            # Accessibility goals, limitations & reporting
 ├── CODE_OF_CONDUCT.md          # Community behavior & enforcement policy
 ├── CONTRIBUTING.md             # Developer workflow & contribution guide
-├── LICENSE                     # MIT license terms
+├── LICENSE                     # AGPL-3.0-only license terms
+├── NOTICE                      # First-party copyright and scope notice
 ├── Makefile                    # One-command developer CLI
 ├── README.md                   # Project overview and entry point
 └── SECURITY.md                 # Private vulnerability reporting policy
@@ -357,4 +358,7 @@ We welcome contributions! Please read our [**Contributing Guide (CONTRIBUTING.md
 
 ## License
 
-Squarewise is open-source software licensed under the [MIT License](LICENSE).
+Squarewise first-party software is licensed under the [GNU Affero General Public License v3.0 only](LICENSE).
+See the [licensing and compliance policy](docs/operations/licensing.md) for
+third-party notices, contribution rights, historical releases, and network
+deployment obligations.

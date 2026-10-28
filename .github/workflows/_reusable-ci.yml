@@ -151,6 +151,8 @@ jobs:
           uv run --frozen --no-build python3 tools/ops/check_security_hygiene.py
           uv run --frozen --no-build python3 tools/ops/check_architecture.py
           uv run --frozen --no-build python3 tools/ops/validate_sbom_baseline.py
+          uv run --frozen --no-build python3 tools/ops/validate_license.py
+          uv run --frozen --no-build python3 -m unittest tools.ops.test_validate_license
           ./gradlew cyclonedxBom --scan --no-daemon
           uv run --frozen --no-build python3 -m unittest discover -s tests/acceptance
           make workflow-validate

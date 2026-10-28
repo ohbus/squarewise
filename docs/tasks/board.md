@@ -40,8 +40,9 @@ query classification, and evidence gates are complete.
 
 | ID | Owner | Status | Deliverable |
 | --- | --- | --- | --- |
-| DOC-27 | coordinator | done | GitHub community standards, security reporting, issue/PR templates, MIT license, and accessibility statement |
+| DOC-27 | coordinator | done | GitHub community standards, security reporting, issue/PR templates, accessibility statement, and the original license baseline superseded by DOC-29 |
 | DOC-28 | coordinator | in_progress | GitHub-native issues, project workflow, labels, milestones, and repository governance |
+| DOC-29 | coordinator | in_progress | Migrate first-party repository content to AGPL-3.0-only with documented exceptions and CI validation |
 
 ## Exhaustive public-interface coverage
 
