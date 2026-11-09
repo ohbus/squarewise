@@ -14,7 +14,7 @@ dependencies = []
 dev = [
     "mypy==2.4.1",
     "yamllint==1.38.0",
-    "websockets>=17.3,<18",
+    "websockets>=17.4,<18",
 ]
 
 [tool.hatch.build.targets.wheel]
