@@ -5,11 +5,11 @@
 biz.aQute.bnd:biz.aQute.bnd.annotation:7.1.0=jmhCompileClasspath
 ch.qos.logback:logback-classic:1.5.38=jmhCompileClasspath,jmhRuntimeClasspath
 ch.qos.logback:logback-core:1.5.38=jmhCompileClasspath,jmhRuntimeClasspath
-com.fasterxml.jackson.core:jackson-annotations:2.22=jmhCompileClasspath,jmhRuntimeClasspath
-com.fasterxml.jackson.core:jackson-core:2.22.4=jmhCompileClasspath,jmhRuntimeClasspath
-com.fasterxml.jackson.core:jackson-databind:2.22.4=jmhCompileClasspath,jmhRuntimeClasspath
-com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.22.4=jmhCompileClasspath,jmhRuntimeClasspath
-com.fasterxml.jackson:jackson-bom:2.22.4=jmhCompileClasspath,jmhRuntimeClasspath
+com.fasterxml.jackson.core:jackson-annotations:2.23=jmhCompileClasspath,jmhRuntimeClasspath
+com.fasterxml.jackson.core:jackson-core:2.23.0=jmhCompileClasspath,jmhRuntimeClasspath
+com.fasterxml.jackson.core:jackson-databind:2.23.0=jmhCompileClasspath,jmhRuntimeClasspath
+com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.23.0=jmhCompileClasspath,jmhRuntimeClasspath
+com.fasterxml.jackson:jackson-bom:2.23.0=jmhCompileClasspath,jmhRuntimeClasspath
 com.github.f4b6a3:uuid-creator:6.1.1=jmhCompileClasspath,jmhRuntimeClasspath
 com.google.errorprone:error_prone_annotations:2.38.0=jmhCompileClasspath
 com.sun.istack:istack-commons-runtime:4.1.2=jmhRuntimeClasspath
