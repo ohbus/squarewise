@@ -1,16 +1,16 @@
 [versions]
 kotlin = "2.4.21"
-springBoot = "4.1.2"
+springBoot = "4.2.0"
 springDependencyManagement = "1.1.7"
 postgresql = "42.7.14"
-flyway = "13.12.2"
+flyway = "13.13.0"
 h2 = "2.5.252"
 uuidCreator = "6.1.1"
 junitPlatform = "6.1.3"
 spotless = "8.11.0"
-cyclonedx = "3.6.0"
+cyclonedx = "3.6.1"
 kotlinxCoroutines = "1.11.0"
-sonarqube = "7.5.0.8588"
+sonarqube = "7.6.0.18749"
 jackson = "2.23.0"
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
@@ -25,7 +25,7 @@ sonarqube = { id = "org.sonarqube", version.ref = "sonarqube" }
 [libraries]
 boot-actuator = { module = "org.springframework.boot:spring-boot-starter-actuator", version.ref = "springBoot" }
 micrometer-prometheus = { module = "io.micrometer:micrometer-registry-prometheus" }
-boot-amqp = { module = "org.springframework.boot:spring-boot-starter-amqp", version.ref = "springBoot" }
+boot-rabbitmq = { module = "org.springframework.boot:spring-boot-starter-rabbitmq", version.ref = "springBoot" }
 boot-validation = { module = "org.springframework.boot:spring-boot-starter-validation", version.ref = "springBoot" }
 boot-security = { module = "org.springframework.boot:spring-boot-starter-security", version.ref = "springBoot" }
 boot-resource-server = { module = "org.springframework.boot:spring-boot-starter-oauth2-resource-server", version.ref = "springBoot" }

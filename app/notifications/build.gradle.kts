@@ -13,7 +13,7 @@ dependencies {
     implementation(project(":libs:errors"))
     implementation(project(":libs:ids"))
     implementation(libs.boot.actuator)
-    implementation(libs.boot.amqp)
+    implementation(libs.boot.rabbitmq)
     implementation(libs.boot.validation)
     implementation(libs.boot.security)
     implementation(libs.boot.resource.server)

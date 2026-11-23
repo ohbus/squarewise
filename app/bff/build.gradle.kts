@@ -20,7 +20,7 @@ dependencies {
     implementation(libs.boot.security)
     implementation(libs.boot.resource.server)
     implementation(libs.boot.graphql)
-    implementation(libs.boot.amqp)
+    implementation(libs.boot.rabbitmq)
     implementation(libs.boot.webflux)
     implementation(libs.boot.webclient)
     implementation(libs.jackson.databind)
