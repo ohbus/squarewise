@@ -19,7 +19,7 @@
 ## 4. Repository gates and delivery evidence
 
 - [x] 4.1 Run `make contracts`, `make python-typecheck`, `make workflow-validate`, `make compose-config`, `make sbom-validate`, `make security-hygiene`, and `git diff --check`; record exact results in the OpenSpec change evidence.
-- [ ] 4.2 Commit the focused implementation and OpenSpec artifacts on the new local branch with a meaningful conventional commit; verify the branch is clean and no push occurs.
+- [x] 4.2 Commit the focused implementation and OpenSpec artifacts on the new local branch with meaningful conventional commits; verify the branch is clean and no push occurs.
 
 ## Workflow follow-up
 
