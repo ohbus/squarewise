@@ -4,6 +4,9 @@
 
 Restore Squarewise's existing RabbitMQ AMQP 0.9.1 integration while retaining the Spring Boot 4.2.0 dependency baseline.
 
+- Follow-up tracker: [issue #68](https://github.com/ohbus/squarewise/issues/68).
+- Implementation: [replacement PR #69](https://github.com/ohbus/squarewise/pull/69).
+
 ## Source and Evidence
 
 - Source of inspiration: [PR #67](https://github.com/ohbus/squarewise/pull/67).
@@ -77,7 +80,7 @@ The repository's `tests/e2e/acquire_local_tokens.sh` helper cannot run under the
 - [ ] Dependency locks contain the classic RabbitMQ AMQP 0.9 graph and no generic AMQP 1.0 starter.
 - [ ] All listed repository gates pass.
 - [ ] OpenSpec artifacts remain valid and complete.
-- [ ] No code or commit is pushed from the local branch.
+- [ ] The reviewed implementation is merged from replacement PR #69; no unreviewed branch changes are required.
 
 ## Rollback
 
